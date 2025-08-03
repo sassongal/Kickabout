@@ -19,7 +19,7 @@ class _TeamFormationScreenState extends State<TeamFormationScreen> with TickerPr
   final GameService _gameService = GameService();
   final TextEditingController _searchController = TextEditingController();
   
-  List<Player> _selectedPlayers = [];
+  final List<Player> _selectedPlayers = [];
   List<Player> _filteredPlayers = [];
   Map<String, Team>? _formedTeams;
   bool _isFormingTeams = false;
@@ -114,9 +114,11 @@ class _TeamFormationScreenState extends State<TeamFormationScreen> with TickerPr
       setState(() {
         _isFormingTeams = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error forming teams: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error forming teams: $e')),
+        );
+      }
     }
   }
 
@@ -148,9 +150,11 @@ class _TeamFormationScreenState extends State<TeamFormationScreen> with TickerPr
       final updatedGame = _currentGame!.copyWith(status: GameStatus.inProgress);
       await _gameService.saveGame(updatedGame);
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Game started! Have fun playing!')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Game started! Have fun playing!')),
+        );
+      }
     }
   }
 
@@ -159,12 +163,14 @@ class _TeamFormationScreenState extends State<TeamFormationScreen> with TickerPr
       final updatedGame = _currentGame!.copyWith(status: GameStatus.completed);
       await _gameService.saveGame(updatedGame);
       
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => StatsInputScreen(game: updatedGame, players: _selectedPlayers),
-        ),
-      );
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StatsInputScreen(game: updatedGame, players: _selectedPlayers),
+          ),
+        );
+      }
     }
   }
 
@@ -399,7 +405,7 @@ class _TeamFormationScreenState extends State<TeamFormationScreen> with TickerPr
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _buildTeamCard(entry.key, entry.value),
               );
-            }).toList(),
+            }),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -589,7 +595,7 @@ class _TeamFormationScreenState extends State<TeamFormationScreen> with TickerPr
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

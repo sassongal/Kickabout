@@ -159,9 +159,11 @@ class _StatsInputScreenState extends State<StatsInputScreen> with TickerProvider
       setState(() {
         _isSubmitting = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving stats: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving stats: $e')),
+        );
+      }
     }
   }
 
@@ -187,8 +189,6 @@ class _StatsInputScreenState extends State<StatsInputScreen> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final currentPlayer = widget.players[_currentPlayerIndex];
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rate Players'),
@@ -279,7 +279,7 @@ class _StatsInputScreenState extends State<StatsInputScreen> with TickerProvider
               padding: const EdgeInsets.only(bottom: 24),
               child: _buildRatingCard(player, category),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

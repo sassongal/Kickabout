@@ -7,7 +7,8 @@ import 'package:kickabout/services/player_stats_service.dart';
 import 'package:kickabout/models/player_stats.dart';
 import 'package:kickabout/screens/player_management_screen.dart';
 import 'package:kickabout/screens/team_formation_screen.dart';
-import 'package:kickabout/widgets/player_card.dart';\nimport 'package:kickabout/screens/player_profile_screen.dart';
+import 'package:kickabout/widgets/player_card.dart';
+import 'package:kickabout/screens/player_profile_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -307,16 +308,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             itemBuilder: (context, index) {
               return Padding(
                 padding: EdgeInsets.only(right: index < topPlayers.length - 1 ? 12 : 0),
-                child: PlayerCard(
-                  player: topPlayers[index],
-                  showRank: true,
-                  rank: index + 1,
-                  showRadarChart: false,
-                  latestStats: _latestStats[topPlayers[index].id],
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PlayerProfileScreen(player: topPlayers[index]),
+                child: SizedBox(
+                  width: 300, // Fixed width for horizontal list
+                  child: PlayerCard(
+                    player: topPlayers[index],
+                    showRank: true,
+                    rank: index + 1,
+                    showRadarChart: false,
+                    latestStats: _latestStats[topPlayers[index].id],
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PlayerProfileScreen(player: topPlayers[index]),
+                      ),
                     ),
                   ),
                 ),

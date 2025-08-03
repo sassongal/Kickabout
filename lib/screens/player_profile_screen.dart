@@ -18,7 +18,6 @@ class PlayerProfileScreen extends StatefulWidget {
 class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
   final PlayerStatsService _statsService = PlayerStatsService();
   PlayerStats? _latestStats;
-  List<PlayerStats> _playerStats = [];
   Map<String, double> _leagueAverages = {};
   bool _isLoading = true;
 
@@ -30,12 +29,10 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
 
   Future<void> _loadPlayerData() async {
     try {
-      final stats = await _statsService.getPlayerStats(widget.player.id);
       final latest = await _statsService.getLatestPlayerStats(widget.player.id);
       final averages = await _statsService.getLeagueAverages();
       
       setState(() {
-        _playerStats = stats;
         _latestStats = latest;
         _leagueAverages = averages;
         _isLoading = false;
@@ -140,7 +137,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                           style: Theme.of(context).textTheme.bodySmall,
                           textAlign: TextAlign.center,
                         ),
-                      )).toList(),
+                      )),
                     ],
                   ),
                 ),
@@ -173,7 +170,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                           style: Theme.of(context).textTheme.bodySmall,
                           textAlign: TextAlign.center,
                         ),
-                      )).toList(),
+                      )),
                     ],
                   ),
                 ),
@@ -185,86 +182,6 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     );
   }
 
-  Widget _buildPlayerHeader(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.2),
-              ),
-              child: Center(
-                child: Text(
-                  widget.player.name.split(' ').map((e) => e[0]).take(2).join().toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.player.name,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.player.attributes.preferredPosition,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.star, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${widget.player.currentRankScore.toStringAsFixed(1)} Rank',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildStatsOverview(BuildContext context) {
     return Column(
@@ -298,7 +215,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                         .map((e) => e.rankScore)
                         .reduce((a, b) => a > b ? a : b)
                         .toStringAsFixed(1)
-                    : '${widget.player.currentRankScore.toStringAsFixed(1)}',
+                    : widget.player.currentRankScore.toStringAsFixed(1),
                 Icons.trending_up,
                 Colors.green,
               ),
