@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "731836758075",
+    "project_id": "kickabout-ddc06",
+    "storage_bucket": "kickabout-ddc06.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:731836758075:android:0dde0fad28e8c51003441e",
+        "android_client_info": {
+          "package_name": "com.mycompany.CounterApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzz0lNtzpqFPcZalk3OIxjdsSuq-F8dFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

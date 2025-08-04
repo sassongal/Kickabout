@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:kickabout/theme.dart';
-import 'package:kickabout/screens/home_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'screens/player_management_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const KickaboutApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class KickaboutApp extends StatelessWidget {
+  const KickaboutApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Kickabout',
-      debugShowCheckedModeBanner: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
-      home: const HomePage(), // TODO(agent): please implement.
+      debugShowCheckedModeBanner: false,
+      home: PlayerManagementScreen(),
     );
   }
 }
