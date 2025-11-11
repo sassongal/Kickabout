@@ -1,0 +1,104 @@
+{
+  "@@locale": "he",
+  "appName": "קיקאבוט",
+  "@appName": {
+    "description": "שם האפליקציה"
+  },
+  "welcome": "ברוכים הבאים",
+  "@welcome": {
+    "description": "הודעת ברכה"
+  },
+  "login": "התחבר",
+  "@login": {
+    "description": "כפתור התחברות"
+  },
+  "register": "הרשם",
+  "@register": {
+    "description": "כפתור הרשמה"
+  },
+  "email": "אימייל",
+  "@email": {
+    "description": "שדה אימייל"
+  },
+  "password": "סיסמה",
+  "@password": {
+    "description": "שדה סיסמה"
+  },
+  "name": "שם",
+  "@name": {
+    "description": "שדה שם"
+  },
+  "phoneNumber": "מספר טלפון",
+  "@phoneNumber": {
+    "description": "שדה מספר טלפון"
+  },
+  "home": "בית",
+  "@home": {
+    "description": "כותרת דף בית"
+  },
+  "players": "שחקנים",
+  "@players": {
+    "description": "כותרת שחקנים"
+  },
+  "games": "משחקים",
+  "@games": {
+    "description": "כותרת משחקים"
+  },
+  "hubs": "הובס",
+  "@hubs": {
+    "description": "כותרת הובס"
+  },
+  "createGame": "צור משחק",
+  "@createGame": {
+    "description": "כפתור צור משחק"
+  },
+  "createHub": "צור הוב",
+  "@createHub": {
+    "description": "כפתור צור הוב"
+  },
+  "teamFormation": "יצירת קבוצות",
+  "@teamFormation": {
+    "description": "כותרת יצירת קבוצות"
+  },
+  "stats": "סטטיסטיקות",
+  "@stats": {
+    "description": "כותרת סטטיסטיקות"
+  },
+  "profile": "פרופיל",
+  "@profile": {
+    "description": "כותרת פרופיל"
+  },
+  "share": "שתף",
+  "@share": {
+    "description": "כפתור שיתוף"
+  },
+  "save": "שמור",
+  "@save": {
+    "description": "כפתור שמירה"
+  },
+  "cancel": "ביטול",
+  "@cancel": {
+    "description": "כפתור ביטול"
+  },
+  "delete": "מחק",
+  "@delete": {
+    "description": "כפתור מחיקה"
+  },
+  "edit": "ערוך",
+  "@edit": {
+    "description": "כפתור עריכה"
+  },
+  "loading": "טוען...",
+  "@loading": {
+    "description": "הודעת טעינה"
+  },
+  "error": "שגיאה",
+  "@error": {
+    "description": "כותרת שגיאה"
+  },
+  "success": "הצלחה",
+  "@success": {
+    "description": "כותרת הצלחה"
+  }
+}
+
