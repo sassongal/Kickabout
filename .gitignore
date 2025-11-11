@@ -45,6 +45,7 @@ app.*.map.json
 # Android related
 *.keystore
 *.jks
+taskflow-key.keystore
 android/key.properties
 android/local.properties
 android/app/google-services.json
