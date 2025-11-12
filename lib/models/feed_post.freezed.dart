@@ -29,6 +29,7 @@ mixin _$FeedPost {
   String? get gameId => throw _privateConstructorUsedError;
   String? get achievementId => throw _privateConstructorUsedError;
   List<String> get likes => throw _privateConstructorUsedError;
+  int get commentsCount => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
 
@@ -56,6 +57,7 @@ abstract class $FeedPostCopyWith<$Res> {
       String? gameId,
       String? achievementId,
       List<String> likes,
+      int commentsCount,
       @TimestampConverter() DateTime createdAt});
 }
 
@@ -82,6 +84,7 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
     Object? gameId = freezed,
     Object? achievementId = freezed,
     Object? likes = null,
+    Object? commentsCount = null,
     Object? createdAt = null,
   }) {
     return _then(_value.copyWith(
@@ -117,6 +120,10 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
           ? _value.likes
           : likes // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      commentsCount: null == commentsCount
+          ? _value.commentsCount
+          : commentsCount // ignore: cast_nullable_to_non_nullable
+              as int,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -142,6 +149,7 @@ abstract class _$$FeedPostImplCopyWith<$Res>
       String? gameId,
       String? achievementId,
       List<String> likes,
+      int commentsCount,
       @TimestampConverter() DateTime createdAt});
 }
 
@@ -166,6 +174,7 @@ class __$$FeedPostImplCopyWithImpl<$Res>
     Object? gameId = freezed,
     Object? achievementId = freezed,
     Object? likes = null,
+    Object? commentsCount = null,
     Object? createdAt = null,
   }) {
     return _then(_$FeedPostImpl(
@@ -201,6 +210,10 @@ class __$$FeedPostImplCopyWithImpl<$Res>
           ? _value._likes
           : likes // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      commentsCount: null == commentsCount
+          ? _value.commentsCount
+          : commentsCount // ignore: cast_nullable_to_non_nullable
+              as int,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -221,6 +234,7 @@ class _$FeedPostImpl implements _FeedPost {
       this.gameId,
       this.achievementId,
       final List<String> likes = const [],
+      this.commentsCount = 0,
       @TimestampConverter() required this.createdAt})
       : _likes = likes;
 
@@ -252,12 +266,15 @@ class _$FeedPostImpl implements _FeedPost {
   }
 
   @override
+  @JsonKey()
+  final int commentsCount;
+  @override
   @TimestampConverter()
   final DateTime createdAt;
 
   @override
   String toString() {
-    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, gameId: $gameId, achievementId: $achievementId, likes: $likes, createdAt: $createdAt)';
+    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, gameId: $gameId, achievementId: $achievementId, likes: $likes, commentsCount: $commentsCount, createdAt: $createdAt)';
   }
 
   @override
@@ -275,6 +292,8 @@ class _$FeedPostImpl implements _FeedPost {
             (identical(other.achievementId, achievementId) ||
                 other.achievementId == achievementId) &&
             const DeepCollectionEquality().equals(other._likes, _likes) &&
+            (identical(other.commentsCount, commentsCount) ||
+                other.commentsCount == commentsCount) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
@@ -291,6 +310,7 @@ class _$FeedPostImpl implements _FeedPost {
       gameId,
       achievementId,
       const DeepCollectionEquality().hash(_likes),
+      commentsCount,
       createdAt);
 
   /// Create a copy of FeedPost
@@ -319,6 +339,7 @@ abstract class _FeedPost implements FeedPost {
           final String? gameId,
           final String? achievementId,
           final List<String> likes,
+          final int commentsCount,
           @TimestampConverter() required final DateTime createdAt}) =
       _$FeedPostImpl;
 
@@ -341,6 +362,8 @@ abstract class _FeedPost implements FeedPost {
   String? get achievementId;
   @override
   List<String> get likes;
+  @override
+  int get commentsCount;
   @override
   @TimestampConverter()
   DateTime get createdAt;

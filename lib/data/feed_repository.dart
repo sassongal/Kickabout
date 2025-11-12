@@ -91,6 +91,45 @@ class FeedRepository {
     }
   }
 
+  /// Watch a single post
+  Stream<FeedPost?> watchPost(String hubId, String postId) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value(null);
+    }
+
+    return _firestore
+        .collection(FirestorePaths.hub(hubId))
+        .doc('feed')
+        .collection('posts')
+        .doc(postId)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) return null;
+      return FeedPost.fromJson({...snapshot.data()!, 'postId': snapshot.id});
+    });
+  }
+
+  /// Get a single post (non-streaming)
+  Future<FeedPost?> getPost(String hubId, String postId) async {
+    if (!Env.isFirebaseAvailable) {
+      return null;
+    }
+
+    try {
+      final doc = await _firestore
+          .collection(FirestorePaths.hub(hubId))
+          .doc('feed')
+          .collection('posts')
+          .doc(postId)
+          .get();
+
+      if (!doc.exists) return null;
+      return FeedPost.fromJson({...doc.data()!, 'postId': doc.id});
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Delete post
   Future<void> deletePost(String hubId, String postId) async {
     if (!Env.isFirebaseAvailable) {

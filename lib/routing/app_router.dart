@@ -18,6 +18,14 @@ import 'package:kickabout/screens/profile/edit_profile_screen.dart';
 import 'package:kickabout/screens/location/discover_hubs_screen.dart';
 import 'package:kickabout/screens/location/map_screen.dart';
 import 'package:kickabout/screens/social/notifications_screen.dart';
+import 'package:kickabout/screens/social/post_detail_screen.dart';
+import 'package:kickabout/screens/social/following_screen.dart';
+import 'package:kickabout/screens/social/followers_screen.dart';
+import 'package:kickabout/screens/home_screen.dart';
+import 'package:kickabout/screens/game/game_chat_screen.dart';
+import 'package:kickabout/screens/social/messages_list_screen.dart';
+import 'package:kickabout/screens/social/private_chat_screen.dart';
+import 'package:kickabout/screens/gamification/leaderboard_screen.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 
 /// Auth state stream provider
@@ -63,11 +71,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
 
-      // Home route (hub list)
+      // Home route
       GoRoute(
         path: '/',
         name: 'home',
-        builder: (context, state) => const HubListScreen(),
+        builder: (context, state) => const HomeScreen(),
       ),
 
       // Location/Discovery routes
@@ -89,6 +97,33 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationsScreen(),
       ),
 
+      // Messages routes
+      GoRoute(
+        path: '/messages',
+        name: 'messages',
+        builder: (context, state) => const MessagesListScreen(),
+        routes: [
+          GoRoute(
+            path: ':conversationId',
+            name: 'privateChat',
+            builder: (context, state) {
+              final conversationId = state.pathParameters['conversationId']!;
+              return PrivateChatScreen(conversationId: conversationId);
+            },
+          ),
+        ],
+      ),
+
+      // Leaderboard route
+      GoRoute(
+        path: '/leaderboard',
+        name: 'leaderboard',
+        builder: (context, state) {
+          final hubId = state.uri.queryParameters['hubId'];
+          return LeaderboardScreen(hubId: hubId);
+        },
+      ),
+
       // Hub routes
       GoRoute(
         path: '/hubs',
@@ -107,6 +142,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               final hubId = state.pathParameters['id']!;
               return HubDetailScreen(hubId: hubId);
             },
+            routes: [
+              GoRoute(
+                path: 'feed/:postId',
+                name: 'postDetail',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  final postId = state.pathParameters['postId']!;
+                  return PostDetailScreen(hubId: hubId, postId: postId);
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -157,6 +203,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                   return BasicRatingScreen(gameId: gameId);
                 },
               ),
+              GoRoute(
+                path: 'chat',
+                name: 'gameChat',
+                builder: (context, state) {
+                  final gameId = state.pathParameters['id']!;
+                  return GameChatScreen(gameId: gameId);
+                },
+              ),
             ],
           ),
         ],
@@ -177,6 +231,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final userId = state.pathParameters['uid']!;
               return EditProfileScreen(userId: userId);
+            },
+          ),
+          GoRoute(
+            path: 'following',
+            name: 'following',
+            builder: (context, state) {
+              final userId = state.pathParameters['uid']!;
+              return FollowingScreen(userId: userId);
+            },
+          ),
+          GoRoute(
+            path: 'followers',
+            name: 'followers',
+            builder: (context, state) {
+              final userId = state.pathParameters['uid']!;
+              return FollowersScreen(userId: userId);
             },
           ),
         ],

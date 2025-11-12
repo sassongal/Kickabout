@@ -1,38 +1,32 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'feed_post.dart';
+part of 'comment.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
-    _$FeedPostImpl(
+_$CommentImpl _$$CommentImplFromJson(Map<String, dynamic> json) =>
+    _$CommentImpl(
+      commentId: json['commentId'] as String,
       postId: json['postId'] as String,
       hubId: json['hubId'] as String,
       authorId: json['authorId'] as String,
-      type: json['type'] as String,
-      content: json['content'] as String?,
-      gameId: json['gameId'] as String?,
-      achievementId: json['achievementId'] as String?,
+      text: json['text'] as String,
       likes:
           (json['likes'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
-      commentsCount: (json['commentsCount'] as num?)?.toInt() ?? 0,
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
     );
 
-Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
+Map<String, dynamic> _$$CommentImplToJson(_$CommentImpl instance) =>
     <String, dynamic>{
+      'commentId': instance.commentId,
       'postId': instance.postId,
       'hubId': instance.hubId,
       'authorId': instance.authorId,
-      'type': instance.type,
-      'content': instance.content,
-      'gameId': instance.gameId,
-      'achievementId': instance.achievementId,
+      'text': instance.text,
       'likes': instance.likes,
-      'commentsCount': instance.commentsCount,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
     };

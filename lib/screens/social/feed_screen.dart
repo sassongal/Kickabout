@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickabout/data/feed_repository.dart';
+import 'package:kickabout/data/users_repository.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/widgets/player_avatar.dart';
 
@@ -206,9 +208,11 @@ class _PostCard extends ConsumerWidget {
                     ),
                     Text('${post.likes.length}'),
                     const SizedBox(width: 16),
-                    const Icon(Icons.comment_outlined),
-                    const SizedBox(width: 8),
-                    const Text('0'), // TODO: Add comments
+                    IconButton(
+                      icon: const Icon(Icons.comment_outlined),
+                      onPressed: () => context.push('/hubs/${post.hubId}/feed/${post.postId}'),
+                    ),
+                    Text('${post.commentsCount}'),
                   ],
                 ),
               ],

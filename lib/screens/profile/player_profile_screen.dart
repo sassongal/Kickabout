@@ -21,9 +21,17 @@ class PlayerProfileScreen extends ConsumerWidget {
     final usersRepo = ref.watch(usersRepositoryProvider);
     final ratingsRepo = ref.watch(ratingsRepositoryProvider);
     final gamesRepo = ref.watch(gamesRepositoryProvider);
+    final followRepo = ref.watch(followRepositoryProvider);
+    final gamificationRepo = ref.watch(gamificationRepositoryProvider);
 
     final userStream = usersRepo.watchUser(playerId);
     final ratingHistoryStream = ratingsRepo.watchRatingHistory(playerId);
+    final gamificationStream = gamificationRepo.watchGamification(playerId);
+    final isFollowingStream = currentUserId != null && currentUserId != playerId
+        ? followRepo.watchIsFollowing(currentUserId, playerId)
+        : Stream.value(false);
+    final followingCountStream = followRepo.watchFollowingCount(playerId);
+    final followersCountStream = followRepo.watchFollowersCount(playerId);
     final isOwnProfile = currentUserId == playerId;
 
     return AppScaffold(
@@ -129,12 +137,180 @@ class PlayerProfileScreen extends ConsumerWidget {
                                       ),
                                     ],
                                   ),
+                                  if (!isOwnProfile) ...[
+                                    const SizedBox(height: 12),
+                                    StreamBuilder<bool>(
+                                      stream: isFollowingStream,
+                                      builder: (context, isFollowingSnapshot) {
+                                        final isFollowing = isFollowingSnapshot.data ?? false;
+                                        return ElevatedButton.icon(
+                                          onPressed: () async {
+                                            if (currentUserId == null) return;
+                                            try {
+                                              if (isFollowing) {
+                                                await followRepo.unfollow(currentUserId, playerId);
+                                              } else {
+                                                await followRepo.follow(currentUserId, playerId);
+                                              }
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('שגיאה: $e')),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          icon: Icon(isFollowing ? Icons.person_remove : Icons.person_add),
+                                          label: Text(isFollowing ? 'ביטול עקיבה' : 'עקוב'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: isFollowing
+                                                ? Theme.of(context).colorScheme.error
+                                                : Theme.of(context).colorScheme.primary,
+                                            foregroundColor: isFollowing
+                                                ? Theme.of(context).colorScheme.onError
+                                                : Theme.of(context).colorScheme.onPrimary,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      StreamBuilder<int>(
+                                        stream: followersCountStream,
+                                        builder: (context, snapshot) {
+                                          final count = snapshot.data ?? 0;
+                                          return InkWell(
+                                            onTap: () => context.push('/profile/$playerId/followers'),
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  '$count',
+                                                  style: const TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const Text(
+                                                  'עוקבים',
+                                                  style: TextStyle(fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(width: 24),
+                                      StreamBuilder<int>(
+                                        stream: followingCountStream,
+                                        builder: (context, snapshot) {
+                                          final count = snapshot.data ?? 0;
+                                          return InkWell(
+                                            onTap: () => context.push('/profile/$playerId/following'),
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  '$count',
+                                                  style: const TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const Text(
+                                                  'עוקב',
+                                                  style: TextStyle(fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Gamification
+                    StreamBuilder<Gamification?>(
+                      stream: gamificationStream,
+                      builder: (context, gamificationSnapshot) {
+                        final gamification = gamificationSnapshot.data;
+                        if (gamification != null) {
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'גיימיפיקציה',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                    children: [
+                                      Column(
+                                        children: [
+                                          Text(
+                                            '${gamification.points}',
+                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.amber,
+                                                ),
+                                          ),
+                                          const Text('נקודות'),
+                                        ],
+                                      ),
+                                      Column(
+                                        children: [
+                                          Text(
+                                            'Level ${gamification.level}',
+                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.blue,
+                                                ),
+                                          ),
+                                          const Text('רמה'),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  if (gamification.badges.isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'תגים',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      children: gamification.badges.map((badge) {
+                                        return Chip(
+                                          label: Text(badge),
+                                          backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
                     ),
                     const SizedBox(height: 24),
 

@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/services/location_service.dart';
+import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/utils/snackbar_helper.dart';
 
 /// Map picker screen - allows user to select location on map

@@ -30,9 +30,11 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
-      setState(() {
-        _currentTab = _tabController.index;
-      });
+      if (mounted) {
+        setState(() {
+          _currentTab = _tabController.index;
+        });
+      }
     });
   }
 
@@ -43,7 +45,8 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    // ConsumerState provides 'ref' automatically
     final currentUserId = ref.watch(currentUserIdProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
     final usersRepo = ref.watch(usersRepositoryProvider);

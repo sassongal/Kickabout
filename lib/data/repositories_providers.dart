@@ -4,6 +4,7 @@ import 'package:kickabout/data/repositories.dart';
 import 'package:kickabout/services/auth_service.dart';
 import 'package:kickabout/services/storage_service.dart';
 import 'package:kickabout/services/location_service.dart';
+import 'package:kickabout/services/push_notification_service.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -45,12 +46,32 @@ final feedRepositoryProvider = Provider<FeedRepository>((ref) {
   return FeedRepository(firestore: ref.watch(firestoreProvider));
 });
 
+final commentsRepositoryProvider = Provider<CommentsRepository>((ref) {
+  return CommentsRepository(firestore: ref.watch(firestoreProvider));
+});
+
+final followRepositoryProvider = Provider<FollowRepository>((ref) {
+  return FollowRepository(firestore: ref.watch(firestoreProvider));
+});
+
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return ChatRepository(firestore: ref.watch(firestoreProvider));
 });
 
 final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
   return NotificationsRepository(firestore: ref.watch(firestoreProvider));
+});
+
+final gamificationRepositoryProvider = Provider<GamificationRepository>((ref) {
+  return GamificationRepository(firestore: ref.watch(firestoreProvider));
+});
+
+final leaderboardRepositoryProvider = Provider<LeaderboardRepository>((ref) {
+  return LeaderboardRepository(firestore: ref.watch(firestoreProvider));
+});
+
+final privateMessagesRepositoryProvider = Provider<PrivateMessagesRepository>((ref) {
+  return PrivateMessagesRepository(firestore: ref.watch(firestoreProvider));
 });
 
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -60,6 +81,11 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 /// Location service provider
 final locationServiceProvider = Provider<LocationService>((ref) {
   return LocationService();
+});
+
+/// Push notification service provider
+final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  return PushNotificationService();
 });
 
 /// Auth service provider (exported from app_router)

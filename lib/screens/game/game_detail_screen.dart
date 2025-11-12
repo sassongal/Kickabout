@@ -129,6 +129,16 @@ class GameDetailScreen extends ConsumerWidget {
 
                     // Action buttons
                     if (currentUserId != null) ...[
+                      // Chat button
+                      OutlinedButton.icon(
+                        onPressed: () => context.push('/games/$gameId/chat'),
+                        icon: const Icon(Icons.chat),
+                        label: const Text('צ\'אט משחק'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       // Sign up / Remove signup button
                       if (!isCreator)
                         ElevatedButton.icon(
@@ -145,7 +155,7 @@ class GameDetailScreen extends ConsumerWidget {
                                 : Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
-                      const SizedBox(height: 12),
+                      if (!isCreator) const SizedBox(height: 12),
 
                       // Creator-only buttons
                       if (isCreator) ...[

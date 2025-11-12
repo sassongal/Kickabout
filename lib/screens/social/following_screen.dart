@@ -1,0 +1,72 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kickabout/widgets/app_scaffold.dart';
+import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickabout/models/models.dart';
+import 'package:kickabout/widgets/player_avatar.dart';
+
+/// Following screen - shows users that a user is following
+class FollowingScreen extends ConsumerWidget {
+  final String userId;
+
+  const FollowingScreen({super.key, required this.userId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final followRepo = ref.watch(followRepositoryProvider);
+    final followingStream = followRepo.watchFollowing(userId);
+
+    return AppScaffold(
+      title: 'עוקב אחרי',
+      body: StreamBuilder<List<User>>(
+        stream: followingStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('שגיאה: ${snapshot.error}'),
+            );
+          }
+
+          final users = snapshot.data ?? [];
+
+          if (users.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.person_outline, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('אין עוקבים'),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: users.length,
+            padding: const EdgeInsets.all(8),
+            itemBuilder: (context, index) {
+              final user = users[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: ListTile(
+                  leading: PlayerAvatar(user: user, radius: 24),
+                  title: Text(user.name),
+                  subtitle: Text(user.email),
+                  trailing: const Icon(Icons.chevron_left),
+                  onTap: () => context.push('/profile/${user.uid}'),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+

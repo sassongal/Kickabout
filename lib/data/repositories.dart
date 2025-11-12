@@ -7,6 +7,11 @@ export 'teams_repository.dart';
 export 'events_repository.dart';
 export 'ratings_repository.dart';
 export 'feed_repository.dart';
+export 'comments_repository.dart';
+export 'follow_repository.dart';
 export 'chat_repository.dart';
 export 'notifications_repository.dart';
+export 'gamification_repository.dart';
+export 'leaderboard_repository.dart';
+export 'private_messages_repository.dart';
 

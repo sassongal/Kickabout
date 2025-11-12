@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickabout/data/notifications_repository.dart';
 import 'package:kickabout/models/models.dart';
+import 'package:kickabout/models/notification.dart' as app_notification;
 
 /// Notifications screen - shows all notifications for current user
 class NotificationsScreen extends ConsumerWidget {
@@ -56,7 +58,7 @@ class NotificationsScreen extends ConsumerWidget {
           },
         ),
       ],
-      body: StreamBuilder<List<Notification>>(
+      body: StreamBuilder<List<app_notification.Notification>>(
         stream: notificationsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -113,7 +115,7 @@ class NotificationsScreen extends ConsumerWidget {
 }
 
 class _NotificationCard extends ConsumerWidget {
-  final Notification notification;
+  final app_notification.Notification notification;
   final NotificationsRepository notificationsRepo;
 
   const _NotificationCard({
@@ -156,7 +158,7 @@ class _NotificationCard extends ConsumerWidget {
   }
 
   void _handleTap(BuildContext context) {
-    if (notification.read) {
+    if (!notification.read) {
       notificationsRepo.markAsRead(notification.userId, notification.notificationId);
     }
 

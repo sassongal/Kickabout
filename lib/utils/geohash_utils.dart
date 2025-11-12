@@ -2,7 +2,7 @@
 /// Based on: https://en.wikipedia.org/wiki/Geohash
 class GeohashUtils {
   static const String _base32 = '0123456789bcdefghjkmnpqrstuvwxyz';
-  static const List<double> _bits = [16, 8, 4, 2, 1];
+  static const List<int> _bits = [16, 8, 4, 2, 1];
 
   /// Encode latitude and longitude to geohash
   static String encode(double latitude, double longitude, {int precision = 8}) {

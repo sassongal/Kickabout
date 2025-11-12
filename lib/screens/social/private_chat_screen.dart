@@ -3,23 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickabout/data/private_messages_repository.dart';
 import 'package:kickabout/data/users_repository.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/widgets/player_avatar.dart';
+import 'package:kickabout/utils/snackbar_helper.dart';
 
-/// Hub chat screen - real-time chat for a hub
-class HubChatScreen extends ConsumerStatefulWidget {
-  final String hubId;
+/// Private chat screen - one-on-one conversation
+class PrivateChatScreen extends ConsumerStatefulWidget {
+  final String conversationId;
 
-  const HubChatScreen({super.key, required this.hubId});
+  const PrivateChatScreen({super.key, required this.conversationId});
 
   @override
-  ConsumerState<HubChatScreen> createState() => _HubChatScreenState();
+  ConsumerState<PrivateChatScreen> createState() => _PrivateChatScreenState();
 }
 
-class _HubChatScreenState extends ConsumerState<HubChatScreen> {
+class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _markAsRead();
+  }
 
   @override
   void dispose() {
@@ -28,51 +36,31 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
-  Future<void> _sendMessage() async {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-
+  Future<void> _markAsRead() async {
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) return;
 
     try {
-      final chatRepo = ref.read(chatRepositoryProvider);
-      await chatRepo.sendMessage(widget.hubId, currentUserId, text);
-      _messageController.clear();
-      _scrollToBottom();
+      final privateMessagesRepo = ref.read(privateMessagesRepositoryProvider);
+      await privateMessagesRepo.markAsRead(widget.conversationId, currentUserId);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה בשליחת הודעה: $e')),
-        );
-      }
+      debugPrint('Failed to mark as read: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final chatRepo = ref.watch(chatRepositoryProvider);
+    final privateMessagesRepo = ref.watch(privateMessagesRepositoryProvider);
     final usersRepo = ref.watch(usersRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
-    final messagesStream = chatRepo.watchMessages(widget.hubId);
+    final messagesStream = privateMessagesRepo.watchMessages(widget.conversationId);
 
     return AppScaffold(
-      title: 'צ\'אט',
+      title: 'שיחה פרטית',
       body: Column(
         children: [
-          // Messages list
           Expanded(
-            child: StreamBuilder<List<ChatMessage>>(
+            child: StreamBuilder<List<PrivateMessage>>(
               stream: messagesStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -97,28 +85,24 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
                         const Text('אין הודעות עדיין'),
                         const SizedBox(height: 8),
                         Text(
-                          'היה הראשון לשלוח הודעה!',
+                          'התחל שיחה!',
                           style: TextStyle(color: Colors.grey[600]),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
                   );
                 }
 
-                // Scroll to bottom when new messages arrive
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _scrollToBottom();
-                });
-
                 return ListView.builder(
+                  reverse: true,
                   controller: _scrollController,
-                  padding: const EdgeInsets.all(8),
                   itemCount: messages.length,
+                  padding: const EdgeInsets.all(8),
                   itemBuilder: (context, index) {
                     final message = messages[index];
                     final isMe = message.authorId == currentUserId;
-
-                    return _MessageBubble(
+                    return _PrivateMessageBubble(
                       message: message,
                       isMe: isMe,
                       usersRepo: usersRepo,
@@ -128,68 +112,43 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
               },
             ),
           ),
-          // Input field
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
+          if (currentUserId != null)
+            _ChatInputField(
+              messageController: _messageController,
+              onSend: (text) async {
+                if (text.trim().isEmpty) return;
+                try {
+                  final privateMessagesRepo = ref.read(privateMessagesRepositoryProvider);
+                  await privateMessagesRepo.sendMessage(
+                    widget.conversationId,
+                    currentUserId,
+                    text.trim(),
+                  );
+                  _messageController.clear();
+                  _scrollController.animateTo(
+                    0.0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                } catch (e) {
+                  if (mounted) {
+                    SnackbarHelper.showError(context, 'שגיאה בשליחת הודעה: $e');
+                  }
+                }
+              },
             ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'הקלד הודעה...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                        ),
-                        maxLines: null,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: _sendMessage,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                        padding: const EdgeInsets.all(12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _MessageBubble extends ConsumerWidget {
-  final ChatMessage message;
+class _PrivateMessageBubble extends ConsumerWidget {
+  final PrivateMessage message;
   final bool isMe;
   final UsersRepository usersRepo;
 
-  const _MessageBubble({
+  const _PrivateMessageBubble({
     required this.message,
     required this.isMe,
     required this.usersRepo,
@@ -214,10 +173,7 @@ class _MessageBubble extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isMe) ...[
-                PlayerAvatar(
-                  user: author,
-                  radius: 16,
-                ),
+                PlayerAvatar(user: author, radius: 16),
                 const SizedBox(width: 8),
               ],
               Flexible(
@@ -255,15 +211,27 @@ class _MessageBubble extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        DateFormat('HH:mm').format(message.createdAt),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: (isMe
-                                  ? Theme.of(context).colorScheme.onPrimary
-                                  : Theme.of(context).colorScheme.onSurfaceVariant)
-                              .withOpacity(0.7),
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            DateFormat('HH:mm').format(message.createdAt),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isMe
+                                  ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
+                                  : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                            ),
+                          ),
+                          if (isMe && message.read) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.done_all,
+                              size: 12,
+                              color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -271,15 +239,54 @@ class _MessageBubble extends ConsumerWidget {
               ),
               if (isMe) ...[
                 const SizedBox(width: 8),
-                PlayerAvatar(
-                  user: author,
-                  radius: 16,
-                ),
+                PlayerAvatar(user: author, radius: 16),
               ],
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _ChatInputField extends StatelessWidget {
+  final TextEditingController messageController;
+  final ValueChanged<String> onSend;
+
+  const _ChatInputField({
+    required this.messageController,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: messageController,
+              decoration: InputDecoration(
+                hintText: 'הקלד הודעה...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              onSubmitted: onSend,
+            ),
+          ),
+          const SizedBox(width: 8),
+          FloatingActionButton.small(
+            onPressed: () => onSend(messageController.text),
+            child: const Icon(Icons.send),
+          ),
+        ],
+      ),
     );
   }
 }

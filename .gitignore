@@ -119,3 +119,14 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Old/backup files
+*.old
+*.backup
+*~
+
+# Old project directories (if not needed)
+# Kickabout-React-Node/
+# client/
+# client_backup/
+# kickabout/

@@ -16,6 +16,7 @@ class FeedPost with _$FeedPost {
     String? gameId,
     String? achievementId,
     @Default([]) List<String> likes,
+    @Default(0) int commentsCount,
     @TimestampConverter() required DateTime createdAt,
   }) = _FeedPost;
 

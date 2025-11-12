@@ -7,6 +7,8 @@ import 'package:kickabout/firebase_options.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:kickabout/l10n/app_localizations.dart';
 import 'package:kickabout/routing/app_router.dart';
+import 'package:kickabout/services/push_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +21,16 @@ void main() async {
     // Firebase initialized successfully
     Env.limitedMode = false;
     debugPrint('✅ Firebase initialized successfully');
+    
+    // Initialize push notifications
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      final pushService = PushNotificationService();
+      await pushService.initialize();
+      debugPrint('✅ Push notifications initialized');
+    } catch (e) {
+      debugPrint('⚠️ Push notifications initialization failed: $e');
+    }
   } catch (e) {
     // Firebase not configured or initialization failed
     // App will continue in limited mode (no crash)
