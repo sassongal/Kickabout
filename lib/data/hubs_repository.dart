@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/services/firestore_paths.dart';
+import 'package:kickabout/utils/geohash_utils.dart';
 
 /// Repository for Hub operations
 class HubsRepository {
@@ -100,6 +102,25 @@ class HubsRepository {
             .toList());
   }
 
+  /// Get hubs by member (non-streaming)
+  Future<List<Hub>> getHubsByMember(String uid) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      final snapshot = await _firestore
+          .collection(FirestorePaths.hubs())
+          .where('memberIds', arrayContains: uid)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Add member to hub
   Future<void> addMember(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) {
@@ -140,6 +161,91 @@ class HubsRepository {
     } catch (e) {
       return false;
     }
+  }
+
+  /// Find hubs within radius (km) using geohash
+  /// This is an approximate search - results are filtered by actual distance
+  Future<List<Hub>> findHubsNearby({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      // Generate geohash (precision 7 = ~150m)
+      final centerHash = GeohashUtils.encode(latitude, longitude, precision: 7);
+      final neighbors = GeohashUtils.neighbors(centerHash);
+
+      // Query Firestore with geohash prefixes
+      final allHashes = [centerHash, ...neighbors];
+      final queries = allHashes.map((hash) => _firestore
+          .collection(FirestorePaths.hubs())
+          .where('geohash', isGreaterThanOrEqualTo: hash)
+          .where('geohash', isLessThan: hash + '~')
+          .get());
+
+      final results = await Future.wait(queries);
+
+      // Filter by actual distance
+      final hubs = results
+          .expand((snapshot) => snapshot.docs)
+          .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
+          .where((hub) {
+            if (hub.location == null) return false;
+            final distance = Geolocator.distanceBetween(
+              latitude,
+              longitude,
+              hub.location!.latitude,
+              hub.location!.longitude,
+            ) / 1000; // Convert to km
+            return distance <= radiusKm;
+          })
+          .toList();
+
+      // Sort by distance
+      hubs.sort((a, b) {
+        final distA = Geolocator.distanceBetween(
+          latitude,
+          longitude,
+          a.location!.latitude,
+          a.location!.longitude,
+        );
+        final distB = Geolocator.distanceBetween(
+          latitude,
+          longitude,
+          b.location!.latitude,
+          b.location!.longitude,
+        );
+        return distA.compareTo(distB);
+      });
+
+      return hubs;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Stream hubs within radius (km)
+  /// Note: This creates a stream that queries periodically - not real-time
+  Stream<List<Hub>> watchHubsNearby({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
+    // For now, return a stream that queries every 30 seconds
+    // In production, you might want to use a more efficient approach
+    return Stream.periodic(const Duration(seconds: 30), (_) => null)
+        .asyncMap((_) => findHubsNearby(
+              latitude: latitude,
+              longitude: longitude,
+              radiusKm: radiusKm,
+            ))
+        .distinct();
   }
 }
 

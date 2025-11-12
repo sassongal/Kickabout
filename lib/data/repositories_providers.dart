@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/data/repositories.dart';
 import 'package:kickabout/services/auth_service.dart';
 import 'package:kickabout/services/storage_service.dart';
+import 'package:kickabout/services/location_service.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -40,8 +41,25 @@ final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
   );
 });
 
+final feedRepositoryProvider = Provider<FeedRepository>((ref) {
+  return FeedRepository(firestore: ref.watch(firestoreProvider));
+});
+
+final chatRepositoryProvider = Provider<ChatRepository>((ref) {
+  return ChatRepository(firestore: ref.watch(firestoreProvider));
+});
+
+final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
+  return NotificationsRepository(firestore: ref.watch(firestoreProvider));
+});
+
 final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
+});
+
+/// Location service provider
+final locationServiceProvider = Provider<LocationService>((ref) {
+  return LocationService();
 });
 
 /// Auth service provider (exported from app_router)

@@ -5,6 +5,7 @@ import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/core/constants.dart';
+import 'package:kickabout/data/notifications_repository.dart';
 
 /// Hub list screen - lists hubs of user
 class HubListScreen extends ConsumerWidget {
@@ -29,6 +30,30 @@ class HubListScreen extends ConsumerWidget {
     return AppScaffold(
       title: 'הובס',
       actions: [
+        StreamBuilder<int>(
+          stream: ref.watch(notificationsRepositoryProvider).watchUnreadCount(currentUserId!),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return Badge(
+              label: count > 0 ? Text('$count') : null,
+              child: IconButton(
+                icon: const Icon(Icons.notifications),
+                tooltip: 'התראות',
+                onPressed: () => context.push('/notifications'),
+              ),
+            );
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.map),
+          tooltip: 'מפה',
+          onPressed: () => context.push('/map'),
+        ),
+        IconButton(
+          icon: const Icon(Icons.explore),
+          tooltip: 'גלה הובים',
+          onPressed: () => context.push('/discover'),
+        ),
         IconButton(
           icon: const Icon(Icons.logout),
           tooltip: 'התנתק',

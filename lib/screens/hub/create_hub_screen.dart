@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/core/constants.dart';
+import 'package:kickabout/services/location_service.dart';
+import 'package:kickabout/utils/snackbar_helper.dart';
+import 'package:kickabout/screens/location/map_picker_screen.dart';
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -19,12 +24,56 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   bool _isLoading = false;
+  GeoPoint? _selectedLocation;
+  String? _locationAddress;
+  bool _isLoadingLocation = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final locationService = ref.read(locationServiceProvider);
+      final position = await locationService.getCurrentLocation();
+
+      if (position != null) {
+        final geoPoint = locationService.positionToGeoPoint(position);
+        final address = await locationService.coordinatesToAddress(
+          position.latitude,
+          position.longitude,
+        );
+
+        setState(() {
+          _selectedLocation = geoPoint;
+          _locationAddress = address ?? '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+        });
+      } else {
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
   }
 
   Future<void> _createHub() async {
@@ -42,6 +91,17 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
+      final locationService = ref.read(locationServiceProvider);
+      
+      // Generate geohash if location is provided
+      String? geohash;
+      if (_selectedLocation != null) {
+        geohash = locationService.generateGeohash(
+          _selectedLocation!.latitude,
+          _selectedLocation!.longitude,
+        );
+      }
+
       final hub = Hub(
         hubId: '', // Will be generated
         name: _nameController.text.trim(),
@@ -51,6 +111,8 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         createdBy: currentUserId,
         createdAt: DateTime.now(),
         memberIds: [currentUserId], // Creator is automatically a member
+        location: _selectedLocation,
+        geohash: geohash,
       );
 
       await hubsRepo.createHub(hub);
@@ -115,6 +177,98 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                 ),
                 maxLines: 3,
                 textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 16),
+
+              // Location section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'מיקום (אופציונלי)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_locationAddress != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _locationAddress!,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedLocation = null;
+                                    _locationAddress = null;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoadingLocation
+                                  ? null
+                                  : _getCurrentLocation,
+                              icon: _isLoadingLocation
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.my_location),
+                              label: Text(_isLoadingLocation
+                                  ? 'מקבל מיקום...'
+                                  : 'מיקום נוכחי'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MapPickerScreen(
+                                      initialLocation: _selectedLocation,
+                                    ),
+                                  ),
+                                );
+                                if (result != null && mounted) {
+                                  setState(() {
+                                    _selectedLocation = result['location'] as GeoPoint;
+                                    _locationAddress = result['address'] as String?;
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.map),
+                              label: const Text('בחר במפה'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 32),
 

@@ -31,6 +31,9 @@ mixin _$User {
   double get currentRankScore => throw _privateConstructorUsedError;
   String get preferredPosition => throw _privateConstructorUsedError;
   int get totalParticipations => throw _privateConstructorUsedError;
+  @GeoPointConverter()
+  GeoPoint? get location => throw _privateConstructorUsedError;
+  String? get geohash => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -56,7 +59,9 @@ abstract class $UserCopyWith<$Res> {
       List<String> hubIds,
       double currentRankScore,
       String preferredPosition,
-      int totalParticipations});
+      int totalParticipations,
+      @GeoPointConverter() GeoPoint? location,
+      String? geohash});
 }
 
 /// @nodoc
@@ -84,6 +89,8 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? currentRankScore = null,
     Object? preferredPosition = null,
     Object? totalParticipations = null,
+    Object? location = freezed,
+    Object? geohash = freezed,
   }) {
     return _then(_value.copyWith(
       uid: null == uid
@@ -126,6 +133,14 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
               as int,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -147,7 +162,9 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       List<String> hubIds,
       double currentRankScore,
       String preferredPosition,
-      int totalParticipations});
+      int totalParticipations,
+      @GeoPointConverter() GeoPoint? location,
+      String? geohash});
 }
 
 /// @nodoc
@@ -172,6 +189,8 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? currentRankScore = null,
     Object? preferredPosition = null,
     Object? totalParticipations = null,
+    Object? location = freezed,
+    Object? geohash = freezed,
   }) {
     return _then(_$UserImpl(
       uid: null == uid
@@ -214,6 +233,14 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
               as int,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -231,7 +258,9 @@ class _$UserImpl implements _User {
       final List<String> hubIds = const [],
       this.currentRankScore = 5.0,
       this.preferredPosition = 'Midfielder',
-      this.totalParticipations = 0})
+      this.totalParticipations = 0,
+      @GeoPointConverter() this.location,
+      this.geohash})
       : _hubIds = hubIds;
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
@@ -268,10 +297,15 @@ class _$UserImpl implements _User {
   @override
   @JsonKey()
   final int totalParticipations;
+  @override
+  @GeoPointConverter()
+  final GeoPoint? location;
+  @override
+  final String? geohash;
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, location: $location, geohash: $geohash)';
   }
 
   @override
@@ -294,7 +328,10 @@ class _$UserImpl implements _User {
             (identical(other.preferredPosition, preferredPosition) ||
                 other.preferredPosition == preferredPosition) &&
             (identical(other.totalParticipations, totalParticipations) ||
-                other.totalParticipations == totalParticipations));
+                other.totalParticipations == totalParticipations) &&
+            (identical(other.location, location) ||
+                other.location == location) &&
+            (identical(other.geohash, geohash) || other.geohash == geohash));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -310,7 +347,9 @@ class _$UserImpl implements _User {
       const DeepCollectionEquality().hash(_hubIds),
       currentRankScore,
       preferredPosition,
-      totalParticipations);
+      totalParticipations,
+      location,
+      geohash);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -339,7 +378,9 @@ abstract class _User implements User {
       final List<String> hubIds,
       final double currentRankScore,
       final String preferredPosition,
-      final int totalParticipations}) = _$UserImpl;
+      final int totalParticipations,
+      @GeoPointConverter() final GeoPoint? location,
+      final String? geohash}) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
 
@@ -364,6 +405,11 @@ abstract class _User implements User {
   String get preferredPosition;
   @override
   int get totalParticipations;
+  @override
+  @GeoPointConverter()
+  GeoPoint? get location;
+  @override
+  String? get geohash;
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.

@@ -6,8 +6,12 @@ export 'game_signup.dart';
 export 'team.dart';
 export 'game_event.dart';
 export 'rating_snapshot.dart';
+export 'feed_post.dart';
+export 'chat_message.dart';
+export 'notification.dart';
 export 'enums/game_status.dart';
 export 'enums/signup_status.dart';
 export 'enums/event_type.dart';
 export 'converters/timestamp_converter.dart';
+export 'converters/geopoint_converter.dart';
 

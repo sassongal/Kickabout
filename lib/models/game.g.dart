@@ -12,6 +12,9 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       hubId: json['hubId'] as String,
       gameDate: const TimestampConverter().fromJson(json['gameDate'] as Object),
       location: json['location'] as String?,
+      locationPoint: const GeoPointConverter().fromJson(json['locationPoint']),
+      geohash: json['geohash'] as String?,
+      venueId: json['venueId'] as String?,
       teamCount: (json['teamCount'] as num?)?.toInt() ?? 2,
       status: json['status'] == null
           ? GameStatus.teamSelection
@@ -29,6 +32,9 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'hubId': instance.hubId,
       'gameDate': const TimestampConverter().toJson(instance.gameDate),
       'location': instance.location,
+      'locationPoint': const GeoPointConverter().toJson(instance.locationPoint),
+      'geohash': instance.geohash,
+      'venueId': instance.venueId,
       'teamCount': instance.teamCount,
       'status': const GameStatusConverter().toJson(instance.status),
       'createdAt': const TimestampConverter().toJson(instance.createdAt),

@@ -21,6 +21,8 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       currentRankScore: (json['currentRankScore'] as num?)?.toDouble() ?? 5.0,
       preferredPosition: json['preferredPosition'] as String? ?? 'Midfielder',
       totalParticipations: (json['totalParticipations'] as num?)?.toInt() ?? 0,
+      location: const GeoPointConverter().fromJson(json['location']),
+      geohash: json['geohash'] as String?,
     );
 
 Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
@@ -35,4 +37,6 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'currentRankScore': instance.currentRankScore,
       'preferredPosition': instance.preferredPosition,
       'totalParticipations': instance.totalParticipations,
+      'location': const GeoPointConverter().toJson(instance.location),
+      'geohash': instance.geohash,
     };

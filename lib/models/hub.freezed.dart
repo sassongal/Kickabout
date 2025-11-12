@@ -28,6 +28,10 @@ mixin _$Hub {
   DateTime get createdAt => throw _privateConstructorUsedError;
   List<String> get memberIds => throw _privateConstructorUsedError;
   Map<String, dynamic> get settings => throw _privateConstructorUsedError;
+  @GeoPointConverter()
+  GeoPoint? get location => throw _privateConstructorUsedError;
+  String? get geohash => throw _privateConstructorUsedError;
+  double? get radius => throw _privateConstructorUsedError;
 
   /// Serializes this Hub to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,7 +54,10 @@ abstract class $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       List<String> memberIds,
-      Map<String, dynamic> settings});
+      Map<String, dynamic> settings,
+      @GeoPointConverter() GeoPoint? location,
+      String? geohash,
+      double? radius});
 }
 
 /// @nodoc
@@ -74,6 +81,9 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? createdAt = null,
     Object? memberIds = null,
     Object? settings = null,
+    Object? location = freezed,
+    Object? geohash = freezed,
+    Object? radius = freezed,
   }) {
     return _then(_value.copyWith(
       hubId: null == hubId
@@ -104,6 +114,18 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.settings
           : settings // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      radius: freezed == radius
+          ? _value.radius
+          : radius // ignore: cast_nullable_to_non_nullable
+              as double?,
     ) as $Val);
   }
 }
@@ -121,7 +143,10 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       List<String> memberIds,
-      Map<String, dynamic> settings});
+      Map<String, dynamic> settings,
+      @GeoPointConverter() GeoPoint? location,
+      String? geohash,
+      double? radius});
 }
 
 /// @nodoc
@@ -142,6 +167,9 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? createdAt = null,
     Object? memberIds = null,
     Object? settings = null,
+    Object? location = freezed,
+    Object? geohash = freezed,
+    Object? radius = freezed,
   }) {
     return _then(_$HubImpl(
       hubId: null == hubId
@@ -172,6 +200,18 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value._settings
           : settings // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      radius: freezed == radius
+          ? _value.radius
+          : radius // ignore: cast_nullable_to_non_nullable
+              as double?,
     ));
   }
 }
@@ -186,7 +226,10 @@ class _$HubImpl implements _Hub {
       required this.createdBy,
       @TimestampConverter() required this.createdAt,
       final List<String> memberIds = const [],
-      final Map<String, dynamic> settings = const {'ratingMode': 'basic'}})
+      final Map<String, dynamic> settings = const {'ratingMode': 'basic'},
+      @GeoPointConverter() this.location,
+      this.geohash,
+      this.radius})
       : _memberIds = memberIds,
         _settings = settings;
 
@@ -223,8 +266,16 @@ class _$HubImpl implements _Hub {
   }
 
   @override
+  @GeoPointConverter()
+  final GeoPoint? location;
+  @override
+  final String? geohash;
+  @override
+  final double? radius;
+
+  @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, settings: $settings)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, settings: $settings, location: $location, geohash: $geohash, radius: $radius)';
   }
 
   @override
@@ -242,7 +293,11 @@ class _$HubImpl implements _Hub {
                 other.createdAt == createdAt) &&
             const DeepCollectionEquality()
                 .equals(other._memberIds, _memberIds) &&
-            const DeepCollectionEquality().equals(other._settings, _settings));
+            const DeepCollectionEquality().equals(other._settings, _settings) &&
+            (identical(other.location, location) ||
+                other.location == location) &&
+            (identical(other.geohash, geohash) || other.geohash == geohash) &&
+            (identical(other.radius, radius) || other.radius == radius));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -255,7 +310,10 @@ class _$HubImpl implements _Hub {
       createdBy,
       createdAt,
       const DeepCollectionEquality().hash(_memberIds),
-      const DeepCollectionEquality().hash(_settings));
+      const DeepCollectionEquality().hash(_settings),
+      location,
+      geohash,
+      radius);
 
   /// Create a copy of Hub
   /// with the given fields replaced by the non-null parameter values.
@@ -281,7 +339,10 @@ abstract class _Hub implements Hub {
       required final String createdBy,
       @TimestampConverter() required final DateTime createdAt,
       final List<String> memberIds,
-      final Map<String, dynamic> settings}) = _$HubImpl;
+      final Map<String, dynamic> settings,
+      @GeoPointConverter() final GeoPoint? location,
+      final String? geohash,
+      final double? radius}) = _$HubImpl;
 
   factory _Hub.fromJson(Map<String, dynamic> json) = _$HubImpl.fromJson;
 
@@ -300,6 +361,13 @@ abstract class _Hub implements Hub {
   List<String> get memberIds;
   @override
   Map<String, dynamic> get settings;
+  @override
+  @GeoPointConverter()
+  GeoPoint? get location;
+  @override
+  String? get geohash;
+  @override
+  double? get radius;
 
   /// Create a copy of Hub
   /// with the given fields replaced by the non-null parameter values.

@@ -15,6 +15,9 @@ import 'package:kickabout/screens/game/stats_logger_screen.dart';
 import 'package:kickabout/screens/stats_input/basic_rating_screen.dart';
 import 'package:kickabout/screens/profile/player_profile_screen.dart';
 import 'package:kickabout/screens/profile/edit_profile_screen.dart';
+import 'package:kickabout/screens/location/discover_hubs_screen.dart';
+import 'package:kickabout/screens/location/map_screen.dart';
+import 'package:kickabout/screens/social/notifications_screen.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 
 /// Auth state stream provider
@@ -65,6 +68,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/',
         name: 'home',
         builder: (context, state) => const HubListScreen(),
+      ),
+
+      // Location/Discovery routes
+      GoRoute(
+        path: '/discover',
+        name: 'discoverHubs',
+        builder: (context, state) => const DiscoverHubsScreen(),
+      ),
+      GoRoute(
+        path: '/map',
+        name: 'map',
+        builder: (context, state) => const MapScreen(),
+      ),
+
+      // Notifications route
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
 
       // Hub routes

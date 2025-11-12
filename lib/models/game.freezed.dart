@@ -25,7 +25,14 @@ mixin _$Game {
   String get hubId => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime get gameDate => throw _privateConstructorUsedError;
-  String? get location => throw _privateConstructorUsedError;
+  String? get location =>
+      throw _privateConstructorUsedError; // Legacy text location (kept for backward compatibility)
+  @GeoPointConverter()
+  GeoPoint? get locationPoint =>
+      throw _privateConstructorUsedError; // New geographic location
+  String? get geohash => throw _privateConstructorUsedError;
+  String? get venueId =>
+      throw _privateConstructorUsedError; // Reference to venue
   int get teamCount => throw _privateConstructorUsedError; // 2, 3, or 4
   @GameStatusConverter()
   GameStatus get status => throw _privateConstructorUsedError;
@@ -54,6 +61,9 @@ abstract class $GameCopyWith<$Res> {
       String hubId,
       @TimestampConverter() DateTime gameDate,
       String? location,
+      @GeoPointConverter() GeoPoint? locationPoint,
+      String? geohash,
+      String? venueId,
       int teamCount,
       @GameStatusConverter() GameStatus status,
       @TimestampConverter() DateTime createdAt,
@@ -80,6 +90,9 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? hubId = null,
     Object? gameDate = null,
     Object? location = freezed,
+    Object? locationPoint = freezed,
+    Object? geohash = freezed,
+    Object? venueId = freezed,
     Object? teamCount = null,
     Object? status = null,
     Object? createdAt = null,
@@ -105,6 +118,18 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
+              as String?,
+      locationPoint: freezed == locationPoint
+          ? _value.locationPoint
+          : locationPoint // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueId: freezed == venueId
+          ? _value.venueId
+          : venueId // ignore: cast_nullable_to_non_nullable
               as String?,
       teamCount: null == teamCount
           ? _value.teamCount
@@ -139,6 +164,9 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       String hubId,
       @TimestampConverter() DateTime gameDate,
       String? location,
+      @GeoPointConverter() GeoPoint? locationPoint,
+      String? geohash,
+      String? venueId,
       int teamCount,
       @GameStatusConverter() GameStatus status,
       @TimestampConverter() DateTime createdAt,
@@ -162,6 +190,9 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? hubId = null,
     Object? gameDate = null,
     Object? location = freezed,
+    Object? locationPoint = freezed,
+    Object? geohash = freezed,
+    Object? venueId = freezed,
     Object? teamCount = null,
     Object? status = null,
     Object? createdAt = null,
@@ -187,6 +218,18 @@ class __$$GameImplCopyWithImpl<$Res>
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
+              as String?,
+      locationPoint: freezed == locationPoint
+          ? _value.locationPoint
+          : locationPoint // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueId: freezed == venueId
+          ? _value.venueId
+          : venueId // ignore: cast_nullable_to_non_nullable
               as String?,
       teamCount: null == teamCount
           ? _value.teamCount
@@ -217,6 +260,9 @@ class _$GameImpl implements _Game {
       required this.hubId,
       @TimestampConverter() required this.gameDate,
       this.location,
+      @GeoPointConverter() this.locationPoint,
+      this.geohash,
+      this.venueId,
       this.teamCount = 2,
       @GameStatusConverter() this.status = GameStatus.teamSelection,
       @TimestampConverter() required this.createdAt,
@@ -236,6 +282,16 @@ class _$GameImpl implements _Game {
   final DateTime gameDate;
   @override
   final String? location;
+// Legacy text location (kept for backward compatibility)
+  @override
+  @GeoPointConverter()
+  final GeoPoint? locationPoint;
+// New geographic location
+  @override
+  final String? geohash;
+  @override
+  final String? venueId;
+// Reference to venue
   @override
   @JsonKey()
   final int teamCount;
@@ -253,7 +309,7 @@ class _$GameImpl implements _Game {
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, gameDate: $gameDate, location: $location, teamCount: $teamCount, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -269,6 +325,10 @@ class _$GameImpl implements _Game {
                 other.gameDate == gameDate) &&
             (identical(other.location, location) ||
                 other.location == location) &&
+            (identical(other.locationPoint, locationPoint) ||
+                other.locationPoint == locationPoint) &&
+            (identical(other.geohash, geohash) || other.geohash == geohash) &&
+            (identical(other.venueId, venueId) || other.venueId == venueId) &&
             (identical(other.teamCount, teamCount) ||
                 other.teamCount == teamCount) &&
             (identical(other.status, status) || other.status == status) &&
@@ -280,8 +340,20 @@ class _$GameImpl implements _Game {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, gameId, createdBy, hubId,
-      gameDate, location, teamCount, status, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      gameId,
+      createdBy,
+      hubId,
+      gameDate,
+      location,
+      locationPoint,
+      geohash,
+      venueId,
+      teamCount,
+      status,
+      createdAt,
+      updatedAt);
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.
@@ -306,6 +378,9 @@ abstract class _Game implements Game {
       required final String hubId,
       @TimestampConverter() required final DateTime gameDate,
       final String? location,
+      @GeoPointConverter() final GeoPoint? locationPoint,
+      final String? geohash,
+      final String? venueId,
       final int teamCount,
       @GameStatusConverter() final GameStatus status,
       @TimestampConverter() required final DateTime createdAt,
@@ -323,7 +398,15 @@ abstract class _Game implements Game {
   @TimestampConverter()
   DateTime get gameDate;
   @override
-  String? get location;
+  String?
+      get location; // Legacy text location (kept for backward compatibility)
+  @override
+  @GeoPointConverter()
+  GeoPoint? get locationPoint; // New geographic location
+  @override
+  String? get geohash;
+  @override
+  String? get venueId; // Reference to venue
   @override
   int get teamCount; // 2, 3, or 4
   @override

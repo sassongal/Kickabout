@@ -147,5 +147,10 @@ class GamesRepository {
       throw Exception('Failed to list games: $e');
     }
   }
+
+  /// Get games by hub (alias for listGamesByHub)
+  Future<List<Game>> getGamesByHub(String hubId) async {
+    return listGamesByHub(hubId);
+  }
 }
 

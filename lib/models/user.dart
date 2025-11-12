@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/models/converters/timestamp_converter.dart';
+import 'package:kickabout/models/converters/geopoint_converter.dart';
 
 part 'user.freezed.dart';
 part 'user.g.dart';
@@ -18,6 +20,8 @@ class User with _$User {
     @Default(5.0) double currentRankScore,
     @Default('Midfielder') String preferredPosition,
     @Default(0) int totalParticipations,
+    @GeoPointConverter() GeoPoint? location,
+    String? geohash,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

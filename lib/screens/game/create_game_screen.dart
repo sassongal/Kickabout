@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/utils/snackbar_helper.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/models/models.dart';
+import 'package:kickabout/models/notification.dart' as app_notification;
 import 'package:kickabout/core/constants.dart';
+import 'package:kickabout/services/location_service.dart';
+import 'package:kickabout/screens/location/map_picker_screen.dart';
+import 'package:flutter/foundation.dart';
 
 /// Create game screen
 class CreateGameScreen extends ConsumerStatefulWidget {
@@ -26,6 +32,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   TimeOfDay _selectedTime = TimeOfDay.now();
   int _teamCount = 2;
   bool _isLoading = false;
+  GeoPoint? _selectedLocation;
+  String? _locationAddress;
+  bool _isLoadingLocation = false;
 
   @override
   void initState() {
@@ -69,6 +78,48 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     }
   }
 
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final locationService = ref.read(locationServiceProvider);
+      final position = await locationService.getCurrentLocation();
+
+      if (position != null) {
+        final geoPoint = locationService.positionToGeoPoint(position);
+        final address = await locationService.coordinatesToAddress(
+          position.latitude,
+          position.longitude,
+        );
+
+        setState(() {
+          _selectedLocation = geoPoint;
+          _locationAddress = address ?? '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+          _locationController.text = address ?? '';
+        });
+      } else {
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
+
   Future<void> _createGame() async {
     if (_selectedHubId == null) {
       if (!_formKey.currentState!.validate()) return;
@@ -91,6 +142,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
+      final locationService = ref.read(locationServiceProvider);
+      
       final gameDate = DateTime(
         _selectedDate.year,
         _selectedDate.month,
@@ -99,6 +152,15 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         _selectedTime.minute,
       );
 
+      // Generate geohash if location is provided
+      String? geohash;
+      if (_selectedLocation != null) {
+        geohash = locationService.generateGeohash(
+          _selectedLocation!.latitude,
+          _selectedLocation!.longitude,
+        );
+      }
+
       final game = Game(
         gameId: '',
         createdBy: currentUserId,
@@ -106,14 +168,66 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         gameDate: gameDate,
         location: _locationController.text.trim().isEmpty
             ? null
-            : _locationController.text.trim(),
+            : _locationController.text.trim(), // Legacy text location
+        locationPoint: _selectedLocation, // New geographic location
+        geohash: geohash,
         teamCount: _teamCount,
         status: GameStatus.teamSelection,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      await gamesRepo.createGame(game);
+      final gameId = await gamesRepo.createGame(game);
+
+      // Create feed post
+      try {
+        final feedRepo = ref.read(feedRepositoryProvider);
+        final feedPost = FeedPost(
+          postId: '',
+          hubId: _selectedHubId!,
+          authorId: currentUserId,
+          type: 'game',
+          gameId: gameId,
+          createdAt: DateTime.now(),
+        );
+        await feedRepo.createPost(feedPost);
+      } catch (e) {
+        // Log error but don't fail game creation
+        debugPrint('Failed to create feed post: $e');
+      }
+
+      // Create notifications for hub members
+      try {
+        final notificationsRepo = ref.read(notificationsRepositoryProvider);
+        final hubsRepo = ref.read(hubsRepositoryProvider);
+        final hub = await hubsRepo.getHub(_selectedHubId!);
+        
+        if (hub != null) {
+          final usersRepo = ref.read(usersRepositoryProvider);
+          final currentUser = await usersRepo.getUser(currentUserId);
+          
+          for (final memberId in hub.memberIds) {
+            if (memberId != currentUserId) {
+              final notification = app_notification.Notification(
+                notificationId: '',
+                userId: memberId,
+                type: 'game',
+                title: 'משחק חדש!',
+                body: '${currentUser?.name ?? 'מישהו'} יצר משחק חדש ב-${hub.name}',
+                data: {
+                  'gameId': gameId,
+                  'hubId': _selectedHubId!,
+                },
+                createdAt: DateTime.now(),
+              );
+              await notificationsRepo.createNotification(notification);
+            }
+          }
+        }
+      } catch (e) {
+        // Log error but don't fail game creation
+        debugPrint('Failed to create notifications: $e');
+      }
 
       if (mounted) {
         SnackbarHelper.showSuccess(
@@ -267,16 +381,110 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Location field
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'מיקום (אופציונלי)',
-                  hintText: 'הכנס מיקום המשחק',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on),
+              // Location section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'מיקום (אופציונלי)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Text location field (legacy support)
+                      TextFormField(
+                        controller: _locationController,
+                        decoration: const InputDecoration(
+                          labelText: 'כתובת או שם מקום',
+                          hintText: 'הכנס מיקום המשחק',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.location_on),
+                        ),
+                        textInputAction: TextInputAction.done,
+                      ),
+                      const SizedBox(height: 8),
+                      // Geographic location
+                      if (_locationAddress != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.my_location, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'מיקום גיאוגרפי: $_locationAddress',
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedLocation = null;
+                                    _locationAddress = null;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoadingLocation
+                                  ? null
+                                  : _getCurrentLocation,
+                              icon: _isLoadingLocation
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.my_location),
+                              label: Text(_isLoadingLocation
+                                  ? 'מקבל מיקום...'
+                                  : 'מיקום נוכחי'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MapPickerScreen(
+                                      initialLocation: _selectedLocation,
+                                    ),
+                                  ),
+                                );
+                                if (result != null && mounted) {
+                                  setState(() {
+                                    _selectedLocation = result['location'] as GeoPoint;
+                                    _locationAddress = result['address'] as String?;
+                                    _locationController.text = result['address'] as String? ?? '';
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.map),
+                              label: const Text('בחר במפה'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 32),
 

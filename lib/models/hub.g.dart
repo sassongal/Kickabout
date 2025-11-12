@@ -19,6 +19,9 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
           const [],
       settings: json['settings'] as Map<String, dynamic>? ??
           const {'ratingMode': 'basic'},
+      location: const GeoPointConverter().fromJson(json['location']),
+      geohash: json['geohash'] as String?,
+      radius: (json['radius'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
@@ -29,4 +32,7 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'memberIds': instance.memberIds,
       'settings': instance.settings,
+      'location': const GeoPointConverter().toJson(instance.location),
+      'geohash': instance.geohash,
+      'radius': instance.radius,
     };

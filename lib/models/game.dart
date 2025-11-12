@@ -1,6 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/models/enums/game_status.dart';
 import 'package:kickabout/models/converters/timestamp_converter.dart';
+import 'package:kickabout/models/converters/geopoint_converter.dart';
 
 part 'game.freezed.dart';
 part 'game.g.dart';
@@ -13,7 +15,10 @@ class Game with _$Game {
     required String createdBy,
     required String hubId,
     @TimestampConverter() required DateTime gameDate,
-    String? location,
+    String? location, // Legacy text location (kept for backward compatibility)
+    @GeoPointConverter() GeoPoint? locationPoint, // New geographic location
+    String? geohash,
+    String? venueId, // Reference to venue
     @Default(2) int teamCount, // 2, 3, or 4
     @GameStatusConverter() @Default(GameStatus.teamSelection) GameStatus status,
     @TimestampConverter() required DateTime createdAt,
