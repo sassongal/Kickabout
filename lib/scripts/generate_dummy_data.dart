@@ -340,6 +340,99 @@ class DummyDataGenerator {
         .set(post.toJson());
   }
 
+  /// Generate 25 players with real photos and "השדים האדומים" Hub
+  Future<void> generateRedDevilsHub() async {
+    print('👹 Generating "השדים האדומים" Hub with 25 players...');
+    
+    // Create hub first to get hubId
+    final hubId = firestore.collection('hubs').doc().id;
+    final hubLocation = GeoPoint(32.8000, 34.9800); // גן דניאל area
+    final hubGeohash = GeohashUtils.encode(hubLocation.latitude, hubLocation.longitude);
+    final hubPhotoUrl = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=600&fit=crop';
+    
+    // Israeli male names for players (25 male names)
+    final playerNames = [
+      'יואב כהן', 'דני לוי', 'אור מזרחי', 'רונן דהן', 'עמית אברהם',
+      'אלון ישראל', 'תומר דוד', 'ניר יוסף', 'רועי משה', 'איתי יעקב',
+      'שרון בן דוד', 'אורן עזרא', 'ליאור שלום', 'רן חיים', 'גיל אליהו',
+      'עומר שמעון', 'רוי רחמים', 'מור יצחק', 'עדי אהרון', 'טל שלמה',
+      'אורן כהן', 'רן לוי', 'גיל מזרחי', 'עומר דהן', 'רוי אברהם',
+    ];
+    
+    final cities = ['חיפה', 'קריית אתא', 'קריית ביאליק', 'קריית ים', 'נשר'];
+    final positions = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
+    
+    // Generate 25 players with photos
+    final userIds = <String>[];
+    for (int i = 0; i < 25; i++) {
+      final nameParts = playerNames[i].split(' ');
+      final firstName = nameParts[0];
+      final lastName = nameParts.length > 1 ? nameParts[1] : 'כהן';
+      
+      // Use real photos of men (aged 25-50) from Random User API
+      // Using different IDs for varied realistic photos
+      final photoIds = [47, 52, 58, 64, 68, 72, 78, 84, 90, 96, 102, 108, 114, 120, 126, 132, 138, 144, 150, 156, 162, 168, 174, 180, 186];
+      // Random User API provides real-looking photos of people
+      final photoUrl = 'https://randomuser.me/api/portraits/men/${photoIds[i]}.jpg';
+      
+      final userId = firestore.collection('users').doc().id;
+      final location = GeoPoint(
+        32.8000 + (i % 5) * 0.01, // Spread around Haifa
+        34.9800 + (i % 5) * 0.01,
+      );
+      final geohash = GeohashUtils.encode(location.latitude, location.longitude);
+      
+      final user = User(
+        uid: userId,
+        name: playerNames[i],
+        email: '${firstName.toLowerCase()}.${lastName.toLowerCase()}@kickadoor.local',
+        phoneNumber: '05${(i % 9) + 1}${(i * 1234567).toString().padLeft(7, '0').substring(0, 7)}',
+        city: cities[i % cities.length],
+        preferredPosition: positions[i % positions.length],
+        availabilityStatus: i % 3 == 0 ? 'available' : (i % 3 == 1 ? 'busy' : 'notAvailable'),
+        createdAt: DateTime.now().subtract(Duration(days: 30 + i)),
+        currentRankScore: 5.0 + (i % 30) / 10.0, // 5.0-7.9
+        totalParticipations: 10 + i * 2,
+        location: location,
+        geohash: geohash,
+        photoUrl: photoUrl, // Add photo URL - real photos of men
+        hubIds: i < 18 ? [hubId] : [], // First 18 are in the hub
+      );
+      
+      await firestore.doc(FirestorePaths.user(userId)).set(user.toJson());
+      userIds.add(userId);
+      print('✅ Created player ${i + 1}/25: ${playerNames[i]}');
+    }
+    
+    // Create "השדים האדומים" Hub with first 18 players
+    final hubMemberIds = userIds.take(18).toList();
+    
+    final hub = Hub(
+      hubId: hubId,
+      name: 'השדים האדומים',
+      description: 'קבוצת כדורגל פעילה וחזקה מחיפה. משחקים קבועים במגרש גן דניאל. קבוצה תחרותית עם מסורת ארוכה.',
+      createdBy: hubMemberIds[0],
+      memberIds: hubMemberIds,
+      createdAt: DateTime.now().subtract(const Duration(days: 180)),
+      location: hubLocation,
+      geohash: hubGeohash,
+      settings: {
+        'ratingMode': 'advanced',
+        'photoUrl': hubPhotoUrl, // Add hub photo
+      },
+    );
+    
+    await firestore.doc(FirestorePaths.hub(hubId)).set(hub.toJson());
+    
+    // Generate games for this hub
+    await _generateGamesForHub(hubId, hubMemberIds, hubLocation);
+    
+    print('🎉 Created "השדים האדומים" Hub with ${hubMemberIds.length} players!');
+    print('📊 Total players created: 25');
+    print('👥 Players in Hub: 18');
+    print('👤 Players not in Hub: 7');
+  }
+
   /// Generate all dummy data
   Future<void> generateAll({
     int userCount = 30,

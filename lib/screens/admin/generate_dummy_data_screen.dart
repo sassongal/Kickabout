@@ -99,6 +99,37 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
     }
   }
 
+  Future<void> _generateRedDevilsHub() async {
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'מתחיל ליצור Hub "השדים האדומים" עם 25 שחקנים...';
+    });
+
+    try {
+      final generator = DummyDataGenerator();
+      await generator.generateRedDevilsHub();
+
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '✅ Hub "השדים האדומים" נוצר בהצלחה עם 25 שחקנים (18 ב-Hub)!';
+        });
+        SnackbarHelper.showSuccess(
+          context,
+          'נוצר Hub "השדים האדומים" עם 18 שחקנים + 7 שחקנים נוספים',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '❌ שגיאה: $e';
+        });
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FuturisticScaffold(
@@ -153,6 +184,14 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
               label: 'צור Hubs במגרשים אמיתיים',
               icon: Icons.stadium,
               onPressed: _isGenerating ? null : _generateRealFieldHubs,
+              isLoading: _isGenerating,
+            ),
+            const SizedBox(height: 16),
+            // Generate Red Devils Hub button
+            GradientButton(
+              label: 'צור Hub "השדים האדומים" עם 25 שחקנים',
+              icon: Icons.people,
+              onPressed: _isGenerating ? null : _generateRedDevilsHub,
               isLoading: _isGenerating,
             ),
             if (_statusMessage != null) ...[
