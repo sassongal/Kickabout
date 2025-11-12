@@ -75,68 +75,81 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _loadMarkers() async {
-    if (_currentPosition == null) return;
+    final position = _currentPosition;
+    if (position == null) return;
 
     final markers = <Marker>{};
 
     try {
-      // Load hubs
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+
+      // Load hubs (parallel with games fetching where possible)
+      List<Hub> nearbyHubs = const [];
       if (_selectedFilter == 'all' || _selectedFilter == 'hubs') {
-        final hubsRepo = ref.read(hubsRepositoryProvider);
-        final hubs = await hubsRepo.findHubsNearby(
-          latitude: _currentPosition!.latitude,
-          longitude: _currentPosition!.longitude,
-          radiusKm: 50.0, // 50km radius
+        nearbyHubs = await hubsRepo.findHubsNearby(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          radiusKm: 50.0,
         );
 
-        for (final hub in hubs) {
-          if (hub.location != null) {
-            markers.add(
-              Marker(
-                markerId: MarkerId('hub_${hub.hubId}'),
-                position: LatLng(
-                  hub.location!.latitude,
-                  hub.location!.longitude,
-                ),
-                infoWindow: InfoWindow(
-                  title: hub.name,
-                  snippet: hub.description ?? '${hub.memberIds.length} חברים',
-                ),
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueBlue,
-                ),
-                onTap: () {
-                  context.push('/hubs/${hub.hubId}');
-                },
+        for (final hub in nearbyHubs) {
+          final hubLocation = hub.location;
+          if (hubLocation == null) continue;
+          markers.add(
+            Marker(
+              markerId: MarkerId('hub_${hub.hubId}'),
+              position: LatLng(
+                hubLocation.latitude,
+                hubLocation.longitude,
               ),
-            );
-          }
+              infoWindow: InfoWindow(
+                title: hub.name,
+                snippet: hub.description ?? '${hub.memberIds.length} חברים',
+              ),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueBlue,
+              ),
+              onTap: () => context.push('/hubs/${hub.hubId}'),
+            ),
+          );
         }
       }
 
-      // Load games
+      // Load games (deferred and batched)
       if (_selectedFilter == 'all' || _selectedFilter == 'games') {
-        final gamesRepo = ref.read(gamesRepositoryProvider);
-        // Get games from user's hubs
         final currentUserId = ref.read(currentUserIdProvider);
         if (currentUserId != null) {
-          final hubsRepo = ref.read(hubsRepositoryProvider);
+          final gamesRepo = ref.read(gamesRepositoryProvider);
           final userHubs = await hubsRepo.getHubsByMember(currentUserId);
-          
-          for (final hub in userHubs) {
-            final games = await gamesRepo.getGamesByHub(hub.hubId);
-            for (final game in games) {
-              if (game.locationPoint != null) {
-                final distance = Geolocator.distanceBetween(
-                  _currentPosition!.latitude,
-                  _currentPosition!.longitude,
-                  game.locationPoint!.latitude,
-                  game.locationPoint!.longitude,
-                ) / 1000;
+          if (userHubs.isNotEmpty) {
+            final gameLists = await Future.wait(
+              userHubs.map((hub) => gamesRepo.getGamesByHub(hub.hubId)),
+            );
 
-                if (distance <= 50.0) {
-                  final dateFormat = '${game.gameDate.day}/${game.gameDate.month}';
-                  final timeFormat = '${game.gameDate.hour}:${game.gameDate.minute.toString().padLeft(2, '0')}';
+            final seenGameIds = <String>{};
+
+            for (var i = 0; i < userHubs.length; i++) {
+              final games = gameLists[i];
+              for (final game in games) {
+                if (game.locationPoint == null ||
+                    !seenGameIds.add(game.gameId)) {
+                  continue;
+                }
+
+                final distanceKm = Geolocator.distanceBetween(
+                      position.latitude,
+                      position.longitude,
+                      game.locationPoint!.latitude,
+                      game.locationPoint!.longitude,
+                    ) /
+                    1000;
+
+                if (distanceKm <= 50.0) {
+                  final dateFormat =
+                      '${game.gameDate.day}/${game.gameDate.month}';
+                  final timeFormat =
+                      '${game.gameDate.hour}:${game.gameDate.minute.toString().padLeft(2, '0')}';
+
                   markers.add(
                     Marker(
                       markerId: MarkerId('game_${game.gameId}'),
@@ -151,9 +164,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       icon: BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueGreen,
                       ),
-                      onTap: () {
-                        context.push('/games/${game.gameId}');
-                      },
+                      onTap: () => context.push('/games/${game.gameId}'),
                     ),
                   );
                 }
@@ -164,25 +175,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
 
       // Add current location marker
-      if (_currentPosition != null) {
-        markers.add(
-          Marker(
-            markerId: const MarkerId('current_location'),
-            position: LatLng(
-              _currentPosition!.latitude,
-              _currentPosition!.longitude,
-            ),
-            infoWindow: const InfoWindow(title: 'מיקום נוכחי'),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueRed,
-            ),
+      markers.add(
+        Marker(
+          markerId: const MarkerId('current_location'),
+          position: LatLng(
+            position.latitude,
+            position.longitude,
           ),
-        );
-      }
+          infoWindow: const InfoWindow(title: 'מיקום נוכחי'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueRed,
+          ),
+        ),
+      );
 
-      setState(() {
-        _markers = markers;
-      });
+      if (mounted) {
+        setState(() {
+          _markers = markers;
+        });
+      }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'שגיאה בטעינת מגרשים: $e');

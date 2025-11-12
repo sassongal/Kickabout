@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/data/repositories.dart';
@@ -10,6 +8,7 @@ import 'package:kickabout/models/models.dart';
 import 'package:kickabout/core/constants.dart';
 import 'package:kickabout/services/push_notification_integration_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kickabout/widgets/charts/player_rating_chart.dart';
 
 /// Player profile screen showing rating, history, and recent games
 class PlayerProfileScreen extends ConsumerWidget {
@@ -466,80 +465,7 @@ class PlayerProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildRatingChart(List<RatingSnapshot> history) {
-    // Take last 10 ratings for chart
-    final recentHistory = history.take(10).toList().reversed.toList();
-    if (recentHistory.isEmpty) {
-      return const Center(child: Text('אין נתונים להצגה'));
-    }
-
-    // Calculate average rating for each snapshot
-    final ratings = recentHistory.map((snapshot) {
-      return (snapshot.defense +
-              snapshot.passing +
-              snapshot.shooting +
-              snapshot.dribbling +
-              snapshot.physical +
-              snapshot.leadership +
-              snapshot.teamPlay +
-              snapshot.consistency) /
-          8.0;
-    }).toList();
-
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(show: true),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) {
-                return Text(
-                  value.toStringAsFixed(1),
-                  style: const TextStyle(fontSize: 10),
-                );
-              },
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() >= recentHistory.length) return const Text('');
-                final index = value.toInt();
-                final date = recentHistory[index].submittedAt;
-                return Text(
-                  DateFormat('dd/MM').format(date),
-                  style: const TextStyle(fontSize: 10),
-                );
-              },
-            ),
-          ),
-          rightTitles: AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-        ),
-        borderData: FlBorderData(show: true),
-        lineBarsData: [
-          LineChartBarData(
-            spots: ratings.asMap().entries.map((entry) {
-              return FlSpot(entry.key.toDouble(), entry.value);
-            }).toList(),
-            isCurved: true,
-            color: Colors.blue,
-            barWidth: 3,
-            dotData: FlDotData(show: true),
-            belowBarData: BarAreaData(show: false),
-          ),
-        ],
-        minY: 0,
-        maxY: 10,
-      ),
-    );
+    return PlayerRatingChart(history: history);
   }
 
   Widget _buildRecentGames(

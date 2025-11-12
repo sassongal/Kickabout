@@ -29,11 +29,18 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
   GoogleMapController? _mapController;
   Position? _currentPosition;
 
+  final List<Hub> _allHubs = [];
+  List<Hub> _filteredHubs = [];
+  bool _isLoadingHubs = true;
+  Object? _hubsError;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadCurrentLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeData();
+    });
   }
 
   @override
@@ -43,11 +50,18 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     super.dispose();
   }
 
+  Future<void> _initializeData() async {
+    await _loadCurrentLocation();
+    if (mounted) {
+      await _loadHubs();
+    }
+  }
+
   Future<void> _loadCurrentLocation() async {
     try {
       final locationService = ref.read(locationServiceProvider);
       final position = await locationService.getCurrentLocation();
-      if (position != null && mounted) {
+      if (mounted && position != null) {
         setState(() {
           _currentPosition = position;
         });
@@ -59,26 +73,103 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
         );
       }
     } catch (e) {
-      // Handle error
+      if (mounted) {
+        setState(() {
+          _hubsError = e;
+        });
+      }
     }
+  }
+
+  Future<void> _loadHubs() async {
+    setState(() {
+      _isLoadingHubs = true;
+      _hubsError = null;
+    });
+
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final position = _currentPosition;
+
+    if (position == null) {
+      setState(() {
+        _allHubs.clear();
+        _filteredHubs = const [];
+        _isLoadingHubs = false;
+        _hubsError ??= Exception('לא ניתן היה לאתר את מיקומך לצורך הצגת הובים קרובים.');
+      });
+      return;
+    }
+
+    try {
+      final hubs = await hubsRepo.findHubsNearby(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        radiusKm: 50.0,
+      );
+
+      if (!mounted) return;
+
+      final filtered = _filterHubs(hubs, _searchQuery);
+      setState(() {
+        _allHubs
+          ..clear()
+          ..addAll(hubs);
+        _filteredHubs = filtered;
+        _isLoadingHubs = false;
+        _hubsError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _allHubs.clear();
+        _filteredHubs = const [];
+        _isLoadingHubs = false;
+        _hubsError = e;
+      });
+    }
+  }
+
+  List<Hub> _filterHubs(List<Hub> hubs, String query) {
+    final normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return List<Hub>.of(hubs);
+    }
+
+    return hubs.where((hub) {
+      final name = hub.name.toLowerCase();
+      final description = hub.description?.toLowerCase();
+      return name.contains(normalized) ||
+          (description != null && description.contains(normalized));
+    }).toList();
+  }
+
+  double? _distanceFromUser(GeoPoint location) {
+    final userPosition = _currentPosition;
+    if (userPosition == null) return null;
+
+    final meters = Geolocator.distanceBetween(
+      userPosition.latitude,
+      userPosition.longitude,
+      location.latitude,
+      location.longitude,
+    );
+
+    return meters / 1000;
   }
 
   @override
   Widget build(BuildContext context) {
-    final locationService = ref.watch(locationServiceProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
-
     return FuturisticScaffold(
       title: 'לוח הובים',
       body: Column(
         children: [
-          // Search bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
+                  _filteredHubs = _filterHubs(_allHubs, value);
                 });
               },
               decoration: InputDecoration(
@@ -90,6 +181,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
                         onPressed: () {
                           setState(() {
                             _searchQuery = '';
+                            _filteredHubs = _filterHubs(_allHubs, '');
                           });
                         },
                       )
@@ -105,7 +197,6 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
               ),
             ),
           ),
-          // Tabs
           TabBar(
             controller: _tabController,
             tabs: const [
@@ -113,15 +204,12 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
               Tab(icon: Icon(Icons.map), text: 'מפה'),
             ],
           ),
-          // Tab content
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                // List view
-                _buildHubsList(hubsRepo, locationService),
-                // Map view
-                _buildHubsMap(hubsRepo, locationService),
+                _buildHubsList(),
+                _buildHubsMap(),
               ],
             ),
           ),
@@ -130,226 +218,202 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     );
   }
 
-  Widget _buildHubsList(HubsRepository hubsRepo, LocationService locationService) {
-    return FutureBuilder<List<Hub>>(
-      future: _getHubs(hubsRepo, locationService),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(
-            message: 'טוען הובים...',
-          );
-        }
+  Widget _buildHubsList() {
+    if (_isLoadingHubs) {
+      return const FuturisticLoadingState(message: 'טוען הובים...');
+    }
 
-        if (snapshot.hasError) {
-          return FuturisticEmptyState(
-            icon: Icons.error_outline,
-            title: 'שגיאה בטעינת הובים',
-            message: snapshot.error.toString(),
-          );
-        }
+    if (_hubsError != null) {
+      return FuturisticEmptyState(
+        icon: Icons.error_outline,
+        title: 'שגיאה בטעינת הובים',
+        message: _hubsError.toString(),
+        action: ElevatedButton.icon(
+          onPressed: _loadHubs,
+          icon: const Icon(Icons.refresh),
+          label: const Text('נסה שוב'),
+        ),
+      );
+    }
 
-        final hubs = snapshot.data ?? [];
-        if (hubs.isEmpty) {
-          return FuturisticEmptyState(
-            icon: Icons.group_outlined,
-            title: 'אין הובים',
-            message: 'לא נמצאו הובים התואמים לחיפוש',
-            action: ElevatedButton.icon(
-              onPressed: () => context.push('/hubs/create'),
-              icon: const Icon(Icons.add),
-              label: const Text('צור הוב'),
-            ),
-          );
-        }
+    if (_filteredHubs.isEmpty) {
+      return FuturisticEmptyState(
+        icon: Icons.group_outlined,
+        title: 'אין הובים',
+        message: 'לא נמצאו הובים התואמים לחיפוש',
+        action: ElevatedButton.icon(
+          onPressed: () => context.push('/hubs/create'),
+          icon: const Icon(Icons.add),
+          label: const Text('צור הוב'),
+        ),
+      );
+    }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: hubs.length,
-          itemBuilder: (context, index) {
-            final hub = hubs[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: FuturisticCard(
-                onTap: () => context.push('/hubs/${hub.hubId}'),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              gradient: FuturisticColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.group,
-                              color: Colors.white,
-                              size: 24,
-                            ),
+    return RefreshIndicator(
+      onRefresh: _loadHubs,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _filteredHubs.length,
+        itemBuilder: (context, index) {
+          final hub = _filteredHubs[index];
+          final distanceKm =
+              hub.location != null ? _distanceFromUser(hub.location!) : null;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: FuturisticCard(
+              onTap: () => context.push('/hubs/${hub.hubId}'),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: FuturisticColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                          child: const Icon(
+                            Icons.group,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hub.name,
+                                style: FuturisticTypography.heading3,
+                              ),
+                              if (hub.description != null) ...[
+                                const SizedBox(height: 4),
                                 Text(
-                                  hub.name,
-                                  style: FuturisticTypography.heading3,
+                                  hub.description!,
+                                  style: FuturisticTypography.bodySmall,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                if (hub.description != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    hub.description!,
-                                    style: FuturisticTypography.bodySmall,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
                               ],
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.people,
+                          size: 16,
+                          color: FuturisticColors.textTertiary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${hub.memberIds.length} חברים',
+                          style: FuturisticTypography.bodySmall,
+                        ),
+                        if (distanceKm != null) ...[
+                          const SizedBox(width: 16),
                           Icon(
-                            Icons.people,
+                            Icons.location_on,
                             size: 16,
                             color: FuturisticColors.textTertiary,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${hub.memberIds.length} חברים',
+                            '${distanceKm.toStringAsFixed(1)} ק"מ',
                             style: FuturisticTypography.bodySmall,
                           ),
-                          if (hub.location != null && _currentPosition != null) ...[
-                            const SizedBox(width: 16),
-                            Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: FuturisticColors.textTertiary,
-                            ),
-                            const SizedBox(width: 4),
-                            FutureBuilder<double>(
-                              future: _calculateDistance(hub.location!, _currentPosition!),
-                              builder: (context, distanceSnapshot) {
-                                final distance = distanceSnapshot.data;
-                                if (distance == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Text(
-                                  '${distance.toStringAsFixed(1)} ק"מ',
-                                  style: FuturisticTypography.bodySmall,
-                                );
-                              },
-                            ),
-                          ],
                         ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildHubsMap(HubsRepository hubsRepo, LocationService locationService) {
-    return FutureBuilder<List<Hub>>(
-      future: _getHubs(hubsRepo, locationService),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(
-            message: 'טוען מפה...',
+            ),
           );
-        }
-
-        final hubs = snapshot.data ?? [];
-        final initialPosition = _currentPosition != null
-            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-            : const LatLng(31.7683, 35.2137); // Default to Jerusalem
-
-        return GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: initialPosition,
-            zoom: 12.0,
-          ),
-          onMapCreated: (controller) {
-            _mapController = controller;
-          },
-          myLocationEnabled: true,
-          myLocationButtonEnabled: true,
-          markers: hubs
-              .where((hub) => hub.location != null)
-              .map((hub) {
-                return Marker(
-                  markerId: MarkerId(hub.hubId),
-                  position: LatLng(
-                    hub.location!.latitude,
-                    hub.location!.longitude,
-                  ),
-                  infoWindow: InfoWindow(
-                    title: hub.name,
-                    snippet: '${hub.memberIds.length} חברים',
-                  ),
-                  onTap: () {
-                    context.push('/hubs/${hub.hubId}');
-                  },
-                );
-              })
-              .toSet(),
-        );
-      },
+        },
+      ),
     );
   }
 
-  Future<List<Hub>> _getHubs(
-    HubsRepository hubsRepo,
-    LocationService locationService,
-  ) async {
-    try {
-      final position = await locationService.getCurrentLocation();
-      if (position == null) {
-        // Fallback: get all hubs (limited)
-        return [];
-      }
-
-      final hubs = await hubsRepo.findHubsNearby(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        radiusKm: 50.0, // 50km radius
-      );
-
-      // Filter by search query
-      if (_searchQuery.isNotEmpty) {
-        return hubs.where((hub) {
-          return hub.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              (hub.description != null &&
-                  hub.description!.toLowerCase().contains(_searchQuery.toLowerCase()));
-        }).toList();
-      }
-
-      return hubs;
-    } catch (e) {
-      return [];
+  Widget _buildHubsMap() {
+    if (_isLoadingHubs) {
+      return const FuturisticLoadingState(message: 'טוען מפה...');
     }
-  }
 
-  Future<double> _calculateDistance(GeoPoint hubLocation, Position userPosition) async {
-    return Geolocator.distanceBetween(
-      userPosition.latitude,
-      userPosition.longitude,
-      hubLocation.latitude,
-      hubLocation.longitude,
-    ) / 1000; // Convert to km
+    if (_hubsError != null) {
+      return FuturisticEmptyState(
+        icon: Icons.error_outline,
+        title: 'שגיאה בטעינת מפה',
+        message: _hubsError.toString(),
+        action: ElevatedButton.icon(
+          onPressed: () async {
+            await _loadCurrentLocation();
+            await _loadHubs();
+          },
+          icon: const Icon(Icons.my_location),
+          label: const Text('נסה שוב'),
+        ),
+      );
+    }
+
+    if (_filteredHubs.isEmpty) {
+      return FuturisticEmptyState(
+        icon: Icons.map_outlined,
+        title: 'אין הובים להצגה במפה',
+        message: 'שנה את החיפוש או צור הוב חדש.',
+        action: ElevatedButton.icon(
+          onPressed: () => context.push('/hubs/create'),
+          icon: const Icon(Icons.add),
+          label: const Text('צור הוב'),
+        ),
+      );
+    }
+
+    final initialPosition = _currentPosition != null
+        ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+        : LatLng(
+            _filteredHubs.first.location?.latitude ?? 31.7683,
+            _filteredHubs.first.location?.longitude ?? 35.2137,
+          );
+
+    final markers = _filteredHubs
+        .where((hub) => hub.location != null)
+        .map(
+          (hub) => Marker(
+            markerId: MarkerId(hub.hubId),
+            position: LatLng(
+              hub.location!.latitude,
+              hub.location!.longitude,
+            ),
+            infoWindow: InfoWindow(
+              title: hub.name,
+              snippet: '${hub.memberIds.length} חברים',
+            ),
+            onTap: () => context.push('/hubs/${hub.hubId}'),
+          ),
+        )
+        .toSet();
+
+    return GoogleMap(
+      initialCameraPosition: CameraPosition(
+        target: initialPosition,
+        zoom: 12.0,
+      ),
+      onMapCreated: (controller) => _mapController = controller,
+      myLocationEnabled: _currentPosition != null,
+      myLocationButtonEnabled: true,
+      markers: markers,
+    );
   }
 }
 
