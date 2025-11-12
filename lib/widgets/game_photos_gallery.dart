@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kickadoor/widgets/optimized_image.dart';
 
 /// Widget for displaying game photos in a grid gallery
 class GamePhotosGallery extends StatelessWidget {
@@ -217,33 +218,24 @@ class _PhotoViewer extends StatelessWidget {
         itemCount: photoUrls.length,
         itemBuilder: (context, index) {
           return Center(
-            child: InteractiveViewer(
+              child: InteractiveViewer(
               minScale: 0.5,
               maxScale: 3.0,
-              child: Image.network(
-                photoUrls[index],
+              child: OptimizedImage(
+                imageUrl: photoUrls[index],
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Center(
-                    child: Icon(
-                      Icons.broken_image,
-                      color: Colors.white,
-                      size: 64,
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                      color: Colors.white,
-                    ),
-                  );
-                },
+                errorWidget: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 64,
+                  ),
+                ),
+                placeholderWidget: const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           );

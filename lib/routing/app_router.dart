@@ -1,42 +1,43 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kickabout/routing/go_router_refresh_stream.dart';
-import 'package:kickabout/screens/auth/login_screen_futuristic.dart';
-import 'package:kickabout/screens/auth/register_screen.dart';
-import 'package:kickabout/screens/hub/hub_list_screen.dart';
-import 'package:kickabout/screens/hub/create_hub_screen.dart';
-import 'package:kickabout/screens/hub/hub_detail_screen.dart';
-import 'package:kickabout/screens/game/game_list_screen.dart';
-import 'package:kickabout/screens/game/create_game_screen.dart';
-import 'package:kickabout/screens/game/game_detail_screen.dart';
-import 'package:kickabout/screens/game/team_maker_screen.dart';
-import 'package:kickabout/screens/game/stats_logger_screen.dart';
-import 'package:kickabout/screens/stats_input/basic_rating_screen.dart';
-import 'package:kickabout/screens/profile/player_profile_screen.dart';
-import 'package:kickabout/screens/profile/edit_profile_screen.dart';
-import 'package:kickabout/screens/location/discover_hubs_screen.dart';
-import 'package:kickabout/screens/location/map_screen.dart';
-import 'package:kickabout/screens/social/notifications_screen.dart';
-import 'package:kickabout/screens/social/post_detail_screen.dart';
-import 'package:kickabout/screens/social/following_screen.dart';
-import 'package:kickabout/screens/social/followers_screen.dart';
-import 'package:kickabout/screens/home_screen_futuristic.dart';
-import 'package:kickabout/screens/game/game_chat_screen.dart';
-import 'package:kickabout/screens/social/messages_list_screen.dart';
-import 'package:kickabout/screens/social/private_chat_screen.dart';
-import 'package:kickabout/screens/gamification/leaderboard_screen.dart';
-import 'package:kickabout/screens/splash/splash_screen.dart';
-import 'package:kickabout/screens/players/players_list_screen.dart';
-import 'package:kickabout/screens/hubs/hubs_board_screen.dart';
-import 'package:kickabout/screens/admin/generate_dummy_data_screen.dart';
-import 'package:kickabout/screens/hub/manage_roles_screen.dart';
-import 'package:kickabout/screens/hub/hub_settings_screen.dart';
-import 'package:kickabout/screens/hub/join_by_invite_screen.dart';
-import 'package:kickabout/screens/game/game_calendar_screen.dart';
-import 'package:kickabout/screens/social/create_post_screen.dart';
-import 'package:kickabout/screens/hub/scouting_screen.dart';
-import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickadoor/routing/go_router_refresh_stream.dart';
+import 'package:kickadoor/utils/performance_utils.dart';
+import 'package:kickadoor/screens/auth/login_screen_futuristic.dart';
+import 'package:kickadoor/screens/auth/register_screen.dart';
+import 'package:kickadoor/screens/hub/hub_list_screen.dart';
+import 'package:kickadoor/screens/hub/create_hub_screen.dart';
+import 'package:kickadoor/screens/hub/hub_detail_screen.dart';
+import 'package:kickadoor/screens/game/game_list_screen.dart';
+import 'package:kickadoor/screens/game/create_game_screen.dart';
+import 'package:kickadoor/screens/game/game_detail_screen.dart';
+import 'package:kickadoor/screens/game/team_maker_screen.dart';
+import 'package:kickadoor/screens/game/stats_logger_screen.dart';
+import 'package:kickadoor/screens/stats_input/basic_rating_screen.dart';
+import 'package:kickadoor/screens/profile/player_profile_screen.dart';
+import 'package:kickadoor/screens/profile/edit_profile_screen.dart';
+import 'package:kickadoor/screens/location/discover_hubs_screen.dart';
+import 'package:kickadoor/screens/location/map_screen.dart';
+import 'package:kickadoor/screens/social/notifications_screen.dart';
+import 'package:kickadoor/screens/social/post_detail_screen.dart';
+import 'package:kickadoor/screens/social/following_screen.dart';
+import 'package:kickadoor/screens/social/followers_screen.dart';
+import 'package:kickadoor/screens/home_screen_futuristic.dart';
+import 'package:kickadoor/screens/game/game_chat_screen.dart';
+import 'package:kickadoor/screens/social/messages_list_screen.dart';
+import 'package:kickadoor/screens/social/private_chat_screen.dart';
+import 'package:kickadoor/screens/gamification/leaderboard_screen.dart';
+import 'package:kickadoor/screens/splash/splash_screen.dart';
+import 'package:kickadoor/screens/players/players_list_screen.dart';
+import 'package:kickadoor/screens/hubs/hubs_board_screen.dart';
+import 'package:kickadoor/screens/admin/generate_dummy_data_screen.dart';
+import 'package:kickadoor/screens/hub/manage_roles_screen.dart';
+import 'package:kickadoor/screens/hub/hub_settings_screen.dart';
+import 'package:kickadoor/screens/hub/join_by_invite_screen.dart';
+import 'package:kickadoor/screens/game/game_calendar_screen.dart';
+import 'package:kickadoor/screens/social/create_post_screen.dart';
+import 'package:kickadoor/screens/hub/scouting_screen.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
 
 /// Auth state stream provider
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -50,7 +51,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
 
   return GoRouter(
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: PerformanceUtils.isDebugMode,
     refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
     redirect: (context, state) {
       final isAuthenticated = authState.valueOrNull != null;

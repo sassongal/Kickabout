@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickabout/models/models.dart';
+import 'package:kickadoor/widgets/optimized_image.dart';
 
 /// Player avatar widget with navigation to profile
 class PlayerAvatar extends StatelessWidget {
@@ -19,14 +20,25 @@ class PlayerAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatar = CircleAvatar(
-      radius: radius,
-      backgroundColor: Colors.blue.withValues(alpha: 0.2),
-      backgroundImage: user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-      child: user.photoUrl == null
-          ? Icon(Icons.person, size: radius, color: Colors.blue)
-          : null,
-    );
+    final avatar = user.photoUrl != null
+        ? ClipOval(
+            child: OptimizedImage(
+              imageUrl: user.photoUrl!,
+              width: radius * 2,
+              height: radius * 2,
+              fit: BoxFit.cover,
+              errorWidget: CircleAvatar(
+                radius: radius,
+                backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                child: Icon(Icons.person, size: radius, color: Colors.blue),
+              ),
+            ),
+          )
+        : CircleAvatar(
+            radius: radius,
+            backgroundColor: Colors.blue.withValues(alpha: 0.2),
+            child: Icon(Icons.person, size: radius, color: Colors.blue),
+          );
 
     if (!clickable) {
       if (showName) {
