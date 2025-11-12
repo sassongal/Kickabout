@@ -1,6 +1,8 @@
-import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kickabout/routing/go_router_refresh_stream.dart';
 import 'package:kickabout/screens/auth/login_screen_futuristic.dart';
 import 'package:kickabout/screens/auth/register_screen.dart';
@@ -16,7 +18,6 @@ import 'package:kickabout/screens/stats_input/basic_rating_screen.dart';
 import 'package:kickabout/screens/profile/player_profile_screen.dart';
 import 'package:kickabout/screens/profile/edit_profile_screen.dart';
 import 'package:kickabout/screens/location/discover_hubs_screen.dart';
-import 'package:kickabout/screens/location/map_screen.dart';
 import 'package:kickabout/screens/social/notifications_screen.dart';
 import 'package:kickabout/screens/social/post_detail_screen.dart';
 import 'package:kickabout/screens/social/following_screen.dart';
@@ -28,10 +29,14 @@ import 'package:kickabout/screens/social/private_chat_screen.dart';
 import 'package:kickabout/screens/gamification/leaderboard_screen.dart';
 import 'package:kickabout/screens/splash/splash_screen.dart';
 import 'package:kickabout/screens/players/players_list_screen.dart';
-import 'package:kickabout/screens/hubs/hubs_board_screen.dart';
 import 'package:kickabout/screens/admin/generate_dummy_data_screen.dart';
 import 'package:kickabout/screens/hub/manage_roles_screen.dart';
 import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickabout/widgets/deferred_widget.dart';
+
+import 'package:kickabout/screens/location/map_screen.dart' deferred as map_screen;
+import 'package:kickabout/screens/hubs/hubs_board_screen.dart'
+    deferred as hubs_board_screen;
 
 /// Auth state stream provider
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -45,7 +50,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
 
   return GoRouter(
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: kDebugMode,
     refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
     redirect: (context, state) {
       final isAuthenticated = authState.valueOrNull != null;
@@ -83,38 +88,54 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
 
-      // Home route - Futuristic Dashboard
-      GoRoute(
-        path: '/',
-        name: 'home',
-        builder: (context, state) => const HomeScreenFuturistic(),
-      ),
+        // Home route - Futuristic Dashboard
+        GoRoute(
+          path: '/',
+          name: 'home',
+          builder: (context, state) => const HomeScreenFuturistic(),
+        ),
 
-      // Location/Discovery routes
-      GoRoute(
-        path: '/discover',
-        name: 'discoverHubs',
-        builder: (context, state) => const DiscoverHubsScreen(),
-      ),
-      GoRoute(
-        path: '/map',
-        name: 'map',
-        builder: (context, state) => const MapScreen(),
-      ),
+        // Location/Discovery routes
+        GoRoute(
+          path: '/discover',
+          name: 'discoverHubs',
+          builder: (context, state) => const DiscoverHubsScreen(),
+        ),
+        GoRoute(
+          path: '/map',
+          name: 'map',
+          builder: (context, state) => DeferredWidget(
+            loadLibrary: map_screen.loadLibrary,
+            builder: (context) => map_screen.MapScreen(),
+            placeholder: const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator.adaptive(),
+              ),
+            ),
+          ),
+        ),
 
-      // Players Board
-      GoRoute(
-        path: '/players',
-        name: 'playersBoard',
-        builder: (context, state) => const PlayersListScreen(),
-      ),
+        // Players Board
+        GoRoute(
+          path: '/players',
+          name: 'playersBoard',
+          builder: (context, state) => const PlayersListScreen(),
+        ),
 
-      // Hubs Board
-      GoRoute(
-        path: '/hubs-board',
-        name: 'hubsBoard',
-        builder: (context, state) => const HubsBoardScreen(),
-      ),
+        // Hubs Board
+        GoRoute(
+          path: '/hubs-board',
+          name: 'hubsBoard',
+          builder: (context, state) => DeferredWidget(
+            loadLibrary: hubs_board_screen.loadLibrary,
+            builder: (context) => hubs_board_screen.HubsBoardScreen(),
+            placeholder: const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator.adaptive(),
+              ),
+            ),
+          ),
+        ),
 
       // Admin - Generate dummy data
       GoRoute(

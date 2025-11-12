@@ -4,26 +4,37 @@ import 'package:kickabout/config/env.dart';
 
 /// Authentication service
 class AuthService {
-  final FirebaseAuth _auth;
+  FirebaseAuth? _auth;
 
-  AuthService({FirebaseAuth? auth})
-      : _auth = auth ?? FirebaseAuth.instance;
+  AuthService({FirebaseAuth? auth}) : _auth = auth;
+
+  FirebaseAuth get _firebaseAuth {
+    if (!Env.isFirebaseAvailable) {
+      throw StateError('Firebase not available');
+    }
+    return _auth ??= FirebaseAuth.instance;
+  }
 
   /// Get current user
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser {
+    if (!Env.isFirebaseAvailable) {
+      return null;
+    }
+    return _firebaseAuth.currentUser;
+  }
 
   /// Get current user ID
-  String? get currentUserId => _auth.currentUser?.uid;
+  String? get currentUserId => currentUser?.uid;
 
   /// Check if user is authenticated
-  bool get isAuthenticated => _auth.currentUser != null;
+  bool get isAuthenticated => currentUser != null;
 
   /// Auth state changes stream
   Stream<User?> get authStateChanges {
     if (!Env.isFirebaseAvailable) {
       return Stream.value(null);
     }
-    return _auth.authStateChanges();
+    return _firebaseAuth.authStateChanges();
   }
 
   /// Sign in anonymously
@@ -34,7 +45,7 @@ class AuthService {
     }
     try {
       debugPrint('🔐 Attempting anonymous sign in...');
-      final result = await _auth.signInAnonymously();
+      final result = await _firebaseAuth.signInAnonymously();
       debugPrint('✅ Anonymous sign in successful: ${result.user?.uid}');
       return result;
     } catch (e) {
@@ -48,7 +59,7 @@ class AuthService {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
-    await _auth.signOut();
+    await _firebaseAuth.signOut();
   }
 
   /// Sign in with email and password
@@ -59,7 +70,7 @@ class AuthService {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
-    return await _auth.signInWithEmailAndPassword(
+    return _firebaseAuth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
@@ -76,7 +87,7 @@ class AuthService {
     }
     try {
       debugPrint('🔐 Attempting user registration: $email');
-      final result = await _auth.createUserWithEmailAndPassword(
+      final result = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
@@ -93,7 +104,7 @@ class AuthService {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
-    await _auth.sendPasswordResetEmail(email: email.trim());
+    await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
   }
 
   /// Update user password (requires re-authentication)
@@ -101,7 +112,7 @@ class AuthService {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
-    await _auth.currentUser?.updatePassword(newPassword);
+    await _firebaseAuth.currentUser?.updatePassword(newPassword);
   }
 
   /// Re-authenticate user (required for sensitive operations)
@@ -111,7 +122,7 @@ class AuthService {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
-    await _auth.currentUser?.reauthenticateWithCredential(credential);
+    await _firebaseAuth.currentUser?.reauthenticateWithCredential(credential);
   }
 }
 
