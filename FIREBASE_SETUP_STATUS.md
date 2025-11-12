@@ -6,7 +6,7 @@
 
 **Your provided config:**
 ```javascript
-apiKey: "AIzaSyBzet6M6R3ZjTUyrmCCu2h6FhHeIUTyaGM"
+apiKey: "YOUR_FIREBASE_API_KEY"
 authDomain: "kickabout-ddc06.firebaseapp.com"
 projectId: "kickabout-ddc06"
 storageBucket: "kickabout-ddc06.firebasestorage.app"
@@ -17,7 +17,7 @@ appId: "1:731836758075:web:449fbf8f2f634a2f03441e"
 **Current config in `lib/firebase_options.dart`:**
 ```dart
 static const FirebaseOptions web = FirebaseOptions(
-  apiKey: 'AIzaSyBzet6M6R3ZjTUyrmCCu2h6FhHeIUTyaGM', ✅
+  apiKey: 'YOUR_FIREBASE_API_KEY', ✅
   appId: '1:731836758075:web:449fbf8f2f634a2f03441e', ✅
   messagingSenderId: '731836758075', ✅
   projectId: 'kickabout-ddc06', ✅

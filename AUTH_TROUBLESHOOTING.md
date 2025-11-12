@@ -199,7 +199,7 @@ Future<UserCredential> signInAnonymously() async {
 
 ```dart
 static const FirebaseOptions web = FirebaseOptions(
-  apiKey: 'AIzaSy...',  // לא 'PLACEHOLDER'
+  apiKey: 'YOUR_FIREBASE_API_KEY',  // לא 'PLACEHOLDER'
   appId: '1:731836758075:web:...',
   projectId: 'kickabout-ddc06',  // לא 'PLACEHOLDER'
   // ...
