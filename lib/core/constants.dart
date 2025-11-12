@@ -27,6 +27,11 @@ class AppConstants {
   static const double defaultRating = 5.0;
   static const int ratingDecayDays = 30;
   
+  // Basic Rating Constants (1-7 scale)
+  static const double minBasicRating = 1.0;
+  static const double maxBasicRating = 7.0;
+  static const double defaultBasicRating = 4.0;
+  
   // UI Constants
   static const double defaultPadding = 16.0;
   static const double cardBorderRadius = 12.0;

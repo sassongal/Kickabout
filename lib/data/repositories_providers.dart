@@ -34,7 +34,10 @@ final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
 });
 
 final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
-  return RatingsRepository(firestore: ref.watch(firestoreProvider));
+  return RatingsRepository(
+    firestore: ref.watch(firestoreProvider),
+    hubsRepo: ref.watch(hubsRepositoryProvider),
+  );
 });
 
 final storageServiceProvider = Provider<StorageService>((ref) {

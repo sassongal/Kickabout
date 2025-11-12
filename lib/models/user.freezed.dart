@@ -30,6 +30,7 @@ mixin _$User {
   List<String> get hubIds => throw _privateConstructorUsedError;
   double get currentRankScore => throw _privateConstructorUsedError;
   String get preferredPosition => throw _privateConstructorUsedError;
+  int get totalParticipations => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -54,7 +55,8 @@ abstract class $UserCopyWith<$Res> {
       @TimestampConverter() DateTime createdAt,
       List<String> hubIds,
       double currentRankScore,
-      String preferredPosition});
+      String preferredPosition,
+      int totalParticipations});
 }
 
 /// @nodoc
@@ -81,6 +83,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? hubIds = null,
     Object? currentRankScore = null,
     Object? preferredPosition = null,
+    Object? totalParticipations = null,
   }) {
     return _then(_value.copyWith(
       uid: null == uid
@@ -119,6 +122,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.preferredPosition
           : preferredPosition // ignore: cast_nullable_to_non_nullable
               as String,
+      totalParticipations: null == totalParticipations
+          ? _value.totalParticipations
+          : totalParticipations // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -139,7 +146,8 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       @TimestampConverter() DateTime createdAt,
       List<String> hubIds,
       double currentRankScore,
-      String preferredPosition});
+      String preferredPosition,
+      int totalParticipations});
 }
 
 /// @nodoc
@@ -163,6 +171,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? hubIds = null,
     Object? currentRankScore = null,
     Object? preferredPosition = null,
+    Object? totalParticipations = null,
   }) {
     return _then(_$UserImpl(
       uid: null == uid
@@ -201,6 +210,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.preferredPosition
           : preferredPosition // ignore: cast_nullable_to_non_nullable
               as String,
+      totalParticipations: null == totalParticipations
+          ? _value.totalParticipations
+          : totalParticipations // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -217,7 +230,8 @@ class _$UserImpl implements _User {
       @TimestampConverter() required this.createdAt,
       final List<String> hubIds = const [],
       this.currentRankScore = 5.0,
-      this.preferredPosition = 'Midfielder'})
+      this.preferredPosition = 'Midfielder',
+      this.totalParticipations = 0})
       : _hubIds = hubIds;
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
@@ -251,10 +265,13 @@ class _$UserImpl implements _User {
   @override
   @JsonKey()
   final String preferredPosition;
+  @override
+  @JsonKey()
+  final int totalParticipations;
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations)';
   }
 
   @override
@@ -275,7 +292,9 @@ class _$UserImpl implements _User {
             (identical(other.currentRankScore, currentRankScore) ||
                 other.currentRankScore == currentRankScore) &&
             (identical(other.preferredPosition, preferredPosition) ||
-                other.preferredPosition == preferredPosition));
+                other.preferredPosition == preferredPosition) &&
+            (identical(other.totalParticipations, totalParticipations) ||
+                other.totalParticipations == totalParticipations));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -290,7 +309,8 @@ class _$UserImpl implements _User {
       createdAt,
       const DeepCollectionEquality().hash(_hubIds),
       currentRankScore,
-      preferredPosition);
+      preferredPosition,
+      totalParticipations);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -318,7 +338,8 @@ abstract class _User implements User {
       @TimestampConverter() required final DateTime createdAt,
       final List<String> hubIds,
       final double currentRankScore,
-      final String preferredPosition}) = _$UserImpl;
+      final String preferredPosition,
+      final int totalParticipations}) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
 
@@ -341,6 +362,8 @@ abstract class _User implements User {
   double get currentRankScore;
   @override
   String get preferredPosition;
+  @override
+  int get totalParticipations;
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.

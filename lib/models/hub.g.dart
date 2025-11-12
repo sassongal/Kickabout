@@ -17,7 +17,8 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      settings: json['settings'] as Map<String, dynamic>? ?? const {},
+      settings: json['settings'] as Map<String, dynamic>? ??
+          const {'ratingMode': 'basic'},
     );
 
 Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{

@@ -17,6 +17,7 @@ class User with _$User {
     @Default([]) List<String> hubIds,
     @Default(5.0) double currentRankScore,
     @Default('Midfielder') String preferredPosition,
+    @Default(0) int totalParticipations,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

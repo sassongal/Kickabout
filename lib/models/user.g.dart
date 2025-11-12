@@ -20,6 +20,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
           const [],
       currentRankScore: (json['currentRankScore'] as num?)?.toDouble() ?? 5.0,
       preferredPosition: json['preferredPosition'] as String? ?? 'Midfielder',
+      totalParticipations: (json['totalParticipations'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
@@ -33,4 +34,5 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'hubIds': instance.hubIds,
       'currentRankScore': instance.currentRankScore,
       'preferredPosition': instance.preferredPosition,
+      'totalParticipations': instance.totalParticipations,
     };

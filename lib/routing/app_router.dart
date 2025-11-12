@@ -12,6 +12,7 @@ import 'package:kickabout/screens/game/create_game_screen.dart';
 import 'package:kickabout/screens/game/game_detail_screen.dart';
 import 'package:kickabout/screens/game/team_maker_screen.dart';
 import 'package:kickabout/screens/game/stats_logger_screen.dart';
+import 'package:kickabout/screens/stats_input/basic_rating_screen.dart';
 import 'package:kickabout/screens/profile/player_profile_screen.dart';
 import 'package:kickabout/screens/profile/edit_profile_screen.dart';
 import 'package:kickabout/data/repositories_providers.dart';
@@ -97,7 +98,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'create',
             name: 'createGame',
-            builder: (context, state) => const CreateGameScreen(),
+            builder: (context, state) {
+              final hubId = state.uri.queryParameters['hubId'];
+              return CreateGameScreen(hubId: hubId);
+            },
           ),
           GoRoute(
             path: ':id',
@@ -121,6 +125,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) {
                   final gameId = state.pathParameters['id']!;
                   return StatsLoggerScreen(gameId: gameId);
+                },
+              ),
+              GoRoute(
+                path: 'basic-rating',
+                name: 'basicRating',
+                builder: (context, state) {
+                  final gameId = state.pathParameters['id']!;
+                  return BasicRatingScreen(gameId: gameId);
                 },
               ),
             ],

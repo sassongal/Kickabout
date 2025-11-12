@@ -23,6 +23,7 @@ mixin _$RatingSnapshot {
   String get ratingId => throw _privateConstructorUsedError;
   String get gameId => throw _privateConstructorUsedError;
   String get playerId => throw _privateConstructorUsedError;
+  double? get basicScore => throw _privateConstructorUsedError;
   double get defense => throw _privateConstructorUsedError;
   double get passing => throw _privateConstructorUsedError;
   double get shooting => throw _privateConstructorUsedError;
@@ -56,6 +57,7 @@ abstract class $RatingSnapshotCopyWith<$Res> {
       {String ratingId,
       String gameId,
       String playerId,
+      double? basicScore,
       double defense,
       double passing,
       double shooting,
@@ -87,6 +89,7 @@ class _$RatingSnapshotCopyWithImpl<$Res, $Val extends RatingSnapshot>
     Object? ratingId = null,
     Object? gameId = null,
     Object? playerId = null,
+    Object? basicScore = freezed,
     Object? defense = null,
     Object? passing = null,
     Object? shooting = null,
@@ -112,6 +115,10 @@ class _$RatingSnapshotCopyWithImpl<$Res, $Val extends RatingSnapshot>
           ? _value.playerId
           : playerId // ignore: cast_nullable_to_non_nullable
               as String,
+      basicScore: freezed == basicScore
+          ? _value.basicScore
+          : basicScore // ignore: cast_nullable_to_non_nullable
+              as double?,
       defense: null == defense
           ? _value.defense
           : defense // ignore: cast_nullable_to_non_nullable
@@ -172,6 +179,7 @@ abstract class _$$RatingSnapshotImplCopyWith<$Res>
       {String ratingId,
       String gameId,
       String playerId,
+      double? basicScore,
       double defense,
       double passing,
       double shooting,
@@ -201,6 +209,7 @@ class __$$RatingSnapshotImplCopyWithImpl<$Res>
     Object? ratingId = null,
     Object? gameId = null,
     Object? playerId = null,
+    Object? basicScore = freezed,
     Object? defense = null,
     Object? passing = null,
     Object? shooting = null,
@@ -226,6 +235,10 @@ class __$$RatingSnapshotImplCopyWithImpl<$Res>
           ? _value.playerId
           : playerId // ignore: cast_nullable_to_non_nullable
               as String,
+      basicScore: freezed == basicScore
+          ? _value.basicScore
+          : basicScore // ignore: cast_nullable_to_non_nullable
+              as double?,
       defense: null == defense
           ? _value.defense
           : defense // ignore: cast_nullable_to_non_nullable
@@ -281,6 +294,7 @@ class _$RatingSnapshotImpl implements _RatingSnapshot {
       {required this.ratingId,
       required this.gameId,
       required this.playerId,
+      this.basicScore,
       this.defense = 5.0,
       this.passing = 5.0,
       this.shooting = 5.0,
@@ -302,6 +316,8 @@ class _$RatingSnapshotImpl implements _RatingSnapshot {
   final String gameId;
   @override
   final String playerId;
+  @override
+  final double? basicScore;
   @override
   @JsonKey()
   final double defense;
@@ -337,7 +353,7 @@ class _$RatingSnapshotImpl implements _RatingSnapshot {
 
   @override
   String toString() {
-    return 'RatingSnapshot(ratingId: $ratingId, gameId: $gameId, playerId: $playerId, defense: $defense, passing: $passing, shooting: $shooting, dribbling: $dribbling, physical: $physical, leadership: $leadership, teamPlay: $teamPlay, consistency: $consistency, submittedBy: $submittedBy, submittedAt: $submittedAt, isVerified: $isVerified)';
+    return 'RatingSnapshot(ratingId: $ratingId, gameId: $gameId, playerId: $playerId, basicScore: $basicScore, defense: $defense, passing: $passing, shooting: $shooting, dribbling: $dribbling, physical: $physical, leadership: $leadership, teamPlay: $teamPlay, consistency: $consistency, submittedBy: $submittedBy, submittedAt: $submittedAt, isVerified: $isVerified)';
   }
 
   @override
@@ -350,6 +366,8 @@ class _$RatingSnapshotImpl implements _RatingSnapshot {
             (identical(other.gameId, gameId) || other.gameId == gameId) &&
             (identical(other.playerId, playerId) ||
                 other.playerId == playerId) &&
+            (identical(other.basicScore, basicScore) ||
+                other.basicScore == basicScore) &&
             (identical(other.defense, defense) || other.defense == defense) &&
             (identical(other.passing, passing) || other.passing == passing) &&
             (identical(other.shooting, shooting) ||
@@ -379,6 +397,7 @@ class _$RatingSnapshotImpl implements _RatingSnapshot {
       ratingId,
       gameId,
       playerId,
+      basicScore,
       defense,
       passing,
       shooting,
@@ -413,6 +432,7 @@ abstract class _RatingSnapshot implements RatingSnapshot {
       {required final String ratingId,
       required final String gameId,
       required final String playerId,
+      final double? basicScore,
       final double defense,
       final double passing,
       final double shooting,
@@ -434,6 +454,8 @@ abstract class _RatingSnapshot implements RatingSnapshot {
   String get gameId;
   @override
   String get playerId;
+  @override
+  double? get basicScore;
   @override
   double get defense;
   @override

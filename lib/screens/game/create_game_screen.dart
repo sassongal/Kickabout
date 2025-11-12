@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
+import 'package:kickabout/utils/snackbar_helper.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/core/constants.dart';
 
 /// Create game screen
 class CreateGameScreen extends ConsumerStatefulWidget {
-  const CreateGameScreen({super.key});
+  final String? hubId;
+
+  const CreateGameScreen({super.key, this.hubId});
 
   @override
   ConsumerState<CreateGameScreen> createState() => _CreateGameScreenState();
@@ -23,6 +26,13 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   TimeOfDay _selectedTime = TimeOfDay.now();
   int _teamCount = 2;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize hubId from parameter if provided
+    _selectedHubId = widget.hubId;
+  }
 
   @override
   void dispose() {
@@ -60,13 +70,14 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   }
 
   Future<void> _createGame() async {
-    if (!_formKey.currentState!.validate()) return;
     if (_selectedHubId == null) {
+      if (!_formKey.currentState!.validate()) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('נא לבחור הוב')),
       );
       return;
     }
+    if (!_formKey.currentState!.validate()) return;
 
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) {
@@ -105,8 +116,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       await gamesRepo.createGame(game);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('המשחק נוצר בהצלחה!')),
+        SnackbarHelper.showSuccess(
+          context,
+          'המשחק נוצר בהצלחה! התראה נשלחה לחברי ההאב.',
         );
         context.pop();
       }
@@ -141,62 +153,64 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Hub selection
-              StreamBuilder<List<Hub>>(
-                stream: hubsStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const LinearProgressIndicator();
-                  }
+              // Hub selection (only show if hubId not provided)
+              if (_selectedHubId == null)
+                StreamBuilder<List<Hub>>(
+                  stream: hubsStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const LinearProgressIndicator();
+                    }
 
-                  final hubs = snapshot.data ?? [];
+                    final hubs = snapshot.data ?? [];
 
-                  if (hubs.isEmpty) {
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.warning, color: Colors.orange),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'אין הובס. צור הוב לפני יצירת משחק.',
-                              style: Theme.of(context).textTheme.bodySmall,
+                    if (hubs.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning, color: Colors.orange),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'אין הובס. צור הוב לפני יצירת משחק.',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                          ],
+                        ),
+                      );
+                    }
 
-                  return DropdownButtonFormField<String>(
-                    value: _selectedHubId,
-                    decoration: const InputDecoration(
-                      labelText: 'הוב',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.group),
-                    ),
-                    items: hubs.map((hub) => DropdownMenuItem<String>(
-                      value: hub.hubId,
-                      child: Text(hub.name),
-                    )).toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedHubId = value);
-                    },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'נא לבחור הוב';
-                      }
-                      return null;
-                    },
-                  );
-                },
-              ),
+                    return DropdownButtonFormField<String>(
+                      value: _selectedHubId,
+                      decoration: const InputDecoration(
+                        labelText: 'הוב',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.group),
+                      ),
+                      items: hubs.map((hub) => DropdownMenuItem<String>(
+                        value: hub.hubId,
+                        child: Text(hub.name),
+                      )).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedHubId = value);
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'נא לבחור הוב';
+                        }
+                        return null;
+                      },
+                    );
+                  },
+                ),
+              if (_selectedHubId == null) const SizedBox(height: 16),
               const SizedBox(height: 16),
 
               // Date selection

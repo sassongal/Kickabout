@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
+import 'package:kickabout/utils/snackbar_helper.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/core/constants.dart';
@@ -47,6 +49,7 @@ class HubDetailScreen extends ConsumerWidget {
           }
 
           final isMember = currentUserId != null && hub.memberIds.contains(currentUserId);
+          final isHubManager = currentUserId == hub.createdBy;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
@@ -88,14 +91,53 @@ class HubDetailScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.settings,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'מצב דירוג: ${hub.settings['ratingMode'] == 'advanced' ? 'מתקדם (1-10)' : 'בסיסי (1-7)'}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
 
+                // Hub manager actions
+                if (isHubManager) ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _editHubSettings(context, ref, hub),
+                    icon: const Icon(Icons.settings),
+                    label: const Text('ערוך הגדרות'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Theme.of(context).colorScheme.onSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/games/create?hubId=${hub.hubId}'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('צור מחזור חדש'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
                 // Join/Leave button
-                if (currentUserId != null)
+                if (currentUserId != null && !isHubManager)
                   ElevatedButton.icon(
                     onPressed: () => _toggleMembership(context, ref, hub, isMember),
                     icon: Icon(isMember ? Icons.exit_to_app : Icons.person_add),
@@ -110,7 +152,7 @@ class HubDetailScreen extends ConsumerWidget {
                           : Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
-                const SizedBox(height: 24),
+                if (currentUserId != null && !isHubManager) const SizedBox(height: 24),
 
                 // Members section
                 Text(
@@ -217,6 +259,69 @@ class HubDetailScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('שגיאה: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _editHubSettings(
+    BuildContext context,
+    WidgetRef ref,
+    Hub hub,
+  ) async {
+    final currentRatingMode = hub.settings['ratingMode'] as String? ?? 'basic';
+
+    final newRatingMode = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ערוך הגדרות הוב'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('בחר מצב דירוג:'),
+            const SizedBox(height: 16),
+            RadioListTile<String>(
+              title: const Text('דירוג בסיסי (1-7)'),
+              subtitle: const Text('ציון יחיד לכל שחקן'),
+              value: 'basic',
+              groupValue: currentRatingMode,
+              onChanged: (value) => Navigator.of(context).pop(value),
+            ),
+            RadioListTile<String>(
+              title: const Text('דירוג מתקדם (1-10)'),
+              subtitle: const Text('8 קטגוריות דירוג'),
+              value: 'advanced',
+              groupValue: currentRatingMode,
+              onChanged: (value) => Navigator.of(context).pop(value),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('ביטול'),
+          ),
+        ],
+      ),
+    );
+
+    if (newRatingMode != null && newRatingMode != currentRatingMode) {
+      try {
+        final hubsRepo = ref.read(hubsRepositoryProvider);
+        await hubsRepo.updateHub(hub.hubId, {
+          'settings': {
+            ...hub.settings,
+            'ratingMode': newRatingMode,
+          },
+        });
+
+        if (context.mounted) {
+          SnackbarHelper.showSuccess(context, 'ההגדרות עודכנו בהצלחה');
+        }
+      } catch (e) {
+        if (context.mounted) {
+          SnackbarHelper.showErrorFromException(context, e);
+        }
       }
     }
   }

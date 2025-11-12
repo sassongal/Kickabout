@@ -186,7 +186,7 @@ class _$HubImpl implements _Hub {
       required this.createdBy,
       @TimestampConverter() required this.createdAt,
       final List<String> memberIds = const [],
-      final Map<String, dynamic> settings = const {}})
+      final Map<String, dynamic> settings = const {'ratingMode': 'basic'}})
       : _memberIds = memberIds,
         _settings = settings;
 

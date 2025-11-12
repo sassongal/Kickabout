@@ -14,7 +14,7 @@ class Hub with _$Hub {
     required String createdBy,
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> memberIds,
-    @Default({}) Map<String, dynamic> settings,
+    @Default({'ratingMode': 'basic'}) Map<String, dynamic> settings,
   }) = _Hub;
 
   factory Hub.fromJson(Map<String, dynamic> json) => _$HubFromJson(json);

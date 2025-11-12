@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -308,15 +309,24 @@ class GameDetailScreen extends ConsumerWidget {
     if (currentUserId == null) return;
 
     final signupsRepo = ref.read(signupsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
 
     try {
       if (isSignedUp) {
         await signupsRepo.removeSignup(gameId, currentUserId);
+        // Decrement participation counter
+        await usersRepo.updateUser(currentUserId, {
+          'totalParticipations': FieldValue.increment(-1),
+        });
         if (context.mounted) {
           SnackbarHelper.showSuccess(context, 'הסרת הרשמה');
         }
       } else {
         await signupsRepo.setSignup(gameId, currentUserId, SignupStatus.confirmed);
+        // Increment participation counter
+        await usersRepo.updateUser(currentUserId, {
+          'totalParticipations': FieldValue.increment(1),
+        });
         if (context.mounted) {
           SnackbarHelper.showSuccess(context, 'נרשמת למשחק');
         }

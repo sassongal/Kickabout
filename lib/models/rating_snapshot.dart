@@ -11,6 +11,7 @@ class RatingSnapshot with _$RatingSnapshot {
     required String ratingId,
     required String gameId,
     required String playerId,
+    double? basicScore,
     @Default(5.0) double defense,
     @Default(5.0) double passing,
     @Default(5.0) double shooting,

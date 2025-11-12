@@ -3,13 +3,18 @@ import 'package:kickabout/config/env.dart';
 import 'package:kickabout/core/constants.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/services/firestore_paths.dart';
+import 'package:kickabout/data/hubs_repository.dart';
 
 /// Repository for Rating operations
 class RatingsRepository {
   final FirebaseFirestore _firestore;
+  final HubsRepository _hubsRepo;
 
-  RatingsRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  RatingsRepository({
+    FirebaseFirestore? firestore,
+    HubsRepository? hubsRepo,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _hubsRepo = hubsRepo ?? HubsRepository();
 
   /// Get rating snapshot by ID
   Future<RatingSnapshot?> getRatingSnapshot(String uid, String ratingId) async {
@@ -96,46 +101,107 @@ class RatingsRepository {
   }
 
   /// Calculate current rating from history (simple average of last N games)
-  Future<double> getCurrentRating(String uid, {int lastNGames = 10}) async {
+  /// If hubId is provided, uses that hub's ratingMode setting
+  Future<double> getCurrentRating(
+    String uid, {
+    int lastNGames = 10,
+    String? hubId,
+  }) async {
     if (!Env.isFirebaseAvailable) return AppConstants.defaultRating;
 
     try {
+      // Get hub settings if hubId is provided
+      String? ratingMode;
+      if (hubId != null) {
+        final hub = await _hubsRepo.getHub(hubId);
+        ratingMode = hub?.settings['ratingMode'] as String? ?? 'basic';
+      }
+
       final history = await getRatingHistory(uid);
-      if (history.isEmpty) return AppConstants.defaultRating;
+      if (history.isEmpty) {
+        // Return appropriate default based on rating mode
+        return ratingMode == 'advanced'
+            ? AppConstants.defaultRating
+            : AppConstants.defaultBasicRating;
+      }
 
       // Take last N games
       final recentRatings = history.take(lastNGames).toList();
-      if (recentRatings.isEmpty) return AppConstants.defaultRating;
+      if (recentRatings.isEmpty) {
+        return ratingMode == 'advanced'
+            ? AppConstants.defaultRating
+            : AppConstants.defaultBasicRating;
+      }
 
-      // Calculate average of all rating categories
+      // Calculate average based on rating mode
       double totalRating = 0.0;
       int count = 0;
 
       for (var snapshot in recentRatings) {
-        totalRating += snapshot.defense;
-        totalRating += snapshot.passing;
-        totalRating += snapshot.shooting;
-        totalRating += snapshot.dribbling;
-        totalRating += snapshot.physical;
-        totalRating += snapshot.leadership;
-        totalRating += snapshot.teamPlay;
-        totalRating += snapshot.consistency;
-        count += 8; // 8 categories
+        if (ratingMode == 'basic' && snapshot.basicScore != null) {
+          // Use basic score if available and mode is basic
+          totalRating += snapshot.basicScore!;
+          count += 1;
+        } else if (ratingMode != 'basic') {
+          // Use advanced 8 categories
+          totalRating += snapshot.defense;
+          totalRating += snapshot.passing;
+          totalRating += snapshot.shooting;
+          totalRating += snapshot.dribbling;
+          totalRating += snapshot.physical;
+          totalRating += snapshot.leadership;
+          totalRating += snapshot.teamPlay;
+          totalRating += snapshot.consistency;
+          count += 8;
+        } else if (snapshot.basicScore == null) {
+          // Fallback: if basic mode but no basicScore, use advanced calculation
+          totalRating += snapshot.defense;
+          totalRating += snapshot.passing;
+          totalRating += snapshot.shooting;
+          totalRating += snapshot.dribbling;
+          totalRating += snapshot.physical;
+          totalRating += snapshot.leadership;
+          totalRating += snapshot.teamPlay;
+          totalRating += snapshot.consistency;
+          count += 8;
+        }
       }
 
-      return count > 0 ? totalRating / count : AppConstants.defaultRating;
+      if (count == 0) {
+        return ratingMode == 'advanced'
+            ? AppConstants.defaultRating
+            : AppConstants.defaultBasicRating;
+      }
+
+      return totalRating / count;
     } catch (e) {
       throw Exception('Failed to calculate current rating: $e');
     }
   }
 
   /// Calculate time-based decay rating (weights recent games more)
-  Future<double> getDecayedRating(String uid, {int decayDays = 30}) async {
+  /// If hubId is provided, uses that hub's ratingMode setting
+  Future<double> getDecayedRating(
+    String uid, {
+    int decayDays = 30,
+    String? hubId,
+  }) async {
     if (!Env.isFirebaseAvailable) return AppConstants.defaultRating;
 
     try {
+      // Get hub settings if hubId is provided
+      String? ratingMode;
+      if (hubId != null) {
+        final hub = await _hubsRepo.getHub(hubId);
+        ratingMode = hub?.settings['ratingMode'] as String? ?? 'basic';
+      }
+
       final history = await getRatingHistory(uid);
-      if (history.isEmpty) return AppConstants.defaultRating;
+      if (history.isEmpty) {
+        return ratingMode == 'advanced'
+            ? AppConstants.defaultRating
+            : AppConstants.defaultBasicRating;
+      }
 
       final now = DateTime.now();
       double weightedSum = 0.0;
@@ -149,24 +215,45 @@ class RatingsRepository {
         final weight = 1.0 - (daysAgo / decayDays);
         if (weight <= 0) continue;
 
-        // Average of all categories
-        final avgRating = (snapshot.defense +
-                snapshot.passing +
-                snapshot.shooting +
-                snapshot.dribbling +
-                snapshot.physical +
-                snapshot.leadership +
-                snapshot.teamPlay +
-                snapshot.consistency) /
-            8.0;
+        // Calculate average based on rating mode
+        double avgRating;
+        if (ratingMode == 'basic' && snapshot.basicScore != null) {
+          avgRating = snapshot.basicScore!;
+        } else if (ratingMode != 'basic') {
+          // Average of all 8 categories
+          avgRating = (snapshot.defense +
+                  snapshot.passing +
+                  snapshot.shooting +
+                  snapshot.dribbling +
+                  snapshot.physical +
+                  snapshot.leadership +
+                  snapshot.teamPlay +
+                  snapshot.consistency) /
+              8.0;
+        } else {
+          // Fallback: if basic mode but no basicScore, use advanced calculation
+          avgRating = (snapshot.defense +
+                  snapshot.passing +
+                  snapshot.shooting +
+                  snapshot.dribbling +
+                  snapshot.physical +
+                  snapshot.leadership +
+                  snapshot.teamPlay +
+                  snapshot.consistency) /
+              8.0;
+        }
 
         weightedSum += avgRating * weight;
         totalWeight += weight;
       }
 
-      return totalWeight > 0
-          ? weightedSum / totalWeight
-          : AppConstants.defaultRating;
+      if (totalWeight == 0) {
+        return ratingMode == 'advanced'
+            ? AppConstants.defaultRating
+            : AppConstants.defaultBasicRating;
+      }
+
+      return weightedSum / totalWeight;
     } catch (e) {
       throw Exception('Failed to calculate decayed rating: $e');
     }

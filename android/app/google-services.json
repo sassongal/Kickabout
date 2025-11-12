@@ -12,7 +12,12 @@
           "package_name": "com.mycompany.CounterApp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "731836758075-7n7toprsfivmbrlmgf12af4bcb1j128h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDzz0lNtzpqFPcZalk3OIxjdsSuq-F8dFI"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "731836758075-7n7toprsfivmbrlmgf12af4bcb1j128h.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.CounterApp"
+              }
+            }
+          ]
         }
       }
     }

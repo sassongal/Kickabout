@@ -111,6 +111,24 @@ class PlayerProfileScreen extends ConsumerWidget {
                                     label: Text(user.preferredPosition),
                                     backgroundColor: Colors.blue.withValues(alpha: 0.1),
                                   ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.event,
+                                        size: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${user.totalParticipations} השתתפויות',
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                              color: Colors.grey[600],
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
