@@ -7,6 +7,7 @@ import 'package:kickabout/services/location_service.dart';
 import 'package:kickabout/services/push_notification_service.dart';
 import 'package:kickabout/services/game_reminder_service.dart';
 import 'package:kickabout/services/push_notification_integration_service.dart';
+import 'package:kickabout/services/scouting_service.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -113,5 +114,14 @@ final authServiceProvider = Provider<AuthService>((ref) {
 final currentUserIdProvider = Provider<String?>((ref) {
   final authService = ref.watch(authServiceProvider);
   return authService.currentUserId;
+});
+
+/// Scouting service provider
+final scoutingServiceProvider = Provider<ScoutingService>((ref) {
+  return ScoutingService(
+    usersRepo: ref.watch(usersRepositoryProvider),
+    hubsRepo: ref.watch(hubsRepositoryProvider),
+    locationService: ref.watch(locationServiceProvider),
+  );
 });
 

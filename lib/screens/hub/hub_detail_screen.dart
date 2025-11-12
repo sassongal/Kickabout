@@ -151,6 +151,17 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.search),
+                          label: const Text('גיוס שחקנים (AI)'),
+                          onPressed: () => context.push('/hubs/${hub.hubId}/scouting'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 48),
+                          ),
+                        ),
                       ] else if (currentUserId != null) ...[
                         const SizedBox(height: 8),
                         ElevatedButton.icon(

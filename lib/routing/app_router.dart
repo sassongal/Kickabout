@@ -35,6 +35,7 @@ import 'package:kickabout/screens/hub/hub_settings_screen.dart';
 import 'package:kickabout/screens/hub/join_by_invite_screen.dart';
 import 'package:kickabout/screens/game/game_calendar_screen.dart';
 import 'package:kickabout/screens/social/create_post_screen.dart';
+import 'package:kickabout/screens/hub/scouting_screen.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 
 /// Auth state stream provider
@@ -231,6 +232,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) {
                   final hubId = state.pathParameters['id']!;
                   return CreatePostScreen(hubId: hubId);
+                },
+              ),
+              GoRoute(
+                path: 'scouting',
+                name: 'scouting',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  final gameId = state.uri.queryParameters['gameId'];
+                  return ScoutingScreen(hubId: hubId, gameId: gameId);
                 },
               ),
             ],
