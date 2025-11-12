@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kickabout/config/env.dart';
 
@@ -28,9 +29,18 @@ class AuthService {
   /// Sign in anonymously
   Future<UserCredential> signInAnonymously() async {
     if (!Env.isFirebaseAvailable) {
+      debugPrint('❌ Anonymous sign in failed: Firebase not available (limited mode)');
       throw Exception('Firebase not available');
     }
-    return await _auth.signInAnonymously();
+    try {
+      debugPrint('🔐 Attempting anonymous sign in...');
+      final result = await _auth.signInAnonymously();
+      debugPrint('✅ Anonymous sign in successful: ${result.user?.uid}');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Anonymous sign in failed: $e');
+      rethrow;
+    }
   }
 
   /// Sign out
@@ -61,12 +71,21 @@ class AuthService {
     String password,
   ) async {
     if (!Env.isFirebaseAvailable) {
+      debugPrint('❌ User registration failed: Firebase not available (limited mode)');
       throw Exception('Firebase not available');
     }
-    return await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    try {
+      debugPrint('🔐 Attempting user registration: $email');
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      debugPrint('✅ User registration successful: ${result.user?.uid}');
+      return result;
+    } catch (e) {
+      debugPrint('❌ User registration failed: $e');
+      rethrow;
+    }
   }
 
   /// Send password reset email

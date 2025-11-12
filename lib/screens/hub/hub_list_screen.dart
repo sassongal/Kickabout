@@ -28,6 +28,27 @@ class HubListScreen extends ConsumerWidget {
 
     return AppScaffold(
       title: 'הובס',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'התנתק',
+          onPressed: () async {
+            final authService = ref.read(authServiceProvider);
+            try {
+              await authService.signOut();
+              if (context.mounted) {
+                context.go('/auth');
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('שגיאה בהתנתקות: $e')),
+                );
+              }
+            }
+          },
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/hubs/create'),
         icon: const Icon(Icons.add),

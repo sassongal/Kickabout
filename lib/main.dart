@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:kickabout/theme.dart';
 import 'package:kickabout/core/constants.dart';
-import 'package:kickabout/config/firebase_options.dart';
+import 'package:kickabout/firebase_options.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:kickabout/l10n/app_localizations.dart';
 import 'package:kickabout/routing/app_router.dart';

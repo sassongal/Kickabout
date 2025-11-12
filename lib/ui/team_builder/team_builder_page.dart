@@ -211,7 +211,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                       Icon(
                         Icons.group_outlined,
                         size: 64,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -248,7 +248,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         border: Border.all(
-          color: teamColors[index % teamColors.length].withOpacity(0.3),
+          color: teamColors[index % teamColors.length].withValues(alpha: 0.3),
           width: 2,
         ),
         borderRadius: BorderRadius.circular(8),
@@ -258,7 +258,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: teamColors[index % teamColors.length].withOpacity(0.1),
+              color: teamColors[index % teamColors.length].withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(6),
                 topRight: Radius.circular(6),
@@ -289,7 +289,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                     child: Text(
                       'ריק',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   )
@@ -314,7 +314,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                               leading: CircleAvatar(
                                 radius: 16,
                                 backgroundColor: teamColors[index % teamColors.length]
-                                    .withOpacity(0.2),
+                                    .withValues(alpha: 0.2),
                                 child: user.photoUrl != null
                                     ? ClipOval(
                                         child: Image.network(
@@ -354,7 +354,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: teamColors[index % teamColors.length].withOpacity(0.05),
+                color: teamColors[index % teamColors.length].withValues(alpha: 0.05),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(6),
                   bottomRight: Radius.circular(6),
