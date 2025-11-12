@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/data/repositories.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/core/constants.dart';
+import 'package:kickabout/services/gamification_service.dart';
 
 /// Basic rating screen for simple 1-7 rating system
 class BasicRatingScreen extends ConsumerStatefulWidget {
@@ -301,6 +303,14 @@ class _BasicRatingScreenState extends ConsumerState<BasicRatingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      // Calculate average rating for each player (from all ratings they received)
+      final playerRatingsMap = <String, List<double>>{};
+      for (final player in players) {
+        final rating = _playerRatings[player.uid] ?? AppConstants.defaultBasicRating;
+        playerRatingsMap.putIfAbsent(player.uid, () => []).add(rating);
+      }
+
+      // Save ratings
       for (final player in players) {
         final rating = _playerRatings[player.uid] ?? AppConstants.defaultBasicRating;
 
@@ -315,6 +325,53 @@ class _BasicRatingScreenState extends ConsumerState<BasicRatingScreen> {
         );
 
         await ratingsRepo.addRatingSnapshot(player.uid, snapshot);
+      }
+
+      // Update gamification for each player
+      final gamificationRepo = ref.read(gamificationRepositoryProvider);
+      final eventsRepo = ref.read(eventsRepositoryProvider);
+      
+      // Get game events to count goals, assists, saves
+      final events = await eventsRepo.getEvents(widget.gameId);
+      
+      for (final player in players) {
+        try {
+          // Count player's events
+          final playerGoals = events.where((e) => e.playerId == player.uid && e.type == EventType.goal).length;
+          final playerAssists = events.where((e) => e.playerId == player.uid && e.type == EventType.assist).length;
+          final playerSaves = events.where((e) => e.playerId == player.uid && e.type == EventType.save).length;
+          
+          // Get average rating for this player (simplified - use their rating from this submission)
+          final averageRating = _playerRatings[player.uid] ?? AppConstants.defaultBasicRating;
+          
+          // Check if MVP (simplified - highest rating)
+          final isMVP = players.every((p) => 
+            (_playerRatings[p.uid] ?? AppConstants.defaultBasicRating) <= averageRating
+          );
+          
+          // Calculate points
+          final pointsEarned = GamificationService.calculateGamePoints(
+            won: false, // TODO: Determine win/loss from game result
+            goals: playerGoals,
+            assists: playerAssists,
+            saves: playerSaves,
+            isMVP: isMVP,
+            averageRating: averageRating,
+          );
+          
+          // Update gamification
+          await gamificationRepo.updateGamification(
+            userId: player.uid,
+            pointsEarned: pointsEarned,
+            won: false, // TODO: Determine from game result
+            goals: playerGoals,
+            assists: playerAssists,
+            saves: playerSaves,
+          );
+        } catch (e) {
+          debugPrint('Error updating gamification for ${player.uid}: $e');
+          // Continue with other players even if one fails
+        }
       }
 
       if (mounted) {

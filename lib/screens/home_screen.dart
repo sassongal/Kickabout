@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickabout/data/repositories.dart';
+import 'package:kickabout/services/location_service.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/widgets/player_avatar.dart';
 import 'package:kickabout/core/constants.dart';
@@ -363,6 +365,7 @@ class _NearbyHubsSection extends ConsumerWidget {
   Future<List<Hub>> _getNearbyHubs() async {
     try {
       final position = await locationService.getCurrentLocation();
+      if (position == null) return [];
       return await hubsRepo.findHubsNearby(
         latitude: position.latitude,
         longitude: position.longitude,

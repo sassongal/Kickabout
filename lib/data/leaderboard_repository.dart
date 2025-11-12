@@ -95,7 +95,7 @@ class LeaderboardRepository {
 
       for (int i = 0; i < snapshot.docs.length; i++) {
         final doc = snapshot.docs[i];
-        final data = doc.data();
+        final data = doc.data() as Map<String, dynamic>;
         final user = User.fromJson({...data, 'uid': doc.id});
 
         int score;
@@ -168,10 +168,10 @@ class LeaderboardRepository {
   Future<Gamification?> _getGamification(String userId) async {
     try {
       final doc = await _firestore
-          .collection(FirestorePaths.user(userId))
-          .doc('gamification')
-          .collection('stats')
-          .doc('data')
+          .collection('users')
+          .doc(userId)
+          .collection('gamification')
+          .doc('stats')
           .get();
 
       if (!doc.exists) return null;

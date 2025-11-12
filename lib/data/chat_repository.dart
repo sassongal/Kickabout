@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:kickabout/models/models.dart';
-import 'package:kickabout/services/firestore_paths.dart';
 
 /// Repository for Chat operations
 class ChatRepository {
@@ -17,9 +16,11 @@ class ChatRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.hub(hubId))
-        .doc('chat')
-        .collection('messages')
+        .collection('hubs')
+        .doc(hubId)
+        .collection('chat')
+        .doc('messages')
+        .collection('items')
         .orderBy('createdAt', descending: false)
         .limit(100)
         .snapshots()
@@ -32,8 +33,9 @@ class ChatRepository {
   Future<String> sendMessage(
     String hubId,
     String authorId,
-    String text,
-  ) async {
+    String text, {
+    List<String>? memberIds, // For notification
+  }) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
@@ -48,12 +50,18 @@ class ChatRepository {
       };
 
       final docRef = _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('chat')
-          .collection('messages')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('chat')
+          .doc('messages')
+          .collection('items')
           .doc();
 
       await docRef.set(data);
+
+      // Send notification to other members
+      // This will be handled by the caller using push integration service
+
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to send message: $e');
@@ -68,9 +76,11 @@ class ChatRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('chat')
-          .collection('messages')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('chat')
+          .doc('messages')
+          .collection('items')
           .doc(messageId)
           .update({
         'readBy': FieldValue.arrayUnion([userId]),
@@ -87,9 +97,11 @@ class ChatRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.game(gameId))
-        .doc('chat')
-        .collection('messages')
+        .collection('games')
+        .doc(gameId)
+        .collection('chat')
+        .doc('messages')
+        .collection('items')
         .orderBy('createdAt', descending: false)
         .limit(100)
         .snapshots()
@@ -118,9 +130,11 @@ class ChatRepository {
       };
 
       final docRef = _firestore
-          .collection(FirestorePaths.game(gameId))
-          .doc('chat')
-          .collection('messages')
+          .collection('games')
+          .doc(gameId)
+          .collection('chat')
+          .doc('messages')
+          .collection('items')
           .doc();
 
       await docRef.set(data);
@@ -138,9 +152,11 @@ class ChatRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('chat')
-          .collection('messages')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('chat')
+          .doc('messages')
+          .collection('items')
           .doc(messageId)
           .delete();
     } catch (e) {

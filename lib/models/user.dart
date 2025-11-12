@@ -15,6 +15,8 @@ class User with _$User {
     required String email,
     String? photoUrl,
     String? phoneNumber,
+    String? city, // עיר מגורים
+    @Default('available') String availabilityStatus, // available, busy, notAvailable
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> hubIds,
     @Default(5.0) double currentRankScore,

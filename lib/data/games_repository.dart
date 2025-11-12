@@ -152,5 +152,43 @@ class GamesRepository {
   Future<List<Game>> getGamesByHub(String hubId) async {
     return listGamesByHub(hubId);
   }
+
+  /// Add photo URL to game
+  Future<void> addGamePhoto(String gameId, String photoUrl) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found');
+      }
+
+      final updatedPhotoUrls = [...game.photoUrls, photoUrl];
+      await updateGame(gameId, {'photoUrls': updatedPhotoUrls});
+    } catch (e) {
+      throw Exception('Failed to add game photo: $e');
+    }
+  }
+
+  /// Remove photo URL from game
+  Future<void> removeGamePhoto(String gameId, String photoUrl) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found');
+      }
+
+      final updatedPhotoUrls = game.photoUrls.where((url) => url != photoUrl).toList();
+      await updateGame(gameId, {'photoUrls': updatedPhotoUrls});
+    } catch (e) {
+      throw Exception('Failed to remove game photo: $e');
+    }
+  }
 }
 

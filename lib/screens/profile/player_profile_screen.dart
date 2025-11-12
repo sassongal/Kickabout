@@ -8,6 +8,8 @@ import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/data/repositories.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/core/constants.dart';
+import 'package:kickabout/services/push_notification_integration_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// Player profile screen showing rating, history, and recent games
 class PlayerProfileScreen extends ConsumerWidget {
@@ -114,6 +116,44 @@ class PlayerProfileScreen extends ConsumerWidget {
                                       color: Colors.grey[600],
                                     ),
                                   ),
+                                  if (user.city != null && user.city!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.location_city,
+                                          size: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          user.city!,
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.phone,
+                                          size: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          user.phoneNumber!,
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                   const SizedBox(height: 8),
                                   Chip(
                                     label: Text(user.preferredPosition),
@@ -151,6 +191,19 @@ class PlayerProfileScreen extends ConsumerWidget {
                                                 await followRepo.unfollow(currentUserId, playerId);
                                               } else {
                                                 await followRepo.follow(currentUserId, playerId);
+                                                
+                                                // Send notification
+                                                try {
+                                                  final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
+                                                  final currentUser = await usersRepo.getUser(currentUserId);
+                                                  
+                                                  await pushIntegration.notifyNewFollow(
+                                                    followerName: currentUser?.name ?? 'מישהו',
+                                                    followingId: playerId,
+                                                  );
+                                                } catch (e) {
+                                                  debugPrint('Failed to send follow notification: $e');
+                                                }
                                               }
                                             } catch (e) {
                                               if (context.mounted) {

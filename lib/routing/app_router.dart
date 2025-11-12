@@ -2,7 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kickabout/routing/go_router_refresh_stream.dart';
-import 'package:kickabout/screens/auth/login_screen.dart';
+import 'package:kickabout/screens/auth/login_screen_futuristic.dart';
 import 'package:kickabout/screens/auth/register_screen.dart';
 import 'package:kickabout/screens/hub/hub_list_screen.dart';
 import 'package:kickabout/screens/hub/create_hub_screen.dart';
@@ -21,11 +21,16 @@ import 'package:kickabout/screens/social/notifications_screen.dart';
 import 'package:kickabout/screens/social/post_detail_screen.dart';
 import 'package:kickabout/screens/social/following_screen.dart';
 import 'package:kickabout/screens/social/followers_screen.dart';
-import 'package:kickabout/screens/home_screen.dart';
+import 'package:kickabout/screens/home_screen_futuristic.dart';
 import 'package:kickabout/screens/game/game_chat_screen.dart';
 import 'package:kickabout/screens/social/messages_list_screen.dart';
 import 'package:kickabout/screens/social/private_chat_screen.dart';
 import 'package:kickabout/screens/gamification/leaderboard_screen.dart';
+import 'package:kickabout/screens/splash/splash_screen.dart';
+import 'package:kickabout/screens/players/players_list_screen.dart';
+import 'package:kickabout/screens/hubs/hubs_board_screen.dart';
+import 'package:kickabout/screens/admin/generate_dummy_data_screen.dart';
+import 'package:kickabout/screens/hub/manage_roles_screen.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 
 /// Auth state stream provider
@@ -59,11 +64,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null; // No redirect
     },
     routes: [
+      // Splash screen
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      
       // Auth routes
       GoRoute(
         path: '/auth',
         name: 'auth',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => const LoginScreenFuturistic(),
       ),
       GoRoute(
         path: '/register',
@@ -71,11 +83,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
 
-      // Home route
+      // Home route - Futuristic Dashboard
       GoRoute(
         path: '/',
         name: 'home',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const HomeScreenFuturistic(),
       ),
 
       // Location/Discovery routes
@@ -88,6 +100,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/map',
         name: 'map',
         builder: (context, state) => const MapScreen(),
+      ),
+
+      // Players Board
+      GoRoute(
+        path: '/players',
+        name: 'playersBoard',
+        builder: (context, state) => const PlayersListScreen(),
+      ),
+
+      // Hubs Board
+      GoRoute(
+        path: '/hubs-board',
+        name: 'hubsBoard',
+        builder: (context, state) => const HubsBoardScreen(),
+      ),
+
+      // Admin - Generate dummy data
+      GoRoute(
+        path: '/admin/generate-dummy-data',
+        name: 'generateDummyData',
+        builder: (context, state) => const GenerateDummyDataScreen(),
       ),
 
       // Notifications route
@@ -143,6 +176,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               return HubDetailScreen(hubId: hubId);
             },
             routes: [
+              GoRoute(
+                path: 'manage-roles',
+                name: 'manageHubRoles',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return ManageRolesScreen(hubId: hubId);
+                },
+              ),
               GoRoute(
                 path: 'feed/:postId',
                 name: 'postDetail',

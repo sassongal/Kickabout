@@ -21,6 +21,7 @@ class Game with _$Game {
     String? venueId, // Reference to venue
     @Default(2) int teamCount, // 2, 3, or 4
     @GameStatusConverter() @Default(GameStatus.teamSelection) GameStatus status,
+    @Default([]) List<String> photoUrls, // URLs of game photos
     @TimestampConverter() required DateTime createdAt,
     @TimestampConverter() required DateTime updatedAt,
   }) = _Game;

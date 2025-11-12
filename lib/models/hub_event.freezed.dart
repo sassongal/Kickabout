@@ -1,0 +1,455 @@
+// coverage:ignore-file
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint
+// ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
+
+part of 'hub_event.dart';
+
+// **************************************************************************
+// FreezedGenerator
+// **************************************************************************
+
+T _$identity<T>(T value) => value;
+
+final _privateConstructorUsedError = UnsupportedError(
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+
+HubEvent _$HubEventFromJson(Map<String, dynamic> json) {
+  return _HubEvent.fromJson(json);
+}
+
+/// @nodoc
+mixin _$HubEvent {
+  String get eventId => throw _privateConstructorUsedError;
+  String get hubId => throw _privateConstructorUsedError;
+  String get createdBy => throw _privateConstructorUsedError;
+  String get title => throw _privateConstructorUsedError;
+  String? get description => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime get eventDate => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime get updatedAt => throw _privateConstructorUsedError;
+  List<String> get registeredPlayerIds =>
+      throw _privateConstructorUsedError; // Players who registered
+  String get status =>
+      throw _privateConstructorUsedError; // upcoming, ongoing, completed, cancelled
+  String? get location => throw _privateConstructorUsedError;
+  @GeoPointConverter()
+  GeoPoint? get locationPoint => throw _privateConstructorUsedError;
+  String? get geohash => throw _privateConstructorUsedError;
+
+  /// Serializes this HubEvent to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of HubEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $HubEventCopyWith<HubEvent> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $HubEventCopyWith<$Res> {
+  factory $HubEventCopyWith(HubEvent value, $Res Function(HubEvent) then) =
+      _$HubEventCopyWithImpl<$Res, HubEvent>;
+  @useResult
+  $Res call(
+      {String eventId,
+      String hubId,
+      String createdBy,
+      String title,
+      String? description,
+      @TimestampConverter() DateTime eventDate,
+      @TimestampConverter() DateTime createdAt,
+      @TimestampConverter() DateTime updatedAt,
+      List<String> registeredPlayerIds,
+      String status,
+      String? location,
+      @GeoPointConverter() GeoPoint? locationPoint,
+      String? geohash});
+}
+
+/// @nodoc
+class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
+    implements $HubEventCopyWith<$Res> {
+  _$HubEventCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of HubEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? eventId = null,
+    Object? hubId = null,
+    Object? createdBy = null,
+    Object? title = null,
+    Object? description = freezed,
+    Object? eventDate = null,
+    Object? createdAt = null,
+    Object? updatedAt = null,
+    Object? registeredPlayerIds = null,
+    Object? status = null,
+    Object? location = freezed,
+    Object? locationPoint = freezed,
+    Object? geohash = freezed,
+  }) {
+    return _then(_value.copyWith(
+      eventId: null == eventId
+          ? _value.eventId
+          : eventId // ignore: cast_nullable_to_non_nullable
+              as String,
+      hubId: null == hubId
+          ? _value.hubId
+          : hubId // ignore: cast_nullable_to_non_nullable
+              as String,
+      createdBy: null == createdBy
+          ? _value.createdBy
+          : createdBy // ignore: cast_nullable_to_non_nullable
+              as String,
+      title: null == title
+          ? _value.title
+          : title // ignore: cast_nullable_to_non_nullable
+              as String,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eventDate: null == eventDate
+          ? _value.eventDate
+          : eventDate // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      registeredPlayerIds: null == registeredPlayerIds
+          ? _value.registeredPlayerIds
+          : registeredPlayerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as String?,
+      locationPoint: freezed == locationPoint
+          ? _value.locationPoint
+          : locationPoint // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$HubEventImplCopyWith<$Res>
+    implements $HubEventCopyWith<$Res> {
+  factory _$$HubEventImplCopyWith(
+          _$HubEventImpl value, $Res Function(_$HubEventImpl) then) =
+      __$$HubEventImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call(
+      {String eventId,
+      String hubId,
+      String createdBy,
+      String title,
+      String? description,
+      @TimestampConverter() DateTime eventDate,
+      @TimestampConverter() DateTime createdAt,
+      @TimestampConverter() DateTime updatedAt,
+      List<String> registeredPlayerIds,
+      String status,
+      String? location,
+      @GeoPointConverter() GeoPoint? locationPoint,
+      String? geohash});
+}
+
+/// @nodoc
+class __$$HubEventImplCopyWithImpl<$Res>
+    extends _$HubEventCopyWithImpl<$Res, _$HubEventImpl>
+    implements _$$HubEventImplCopyWith<$Res> {
+  __$$HubEventImplCopyWithImpl(
+      _$HubEventImpl _value, $Res Function(_$HubEventImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of HubEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? eventId = null,
+    Object? hubId = null,
+    Object? createdBy = null,
+    Object? title = null,
+    Object? description = freezed,
+    Object? eventDate = null,
+    Object? createdAt = null,
+    Object? updatedAt = null,
+    Object? registeredPlayerIds = null,
+    Object? status = null,
+    Object? location = freezed,
+    Object? locationPoint = freezed,
+    Object? geohash = freezed,
+  }) {
+    return _then(_$HubEventImpl(
+      eventId: null == eventId
+          ? _value.eventId
+          : eventId // ignore: cast_nullable_to_non_nullable
+              as String,
+      hubId: null == hubId
+          ? _value.hubId
+          : hubId // ignore: cast_nullable_to_non_nullable
+              as String,
+      createdBy: null == createdBy
+          ? _value.createdBy
+          : createdBy // ignore: cast_nullable_to_non_nullable
+              as String,
+      title: null == title
+          ? _value.title
+          : title // ignore: cast_nullable_to_non_nullable
+              as String,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eventDate: null == eventDate
+          ? _value.eventDate
+          : eventDate // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      registeredPlayerIds: null == registeredPlayerIds
+          ? _value._registeredPlayerIds
+          : registeredPlayerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as String?,
+      locationPoint: freezed == locationPoint
+          ? _value.locationPoint
+          : locationPoint // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      geohash: freezed == geohash
+          ? _value.geohash
+          : geohash // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$HubEventImpl implements _HubEvent {
+  const _$HubEventImpl(
+      {required this.eventId,
+      required this.hubId,
+      required this.createdBy,
+      required this.title,
+      this.description,
+      @TimestampConverter() required this.eventDate,
+      @TimestampConverter() required this.createdAt,
+      @TimestampConverter() required this.updatedAt,
+      final List<String> registeredPlayerIds = const [],
+      this.status = 'upcoming',
+      this.location,
+      @GeoPointConverter() this.locationPoint,
+      this.geohash})
+      : _registeredPlayerIds = registeredPlayerIds;
+
+  factory _$HubEventImpl.fromJson(Map<String, dynamic> json) =>
+      _$$HubEventImplFromJson(json);
+
+  @override
+  final String eventId;
+  @override
+  final String hubId;
+  @override
+  final String createdBy;
+  @override
+  final String title;
+  @override
+  final String? description;
+  @override
+  @TimestampConverter()
+  final DateTime eventDate;
+  @override
+  @TimestampConverter()
+  final DateTime createdAt;
+  @override
+  @TimestampConverter()
+  final DateTime updatedAt;
+  final List<String> _registeredPlayerIds;
+  @override
+  @JsonKey()
+  List<String> get registeredPlayerIds {
+    if (_registeredPlayerIds is EqualUnmodifiableListView)
+      return _registeredPlayerIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_registeredPlayerIds);
+  }
+
+// Players who registered
+  @override
+  @JsonKey()
+  final String status;
+// upcoming, ongoing, completed, cancelled
+  @override
+  final String? location;
+  @override
+  @GeoPointConverter()
+  final GeoPoint? locationPoint;
+  @override
+  final String? geohash;
+
+  @override
+  String toString() {
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$HubEventImpl &&
+            (identical(other.eventId, eventId) || other.eventId == eventId) &&
+            (identical(other.hubId, hubId) || other.hubId == hubId) &&
+            (identical(other.createdBy, createdBy) ||
+                other.createdBy == createdBy) &&
+            (identical(other.title, title) || other.title == title) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
+            (identical(other.eventDate, eventDate) ||
+                other.eventDate == eventDate) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
+            const DeepCollectionEquality()
+                .equals(other._registeredPlayerIds, _registeredPlayerIds) &&
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.location, location) ||
+                other.location == location) &&
+            (identical(other.locationPoint, locationPoint) ||
+                other.locationPoint == locationPoint) &&
+            (identical(other.geohash, geohash) || other.geohash == geohash));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      eventId,
+      hubId,
+      createdBy,
+      title,
+      description,
+      eventDate,
+      createdAt,
+      updatedAt,
+      const DeepCollectionEquality().hash(_registeredPlayerIds),
+      status,
+      location,
+      locationPoint,
+      geohash);
+
+  /// Create a copy of HubEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$HubEventImplCopyWith<_$HubEventImpl> get copyWith =>
+      __$$HubEventImplCopyWithImpl<_$HubEventImpl>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$HubEventImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class _HubEvent implements HubEvent {
+  const factory _HubEvent(
+      {required final String eventId,
+      required final String hubId,
+      required final String createdBy,
+      required final String title,
+      final String? description,
+      @TimestampConverter() required final DateTime eventDate,
+      @TimestampConverter() required final DateTime createdAt,
+      @TimestampConverter() required final DateTime updatedAt,
+      final List<String> registeredPlayerIds,
+      final String status,
+      final String? location,
+      @GeoPointConverter() final GeoPoint? locationPoint,
+      final String? geohash}) = _$HubEventImpl;
+
+  factory _HubEvent.fromJson(Map<String, dynamic> json) =
+      _$HubEventImpl.fromJson;
+
+  @override
+  String get eventId;
+  @override
+  String get hubId;
+  @override
+  String get createdBy;
+  @override
+  String get title;
+  @override
+  String? get description;
+  @override
+  @TimestampConverter()
+  DateTime get eventDate;
+  @override
+  @TimestampConverter()
+  DateTime get createdAt;
+  @override
+  @TimestampConverter()
+  DateTime get updatedAt;
+  @override
+  List<String> get registeredPlayerIds; // Players who registered
+  @override
+  String get status; // upcoming, ongoing, completed, cancelled
+  @override
+  String? get location;
+  @override
+  @GeoPointConverter()
+  GeoPoint? get locationPoint;
+  @override
+  String? get geohash;
+
+  /// Create a copy of HubEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$HubEventImplCopyWith<_$HubEventImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}

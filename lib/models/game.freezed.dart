@@ -36,6 +36,8 @@ mixin _$Game {
   int get teamCount => throw _privateConstructorUsedError; // 2, 3, or 4
   @GameStatusConverter()
   GameStatus get status => throw _privateConstructorUsedError;
+  List<String> get photoUrls =>
+      throw _privateConstructorUsedError; // URLs of game photos
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
   @TimestampConverter()
@@ -66,6 +68,7 @@ abstract class $GameCopyWith<$Res> {
       String? venueId,
       int teamCount,
       @GameStatusConverter() GameStatus status,
+      List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt});
 }
@@ -95,6 +98,7 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? venueId = freezed,
     Object? teamCount = null,
     Object? status = null,
+    Object? photoUrls = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -139,6 +143,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as GameStatus,
+      photoUrls: null == photoUrls
+          ? _value.photoUrls
+          : photoUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -169,6 +177,7 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       String? venueId,
       int teamCount,
       @GameStatusConverter() GameStatus status,
+      List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt});
 }
@@ -195,6 +204,7 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? venueId = freezed,
     Object? teamCount = null,
     Object? status = null,
+    Object? photoUrls = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -239,6 +249,10 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as GameStatus,
+      photoUrls: null == photoUrls
+          ? _value._photoUrls
+          : photoUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -265,8 +279,10 @@ class _$GameImpl implements _Game {
       this.venueId,
       this.teamCount = 2,
       @GameStatusConverter() this.status = GameStatus.teamSelection,
+      final List<String> photoUrls = const [],
       @TimestampConverter() required this.createdAt,
-      @TimestampConverter() required this.updatedAt});
+      @TimestampConverter() required this.updatedAt})
+      : _photoUrls = photoUrls;
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameImplFromJson(json);
@@ -300,6 +316,16 @@ class _$GameImpl implements _Game {
   @JsonKey()
   @GameStatusConverter()
   final GameStatus status;
+  final List<String> _photoUrls;
+  @override
+  @JsonKey()
+  List<String> get photoUrls {
+    if (_photoUrls is EqualUnmodifiableListView) return _photoUrls;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_photoUrls);
+  }
+
+// URLs of game photos
   @override
   @TimestampConverter()
   final DateTime createdAt;
@@ -309,7 +335,7 @@ class _$GameImpl implements _Game {
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -332,6 +358,8 @@ class _$GameImpl implements _Game {
             (identical(other.teamCount, teamCount) ||
                 other.teamCount == teamCount) &&
             (identical(other.status, status) || other.status == status) &&
+            const DeepCollectionEquality()
+                .equals(other._photoUrls, _photoUrls) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -352,6 +380,7 @@ class _$GameImpl implements _Game {
       venueId,
       teamCount,
       status,
+      const DeepCollectionEquality().hash(_photoUrls),
       createdAt,
       updatedAt);
 
@@ -383,6 +412,7 @@ abstract class _Game implements Game {
       final String? venueId,
       final int teamCount,
       @GameStatusConverter() final GameStatus status,
+      final List<String> photoUrls,
       @TimestampConverter() required final DateTime createdAt,
       @TimestampConverter() required final DateTime updatedAt}) = _$GameImpl;
 
@@ -412,6 +442,8 @@ abstract class _Game implements Game {
   @override
   @GameStatusConverter()
   GameStatus get status;
+  @override
+  List<String> get photoUrls; // URLs of game photos
   @override
   @TimestampConverter()
   DateTime get createdAt;

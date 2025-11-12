@@ -28,6 +28,8 @@ mixin _$Hub {
   DateTime get createdAt => throw _privateConstructorUsedError;
   List<String> get memberIds => throw _privateConstructorUsedError;
   Map<String, dynamic> get settings => throw _privateConstructorUsedError;
+  Map<String, String> get roles =>
+      throw _privateConstructorUsedError; // userId -> role (manager, moderator, member)
   @GeoPointConverter()
   GeoPoint? get location => throw _privateConstructorUsedError;
   String? get geohash => throw _privateConstructorUsedError;
@@ -55,6 +57,7 @@ abstract class $HubCopyWith<$Res> {
       @TimestampConverter() DateTime createdAt,
       List<String> memberIds,
       Map<String, dynamic> settings,
+      Map<String, String> roles,
       @GeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius});
@@ -81,6 +84,7 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? createdAt = null,
     Object? memberIds = null,
     Object? settings = null,
+    Object? roles = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
@@ -114,6 +118,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.settings
           : settings // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
+      roles: null == roles
+          ? _value.roles
+          : roles // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -144,6 +152,7 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       @TimestampConverter() DateTime createdAt,
       List<String> memberIds,
       Map<String, dynamic> settings,
+      Map<String, String> roles,
       @GeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius});
@@ -167,6 +176,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? createdAt = null,
     Object? memberIds = null,
     Object? settings = null,
+    Object? roles = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
@@ -200,6 +210,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value._settings
           : settings // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
+      roles: null == roles
+          ? _value._roles
+          : roles // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -227,11 +241,13 @@ class _$HubImpl implements _Hub {
       @TimestampConverter() required this.createdAt,
       final List<String> memberIds = const [],
       final Map<String, dynamic> settings = const {'ratingMode': 'basic'},
+      final Map<String, String> roles = const {},
       @GeoPointConverter() this.location,
       this.geohash,
       this.radius})
       : _memberIds = memberIds,
-        _settings = settings;
+        _settings = settings,
+        _roles = roles;
 
   factory _$HubImpl.fromJson(Map<String, dynamic> json) =>
       _$$HubImplFromJson(json);
@@ -265,6 +281,16 @@ class _$HubImpl implements _Hub {
     return EqualUnmodifiableMapView(_settings);
   }
 
+  final Map<String, String> _roles;
+  @override
+  @JsonKey()
+  Map<String, String> get roles {
+    if (_roles is EqualUnmodifiableMapView) return _roles;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_roles);
+  }
+
+// userId -> role (manager, moderator, member)
   @override
   @GeoPointConverter()
   final GeoPoint? location;
@@ -275,7 +301,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, settings: $settings, location: $location, geohash: $geohash, radius: $radius)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, settings: $settings, roles: $roles, location: $location, geohash: $geohash, radius: $radius)';
   }
 
   @override
@@ -294,6 +320,7 @@ class _$HubImpl implements _Hub {
             const DeepCollectionEquality()
                 .equals(other._memberIds, _memberIds) &&
             const DeepCollectionEquality().equals(other._settings, _settings) &&
+            const DeepCollectionEquality().equals(other._roles, _roles) &&
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
@@ -311,6 +338,7 @@ class _$HubImpl implements _Hub {
       createdAt,
       const DeepCollectionEquality().hash(_memberIds),
       const DeepCollectionEquality().hash(_settings),
+      const DeepCollectionEquality().hash(_roles),
       location,
       geohash,
       radius);
@@ -340,6 +368,7 @@ abstract class _Hub implements Hub {
       @TimestampConverter() required final DateTime createdAt,
       final List<String> memberIds,
       final Map<String, dynamic> settings,
+      final Map<String, String> roles,
       @GeoPointConverter() final GeoPoint? location,
       final String? geohash,
       final double? radius}) = _$HubImpl;
@@ -361,6 +390,8 @@ abstract class _Hub implements Hub {
   List<String> get memberIds;
   @override
   Map<String, dynamic> get settings;
+  @override
+  Map<String, String> get roles; // userId -> role (manager, moderator, member)
   @override
   @GeoPointConverter()
   GeoPoint? get location;

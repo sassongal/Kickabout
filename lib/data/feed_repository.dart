@@ -17,9 +17,11 @@ class FeedRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.hub(hubId))
-        .doc('feed')
-        .collection('posts')
+        .collection('hubs')
+        .doc(hubId)
+        .collection('feed')
+        .doc('posts')
+        .collection('items')
         .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
@@ -39,9 +41,11 @@ class FeedRepository {
       data.remove('postId');
 
       final docRef = _firestore
-          .collection(FirestorePaths.hub(post.hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(post.hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc();
 
       await docRef.set(data);
@@ -59,9 +63,11 @@ class FeedRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .update({
         'likes': FieldValue.arrayUnion([userId]),
@@ -79,9 +85,11 @@ class FeedRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .update({
         'likes': FieldValue.arrayRemove([userId]),
@@ -98,9 +106,11 @@ class FeedRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.hub(hubId))
-        .doc('feed')
-        .collection('posts')
+        .collection('hubs')
+        .doc(hubId)
+        .collection('feed')
+        .doc('posts')
+        .collection('items')
         .doc(postId)
         .snapshots()
         .map((snapshot) {
@@ -117,9 +127,11 @@ class FeedRepository {
 
     try {
       final doc = await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .get();
 
@@ -138,9 +150,11 @@ class FeedRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .delete();
     } catch (e) {

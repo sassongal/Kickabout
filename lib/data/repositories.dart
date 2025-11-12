@@ -5,6 +5,7 @@ export 'games_repository.dart';
 export 'signups_repository.dart';
 export 'teams_repository.dart';
 export 'events_repository.dart';
+export 'hub_events_repository.dart';
 export 'ratings_repository.dart';
 export 'feed_repository.dart';
 export 'comments_repository.dart';

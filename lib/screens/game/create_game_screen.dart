@@ -179,6 +179,22 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
       final gameId = await gamesRepo.createGame(game);
 
+      // Get hub for notifications and reminders
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(_selectedHubId!);
+
+      // Schedule game reminders
+      try {
+        final reminderService = ref.read(gameReminderServiceProvider);
+        await reminderService.initialize();
+        await reminderService.scheduleGameReminders(
+          game.copyWith(gameId: gameId),
+          hub?.name ?? 'Hub',
+        );
+      } catch (e) {
+        debugPrint('Failed to schedule game reminders: $e');
+      }
+
       // Create feed post
       try {
         final feedRepo = ref.read(feedRepositoryProvider);
@@ -196,33 +212,21 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         debugPrint('Failed to create feed post: $e');
       }
 
-      // Create notifications for hub members
+      // Create notifications for hub members (using integration service)
       try {
-        final notificationsRepo = ref.read(notificationsRepositoryProvider);
-        final hubsRepo = ref.read(hubsRepositoryProvider);
-        final hub = await hubsRepo.getHub(_selectedHubId!);
+        final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
+        final usersRepo = ref.read(usersRepositoryProvider);
+        final currentUser = await usersRepo.getUser(currentUserId);
         
         if (hub != null) {
-          final usersRepo = ref.read(usersRepositoryProvider);
-          final currentUser = await usersRepo.getUser(currentUserId);
-          
-          for (final memberId in hub.memberIds) {
-            if (memberId != currentUserId) {
-              final notification = app_notification.Notification(
-                notificationId: '',
-                userId: memberId,
-                type: 'game',
-                title: 'משחק חדש!',
-                body: '${currentUser?.name ?? 'מישהו'} יצר משחק חדש ב-${hub.name}',
-                data: {
-                  'gameId': gameId,
-                  'hubId': _selectedHubId!,
-                },
-                createdAt: DateTime.now(),
-              );
-              await notificationsRepo.createNotification(notification);
-            }
-          }
+          await pushIntegration.notifyNewGame(
+            gameId: gameId,
+            hubId: _selectedHubId!,
+            creatorName: currentUser?.name ?? 'מישהו',
+            hubName: hub.name,
+            memberIds: hub.memberIds,
+            excludeUserId: currentUserId,
+          );
         }
       } catch (e) {
         // Log error but don't fail game creation

@@ -17,6 +17,7 @@ class Hub with _$Hub {
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> memberIds,
     @Default({'ratingMode': 'basic'}) Map<String, dynamic> settings,
+    @Default({}) Map<String, String> roles, // userId -> role (manager, moderator, member)
     @GeoPointConverter() GeoPoint? location,
     String? geohash,
     double? radius, // radius in km

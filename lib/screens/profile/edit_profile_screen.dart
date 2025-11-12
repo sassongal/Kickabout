@@ -26,6 +26,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _positionController = TextEditingController();
+  final _cityController = TextEditingController();
 
   XFile? _selectedImage;
   bool _isLoading = false;
@@ -44,6 +45,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _positionController.dispose();
+    _cityController.dispose();
     super.dispose();
   }
 
@@ -58,6 +60,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           _emailController.text = user.email;
           _phoneController.text = user.phoneNumber ?? '';
           _positionController.text = user.preferredPosition;
+          _cityController.text = user.city ?? '';
         });
       }
     } catch (e) {
@@ -103,6 +106,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ? null
             : _phoneController.text.trim(),
         preferredPosition: _positionController.text.trim(),
+        city: _cityController.text.trim().isEmpty
+            ? null
+            : _cityController.text.trim(),
         photoUrl: photoUrl,
       );
 
@@ -203,11 +209,36 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 TextFormField(
                   controller: _phoneController,
                   decoration: const InputDecoration(
-                    labelText: 'טלפון (אופציונלי)',
+                    labelText: 'טלפון',
+                    hintText: '05X-XXXXXXX',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.phone),
+                    helperText: 'מספר טלפון ייחודי (לא יכול להיות בשימוש על ידי משתמש אחר)',
                   ),
                   keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      // Basic Israeli phone validation
+                      final phoneRegex = RegExp(r'^0[2-9]\d{7,8}$');
+                      final cleanPhone = value.trim().replaceAll(RegExp(r'[-\s]'), '');
+                      if (!phoneRegex.hasMatch(cleanPhone)) {
+                        return 'נא להזין מספר טלפון תקין (ישראל)';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // City field
+                TextFormField(
+                  controller: _cityController,
+                  decoration: const InputDecoration(
+                    labelText: 'עיר מגורים',
+                    hintText: 'לדוגמה: תל אביב',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.location_city),
+                  ),
                 ),
                 const SizedBox(height: 16),
 

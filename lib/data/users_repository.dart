@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/services/firestore_paths.dart';
@@ -37,6 +38,33 @@ class UsersRepository {
             : null);
   }
 
+  /// Check if phone number is already in use by another user
+  Future<bool> isPhoneNumberTaken(String phoneNumber, String excludeUserId) async {
+    if (!Env.isFirebaseAvailable) return false;
+    if (phoneNumber.trim().isEmpty) return false;
+
+    try {
+      final query = await _firestore
+          .collection('users')
+          .where('phoneNumber', isEqualTo: phoneNumber.trim())
+          .limit(1)
+          .get();
+
+      // If no results, phone is available
+      if (query.docs.isEmpty) return false;
+
+      // If the only result is the current user, phone is available
+      if (query.docs.length == 1 && query.docs.first.id == excludeUserId) {
+        return false;
+      }
+
+      // Phone is taken by another user
+      return true;
+    } catch (e) {
+      throw Exception('Failed to check phone number: $e');
+    }
+  }
+
   /// Create or update user
   Future<void> setUser(User user) async {
     if (!Env.isFirebaseAvailable) {
@@ -44,6 +72,14 @@ class UsersRepository {
     }
 
     try {
+      // Validate phone number uniqueness if provided
+      if (user.phoneNumber != null && user.phoneNumber!.trim().isNotEmpty) {
+        final isTaken = await isPhoneNumberTaken(user.phoneNumber!, user.uid);
+        if (isTaken) {
+          throw Exception('מספר הטלפון כבר בשימוש על ידי משתמש אחר');
+        }
+      }
+
       final data = user.toJson();
       data.remove('uid'); // Remove uid from data (it's the document ID)
       await _firestore.doc(FirestorePaths.user(user.uid)).set(data);
@@ -117,6 +153,83 @@ class UsersRepository {
         .map((snapshot) => snapshot.docs
             .map((doc) => User.fromJson({...doc.data(), 'uid': doc.id}))
             .toList());
+  }
+
+  /// Find available players nearby
+  Future<List<User>> findAvailablePlayersNearby({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+    String excludeUserId = '',
+    int limit = 5,
+  }) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      // Query users with availability status 'available' or 'busy'
+      final query = _firestore
+          .collection(FirestorePaths.users())
+          .where('availabilityStatus', whereIn: ['available', 'busy'])
+          .limit(50); // Get more to filter by distance
+
+      final snapshot = await query.get();
+
+      // Filter by distance and exclude current user
+      final users = snapshot.docs
+          .map((doc) => User.fromJson({...doc.data(), 'uid': doc.id}))
+          .where((user) => user.uid != excludeUserId && user.location != null)
+          .map((user) {
+            final distance = Geolocator.distanceBetween(
+              latitude,
+              longitude,
+              user.location!.latitude,
+              user.location!.longitude,
+            ) / 1000; // Convert to km
+            return MapEntry(user, distance);
+          })
+          .where((entry) => entry.value <= radiusKm)
+          .toList();
+
+      // Sort by distance and availability (available first)
+      users.sort((a, b) {
+        final aAvailable = a.key.availabilityStatus == 'available' ? 0 : 1;
+        final bAvailable = b.key.availabilityStatus == 'available' ? 0 : 1;
+        if (aAvailable != bAvailable) return aAvailable.compareTo(bAvailable);
+        return a.value.compareTo(b.value);
+      });
+
+      return users.take(limit).map((entry) => entry.key).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get recommended players (available, nearby, good rating)
+  Future<List<User>> getRecommendedPlayers({
+    required double latitude,
+    required double longitude,
+    String excludeUserId = '',
+    int limit = 3,
+  }) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      // Get available players within 10km
+      final nearbyPlayers = await findAvailablePlayersNearby(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: 10.0,
+        excludeUserId: excludeUserId,
+        limit: 20, // Get more to filter by rating
+      );
+
+      // Sort by rating (higher is better) and take top players
+      nearbyPlayers.sort((a, b) => b.currentRankScore.compareTo(a.currentRankScore));
+
+      return nearbyPlayers.take(limit).toList();
+    } catch (e) {
+      return [];
+    }
   }
 }
 

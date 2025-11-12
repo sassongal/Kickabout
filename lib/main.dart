@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:kickabout/theme.dart';
+import 'package:kickabout/theme/futuristic_theme.dart';
 import 'package:kickabout/core/constants.dart';
 import 'package:kickabout/firebase_options.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:kickabout/l10n/app_localizations.dart';
 import 'package:kickabout/routing/app_router.dart';
 import 'package:kickabout/services/push_notification_service.dart';
+import 'package:kickabout/services/deep_link_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
@@ -54,14 +56,17 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
+    // Initialize deep link service
+    DeepLinkService().initialize(router: router);
+
     return MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       
-      // Theme
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.system,
+      // Theme - Futuristic Football Design
+      theme: futuristicDarkTheme,
+      darkTheme: futuristicDarkTheme,
+      themeMode: ThemeMode.dark, // Force dark mode for futuristic theme
       
       // Localization & RTL
       localizationsDelegates: AppLocalizations.localizationsDelegates,

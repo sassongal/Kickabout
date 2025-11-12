@@ -143,11 +143,69 @@ class HubsRepository {
     }
 
     try {
+      final hub = await getHub(hubId);
+      if (hub == null) throw Exception('Hub not found');
+      
+      // Remove from memberIds
       await _firestore.doc(FirestorePaths.hub(hubId)).update({
         'memberIds': FieldValue.arrayRemove([uid]),
       });
+      
+      // Remove from roles if exists
+      if (hub.roles.containsKey(uid)) {
+        final updatedRoles = Map<String, String>.from(hub.roles);
+        updatedRoles.remove(uid);
+        await _firestore.doc(FirestorePaths.hub(hubId)).update({
+          'roles': updatedRoles,
+        });
+      }
     } catch (e) {
       throw Exception('Failed to remove member: $e');
+    }
+  }
+
+  /// Update member role
+  Future<void> updateMemberRole(String hubId, String uid, String role) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final hub = await getHub(hubId);
+      if (hub == null) throw Exception('Hub not found');
+      
+      // Creator cannot change role
+      if (uid == hub.createdBy) {
+        throw Exception('Cannot change creator role');
+      }
+      
+      // Update roles
+      final updatedRoles = Map<String, String>.from(hub.roles);
+      updatedRoles[uid] = role;
+      
+      await _firestore.doc(FirestorePaths.hub(hubId)).update({
+        'roles': updatedRoles,
+      });
+    } catch (e) {
+      throw Exception('Failed to update member role: $e');
+    }
+  }
+
+  /// Get user role in hub
+  Future<String?> getUserRole(String hubId, String uid) async {
+    if (!Env.isFirebaseAvailable) return null;
+
+    try {
+      final hub = await getHub(hubId);
+      if (hub == null) return null;
+      
+      // Creator is always manager
+      if (uid == hub.createdBy) return 'manager';
+      
+      // Check roles map
+      return hub.roles[uid] ?? 'member';
+    } catch (e) {
+      return null;
     }
   }
 
@@ -246,6 +304,41 @@ class HubsRepository {
               radiusKm: radiusKm,
             ))
         .distinct();
+  }
+
+  /// Stream hubs created by user
+  Stream<List<Hub>> watchHubsByCreator(String uid) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection(FirestorePaths.hubs())
+        .where('createdBy', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
+            .toList());
+  }
+
+  /// Get hubs created by user (non-streaming)
+  Future<List<Hub>> getHubsByCreator(String uid) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      final snapshot = await _firestore
+          .collection(FirestorePaths.hubs())
+          .where('createdBy', isEqualTo: uid)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
+          .toList();
+    } catch (e) {
+      return [];
+    }
   }
 }
 

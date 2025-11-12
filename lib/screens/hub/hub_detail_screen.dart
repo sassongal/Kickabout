@@ -5,11 +5,13 @@ import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/utils/snackbar_helper.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/models/models.dart';
-import 'package:kickabout/core/constants.dart';
 import 'package:kickabout/screens/social/feed_screen.dart';
 import 'package:kickabout/screens/social/hub_chat_screen.dart';
-import 'package:kickabout/screens/game/game_list_screen.dart';
 import 'package:kickabout/data/users_repository.dart';
+import 'package:kickabout/screens/hub/add_manual_player_dialog.dart';
+import 'package:kickabout/screens/hub/manage_roles_screen.dart';
+import 'package:kickabout/screens/hub/hub_events_tab.dart';
+import 'package:kickabout/models/hub_role.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -23,19 +25,11 @@ class HubDetailScreen extends ConsumerStatefulWidget {
 
 class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _currentTab = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(() {
-      if (mounted) {
-        setState(() {
-          _currentTab = _tabController.index;
-        });
-      }
-    });
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -58,14 +52,14 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return AppScaffold(
-            title: 'פרטי הוב',
+            title: 'פרטי Hub',
             body: const Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasError) {
           return AppScaffold(
-            title: 'פרטי הוב',
+            title: 'פרטי Hub',
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -82,13 +76,16 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         final hub = snapshot.data;
         if (hub == null) {
           return AppScaffold(
-            title: 'פרטי הוב',
-            body: const Center(child: Text('הוב לא נמצא')),
+            title: 'פרטי Hub',
+            body: const Center(child: Text('Hub לא נמצא')),
           );
         }
 
         final isMember = currentUserId != null && hub.memberIds.contains(currentUserId);
-        final isHubManager = currentUserId == hub.createdBy;
+        final hubPermissions = currentUserId != null
+            ? HubPermissions(hub: hub, userId: currentUserId)
+            : null;
+        final isHubManager = hubPermissions?.isManager() ?? (currentUserId == hub.createdBy);
 
         return AppScaffold(
           title: hub.name,
@@ -138,6 +135,14 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                             ),
                             const SizedBox(width: 8),
                             Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push('/hubs/${hub.hubId}/manage-roles'),
+                                icon: const Icon(Icons.admin_panel_settings, size: 18),
+                                label: const Text('ניהול תפקידים'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () => context.push('/games/create?hubId=${hub.hubId}'),
                                 icon: const Icon(Icons.add, size: 18),
@@ -151,7 +156,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                         ElevatedButton.icon(
                           onPressed: () => _toggleMembership(context, ref, hub, isMember),
                           icon: Icon(isMember ? Icons.exit_to_app : Icons.person_add),
-                          label: Text(isMember ? 'עזוב הוב' : 'הצטרף להוב'),
+                          label: Text(isMember ? 'עזוב Hub' : 'הצטרף ל-Hub'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isMember
                                 ? Theme.of(context).colorScheme.error
@@ -171,6 +176,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                 controller: _tabController,
                 tabs: const [
                   Tab(icon: Icon(Icons.sports_soccer), text: 'משחקים'),
+                  Tab(icon: Icon(Icons.event), text: 'אירועים'),
                   Tab(icon: Icon(Icons.feed), text: 'פיד'),
                   Tab(icon: Icon(Icons.chat), text: 'צ\'אט'),
                   Tab(icon: Icon(Icons.group), text: 'חברים'),
@@ -183,6 +189,12 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                   children: [
                     // Games tab
                     _GamesTab(hubId: widget.hubId),
+                    // Events tab
+                    HubEventsTab(
+                      hubId: widget.hubId,
+                      hub: hub,
+                      isManager: isHubManager,
+                    ),
                     // Feed tab
                     FeedScreen(hubId: widget.hubId),
                     // Chat tab
@@ -215,14 +227,14 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         await hubsRepo.removeMember(widget.hubId, currentUserId);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('עזבת את ההוב')),
+            const SnackBar(content: Text('עזבת את ה-Hub')),
           );
         }
       } else {
         await hubsRepo.addMember(widget.hubId, currentUserId);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('הצטרפת להוב')),
+            const SnackBar(content: Text('הצטרפת ל-Hub')),
           );
         }
       }
@@ -245,7 +257,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
     final newRatingMode = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ערוך הגדרות הוב'),
+        title: const Text('ערוך הגדרות Hub'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,14 +380,49 @@ class _MembersTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (hub.memberIds.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: Text('אין חברים'),
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isHubManager = currentUserId == hub.createdBy;
+
+    return Column(
+      children: [
+        // Add manual player button (for managers)
+        if (isHubManager)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final result = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AddManualPlayerDialog(hubId: hubId),
+                );
+                if (result == true && context.mounted) {
+                  // Refresh will happen automatically via StreamBuilder
+                }
+              },
+              icon: const Icon(Icons.person_add),
+              label: const Text('הוסף שחקן ידנית'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                foregroundColor: Theme.of(context).colorScheme.onSecondary,
+              ),
+            ),
+          ),
+        // Members list
+        Expanded(
+          child: hub.memberIds.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Text('אין חברים'),
+                  ),
+                )
+              : _buildMembersList(context, ref),
         ),
-      );
-    }
+      ],
+    );
+  }
+
+  Widget _buildMembersList(BuildContext context, WidgetRef ref) {
 
     return FutureBuilder<List<User>>(
       future: usersRepo.getUsers(hub.memberIds),
@@ -391,6 +438,8 @@ class _MembersTab extends ConsumerWidget {
           padding: const EdgeInsets.all(8),
           itemBuilder: (context, index) {
             final user = users[index];
+            final isManualPlayer = user.email.startsWith('manual_');
+            
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: ListTile(
@@ -412,15 +461,38 @@ class _MembersTab extends ConsumerWidget {
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                 ),
-                title: Text(user.name),
-                subtitle: Text(user.email),
+                title: Row(
+                  children: [
+                    Text(user.name),
+                    if (isManualPlayer) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.edit_note,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                    ],
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isManualPlayer) Text(user.email),
+                    if (isManualPlayer) Text('שחקן ידני - ללא אפליקציה'),
+                    if (user.city != null) Text('עיר: ${user.city}'),
+                    if (user.preferredPosition.isNotEmpty)
+                      Text('עמדה: ${user.preferredPosition}'),
+                  ],
+                ),
                 trailing: user.uid == hub.createdBy
                     ? Chip(
                         label: const Text('יוצר'),
                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                       )
                     : null,
-                onTap: () => context.push('/profile/${user.uid}'),
+                onTap: isManualPlayer
+                    ? null
+                    : () => context.push('/profile/${user.uid}'),
               ),
             );
           },

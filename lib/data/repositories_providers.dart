@@ -5,6 +5,8 @@ import 'package:kickabout/services/auth_service.dart';
 import 'package:kickabout/services/storage_service.dart';
 import 'package:kickabout/services/location_service.dart';
 import 'package:kickabout/services/push_notification_service.dart';
+import 'package:kickabout/services/game_reminder_service.dart';
+import 'package:kickabout/services/push_notification_integration_service.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -33,6 +35,10 @@ final teamsRepositoryProvider = Provider<TeamsRepository>((ref) {
 
 final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
   return EventsRepository(firestore: ref.watch(firestoreProvider));
+});
+
+final hubEventsRepositoryProvider = Provider<HubEventsRepository>((ref) {
+  return HubEventsRepository(firestore: ref.watch(firestoreProvider));
 });
 
 final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
@@ -86,6 +92,16 @@ final locationServiceProvider = Provider<LocationService>((ref) {
 /// Push notification service provider
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
   return PushNotificationService();
+});
+
+/// Game reminder service provider
+final gameReminderServiceProvider = Provider<GameReminderService>((ref) {
+  return GameReminderService();
+});
+
+/// Push notification integration service provider
+final pushNotificationIntegrationServiceProvider = Provider<PushNotificationIntegrationService>((ref) {
+  return PushNotificationIntegrationService();
 });
 
 /// Auth service provider (exported from app_router)

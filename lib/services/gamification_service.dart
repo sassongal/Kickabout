@@ -60,20 +60,20 @@ class GamificationService {
 
     try {
       final doc = await _firestore
-          .collection(FirestorePaths.user(userId))
-          .doc('gamification')
-          .collection('stats')
-          .doc('data')
+          .collection('users')
+          .doc(userId)
+          .collection('gamification')
+          .doc('stats')
           .get();
 
       if (!doc.exists) {
         // Create default gamification
         final defaultGamification = Gamification(userId: userId);
         await _firestore
-            .collection(FirestorePaths.user(userId))
-            .doc('gamification')
-            .collection('stats')
-            .doc('data')
+            .collection('users')
+            .doc(userId)
+            .collection('gamification')
+            .doc('stats')
             .set(defaultGamification.toJson());
         return defaultGamification;
       }
@@ -91,10 +91,10 @@ class GamificationService {
     }
 
     return _firestore
-        .collection(FirestorePaths.user(userId))
-        .doc('gamification')
-        .collection('stats')
-        .doc('data')
+        .collection('users')
+        .doc(userId)
+        .collection('gamification')
+        .doc('stats')
         .snapshots()
         .map((snapshot) {
       if (!snapshot.exists) {
@@ -136,10 +136,10 @@ class GamificationService {
       };
 
       await _firestore
-          .collection(FirestorePaths.user(userId))
-          .doc('gamification')
-          .collection('stats')
-          .doc('data')
+          .collection('users')
+          .doc(userId)
+          .collection('gamification')
+          .doc('stats')
           .set({
         'userId': userId,
         'points': newPoints,
@@ -207,10 +207,10 @@ class GamificationService {
 
       if (badgesToAward.isNotEmpty) {
         await _firestore
-            .collection(FirestorePaths.user(userId))
-            .doc('gamification')
-            .collection('stats')
-            .doc('data')
+            .collection('users')
+            .doc(userId)
+            .collection('gamification')
+            .doc('stats')
             .update({
           'badges': FieldValue.arrayUnion(badgesToAward),
           'updatedAt': FieldValue.serverTimestamp(),

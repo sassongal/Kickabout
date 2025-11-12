@@ -7,27 +7,36 @@ import 'package:kickabout/widgets/app_scaffold.dart';
 import 'package:kickabout/widgets/error_widget.dart';
 import 'package:kickabout/widgets/loading_widget.dart';
 import 'package:kickabout/widgets/player_avatar.dart';
+import 'package:kickabout/widgets/game_photos_gallery.dart';
 import 'package:kickabout/utils/snackbar_helper.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/data/repositories.dart';
 import 'package:kickabout/models/models.dart';
+import 'package:kickabout/models/hub_role.dart';
+import 'package:kickabout/data/hubs_repository.dart';
 import 'package:kickabout/core/constants.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// Game detail screen
-class GameDetailScreen extends ConsumerWidget {
+class GameDetailScreen extends ConsumerStatefulWidget {
   final String gameId;
 
   const GameDetailScreen({super.key, required this.gameId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GameDetailScreen> createState() => _GameDetailScreenState();
+}
+
+class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
+  @override
+  Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
     final gamesRepo = ref.watch(gamesRepositoryProvider);
     final signupsRepo = ref.watch(signupsRepositoryProvider);
     final usersRepo = ref.watch(usersRepositoryProvider);
 
-    final gameStream = gamesRepo.watchGame(gameId);
-    final signupsStream = signupsRepo.watchSignups(gameId);
+    final gameStream = gamesRepo.watchGame(widget.gameId);
+    final signupsStream = signupsRepo.watchSignups(widget.gameId);
 
     return AppScaffold(
       title: 'פרטי משחק',
@@ -57,6 +66,7 @@ class GameDetailScreen extends ConsumerWidget {
 
           final isCreator = currentUserId == game.createdBy;
           final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
+          final hubsRepo = ref.watch(hubsRepositoryProvider);
 
           return StreamBuilder<List<GameSignup>>(
             stream: signupsStream,
@@ -97,7 +107,7 @@ class GameDetailScreen extends ConsumerWidget {
                                   Icon(
                                     Icons.location_on,
                                     size: 20,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(game.location!),
@@ -110,7 +120,7 @@ class GameDetailScreen extends ConsumerWidget {
                                 Chip(
                                   label: Text(_getStatusText(game.status)),
                                   backgroundColor: _getStatusColor(game.status, context)
-                                      .withOpacity(0.1),
+                                      .withValues(alpha: 0.1),
                                 ),
                                 const SizedBox(width: 8),
                                 Text('${game.teamCount} קבוצות'),
@@ -131,7 +141,7 @@ class GameDetailScreen extends ConsumerWidget {
                     if (currentUserId != null) ...[
                       // Chat button
                       OutlinedButton.icon(
-                        onPressed: () => context.push('/games/$gameId/chat'),
+                        onPressed: () => context.push('/games/${widget.gameId}/chat'),
                         icon: const Icon(Icons.chat),
                         label: const Text('צ\'אט משחק'),
                         style: OutlinedButton.styleFrom(
@@ -142,7 +152,7 @@ class GameDetailScreen extends ConsumerWidget {
                       // Sign up / Remove signup button
                       if (!isCreator)
                         ElevatedButton.icon(
-                          onPressed: () => _toggleSignup(context, ref, game, isSignedUp),
+                          onPressed: () => _toggleSignup(context, game, isSignedUp),
                           icon: Icon(isSignedUp ? Icons.person_remove : Icons.person_add),
                           label: Text(isSignedUp ? 'מסיר הרשמה' : 'נרשם'),
                           style: ElevatedButton.styleFrom(
@@ -157,23 +167,32 @@ class GameDetailScreen extends ConsumerWidget {
                         ),
                       if (!isCreator) const SizedBox(height: 12),
 
+                      // Hub manager-only buttons (Team Maker)
+                      FutureBuilder<bool>(
+                        future: _checkIfHubManager(hubsRepo, game.hubId, currentUserId),
+                        builder: (context, managerSnapshot) {
+                          final isHubManager = managerSnapshot.data ?? false;
+                          if (isHubManager && (game.status == GameStatus.teamSelection ||
+                              game.status == GameStatus.teamsFormed)) {
+                            return ElevatedButton.icon(
+                              onPressed: () => context.push('/games/${widget.gameId}/team-maker'),
+                              icon: const Icon(Icons.group),
+                              label: const Text('בחר קבוצות'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
                       // Creator-only buttons
                       if (isCreator) ...[
-                        if (game.status == GameStatus.teamSelection ||
-                            game.status == GameStatus.teamsFormed)
-                          ElevatedButton.icon(
-                            onPressed: () => context.push('/games/$gameId/team-maker'),
-                            icon: const Icon(Icons.group),
-                            label: const Text('בחר קבוצות'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
                         const SizedBox(height: 12),
 
                         if (game.status == GameStatus.teamsFormed)
                           ElevatedButton.icon(
-                            onPressed: () => _startGame(context, ref, game),
+                            onPressed: () => _startGame(context, game),
                             icon: const Icon(Icons.play_arrow),
                             label: const Text('התחל משחק'),
                             style: ElevatedButton.styleFrom(
@@ -186,7 +205,7 @@ class GameDetailScreen extends ConsumerWidget {
 
                         if (game.status == GameStatus.inProgress)
                           ElevatedButton.icon(
-                            onPressed: () => _endGame(context, ref, game),
+                            onPressed: () => _endGame(context, game),
                             icon: const Icon(Icons.stop),
                             label: const Text('סיים משחק'),
                             style: ElevatedButton.styleFrom(
@@ -200,7 +219,7 @@ class GameDetailScreen extends ConsumerWidget {
                         if (game.status == GameStatus.inProgress ||
                             game.status == GameStatus.completed)
                           ElevatedButton.icon(
-                            onPressed: () => context.push('/games/$gameId/stats'),
+                            onPressed: () => context.push('/games/${widget.gameId}/stats'),
                             icon: const Icon(Icons.bar_chart),
                             label: const Text('רישום סטטיסטיקות'),
                             style: ElevatedButton.styleFrom(
@@ -215,6 +234,16 @@ class GameDetailScreen extends ConsumerWidget {
                       ],
                     ],
                     const SizedBox(height: 24),
+
+                    // Game Photos Gallery
+                    GamePhotosGallery(
+                      photoUrls: game.photoUrls,
+                      canAddPhotos: currentUserId != null,
+                      onAddPhoto: () => _addPhoto(context, game),
+                      canDelete: isCreator,
+                      onDeletePhoto: (photoUrl) => _deletePhoto(context, photoUrl),
+                    ),
+                    if (game.photoUrls.isNotEmpty) const SizedBox(height: 24),
 
                     // Signups section
                     Text(
@@ -311,7 +340,6 @@ class GameDetailScreen extends ConsumerWidget {
 
   Future<void> _toggleSignup(
     BuildContext context,
-    WidgetRef ref,
     Game game,
     bool isSignedUp,
   ) async {
@@ -323,7 +351,7 @@ class GameDetailScreen extends ConsumerWidget {
 
     try {
       if (isSignedUp) {
-        await signupsRepo.removeSignup(gameId, currentUserId);
+        await signupsRepo.removeSignup(widget.gameId, currentUserId);
         // Decrement participation counter
         await usersRepo.updateUser(currentUserId, {
           'totalParticipations': FieldValue.increment(-1),
@@ -332,7 +360,7 @@ class GameDetailScreen extends ConsumerWidget {
           SnackbarHelper.showSuccess(context, 'הסרת הרשמה');
         }
       } else {
-        await signupsRepo.setSignup(gameId, currentUserId, SignupStatus.confirmed);
+        await signupsRepo.setSignup(widget.gameId, currentUserId, SignupStatus.confirmed);
         // Increment participation counter
         await usersRepo.updateUser(currentUserId, {
           'totalParticipations': FieldValue.increment(1),
@@ -348,7 +376,7 @@ class GameDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _startGame(BuildContext context, WidgetRef ref, Game game) async {
+  Future<void> _startGame(BuildContext context, Game game) async {
     if (game.createdBy != ref.read(currentUserIdProvider)) {
       SnackbarHelper.showWarning(context, 'רק יוצר המשחק יכול להתחיל');
       return;
@@ -356,7 +384,7 @@ class GameDetailScreen extends ConsumerWidget {
 
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      await gamesRepo.updateGameStatus(gameId, GameStatus.inProgress);
+      await gamesRepo.updateGameStatus(widget.gameId, GameStatus.inProgress);
       if (context.mounted) {
         SnackbarHelper.showSuccess(context, 'המשחק התחיל');
       }
@@ -367,7 +395,7 @@ class GameDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _endGame(BuildContext context, WidgetRef ref, Game game) async {
+  Future<void> _endGame(BuildContext context, Game game) async {
     if (game.createdBy != ref.read(currentUserIdProvider)) {
       SnackbarHelper.showWarning(context, 'רק יוצר המשחק יכול לסיים');
       return;
@@ -375,9 +403,77 @@ class GameDetailScreen extends ConsumerWidget {
 
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      await gamesRepo.updateGameStatus(gameId, GameStatus.completed);
+      await gamesRepo.updateGameStatus(widget.gameId, GameStatus.completed);
       if (context.mounted) {
         SnackbarHelper.showSuccess(context, 'המשחק הסתיים');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _addPhoto(BuildContext context, Game game) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      if (!context.mounted) return;
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      try {
+        final storageService = ref.read(storageServiceProvider);
+        final gamesRepo = ref.read(gamesRepositoryProvider);
+
+        // Upload photo
+        final photoUrl = await storageService.uploadGamePhoto(widget.gameId, image);
+
+        // Add to game
+        await gamesRepo.addGamePhoto(widget.gameId, photoUrl);
+
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          SnackbarHelper.showSuccess(context, 'התמונה הועלתה בהצלחה!');
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          SnackbarHelper.showErrorFromException(context, e);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _deletePhoto(
+    BuildContext context,
+    String photoUrl,
+  ) async {
+    try {
+      final gamesRepo = ref.read(gamesRepositoryProvider);
+      await gamesRepo.removeGamePhoto(widget.gameId, photoUrl);
+
+      if (context.mounted) {
+        SnackbarHelper.showSuccess(context, 'התמונה נמחקה');
       }
     } catch (e) {
       if (context.mounted) {
@@ -414,5 +510,18 @@ class GameDetailScreen extends ConsumerWidget {
       case GameStatus.statsInput:
         return 'הזנת סטטיסטיקות';
     }
+  }
+}
+
+/// Helper function to check if user is hub manager
+Future<bool> _checkIfHubManager(HubsRepository hubsRepo, String hubId, String? userId) async {
+  if (userId == null) return false;
+  try {
+    final hub = await hubsRepo.getHub(hubId);
+    if (hub == null) return false;
+    final permissions = HubPermissions(hub: hub, userId: userId);
+    return permissions.isManager();
+  } catch (e) {
+    return false;
   }
 }

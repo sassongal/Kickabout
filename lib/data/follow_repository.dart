@@ -28,9 +28,9 @@ class FollowRepository {
       // Add to following
       batch.set(
         _firestore
-            .collection(FirestorePaths.user(followerId))
-            .doc('following')
             .collection('users')
+            .doc(followerId)
+            .collection('following')
             .doc(followingId),
         {
           'createdAt': FieldValue.serverTimestamp(),
@@ -41,9 +41,9 @@ class FollowRepository {
       // Add to followers
       batch.set(
         _firestore
-            .collection(FirestorePaths.user(followingId))
-            .doc('followers')
             .collection('users')
+            .doc(followingId)
+            .collection('followers')
             .doc(followerId),
         {
           'createdAt': FieldValue.serverTimestamp(),
@@ -52,8 +52,8 @@ class FollowRepository {
 
       await batch.commit();
 
-      // Create notification
-      await _createFollowNotification(followerId, followingId);
+      // Create notification (using push integration service)
+      // This will be handled by the caller
     } catch (e) {
       throw Exception('Failed to follow user: $e');
     }
@@ -71,18 +71,18 @@ class FollowRepository {
       // Remove from following
       batch.delete(
         _firestore
-            .collection(FirestorePaths.user(followerId))
-            .doc('following')
             .collection('users')
+            .doc(followerId)
+            .collection('following')
             .doc(followingId),
       );
 
       // Remove from followers
       batch.delete(
         _firestore
-            .collection(FirestorePaths.user(followingId))
-            .doc('followers')
             .collection('users')
+            .doc(followingId)
+            .collection('followers')
             .doc(followerId),
       );
 
@@ -99,9 +99,9 @@ class FollowRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.user(followerId))
-        .doc('following')
         .collection('users')
+        .doc(followerId)
+        .collection('following')
         .doc(followingId)
         .snapshots()
         .map((snapshot) => snapshot.exists);
@@ -134,9 +134,9 @@ class FollowRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.user(userId))
-        .doc('followers')
         .collection('users')
+        .doc(userId)
+        .collection('followers')
         .snapshots()
         .asyncMap((snapshot) async {
           final userIds = snapshot.docs.map((doc) => doc.id).toList();
@@ -154,9 +154,9 @@ class FollowRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.user(userId))
-        .doc('following')
         .collection('users')
+        .doc(userId)
+        .collection('following')
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
@@ -168,31 +168,11 @@ class FollowRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.user(userId))
-        .doc('followers')
         .collection('users')
+        .doc(userId)
+        .collection('followers')
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
-  }
-
-  Future<void> _createFollowNotification(String followerId, String followingId) async {
-    final usersRepo = UsersRepository(firestore: _firestore);
-    final follower = await usersRepo.getUser(followerId);
-    final notificationsRepo = NotificationsRepository(firestore: _firestore);
-
-    await notificationsRepo.createNotification(
-      Notification(
-        notificationId: '',
-        userId: followingId,
-        type: 'follow',
-        title: 'עוקב חדש!',
-        body: '${follower?.name ?? 'מישהו'} התחיל לעקוב אחריך',
-        data: {
-          'followerId': followerId,
-        },
-        createdAt: DateTime.now(),
-      ),
-    );
   }
 }
 

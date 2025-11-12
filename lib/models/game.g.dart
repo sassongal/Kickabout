@@ -19,6 +19,10 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       status: json['status'] == null
           ? GameStatus.teamSelection
           : const GameStatusConverter().fromJson(json['status'] as String),
+      photoUrls: (json['photoUrls'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
       updatedAt:
@@ -37,6 +41,7 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'venueId': instance.venueId,
       'teamCount': instance.teamCount,
       'status': const GameStatusConverter().toJson(instance.status),
+      'photoUrls': instance.photoUrls,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'updatedAt': const TimestampConverter().toJson(instance.updatedAt),
     };

@@ -8,9 +8,10 @@ import 'package:kickabout/data/feed_repository.dart';
 import 'package:kickabout/data/comments_repository.dart';
 import 'package:kickabout/data/users_repository.dart';
 import 'package:kickabout/models/models.dart';
-import 'package:kickabout/models/notification.dart' as app_notification;
 import 'package:kickabout/widgets/player_avatar.dart';
 import 'package:kickabout/utils/snackbar_helper.dart';
+import 'package:kickabout/services/push_notification_integration_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// Post detail screen - shows post with comments
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -58,28 +59,24 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       );
       _commentController.clear();
 
-      // Create notification for post author
-      final feedRepo = ref.read(feedRepositoryProvider);
-      final post = await feedRepo.getPost(widget.hubId, widget.postId);
-      if (post != null && post.authorId != currentUserId) {
-        final notificationsRepo = ref.read(notificationsRepositoryProvider);
-        final usersRepo = ref.read(usersRepositoryProvider);
-        final currentUser = await usersRepo.getUser(currentUserId);
-        
-        await notificationsRepo.createNotification(
-          app_notification.Notification(
-            notificationId: '',
-            userId: post.authorId,
-            type: 'comment',
-            title: 'תגובה חדשה',
-            body: '${currentUser?.name ?? 'מישהו'} הגיב על הפוסט שלך',
-            data: {
-              'postId': widget.postId,
-              'hubId': widget.hubId,
-            },
-            createdAt: DateTime.now(),
-          ),
-        );
+      // Create notification for post author (using push integration service)
+      try {
+        final feedRepo = ref.read(feedRepositoryProvider);
+        final post = await feedRepo.getPost(widget.hubId, widget.postId);
+        if (post != null && post.authorId != currentUserId) {
+          final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
+          final usersRepo = ref.read(usersRepositoryProvider);
+          final currentUser = await usersRepo.getUser(currentUserId);
+          
+          await pushIntegration.notifyNewComment(
+            postId: widget.postId,
+            hubId: widget.hubId,
+            commenterName: currentUser?.name ?? 'מישהו',
+            postAuthorId: post.authorId,
+          );
+        }
+      } catch (e) {
+        debugPrint('Failed to send comment notification: $e');
       }
     } catch (e) {
       if (mounted) {

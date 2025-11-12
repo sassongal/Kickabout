@@ -25,6 +25,9 @@ mixin _$User {
   String get email => throw _privateConstructorUsedError;
   String? get photoUrl => throw _privateConstructorUsedError;
   String? get phoneNumber => throw _privateConstructorUsedError;
+  String? get city => throw _privateConstructorUsedError; // עיר מגורים
+  String get availabilityStatus =>
+      throw _privateConstructorUsedError; // available, busy, notAvailable
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
   List<String> get hubIds => throw _privateConstructorUsedError;
@@ -55,6 +58,8 @@ abstract class $UserCopyWith<$Res> {
       String email,
       String? photoUrl,
       String? phoneNumber,
+      String? city,
+      String availabilityStatus,
       @TimestampConverter() DateTime createdAt,
       List<String> hubIds,
       double currentRankScore,
@@ -84,6 +89,8 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? email = null,
     Object? photoUrl = freezed,
     Object? phoneNumber = freezed,
+    Object? city = freezed,
+    Object? availabilityStatus = null,
     Object? createdAt = null,
     Object? hubIds = null,
     Object? currentRankScore = null,
@@ -113,6 +120,14 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.phoneNumber
           : phoneNumber // ignore: cast_nullable_to_non_nullable
               as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
+      availabilityStatus: null == availabilityStatus
+          ? _value.availabilityStatus
+          : availabilityStatus // ignore: cast_nullable_to_non_nullable
+              as String,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -158,6 +173,8 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String email,
       String? photoUrl,
       String? phoneNumber,
+      String? city,
+      String availabilityStatus,
       @TimestampConverter() DateTime createdAt,
       List<String> hubIds,
       double currentRankScore,
@@ -184,6 +201,8 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? email = null,
     Object? photoUrl = freezed,
     Object? phoneNumber = freezed,
+    Object? city = freezed,
+    Object? availabilityStatus = null,
     Object? createdAt = null,
     Object? hubIds = null,
     Object? currentRankScore = null,
@@ -213,6 +232,14 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.phoneNumber
           : phoneNumber // ignore: cast_nullable_to_non_nullable
               as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
+      availabilityStatus: null == availabilityStatus
+          ? _value.availabilityStatus
+          : availabilityStatus // ignore: cast_nullable_to_non_nullable
+              as String,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -254,6 +281,8 @@ class _$UserImpl implements _User {
       required this.email,
       this.photoUrl,
       this.phoneNumber,
+      this.city,
+      this.availabilityStatus = 'available',
       @TimestampConverter() required this.createdAt,
       final List<String> hubIds = const [],
       this.currentRankScore = 5.0,
@@ -276,6 +305,13 @@ class _$UserImpl implements _User {
   final String? photoUrl;
   @override
   final String? phoneNumber;
+  @override
+  final String? city;
+// עיר מגורים
+  @override
+  @JsonKey()
+  final String availabilityStatus;
+// available, busy, notAvailable
   @override
   @TimestampConverter()
   final DateTime createdAt;
@@ -305,7 +341,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, location: $location, geohash: $geohash)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, city: $city, availabilityStatus: $availabilityStatus, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, location: $location, geohash: $geohash)';
   }
 
   @override
@@ -320,6 +356,9 @@ class _$UserImpl implements _User {
                 other.photoUrl == photoUrl) &&
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
+            (identical(other.city, city) || other.city == city) &&
+            (identical(other.availabilityStatus, availabilityStatus) ||
+                other.availabilityStatus == availabilityStatus) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             const DeepCollectionEquality().equals(other._hubIds, _hubIds) &&
@@ -343,6 +382,8 @@ class _$UserImpl implements _User {
       email,
       photoUrl,
       phoneNumber,
+      city,
+      availabilityStatus,
       createdAt,
       const DeepCollectionEquality().hash(_hubIds),
       currentRankScore,
@@ -374,6 +415,8 @@ abstract class _User implements User {
       required final String email,
       final String? photoUrl,
       final String? phoneNumber,
+      final String? city,
+      final String availabilityStatus,
       @TimestampConverter() required final DateTime createdAt,
       final List<String> hubIds,
       final double currentRankScore,
@@ -394,6 +437,10 @@ abstract class _User implements User {
   String? get photoUrl;
   @override
   String? get phoneNumber;
+  @override
+  String? get city; // עיר מגורים
+  @override
+  String get availabilityStatus; // available, busy, notAvailable
   @override
   @TimestampConverter()
   DateTime get createdAt;

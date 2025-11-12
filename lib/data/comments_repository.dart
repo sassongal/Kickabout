@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:kickabout/models/models.dart';
-import 'package:kickabout/services/firestore_paths.dart';
+import 'package:flutter/foundation.dart';
 
 /// Repository for Comments operations
 class CommentsRepository {
@@ -17,9 +17,11 @@ class CommentsRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.hub(hubId))
-        .doc('feed')
-        .collection('posts')
+        .collection('hubs')
+        .doc(hubId)
+        .collection('feed')
+        .doc('posts')
+        .collection('items')
         .doc(postId)
         .collection('comments')
         .orderBy('createdAt', descending: false)
@@ -35,17 +37,20 @@ class CommentsRepository {
     String hubId,
     String postId,
     String authorId,
-    String text,
-  ) async {
+    String text, {
+    String? postAuthorId, // For notification
+  }) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
       final docRef = _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .collection('comments')
           .doc();
@@ -61,13 +66,17 @@ class CommentsRepository {
 
       // Update comments count on post
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .update({
         'commentsCount': FieldValue.increment(1),
       });
+
+      // Notification will be handled by the caller using push integration service
 
       return docRef.id;
     } catch (e) {
@@ -88,9 +97,11 @@ class CommentsRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .collection('comments')
           .doc(commentId)
@@ -115,9 +126,11 @@ class CommentsRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .collection('comments')
           .doc(commentId)
@@ -141,9 +154,11 @@ class CommentsRepository {
 
     try {
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .collection('comments')
           .doc(commentId)
@@ -151,9 +166,11 @@ class CommentsRepository {
 
       // Update comments count on post
       await _firestore
-          .collection(FirestorePaths.hub(hubId))
-          .doc('feed')
-          .collection('posts')
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
           .doc(postId)
           .update({
         'commentsCount': FieldValue.increment(-1),

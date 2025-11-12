@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:kickabout/config/env.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/services/firestore_paths.dart';
+import 'package:kickabout/services/deep_link_service.dart';
 
 /// Service for handling push notifications
 class PushNotificationService {
@@ -120,14 +121,29 @@ class PushNotificationService {
   /// Handle notification tap
   void _handleNotificationTap(RemoteMessage message) {
     final data = message.data;
-    // Deep linking will be handled by the app router
-    // This is a placeholder - actual navigation should be done via GoRouter
+    if (data.isNotEmpty) {
+      DeepLinkService().handleDeepLink(data);
+    }
   }
 
   /// Handle local notification tap
   void _onNotificationTapped(NotificationResponse response) {
-    // Handle local notification tap
-    // Deep linking will be handled by the app router
+    if (response.payload != null) {
+      try {
+        // Parse payload as JSON-like string
+        final data = <String, dynamic>{};
+        final parts = response.payload!.split(',');
+        for (final part in parts) {
+          final keyValue = part.split(':');
+          if (keyValue.length == 2) {
+            data[keyValue[0].trim()] = keyValue[1].trim();
+          }
+        }
+        DeepLinkService().handleDeepLink(data);
+      } catch (e) {
+        debugPrint('Error parsing notification payload: $e');
+      }
+    }
   }
 
   /// Get FCM token
@@ -155,8 +171,10 @@ class PushNotificationService {
       if (currentUser == null) return;
 
       await FirebaseFirestore.instance
-          .collection(FirestorePaths.user(currentUser.uid))
-          .doc('fcm_tokens')
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('fcm_tokens')
+          .doc('tokens')
           .set({
         'tokens': FieldValue.arrayUnion([token]),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -178,8 +196,10 @@ class PushNotificationService {
       if (currentUser == null) return;
 
       await FirebaseFirestore.instance
-          .collection(FirestorePaths.user(currentUser.uid))
-          .doc('fcm_tokens')
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('fcm_tokens')
+          .doc('tokens')
           .update({
         'tokens': FieldValue.arrayRemove([token]),
       });
