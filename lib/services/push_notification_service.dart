@@ -16,8 +16,14 @@ class PushNotificationService {
   bool _initialized = false;
 
   /// Initialize push notifications
-  Future<void> initialize() async {
-    if (!Env.isFirebaseAvailable || _initialized) return;
+  Future<bool> initialize() async {
+    if (!Env.isFirebaseAvailable) {
+      return false;
+    }
+
+    if (_initialized) {
+      return true;
+    }
 
     try {
       // Request permission
@@ -43,10 +49,13 @@ class PushNotificationService {
         }
 
         _initialized = true;
+        return true;
       }
     } catch (e) {
       debugPrint('Failed to initialize push notifications: $e');
     }
+
+    return false;
   }
 
   /// Initialize local notifications
@@ -109,7 +118,7 @@ class PushNotificationService {
       iOS: iosDetails,
     );
 
-    await _localNotifications.show(
+      await _localNotifications.show(
       notification.hashCode,
       notification.title,
       notification.body,
