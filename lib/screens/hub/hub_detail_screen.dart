@@ -128,7 +128,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () => _editHubSettings(context, ref, hub),
+                                onPressed: () => context.push('/hubs/${hub.hubId}/settings'),
                                 icon: const Icon(Icons.settings, size: 18),
                                 label: const Text('הגדרות'),
                               ),
@@ -247,68 +247,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
     }
   }
 
-  Future<void> _editHubSettings(
-    BuildContext context,
-    WidgetRef ref,
-    Hub hub,
-  ) async {
-    final currentRatingMode = hub.settings['ratingMode'] as String? ?? 'basic';
-
-    final newRatingMode = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ערוך הגדרות Hub'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('בחר מצב דירוג:'),
-            const SizedBox(height: 16),
-            RadioListTile<String>(
-              title: const Text('דירוג בסיסי (1-7)'),
-              subtitle: const Text('ציון יחיד לכל שחקן'),
-              value: 'basic',
-              groupValue: currentRatingMode,
-              onChanged: (value) => Navigator.of(context).pop(value),
-            ),
-            RadioListTile<String>(
-              title: const Text('דירוג מתקדם (1-10)'),
-              subtitle: const Text('8 קטגוריות דירוג'),
-              value: 'advanced',
-              groupValue: currentRatingMode,
-              onChanged: (value) => Navigator.of(context).pop(value),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('ביטול'),
-          ),
-        ],
-      ),
-    );
-
-    if (newRatingMode != null && newRatingMode != currentRatingMode) {
-      try {
-        final hubsRepo = ref.read(hubsRepositoryProvider);
-        await hubsRepo.updateHub(hub.hubId, {
-          'settings': {
-            ...hub.settings,
-            'ratingMode': newRatingMode,
-          },
-        });
-
-        if (context.mounted) {
-          SnackbarHelper.showSuccess(context, 'ההגדרות עודכנו בהצלחה');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          SnackbarHelper.showErrorFromException(context, e);
-        }
-      }
-    }
-  }
 }
 
 /// Games tab widget

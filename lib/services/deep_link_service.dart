@@ -73,6 +73,13 @@ class DeepLinkService {
           }
           break;
 
+        case 'hub_invite':
+          final invitationCode = data['code'] as String?;
+          if (invitationCode != null) {
+            _router!.go('/invite/$invitationCode');
+          }
+          break;
+
         default:
           debugPrint('Unknown notification type: $type');
       }

@@ -319,7 +319,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
       final position = await locationService.getCurrentLocation();
       if (position == null) {
         // Fallback: get all hubs (limited)
-        return [];
+        return await hubsRepo.getAllHubs(limit: 100);
       }
 
       final hubs = await hubsRepo.findHubsNearby(

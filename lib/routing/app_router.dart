@@ -31,6 +31,10 @@ import 'package:kickabout/screens/players/players_list_screen.dart';
 import 'package:kickabout/screens/hubs/hubs_board_screen.dart';
 import 'package:kickabout/screens/admin/generate_dummy_data_screen.dart';
 import 'package:kickabout/screens/hub/manage_roles_screen.dart';
+import 'package:kickabout/screens/hub/hub_settings_screen.dart';
+import 'package:kickabout/screens/hub/join_by_invite_screen.dart';
+import 'package:kickabout/screens/game/game_calendar_screen.dart';
+import 'package:kickabout/screens/social/create_post_screen.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 
 /// Auth state stream provider
@@ -123,6 +127,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const GenerateDummyDataScreen(),
       ),
 
+      // Join by invitation
+      GoRoute(
+        path: '/invite/:code',
+        name: 'joinByInvite',
+        builder: (context, state) {
+          final code = state.pathParameters['code']!;
+          return JoinByInviteScreen(invitationCode: code);
+        },
+      ),
+
+      // Game Calendar
+      GoRoute(
+        path: '/calendar',
+        name: 'gameCalendar',
+        builder: (context, state) {
+          final hubId = state.uri.queryParameters['hubId'];
+          return GameCalendarScreen(hubId: hubId);
+        },
+      ),
+
       // Notifications route
       GoRoute(
         path: '/notifications',
@@ -177,6 +201,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
             routes: [
               GoRoute(
+                path: 'settings',
+                name: 'hubSettings',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return HubSettingsScreen(hubId: hubId);
+                },
+              ),
+              GoRoute(
                 path: 'manage-roles',
                 name: 'manageHubRoles',
                 builder: (context, state) {
@@ -191,6 +223,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                   final hubId = state.pathParameters['id']!;
                   final postId = state.pathParameters['postId']!;
                   return PostDetailScreen(hubId: hubId, postId: postId);
+                },
+              ),
+              GoRoute(
+                path: 'create-post',
+                name: 'createPost',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return CreatePostScreen(hubId: hubId);
                 },
               ),
             ],

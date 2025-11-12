@@ -19,6 +19,10 @@ _$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
           (json['likes'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
       commentsCount: (json['commentsCount'] as num?)?.toInt() ?? 0,
+      photoUrls: (json['photoUrls'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
     );
@@ -34,5 +38,6 @@ Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
       'achievementId': instance.achievementId,
       'likes': instance.likes,
       'commentsCount': instance.commentsCount,
+      'photoUrls': instance.photoUrls,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
     };

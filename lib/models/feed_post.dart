@@ -17,6 +17,7 @@ class FeedPost with _$FeedPost {
     String? achievementId,
     @Default([]) List<String> likes,
     @Default(0) int commentsCount,
+    @Default([]) List<String> photoUrls, // URLs of photos/videos in the post
     @TimestampConverter() required DateTime createdAt,
   }) = _FeedPost;
 

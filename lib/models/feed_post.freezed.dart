@@ -30,6 +30,8 @@ mixin _$FeedPost {
   String? get achievementId => throw _privateConstructorUsedError;
   List<String> get likes => throw _privateConstructorUsedError;
   int get commentsCount => throw _privateConstructorUsedError;
+  List<String> get photoUrls =>
+      throw _privateConstructorUsedError; // URLs of photos/videos in the post
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
 
@@ -58,6 +60,7 @@ abstract class $FeedPostCopyWith<$Res> {
       String? achievementId,
       List<String> likes,
       int commentsCount,
+      List<String> photoUrls,
       @TimestampConverter() DateTime createdAt});
 }
 
@@ -85,6 +88,7 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
     Object? achievementId = freezed,
     Object? likes = null,
     Object? commentsCount = null,
+    Object? photoUrls = null,
     Object? createdAt = null,
   }) {
     return _then(_value.copyWith(
@@ -124,6 +128,10 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
           ? _value.commentsCount
           : commentsCount // ignore: cast_nullable_to_non_nullable
               as int,
+      photoUrls: null == photoUrls
+          ? _value.photoUrls
+          : photoUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -150,6 +158,7 @@ abstract class _$$FeedPostImplCopyWith<$Res>
       String? achievementId,
       List<String> likes,
       int commentsCount,
+      List<String> photoUrls,
       @TimestampConverter() DateTime createdAt});
 }
 
@@ -175,6 +184,7 @@ class __$$FeedPostImplCopyWithImpl<$Res>
     Object? achievementId = freezed,
     Object? likes = null,
     Object? commentsCount = null,
+    Object? photoUrls = null,
     Object? createdAt = null,
   }) {
     return _then(_$FeedPostImpl(
@@ -214,6 +224,10 @@ class __$$FeedPostImplCopyWithImpl<$Res>
           ? _value.commentsCount
           : commentsCount // ignore: cast_nullable_to_non_nullable
               as int,
+      photoUrls: null == photoUrls
+          ? _value._photoUrls
+          : photoUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -235,8 +249,10 @@ class _$FeedPostImpl implements _FeedPost {
       this.achievementId,
       final List<String> likes = const [],
       this.commentsCount = 0,
+      final List<String> photoUrls = const [],
       @TimestampConverter() required this.createdAt})
-      : _likes = likes;
+      : _likes = likes,
+        _photoUrls = photoUrls;
 
   factory _$FeedPostImpl.fromJson(Map<String, dynamic> json) =>
       _$$FeedPostImplFromJson(json);
@@ -268,13 +284,23 @@ class _$FeedPostImpl implements _FeedPost {
   @override
   @JsonKey()
   final int commentsCount;
+  final List<String> _photoUrls;
+  @override
+  @JsonKey()
+  List<String> get photoUrls {
+    if (_photoUrls is EqualUnmodifiableListView) return _photoUrls;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_photoUrls);
+  }
+
+// URLs of photos/videos in the post
   @override
   @TimestampConverter()
   final DateTime createdAt;
 
   @override
   String toString() {
-    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, gameId: $gameId, achievementId: $achievementId, likes: $likes, commentsCount: $commentsCount, createdAt: $createdAt)';
+    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, gameId: $gameId, achievementId: $achievementId, likes: $likes, commentsCount: $commentsCount, photoUrls: $photoUrls, createdAt: $createdAt)';
   }
 
   @override
@@ -294,6 +320,8 @@ class _$FeedPostImpl implements _FeedPost {
             const DeepCollectionEquality().equals(other._likes, _likes) &&
             (identical(other.commentsCount, commentsCount) ||
                 other.commentsCount == commentsCount) &&
+            const DeepCollectionEquality()
+                .equals(other._photoUrls, _photoUrls) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
@@ -311,6 +339,7 @@ class _$FeedPostImpl implements _FeedPost {
       achievementId,
       const DeepCollectionEquality().hash(_likes),
       commentsCount,
+      const DeepCollectionEquality().hash(_photoUrls),
       createdAt);
 
   /// Create a copy of FeedPost
@@ -340,6 +369,7 @@ abstract class _FeedPost implements FeedPost {
           final String? achievementId,
           final List<String> likes,
           final int commentsCount,
+          final List<String> photoUrls,
           @TimestampConverter() required final DateTime createdAt}) =
       _$FeedPostImpl;
 
@@ -364,6 +394,8 @@ abstract class _FeedPost implements FeedPost {
   List<String> get likes;
   @override
   int get commentsCount;
+  @override
+  List<String> get photoUrls; // URLs of photos/videos in the post
   @override
   @TimestampConverter()
   DateTime get createdAt;

@@ -1,5 +1,5 @@
-name: kickabout
-description: "Unleash your inner soccer star with this app designed to organize neighborhood games, balance teams fairly, and track your performance with a fun, engaging ranking system!"
+name: kickadoor
+description: "Kickadoor - רשת חברתית לכדורגל שכונתי בישראל. מצא שחקנים, Hubs ומגרשים, ארגן משחקים, וצור קהילה פעילה סביב הכדורגל!"
 publish_to: "none"
 version: 1.0.0
 
@@ -58,7 +58,8 @@ flutter:
   uses-material-design: true
   generate: true
 
-  # Assets (אם יש תמונות/אייקונים)
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
+  # Assets
+  assets:
+    - assets/logo/
+    - assets/images/
+    - assets/icons/

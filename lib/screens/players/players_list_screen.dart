@@ -313,7 +313,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       } else {
         // Fallback: get all users (limited)
         // Note: This is not ideal for production - you'd want pagination
-        players = [];
+        players = await usersRepo.getAllUsers(limit: 100);
       }
 
       // Filter by search query

@@ -6,6 +6,7 @@ class GradientButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+  final Widget? iconWidget; // Support for custom icons (AppIcon)
   final bool isLoading;
   final Gradient? gradient;
   final double? width;
@@ -15,6 +16,7 @@ class GradientButton extends StatefulWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.iconWidget,
     this.isLoading = false,
     this.gradient,
     this.width,
@@ -92,6 +94,14 @@ class _GradientButtonState extends State<GradientButton>
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
+                    else if (widget.iconWidget != null) ...[
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: widget.iconWidget,
+                      ),
+                      const SizedBox(width: 8),
+                    ]
                     else if (widget.icon != null) ...[
                       Icon(widget.icon, size: 20, color: Colors.white),
                       const SizedBox(width: 8),

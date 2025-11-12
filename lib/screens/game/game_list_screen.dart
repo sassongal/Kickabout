@@ -33,6 +33,13 @@ class GameListScreen extends ConsumerWidget {
 
     return AppScaffold(
       title: 'משחקים',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.calendar_today),
+          onPressed: () => context.push('/calendar${selectedHubId != null ? '?hubId=$selectedHubId' : ''}'),
+          tooltip: 'לוח שנה',
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/games/create'),
         icon: const Icon(Icons.add),

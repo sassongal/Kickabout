@@ -155,6 +155,24 @@ class UsersRepository {
             .toList());
   }
 
+  /// Get all users (with limit for pagination)
+  Future<List<User>> getAllUsers({int limit = 100}) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      final snapshot = await _firestore
+          .collection(FirestorePaths.users())
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => User.fromJson({...doc.data(), 'uid': doc.id}))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Find available players nearby
   Future<List<User>> findAvailablePlayersNearby({
     required double latitude,

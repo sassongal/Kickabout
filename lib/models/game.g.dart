@@ -27,6 +27,11 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
           const TimestampConverter().fromJson(json['createdAt'] as Object),
       updatedAt:
           const TimestampConverter().fromJson(json['updatedAt'] as Object),
+      isRecurring: json['isRecurring'] as bool? ?? false,
+      parentGameId: json['parentGameId'] as String?,
+      recurrencePattern: json['recurrencePattern'] as String?,
+      recurrenceEndDate: _$JsonConverterFromJson<Object, DateTime>(
+          json['recurrenceEndDate'], const TimestampConverter().fromJson),
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -44,4 +49,21 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'photoUrls': instance.photoUrls,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'updatedAt': const TimestampConverter().toJson(instance.updatedAt),
+      'isRecurring': instance.isRecurring,
+      'parentGameId': instance.parentGameId,
+      'recurrencePattern': instance.recurrencePattern,
+      'recurrenceEndDate': _$JsonConverterToJson<Object, DateTime>(
+          instance.recurrenceEndDate, const TimestampConverter().toJson),
     };
+
+Value? _$JsonConverterFromJson<Json, Value>(
+  Object? json,
+  Value? Function(Json json) fromJson,
+) =>
+    json == null ? null : fromJson(json as Json);
+
+Json? _$JsonConverterToJson<Json, Value>(
+  Value? value,
+  Json? Function(Value value) toJson,
+) =>
+    value == null ? null : toJson(value);

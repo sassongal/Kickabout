@@ -24,6 +24,11 @@ class Game with _$Game {
     @Default([]) List<String> photoUrls, // URLs of game photos
     @TimestampConverter() required DateTime createdAt,
     @TimestampConverter() required DateTime updatedAt,
+    // Recurring game fields
+    @Default(false) bool isRecurring, // Is this a recurring game?
+    String? parentGameId, // ID of the original recurring game (for child games)
+    String? recurrencePattern, // 'weekly', 'biweekly', 'monthly'
+    @TimestampConverter() DateTime? recurrenceEndDate, // When to stop creating recurring games
   }) = _Game;
 
   factory Game.fromJson(Map<String, dynamic> json) => _$GameFromJson(json);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickabout/data/repositories_providers.dart';
 import 'package:kickabout/models/hub_event.dart';
 import 'package:kickabout/models/hub_role.dart';
@@ -155,10 +156,21 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                               child: Text(isRegistered ? 'בוטל' : 'הירשם'),
                             )
                           : widget.isManager
-                              ? IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => _deleteEvent(event),
-                                  color: Colors.red,
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _editEvent(context, event),
+                                      tooltip: 'ערוך',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => _deleteEvent(event),
+                                      color: Colors.red,
+                                      tooltip: 'מחק',
+                                    ),
+                                  ],
                                 )
                               : null,
                     ),
@@ -339,6 +351,152 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
     } catch (e) {
       if (context.mounted) {
         SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _editEvent(BuildContext context, HubEvent event) async {
+    final titleController = TextEditingController(text: event.title);
+    final descriptionController = TextEditingController(text: event.description ?? '');
+    final locationController = TextEditingController(text: event.location ?? '');
+    DateTime selectedDate = event.eventDate;
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(event.eventDate);
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('ערוך אירוע'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'כותרת',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'תיאור (אופציונלי)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: locationController,
+                    decoration: const InputDecoration(
+                      labelText: 'מיקום (אופציונלי)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('תאריך'),
+                    subtitle: Text(DateFormat('dd/MM/yyyy', 'he').format(selectedDate)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        locale: const Locale('he'),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          selectedDate = picked;
+                        });
+                      }
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('שעה'),
+                    subtitle: Text(selectedTime.format(context)),
+                    trailing: const Icon(Icons.access_time),
+                    onTap: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: selectedTime,
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          selectedTime = picked;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('ביטול'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (titleController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('נא למלא כותרת')),
+                    );
+                    return;
+                  }
+                  final eventDate = DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                    selectedTime.hour,
+                    selectedTime.minute,
+                  );
+                  Navigator.pop(
+                    context,
+                    {
+                      'title': titleController.text.trim(),
+                      'description': descriptionController.text.trim().isEmpty
+                          ? null
+                          : descriptionController.text.trim(),
+                      'location': locationController.text.trim().isEmpty
+                          ? null
+                          : locationController.text.trim(),
+                      'eventDate': eventDate,
+                    },
+                  );
+                },
+                child: const Text('שמור'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (result != null) {
+      try {
+        final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+        await hubEventsRepo.updateEvent(
+          widget.hubId,
+          event.eventId,
+          {
+            'title': result['title'],
+            'description': result['description'],
+            'location': result['location'],
+            'eventDate': Timestamp.fromDate(result['eventDate'] as DateTime),
+          },
+        );
+        if (context.mounted) {
+          SnackbarHelper.showSuccess(context, 'אירוע עודכן בהצלחה!');
+        }
+      } catch (e) {
+        if (context.mounted) {
+          SnackbarHelper.showError(context, 'שגיאה בעדכון אירוע: $e');
+        }
       }
     }
   }

@@ -11,6 +11,7 @@ import 'package:kickabout/routing/app_router.dart';
 import 'package:kickabout/services/push_notification_service.dart';
 import 'package:kickabout/services/deep_link_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,17 @@ void main() async {
     // Firebase initialized successfully
     Env.limitedMode = false;
     debugPrint('✅ Firebase initialized successfully');
+    
+    // Enable Firestore offline persistence
+    try {
+      await FirebaseFirestore.instance.enablePersistence(
+        const PersistenceSettings(synchronizeTabs: true),
+      );
+      debugPrint('✅ Firestore offline persistence enabled');
+    } catch (e) {
+      debugPrint('⚠️ Failed to enable offline persistence: $e');
+      // Continue without offline support
+    }
     
     // Initialize push notifications
     try {

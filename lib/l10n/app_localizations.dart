@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// שם האפליקציה
   ///
   /// In he, this message translates to:
-  /// **'קיקאבוט'**
+  /// **'קיקאדור'**
   String get appName;
 
   /// הודעת ברכה

@@ -140,6 +140,11 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                       icon: const Icon(Icons.emoji_events_outlined),
                       onPressed: () => context.push('/leaderboard'),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.admin_panel_settings_outlined),
+                      onPressed: () => context.push('/admin/generate-dummy-data'),
+                      tooltip: 'Admin - יצירת נתוני דמה',
+                    ),
           ],
           floatingActionButton: GradientButton(
             label: 'צור הוב',

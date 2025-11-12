@@ -223,6 +223,24 @@ class HubsRepository {
 
   /// Find hubs within radius (km) using geohash
   /// This is an approximate search - results are filtered by actual distance
+  /// Get all hubs (with limit for pagination)
+  Future<List<Hub>> getAllHubs({int limit = 100}) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      final snapshot = await _firestore
+          .collection(FirestorePaths.hubs())
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<List<Hub>> findHubsNearby({
     required double latitude,
     required double longitude,

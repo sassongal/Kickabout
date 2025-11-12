@@ -96,10 +96,15 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
     try {
       final eventsRepo = ref.read(eventsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
-      final recap = await RecapGenerator.generateRecap(
+      final teamsRepo = ref.read(teamsRepositoryProvider);
+      final gamesRepo = ref.read(gamesRepositoryProvider);
+      
+      final recap = await RecapGenerator.generateNarrativeRecap(
         widget.gameId,
         eventsRepo,
         usersRepo,
+        teamsRepo,
+        gamesRepo,
       );
       if (mounted) {
         setState(() {
@@ -107,7 +112,23 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
         });
       }
     } catch (e) {
-      // Ignore errors in recap loading
+      // Fallback to simple recap if narrative fails
+      try {
+        final eventsRepo = ref.read(eventsRepositoryProvider);
+        final usersRepo = ref.read(usersRepositoryProvider);
+        final recap = await RecapGenerator.generateRecap(
+          widget.gameId,
+          eventsRepo,
+          usersRepo,
+        );
+        if (mounted) {
+          setState(() {
+            _recapText = recap;
+          });
+        }
+      } catch (e2) {
+        // Ignore errors in recap loading
+      }
     }
   }
 
@@ -116,11 +137,41 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       await gamesRepo.updateGameStatus(widget.gameId, GameStatus.completed);
       _pauseTimer();
-      _loadRecap(); // Refresh recap
+      
+      // Load recap first
+      await _loadRecap();
+      
+      // Auto-post recap to feed if available
+      if (_recapText != null && _recapText!.isNotEmpty) {
+        try {
+          final game = await gamesRepo.getGame(widget.gameId);
+          if (game != null) {
+            final feedRepo = ref.read(feedRepositoryProvider);
+            final currentUserId = ref.read(currentUserIdProvider);
+            
+            if (currentUserId != null) {
+              final feedPost = FeedPost(
+                postId: '',
+                hubId: game.hubId,
+                authorId: currentUserId,
+                type: 'game',
+                content: _recapText,
+                gameId: widget.gameId,
+                createdAt: DateTime.now(),
+              );
+              
+              await feedRepo.createPost(feedPost);
+            }
+          }
+        } catch (e) {
+          debugPrint('Failed to auto-post recap to feed: $e');
+          // Don't fail game ending if feed post fails
+        }
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('המשחק הסתיים')),
+          const SnackBar(content: Text('המשחק הסתיים והסיכום פורסם בפיד')),
         );
       }
     } catch (e) {

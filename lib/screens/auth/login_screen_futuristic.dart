@@ -108,6 +108,67 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
     }
   }
 
+  Future<void> _showPasswordResetDialog(BuildContext context) async {
+    final emailController = TextEditingController(text: _emailController.text);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('איפוס סיסמה'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את כתובת האימייל שלך ונשלח לך קישור לאיפוס הסיסמה.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: 'אימייל',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (emailController.text.trim().isEmpty) {
+                SnackbarHelper.showError(context, 'נא להזין אימייל');
+                return;
+              }
+              Navigator.pop(context, true);
+            },
+            child: const Text('שלח'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && emailController.text.trim().isNotEmpty) {
+      try {
+        final authService = ref.read(authServiceProvider);
+        await authService.sendPasswordResetEmail(emailController.text.trim());
+        if (mounted) {
+          SnackbarHelper.showSuccess(
+            context,
+            'נשלח קישור לאיפוס סיסמה לכתובת האימייל שלך',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'שגיאה בשליחת אימייל: $e');
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FuturisticScaffold(
@@ -283,13 +344,7 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
                           ),
                           const SizedBox(height: 12),
                           TextButton(
-                            onPressed: () {
-                              // TODO: Implement password reset
-                              SnackbarHelper.showError(
-                                context,
-                                'איפוס סיסמה בקרוב',
-                              );
-                            },
+                            onPressed: _isLoading ? null : () => _showPasswordResetDialog(context),
                             child: Text(
                               'שכחת סיסמה?',
                               style: FuturisticTypography.labelMedium,

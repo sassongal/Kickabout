@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kickabout/core/app_assets.dart';
 import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/widgets/kicka_ball_logo.dart';
 
 /// Futuristic splash screen with animated football trajectory
 class SplashScreen extends StatefulWidget {
@@ -93,108 +93,48 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       backgroundColor: FuturisticColors.background,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          // Background gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: FuturisticColors.backgroundGradient,
-            ),
-          ),
-          
-          // Animated ball trajectory
+          // Loading screen image - full screen
           AnimatedBuilder(
-            animation: _ballAnimation,
+            animation: _logoScale,
             builder: (context, child) {
-              return Positioned(
-                left: MediaQuery.of(context).size.width * 
-                    (0.5 + _ballAnimation.value.dx),
-                top: MediaQuery.of(context).size.height * 
-                    (0.5 + _ballAnimation.value.dy),
-                child: Transform.scale(
-                  scale: 1.0 - (_ballController.value * 0.5),
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          FuturisticColors.secondary,
-                          FuturisticColors.secondary.withValues(alpha: 0.3),
-                        ],
+              return Opacity(
+                opacity: _logoScale.value,
+                child: Image.asset(
+                  AppAssets.splashLoading,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Fallback to gradient if image fails to load
+                    return Container(
+                      decoration: const BoxDecoration(
+                        gradient: FuturisticColors.backgroundGradient,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: FuturisticColors.secondary.withValues(alpha: 0.5),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.sports_soccer,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ),
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  },
                 ),
               );
             },
           ),
           
-          // Logo in center
-          Center(
-            child: AnimatedBuilder(
-              animation: _logoScale,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _logoScale.value,
-                  child: AnimatedBuilder(
-                    animation: _glowAnimation,
-                    builder: (context, child) {
-                      return Container(
-                        padding: const EdgeInsets.all(32),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              FuturisticColors.primary.withValues(alpha: 0.3),
-                              FuturisticColors.primary.withValues(alpha: 0.1),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: FuturisticColors.secondary.withValues(
-                                alpha: _glowAnimation.value * 0.5,
-                              ),
-                              blurRadius: 40,
-                              spreadRadius: 10,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            KickaBallLogo(
-                              size: 120,
-                              showText: false,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'עתיד הכדורגל',
-                              style: FuturisticTypography.bodySmall.copyWith(
-                                letterSpacing: 2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
+          // Optional: Add a subtle overlay for better text visibility if needed
+          // Container(
+          //   decoration: BoxDecoration(
+          //     gradient: LinearGradient(
+          //       begin: Alignment.topCenter,
+          //       end: Alignment.bottomCenter,
+          //       colors: [
+          //         Colors.transparent,
+          //         FuturisticColors.background.withValues(alpha: 0.3),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

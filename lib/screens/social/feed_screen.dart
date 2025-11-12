@@ -8,6 +8,7 @@ import 'package:kickabout/data/feed_repository.dart';
 import 'package:kickabout/data/users_repository.dart';
 import 'package:kickabout/models/models.dart';
 import 'package:kickabout/widgets/player_avatar.dart';
+import 'package:kickabout/widgets/game_photos_gallery.dart';
 
 /// Feed screen - shows activity feed for a hub
 class FeedScreen extends ConsumerWidget {
@@ -24,6 +25,11 @@ class FeedScreen extends ConsumerWidget {
 
     return AppScaffold(
       title: 'פיד פעילות',
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/hubs/$hubId/create-post'),
+        icon: const Icon(Icons.add),
+        label: const Text('צור פוסט'),
+      ),
       body: StreamBuilder<List<FeedPost>>(
         stream: feedStream,
         builder: (context, snapshot) {
@@ -160,6 +166,15 @@ class _PostCard extends ConsumerWidget {
                 // Content
                 if (post.content != null) ...[
                   Text(post.content!),
+                  const SizedBox(height: 8),
+                ],
+                // Photos
+                if (post.photoUrls.isNotEmpty) ...[
+                  GamePhotosGallery(
+                    photoUrls: post.photoUrls,
+                    canAddPhotos: false,
+                    canDelete: false,
+                  ),
                   const SizedBox(height: 8),
                 ],
                 // Game link

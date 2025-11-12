@@ -35,6 +35,10 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   GeoPoint? _selectedLocation;
   String? _locationAddress;
   bool _isLoadingLocation = false;
+  // Recurring game fields
+  bool _isRecurring = false;
+  String? _recurrencePattern; // 'weekly', 'biweekly', 'monthly'
+  DateTime? _recurrenceEndDate;
 
   @override
   void initState() {
@@ -175,9 +179,17 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         status: GameStatus.teamSelection,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        isRecurring: _isRecurring,
+        recurrencePattern: _recurrencePattern,
+        recurrenceEndDate: _recurrenceEndDate,
       );
 
       final gameId = await gamesRepo.createGame(game);
+      
+      // If recurring, schedule future games
+      if (_isRecurring && _recurrencePattern != null && _recurrenceEndDate != null) {
+        await _scheduleRecurringGames(gameId, gameDate, _recurrencePattern!, _recurrenceEndDate!);
+      }
 
       // Get hub for notifications and reminders
       final hubsRepo = ref.read(hubsRepositoryProvider);
@@ -250,6 +262,62 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  /// Schedule recurring games based on pattern
+  Future<void> _scheduleRecurringGames(
+    String parentGameId,
+    DateTime firstGameDate,
+    String pattern,
+    DateTime endDate,
+  ) async {
+    try {
+      final gamesRepo = ref.read(gamesRepositoryProvider);
+      final locationService = ref.read(locationServiceProvider);
+      
+      Duration interval;
+      switch (pattern) {
+        case 'weekly':
+          interval = const Duration(days: 7);
+          break;
+        case 'biweekly':
+          interval = const Duration(days: 14);
+          break;
+        case 'monthly':
+          interval = const Duration(days: 30);
+          break;
+        default:
+          interval = const Duration(days: 7);
+      }
+
+      DateTime nextDate = firstGameDate.add(interval);
+      int gameCount = 0;
+      const maxGames = 52; // Limit to prevent too many games
+
+      while (nextDate.isBefore(endDate) && gameCount < maxGames) {
+        // Get the original game to copy its properties
+        final originalGame = await gamesRepo.getGame(parentGameId);
+        if (originalGame == null) break;
+
+        final recurringGame = originalGame.copyWith(
+          gameId: '',
+          gameDate: nextDate,
+          isRecurring: false, // Child games are not recurring themselves
+          parentGameId: parentGameId,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        await gamesRepo.createGame(recurringGame);
+        nextDate = nextDate.add(interval);
+        gameCount++;
+      }
+
+      debugPrint('✅ Created $gameCount recurring games');
+    } catch (e) {
+      debugPrint('⚠️ Failed to create recurring games: $e');
+      // Don't fail the main game creation if recurring games fail
     }
   }
 
@@ -382,6 +450,84 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                     setState(() => _teamCount = value);
                   }
                 },
+              ),
+              const SizedBox(height: 16),
+
+              // Recurring game option
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        title: const Text('משחק חוזר'),
+                        subtitle: const Text('צור משחק זה בכל שבוע'),
+                        value: _isRecurring,
+                        onChanged: (value) {
+                          setState(() {
+                            _isRecurring = value;
+                            if (!value) {
+                              _recurrencePattern = null;
+                              _recurrenceEndDate = null;
+                            } else {
+                              _recurrencePattern = 'weekly';
+                              _recurrenceEndDate = DateTime.now().add(const Duration(days: 90));
+                            }
+                          });
+                        },
+                      ),
+                      if (_isRecurring) ...[
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _recurrencePattern,
+                          decoration: const InputDecoration(
+                            labelText: 'תדירות',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.repeat),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'weekly',
+                              child: Text('כל שבוע'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'biweekly',
+                              child: Text('כל שבועיים'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'monthly',
+                              child: Text('כל חודש'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _recurrencePattern = value);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          title: const Text('תאריך סיום'),
+                          subtitle: Text(_recurrenceEndDate != null
+                              ? '${_recurrenceEndDate!.day}/${_recurrenceEndDate!.month}/${_recurrenceEndDate!.year}'
+                              : 'לא נבחר'),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _recurrenceEndDate ?? DateTime.now().add(const Duration(days: 90)),
+                              firstDate: _selectedDate,
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              locale: const Locale('he'),
+                            );
+                            if (picked != null) {
+                              setState(() => _recurrenceEndDate = picked);
+                            }
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 

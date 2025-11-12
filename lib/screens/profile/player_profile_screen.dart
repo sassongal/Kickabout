@@ -437,6 +437,42 @@ class PlayerProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      // Advanced analytics
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ניתוח מתקדם',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Skills radar chart
+                              if (history.isNotEmpty) ...[
+                                Text(
+                                  'השוואת יכולות',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 250,
+                                  child: _buildSkillsRadarChart(history.last),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                              // Trend indicators
+                              _buildTrendIndicators(history),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                     ],
 
                     // Recent games
@@ -539,6 +575,119 @@ class PlayerProfileScreen extends ConsumerWidget {
         minY: 0,
         maxY: 10,
       ),
+    );
+  }
+
+  Widget _buildSkillsRadarChart(RatingSnapshot snapshot) {
+    final skills = [
+      ('הגנה', snapshot.defense),
+      ('מסירות', snapshot.passing),
+      ('בעיטות', snapshot.shooting),
+      ('כדרור', snapshot.dribbling),
+      ('פיזי', snapshot.physical),
+      ('מנהיגות', snapshot.leadership),
+      ('משחק קבוצתי', snapshot.teamPlay),
+      ('עקביות', snapshot.consistency),
+    ];
+
+    return RadarChart(
+      RadarChartData(
+        dataSets: [
+          RadarDataSet(
+            fillColor: Colors.blue.withValues(alpha: 0.2),
+            borderColor: Colors.blue,
+            borderWidth: 2,
+            dataEntries: skills.map((s) => RadarEntry(value: s.$2)).toList(),
+          ),
+        ],
+        tickCount: 5,
+        ticksTextStyle: const TextStyle(fontSize: 10),
+        tickBorderData: BorderSide(color: Colors.grey[300]!),
+        borderData: BorderSide(color: Colors.grey[400]!, width: 2),
+        radarBackgroundColor: Colors.grey[100]!,
+        radarBorderData: BorderSide(color: Colors.grey[400]!, width: 1),
+        titleTextStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        getTitle: (index, angle) {
+          return RadarChartTitle(
+            text: skills[index].$1,
+            angle: angle,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTrendIndicators(List<RatingSnapshot> history) {
+    if (history.length < 2) {
+      return const SizedBox.shrink();
+    }
+
+    // Calculate trends
+    final recent = history.take(5).toList();
+    final older = history.skip(5).take(5).toList();
+    
+    if (older.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final recentAvg = recent.map((s) => 
+      (s.defense + s.passing + s.shooting + s.dribbling + 
+       s.physical + s.leadership + s.teamPlay + s.consistency) / 8.0
+    ).reduce((a, b) => a + b) / recent.length;
+
+    final olderAvg = older.map((s) => 
+      (s.defense + s.passing + s.shooting + s.dribbling + 
+       s.physical + s.leadership + s.teamPlay + s.consistency) / 8.0
+    ).reduce((a, b) => a + b) / older.length;
+
+    final trend = recentAvg - olderAvg;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildTrendCard(
+          'מגמה',
+          trend > 0.1 ? 'משתפר' : trend < -0.1 ? 'יורד' : 'יציב',
+          trend > 0.1 ? Colors.green : trend < -0.1 ? Colors.red : Colors.grey,
+          Icons.trending_up,
+        ),
+        _buildTrendCard(
+          'שינוי',
+          '${trend > 0 ? "+" : ""}${trend.toStringAsFixed(1)}',
+          trend > 0 ? Colors.green : trend < 0 ? Colors.red : Colors.grey,
+          Icons.arrow_upward,
+        ),
+        _buildTrendCard(
+          'ממוצע אחרון',
+          recentAvg.toStringAsFixed(1),
+          _getRatingColor(recentAvg),
+          Icons.star,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrendCard(String label, String value, Color color, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 
