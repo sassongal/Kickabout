@@ -132,7 +132,7 @@ print('Radius: ${remoteConfig.venueSearchRadiusDefault}');
 
 **פתרון**:
 ```bash
-firebase functions:config:set googleplaces.apikey="YOUR_KEY"
+firebase functions:config:set googleplaces.apikey="YOUR_API_KEY"
 firebase deploy --only functions
 ```
 
