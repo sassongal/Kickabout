@@ -11,6 +11,7 @@ import 'package:kickadoor/services/push_notification_service.dart';
 import 'package:kickadoor/services/deep_link_service.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:kickadoor/services/analytics_service.dart';
+import 'package:kickadoor/services/remote_config_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -88,6 +89,15 @@ void main() async {
       debugPrint('✅ Analytics initialized');
     } catch (e) {
       debugPrint('⚠️ Analytics initialization failed: $e');
+    }
+
+    // Initialize Remote Config
+    try {
+      final remoteConfig = RemoteConfigService();
+      await remoteConfig.initialize();
+      debugPrint('✅ Remote Config initialized');
+    } catch (e) {
+      debugPrint('⚠️ Remote Config initialization failed: $e');
     }
   } catch (e) {
     // Firebase not configured or initialization failed
