@@ -1,5 +1,7 @@
 # 🎨 Kickadoor - Complete Design System & App Structure for Figma Make
 
+> **Note**: This prompt references the existing Figma design output located in `/Kickadoor Mobile App Design/` folder, which contains React/TypeScript implementations of all components. Use these as reference for exact styling, component structure, and implementation details.
+
 ## 📱 App Overview
 
 **Kickadoor** is a social network for neighborhood soccer players in Israel. It connects players, Hubs (soccer communities), and fields, enabling users to find local games, organize matches, build communities, and track performance.
@@ -328,18 +330,114 @@
 
 ## 🧩 Key UI Components
 
-### Reusable Widgets
+### Reusable Widgets (Figma Output Reference)
 
-1. **FuturisticScaffold**: App bar with logo, title, actions
-2. **FuturisticCard**: Card with border, rounded corners
-3. **GradientButton**: Button with blue→light blue gradient
-4. **PlayerAvatar**: Circular avatar with navigation to profile
-5. **OptimizedImage**: Cached network image with loading/error states
-6. **StatsDashboard**: Progress rings, charts, metrics
-7. **PlayerRecommendationCard**: Card with avatar, name, rating, match reasons
-8. **GamePhotosGallery**: Grid of game photos with full-screen viewer
-9. **AvailabilityToggle**: Dropdown to set availability status
-10. **KickaBallLogo**: App logo component
+> **Reference**: All components are implemented in `/Kickadoor Mobile App Design/src/components/`
+
+1. **FuturisticCard** (`FuturisticCard.tsx`)
+   - White background (#FFFFFF)
+   - Border: 1.5px #E0E0E0
+   - Border-radius: 16px (rounded-lg)
+   - Shadow: shadow-md (or glow effect for special cards)
+   - Padding: 16px (p-4)
+   - Optional `glow` prop for special highlighting
+
+2. **GradientButton** (`GradientButton.tsx`)
+   - Variants: `primary` (blue), `secondary` (green), `accent` (purple)
+   - Gradient: `bg-gradient-to-r from-[#1976D2] to-[#1565C0]` (primary)
+   - Text: Uppercase, Montserrat bold, tracking-wide
+   - Border-radius: 12px (rounded-lg)
+   - Padding: 24px horizontal, 12px vertical (px-6 py-3)
+   - Supports icon prop
+
+3. **PlayerAvatar** (`PlayerAvatar.tsx`)
+   - Circular avatar with colored status ring
+   - Sizes: `sm`, `md`, `lg`, `xl`
+   - Status colors: Green (available), Orange (busy), Red (notAvailable)
+   - Ring thickness varies by size
+
+4. **StatsDashboard** (`StatsDashboard.tsx`)
+   - Grid layout: 2 columns
+   - Uses `StatsRing` components
+   - Heading: Orbitron, uppercase, tracking-widest
+   - Stats: Games Played (blue), Wins (green), Goals (purple), Avg Rating (orange)
+
+5. **StatsRing** (`StatsRing.tsx`)
+   - Circular progress indicator
+   - Customizable color
+   - Shows value/maxValue as percentage
+   - Label below ring
+
+6. **PlayerRecommendationCard** (`PlayerRecommendationCard.tsx`)
+   - Special card with glow effect
+   - Shows player avatar, name, rating, position
+   - Match score percentage
+   - Match reasons as chips
+   - Clickable with hover effect
+
+7. **HomeDashboard** (`HomeDashboard.tsx`)
+   - Main dashboard layout
+   - User profile card with availability toggle
+   - Quick action buttons (3-column grid)
+   - Stats dashboard section
+   - My Hubs section
+   - AI recommendations section
+   - Upcoming games list
+
+8. **BottomNavigation** (`BottomNavigation.tsx`)
+   - Fixed bottom navigation bar
+   - 5 main sections: Home, Games, Map, Hubs, Profile
+   - Active state highlighting
+   - Icons from Lucide React
+
+9. **PlayerProfile** (`PlayerProfile.tsx`)
+   - Large avatar with status ring
+   - Rating display with progress bar
+   - Line chart for rating history (Recharts)
+   - Radar chart for skills (8 skills)
+   - Follow/Edit profile button
+
+10. **HubDetail** (`HubDetail.tsx`)
+    - Tabbed interface (Overview, Games, Feed, Chat)
+    - Member grid
+    - Hub info card
+    - Manager actions section
+
+11. **PlayersBoard** (`PlayersBoard.tsx`)
+    - Searchable list
+    - Filter chips
+    - Player cards with avatar, rating, position, distance
+    - Status indicators
+
+12. **HubsBoard** (`HubsBoard.tsx`)
+    - List/Map view toggle
+    - Hub cards with member count, location
+    - Activity indicators
+
+### UI Component Library (Shadcn/ui)
+
+> **Reference**: All base UI components in `/Kickadoor Mobile App Design/src/components/ui/`
+
+The design uses Shadcn/ui components built on Radix UI:
+- **Button** (`button.tsx`): Base button with variants
+- **Card** (`card.tsx`): Base card component
+- **Input** (`input.tsx`): Text input fields
+- **Switch** (`switch.tsx`): Toggle switches
+- **Tabs** (`tabs.tsx`): Tabbed interfaces
+- **Progress** (`progress.tsx`): Progress bars
+- **Avatar** (`avatar.tsx`): Avatar component
+- **Badge** (`badge.tsx`): Status badges
+- **Dialog** (`dialog.tsx`): Modal dialogs
+- **Select** (`select.tsx`): Dropdown selects
+- **Chart** (`chart.tsx`): Chart wrapper for Recharts
+- And 40+ more components...
+
+### Data Visualization
+
+- **Recharts** library for charts:
+  - `LineChart` - Rating history over time
+  - `RadarChart` - Skills visualization (8 skills)
+  - `ResponsiveContainer` - Responsive chart wrapper
 
 ### Charts & Data Visualization
 - **Line Chart** (fl_chart): Rating history over time
@@ -492,10 +590,46 @@ hubs/{hubId}/feed/photos/{timestamp}.jpg
 ### Design Tokens
 
 - **Spacing**: 4px, 8px, 12px, 16px, 24px, 32px
-- **Border Radius**: 8px, 12px, 16px, 24px
-- **Shadows**: Minimal (0-2px elevation)
-- **Icons**: Material Icons, 24px default
-- **Images**: Avatar (circular), Photos (rounded corners)
+- **Border Radius**: 8px (rounded), 12px (rounded-lg), 16px (rounded-xl), 24px (rounded-2xl)
+- **Shadows**: 
+  - `shadow-md` - Default card shadow
+  - `shadow-[0_0_20px_rgba(76,175,80,0.15)]` - Glow effect for special cards
+- **Icons**: Lucide React, 24px default (w-6 h-6)
+- **Images**: Avatar (circular), Photos (rounded corners 8px)
+- **Gradients**: 
+  - Primary: `from-[#1976D2] to-[#1565C0]`
+  - Secondary: `from-[#4CAF50] to-[#388E3C]`
+  - Accent: `from-[#9C27B0] to-[#7B1FA2]`
+
+### CSS Variables (from globals.css)
+
+The design uses CSS custom properties defined in `globals.css`:
+```css
+--primary-blue: #1976D2;
+--primary-light: #42A5F5;
+--primary-dark: #1565C0;
+--secondary-green: #4CAF50;
+--secondary-light: #81C784;
+--secondary-dark: #388E3C;
+--accent-purple: #9C27B0;
+--accent-light: #BA68C8;
+--accent-dark: #7B1FA2;
+--bg-main: #F5F5F5;
+--surface: #FFFFFF;
+--surface-variant: #E0E0E0;
+--text-primary: #212121;
+--text-secondary: #757575;
+--text-tertiary: #9E9E9E;
+```
+
+### Tailwind CSS Classes
+
+The Figma output uses Tailwind CSS with custom configuration:
+- Background: `bg-[#F5F5F5]` for main background
+- Text colors: `text-[#212121]`, `text-[#757575]`, `text-[#9E9E9E]`
+- Borders: `border-[#E0E0E0]` for card borders
+- Gradients: `bg-gradient-to-r` or `bg-gradient-to-br`
+- RTL Support: `dir="rtl"` on main containers
 
 ---
 
@@ -503,9 +637,35 @@ hubs/{hubId}/feed/photos/{timestamp}.jpg
 
 ### RTL (Right-to-Left) Support
 - All layouts must support Hebrew RTL
-- Text alignment: Right for Hebrew
-- Icons and buttons: Mirrored for RTL
+- Implementation: `dir="rtl"` on main containers
+- Text alignment: Right for Hebrew (automatic with RTL)
+- Icons and buttons: Mirrored for RTL (Lucide React handles this)
 - Navigation: Right-to-left flow
+- Example from code: `<div className="min-h-screen bg-[#F5F5F5] pb-20" dir="rtl">`
+
+### Figma Output Reference
+
+The `/Kickadoor Mobile App Design/` folder contains:
+- **React/TypeScript** implementations of all screens
+- **Component library** with exact styling
+- **Type definitions** in `src/types/index.ts`
+- **Mock data** in `src/data/mockData.ts`
+- **Global styles** in `src/styles/globals.css`
+- **Shadcn/ui components** in `src/components/ui/`
+
+**Key Files to Reference**:
+- `src/App.tsx` - Main app structure and navigation
+- `src/components/HomeDashboard.tsx` - Dashboard implementation
+- `src/components/PlayerProfile.tsx` - Profile with charts
+- `src/components/HubDetail.tsx` - Hub detail with tabs
+- `src/components/GradientButton.tsx` - Button component
+- `src/components/FuturisticCard.tsx` - Card component
+- `src/components/StatsDashboard.tsx` - Stats visualization
+- `src/components/StatsRing.tsx` - Circular progress
+- `src/components/PlayerRecommendationCard.tsx` - AI recommendations
+- `src/components/BottomNavigation.tsx` - Bottom nav bar
+
+**Figma Design File**: https://www.figma.com/design/w4idy9zy89LHZrtIGQuc1B/Kickadoor-Mobile-App-Design
 
 ### Responsive Design
 - Mobile-first approach
@@ -528,23 +688,41 @@ hubs/{hubId}/feed/photos/{timestamp}.jpg
 
 ## 🚀 Implementation Priority
 
-### Phase 1 (Core)
-1. Design system (colors, typography, components)
-2. Authentication screens
-3. Home dashboard
-4. Player/Hub lists
+### Phase 1 (Core) - ✅ Already Implemented in Figma
+1. ✅ Design system (colors, typography, components)
+2. ✅ Authentication screens (`LoginScreen.tsx`)
+3. ✅ Home dashboard (`HomeDashboard.tsx`)
+4. ✅ Player/Hub lists (`PlayersBoard.tsx`, `HubsBoard.tsx`)
 
-### Phase 2 (Features)
-5. Hub detail with tabs
-6. Game screens
-7. Profile with charts
-8. Social feed
+### Phase 2 (Features) - ✅ Already Implemented in Figma
+5. ✅ Hub detail with tabs (`HubDetail.tsx`)
+6. ⚠️ Game screens (`GamesList.tsx` - basic implementation)
+7. ✅ Profile with charts (`PlayerProfile.tsx`)
+8. ⚠️ Social feed (partially in `HubDetail.tsx`)
 
-### Phase 3 (Advanced)
-9. Maps integration
-10. Chat interfaces
-11. Gamification elements
-12. Admin screens
+### Phase 3 (Advanced) - ⚠️ Partially Implemented
+9. ⚠️ Maps integration (`MapView.tsx` - placeholder)
+10. ⚠️ Chat interfaces (in `HubDetail.tsx` - basic)
+11. ⚠️ Gamification elements (StatsDashboard implemented)
+12. ❌ Admin screens (not in Figma output)
+
+### What's Already Built (Figma Output)
+- ✅ Complete component library
+- ✅ All main screens with layouts
+- ✅ Navigation structure
+- ✅ RTL support
+- ✅ Responsive design
+- ✅ Data visualization (charts)
+- ✅ Mock data structure
+
+### What Needs Enhancement
+- ⚠️ Interactive map (currently placeholder)
+- ⚠️ Real-time chat UI (basic structure exists)
+- ⚠️ Game detail screen (not in Figma output)
+- ⚠️ Stats logger screen (not in Figma output)
+- ⚠️ Team maker screen (not in Figma output)
+- ❌ Admin screens
+- ❌ Scouting screen
 
 ---
 
