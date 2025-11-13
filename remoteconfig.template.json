@@ -1,0 +1,70 @@
+{
+  "conditions": [],
+  "parameters": {
+    "venue_search_radius_default": {
+      "defaultValue": {
+        "value": "5000"
+      },
+      "description": "Default search radius for venues in meters",
+      "valueType": "NUMBER"
+    },
+    "venue_search_radius_max": {
+      "defaultValue": {
+        "value": "10000"
+      },
+      "description": "Maximum search radius for venues in meters",
+      "valueType": "NUMBER"
+    },
+    "hub_search_radius_default": {
+      "defaultValue": {
+        "value": "5000"
+      },
+      "description": "Default search radius for hubs in kilometers",
+      "valueType": "NUMBER"
+    },
+    "enable_venue_rental_search": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Enable rental venue search feature",
+      "valueType": "BOOLEAN"
+    },
+    "venue_cache_ttl_seconds": {
+      "defaultValue": {
+        "value": "300"
+      },
+      "description": "Cache TTL for venue search results in seconds",
+      "valueType": "NUMBER"
+    },
+    "api_rate_limit_seconds": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Minimum seconds between API calls per user",
+      "valueType": "NUMBER"
+    },
+    "enable_smart_recommendations": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Enable AI-powered smart recommendations",
+      "valueType": "BOOLEAN"
+    },
+    "geohash_precision": {
+      "defaultValue": {
+        "value": "7"
+      },
+      "description": "Geohash precision for location queries (7 = ~150m)",
+      "valueType": "NUMBER"
+    }
+  },
+  "version": {
+    "versionNumber": "1",
+    "updateTime": "2024-01-01T00:00:00Z",
+    "updateUser": {
+      "email": "admin@kickadoor.com"
+    },
+    "description": "Initial Remote Config template"
+  }
+}
+

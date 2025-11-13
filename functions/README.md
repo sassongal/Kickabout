@@ -1,73 +1,167 @@
 # Firebase Cloud Functions - Kickadoor
 
-## 📋 סקירה
+## 📋 Overview
 
-Cloud Functions לשליחת Push Notifications אוטומטיות ב-Kickadoor.
+Cloud Functions for secure API integration, caching, and server-side logic.
 
-## 🚀 Functions זמינים
+## 🔧 Setup
 
-### 1. `onGameCreated`
-**Trigger**: כאשר משחק חדש נוצר  
-**פעולה**: שולח התראות לכל חברי ההוב (חוץ מיוצר המשחק)
-
-### 2. `onHubMessageCreated`
-**Trigger**: כאשר הודעה חדשה נשלחת בצ'אט ההוב  
-**פעולה**: שולח התראות לכל חברי ההוב (חוץ מהשולח)
-
-### 3. `onCommentCreated`
-**Trigger**: כאשר תגובה חדשה נוספת לפוסט  
-**פעולה**: שולח התראה למחבר הפוסט
-
-### 4. `onFollowCreated`
-**Trigger**: כאשר משתמש מתחיל לעקוב אחרי משתמש אחר  
-**פעולה**: שולח התראה למשתמש שנעקב אחריו
-
-### 5. `sendGameReminder`
-**Trigger**: Callable function (נקרא מהאפליקציה)  
-**פעולה**: שולח תזכורות למשחק
-
-## 📦 התקנה
+### 1. Install Dependencies
 
 ```bash
 cd functions
 npm install
 ```
 
-## 🧪 בדיקה מקומית
+### 2. Configure API Keys
 
 ```bash
-npm run serve
+# Google Places API
+firebase functions:config:set googleplaces.apikey="YOUR_API_KEY"
+
+# Custom API (optional)
+firebase functions:config:set customapi.baseurl="https://your-api.com"
+firebase functions:config:set customapi.apikey="YOUR_API_KEY"
 ```
 
-זה יריץ את ה-Functions locally עם Firebase Emulators.
-
-## 🚀 Deploy
+### 3. Deploy
 
 ```bash
-# Deploy כל ה-Functions
 firebase deploy --only functions
-
-# Deploy function ספציפי
-firebase deploy --only functions:onGameCreated
 ```
 
-## 📝 הערות חשובות
+## 📦 Functions
 
-1. **FCM Tokens**: המשתמשים צריכים לשמור את ה-FCM token שלהם ב-`users/{userId}/fcmToken`
-2. **Permissions**: ה-Functions דורשות Firebase Admin SDK (אוטומטי)
-3. **Error Handling**: כל ה-Functions כוללות error handling מלא
+### 1. `searchVenues`
+Secure venue search using Google Places API.
 
-## 🔧 Configuration
+**Parameters:**
+- `latitude` (number) - User latitude
+- `longitude` (number) - User longitude
+- `radius` (number, optional) - Search radius in meters (default: 5000)
+- `query` (string, optional) - Search query
+- `includeRentals` (boolean, optional) - Include rental venues
 
-ה-Functions משתמשות ב-Firebase Admin SDK שמתחבר אוטומטית ל-Firebase Project.
+**Returns:**
+```json
+{
+  "results": [...],
+  "count": 10
+}
+```
 
-## 📊 Logs
+**Features:**
+- ✅ Server-side API key (secure)
+- ✅ Caching (5 minutes)
+- ✅ Rate limiting (2 seconds per user)
+- ✅ Retry logic with exponential backoff
+
+### 2. `getPlaceDetails`
+Get detailed information about a place.
+
+**Parameters:**
+- `placeId` (string) - Google Places place ID
+
+**Returns:**
+```json
+{
+  "place": {...}
+}
+```
+
+**Features:**
+- ✅ Long-term caching (1 hour)
+- ✅ Detailed place information
+
+### 3. `syncVenueToCustomAPI`
+Sync venue data to custom API.
+
+**Parameters:**
+- `venueId` (string) - Venue ID to sync
+
+**Returns:**
+```json
+{
+  "success": true,
+  "data": {...}
+}
+```
+
+### 4. `onVenueChanged`
+Automatic trigger when venue is created/updated.
+
+**Features:**
+- ✅ Automatic sync to custom API
+- ✅ Firestore trigger
+
+### 5. Existing Functions
+- `onGameCreated` - Notify hub members of new game
+- `onHubMessageCreated` - Notify hub members of new message
+- `onCommentCreated` - Notify post author of new comment
+- `onFollowCreated` - Notify user of new follower
+- `sendGameReminder` - Send game reminder notifications
+
+## 🔒 Security
+
+- API keys stored in Functions config (not in code)
+- Authentication required for all callable functions
+- Rate limiting per user
+- Input validation
+
+## 📊 Performance
+
+- **Caching**: Reduces API calls and costs
+- **Rate Limiting**: Prevents abuse
+- **Retry Logic**: Handles transient errors
+- **Batch Processing**: Efficient Firestore queries
+
+## 🧪 Testing
+
+### Local Testing
 
 ```bash
-# צפה ב-logs
+# Start emulators
+firebase emulators:start
+
+# Test function
+curl -X POST http://localhost:5001/your-project/us-central1/searchVenues \
+  -H "Content-Type: application/json" \
+  -d '{"data": {"latitude": 31.7683, "longitude": 35.2137, "radius": 5000}}'
+```
+
+## 📈 Monitoring
+
+```bash
+# View logs
 firebase functions:log
 
-# צפה ב-logs של function ספציפי
-firebase functions:log --only onGameCreated
+# View specific function logs
+firebase functions:log --only searchVenues
 ```
 
+## 💰 Cost Optimization
+
+1. **Caching** - Reduces Google Places API calls
+2. **Rate Limiting** - Prevents excessive usage
+3. **Batch Queries** - Efficient Firestore reads
+4. **Error Handling** - Prevents unnecessary retries
+
+## 🔄 Updates
+
+When updating functions:
+
+```bash
+# Deploy specific function
+firebase deploy --only functions:searchVenues
+
+# Deploy all functions
+firebase deploy --only functions
+```
+
+## 📚 Dependencies
+
+- `firebase-admin` - Admin SDK
+- `firebase-functions` - Functions runtime
+- `axios` - HTTP client
+- `axios-retry` - Retry logic
+- `node-cache` - Caching
