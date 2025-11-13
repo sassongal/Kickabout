@@ -75,6 +75,12 @@ google-services.json
 GoogleService-Info.plist
 serviceAccount*.json
 firebase-adminsdk*.json
+.firebaserc
+# API Keys - NEVER commit these!
+*api*key*.txt
+*api*key*.json
+*secrets*.txt
+*secrets*.json
 
 # Node.js (if any)
 node_modules/
