@@ -12,6 +12,7 @@ export 'chat_message.dart';
 export 'notification.dart';
 export 'gamification.dart';
 export 'private_message.dart';
+export 'venue.dart';
 export 'enums/game_status.dart';
 export 'enums/signup_status.dart';
 export 'enums/event_type.dart';

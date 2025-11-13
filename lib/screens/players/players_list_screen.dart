@@ -9,6 +9,7 @@ import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/services/location_service.dart';
 
@@ -129,8 +130,10 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
               future: _getPlayers(usersRepo, locationService),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const FuturisticLoadingState(
-                    message: 'טוען שחקנים...',
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => const SkeletonPlayerCard(),
                   );
                 }
 

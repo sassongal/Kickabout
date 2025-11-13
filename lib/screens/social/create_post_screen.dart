@@ -7,7 +7,9 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/storage_service.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/core/constants.dart';
 
 /// Create Feed Post Screen - Create a post with text and photos
@@ -168,6 +170,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       );
 
       await feedRepo.createPost(post);
+
+      // Log analytics
+      try {
+        final analytics = AnalyticsService();
+        await analytics.logPostCreated(hubId: widget.hubId);
+      } catch (e) {
+        debugPrint('Failed to log analytics: $e');
+      }
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'הפוסט נוצר בהצלחה!');

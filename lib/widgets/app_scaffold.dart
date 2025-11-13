@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kickadoor/widgets/futuristic/bottom_navigation_bar.dart';
+import 'package:kickadoor/widgets/futuristic/offline_indicator.dart';
 
 /// App scaffold with AppBar and Hebrew titles
 class AppScaffold extends StatelessWidget {
@@ -7,6 +10,7 @@ class AppScaffold extends StatelessWidget {
   final List<Widget>? actions;
   final Widget? floatingActionButton;
   final bool showBackButton;
+  final bool showBottomNav;
 
   const AppScaffold({
     super.key,
@@ -15,18 +19,29 @@ class AppScaffold extends StatelessWidget {
     this.actions,
     this.floatingActionButton,
     this.showBackButton = true,
+    this.showBottomNav = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final currentRoute = GoRouterState.of(context).uri.toString();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
         actions: actions,
         automaticallyImplyLeading: showBackButton,
       ),
-      body: body,
+      body: Column(
+        children: [
+          const OfflineIndicator(),
+          Expanded(child: body),
+        ],
+      ),
       floatingActionButton: floatingActionButton,
+      bottomNavigationBar: showBottomNav
+          ? FuturisticBottomNavBar(currentRoute: currentRoute)
+          : null,
     );
   }
 }

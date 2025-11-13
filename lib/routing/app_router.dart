@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/routing/go_router_refresh_stream.dart';
 import 'package:kickadoor/utils/performance_utils.dart';
 import 'package:kickadoor/screens/auth/login_screen_futuristic.dart';
@@ -37,7 +38,10 @@ import 'package:kickadoor/screens/hub/join_by_invite_screen.dart';
 import 'package:kickadoor/screens/game/game_calendar_screen.dart';
 import 'package:kickadoor/screens/social/create_post_screen.dart';
 import 'package:kickadoor/screens/hub/scouting_screen.dart';
+import 'package:kickadoor/screens/hub/hub_players_list_screen.dart';
+import 'package:kickadoor/screens/onboarding/onboarding_screen.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Auth state stream provider
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -52,22 +56,55 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     debugLogDiagnostics: PerformanceUtils.isDebugMode,
+    initialLocation: '/auth', // Start with auth screen
     refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
-    redirect: (context, state) {
-      final isAuthenticated = authState.valueOrNull != null;
-      final isGoingToAuth = state.matchedLocation == '/auth';
+    // Optimize navigation performance
+    restorationScopeId: 'app_router',
+    redirect: (context, state) async {
+      try {
+        // Wait for auth state to be available
+        final authValue = authState.valueOrNull;
+        final isAuthenticated = authValue != null;
+        final isGoingToAuth = state.matchedLocation == '/auth' || state.matchedLocation == '/register';
+        final isGoingToOnboarding = state.matchedLocation == '/onboarding';
+        final isGoingToSplash = state.matchedLocation == '/splash';
 
-      // If not authenticated and not going to auth, redirect to auth
-      if (!isAuthenticated && !isGoingToAuth) {
+        // Allow splash screen
+        if (isGoingToSplash) {
+          return null;
+        }
+
+        // Check onboarding status (only for authenticated users)
+        if (isAuthenticated && !isGoingToOnboarding && !isGoingToSplash) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+            
+            if (!onboardingCompleted) {
+              return '/onboarding';
+            }
+          } catch (e) {
+            // If SharedPreferences fails, continue without onboarding check
+            debugPrint('Failed to check onboarding status: $e');
+          }
+        }
+
+        // If not authenticated and not going to auth/onboarding/splash, redirect to auth
+        if (!isAuthenticated && !isGoingToAuth && !isGoingToOnboarding && !isGoingToSplash) {
+          return '/auth';
+        }
+
+        // If authenticated and going to auth, redirect to home
+        if (isAuthenticated && isGoingToAuth) {
+          return '/';
+        }
+
+        return null; // No redirect
+      } catch (e) {
+        // If redirect fails, go to auth screen
+        debugPrint('Router redirect error: $e');
         return '/auth';
       }
-
-      // If authenticated and going to auth, redirect to home
-      if (isAuthenticated && isGoingToAuth) {
-        return '/';
-      }
-
-      return null; // No redirect
     },
     routes: [
       // Splash screen
@@ -75,6 +112,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/splash',
         name: 'splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      
+      // Onboarding route
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       
       // Auth routes
@@ -242,6 +286,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                   final hubId = state.pathParameters['id']!;
                   final gameId = state.uri.queryParameters['gameId'];
                   return ScoutingScreen(hubId: hubId, gameId: gameId);
+                },
+              ),
+              GoRoute(
+                path: 'players',
+                name: 'hubPlayers',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return HubPlayersListScreen(hubId: hubId);
                 },
               ),
             ],

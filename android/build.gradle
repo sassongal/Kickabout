@@ -4,8 +4,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.3.2'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22'
+        classpath 'com.android.tools.build:gradle:8.6.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0'
     }
 }
 
@@ -22,7 +22,7 @@ subprojects {
         if (project.hasProperty("kotlin")) {
             project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
                 kotlinOptions {
-                    jvmTarget = "1.8"
+                    jvmTarget = "17"
                 }
             }
         }
@@ -34,7 +34,33 @@ subprojects {
         if (project.plugins.hasPlugin("com.android.application") ||
                 project.plugins.hasPlugin("com.android.library")) {
             project.android {
-                compileSdkVersion 35
+                compileSdkVersion 36
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+                if (project.hasProperty('defaultConfig')) {
+                    project.android.defaultConfig {
+                        targetSdkVersion 35
+                    }
+                }
+            }
+            if (project.hasProperty('kotlin')) {
+                project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+                    kotlinOptions {
+                        jvmTarget = "17"
+                    }
+                }
+            }
+            // Force compileSdk for all Android projects including plugins
+            if (project.hasProperty('android')) {
+                project.android {
+                    compileSdkVersion 36
+                    compileOptions {
+                        sourceCompatibility JavaVersion.VERSION_17
+                        targetCompatibility JavaVersion.VERSION_17
+                    }
+                }
             }
         }
         if (project.hasProperty('android')) {

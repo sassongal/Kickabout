@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// Game Calendar Screen - לוח שנה למשחקים
 class GameCalendarScreen extends ConsumerStatefulWidget {
@@ -23,6 +25,7 @@ class GameCalendarScreen extends ConsumerStatefulWidget {
 class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
   DateTime _selectedMonth = DateTime.now();
   Map<DateTime, List<Game>> _gamesByDate = {};
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -31,6 +34,8 @@ class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
   }
 
   Future<void> _loadGames() async {
+    setState(() => _isLoading = true);
+    
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       List<Game> games;
@@ -67,9 +72,11 @@ class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
 
       setState(() {
         _gamesByDate = gamesByDate;
+        _isLoading = false;
       });
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         SnackbarHelper.showError(context, 'שגיאה בטעינת משחקים: $e');
       }
     }
@@ -99,7 +106,12 @@ class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
 
     return FuturisticScaffold(
       title: 'לוח שנה למשחקים',
-      body: Column(
+      body: _isLoading
+          ? ListView.builder(
+              itemCount: 3,
+              itemBuilder: (context, index) => const SkeletonGameCard(),
+            )
+          : Column(
         children: [
           // Month navigation
           Card(

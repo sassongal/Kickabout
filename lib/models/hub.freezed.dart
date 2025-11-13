@@ -31,9 +31,11 @@ mixin _$Hub {
   Map<String, String> get roles =>
       throw _privateConstructorUsedError; // userId -> role (manager, moderator, member)
   @GeoPointConverter()
-  GeoPoint? get location => throw _privateConstructorUsedError;
+  GeoPoint? get location =>
+      throw _privateConstructorUsedError; // Primary location (deprecated, use venues)
   String? get geohash => throw _privateConstructorUsedError;
-  double? get radius => throw _privateConstructorUsedError;
+  double? get radius => throw _privateConstructorUsedError; // radius in km
+  List<String> get venueIds => throw _privateConstructorUsedError;
 
   /// Serializes this Hub to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -60,7 +62,8 @@ abstract class $HubCopyWith<$Res> {
       Map<String, String> roles,
       @GeoPointConverter() GeoPoint? location,
       String? geohash,
-      double? radius});
+      double? radius,
+      List<String> venueIds});
 }
 
 /// @nodoc
@@ -88,6 +91,7 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
+    Object? venueIds = null,
   }) {
     return _then(_value.copyWith(
       hubId: null == hubId
@@ -134,6 +138,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.radius
           : radius // ignore: cast_nullable_to_non_nullable
               as double?,
+      venueIds: null == venueIds
+          ? _value.venueIds
+          : venueIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ) as $Val);
   }
 }
@@ -155,7 +163,8 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       Map<String, String> roles,
       @GeoPointConverter() GeoPoint? location,
       String? geohash,
-      double? radius});
+      double? radius,
+      List<String> venueIds});
 }
 
 /// @nodoc
@@ -180,6 +189,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
+    Object? venueIds = null,
   }) {
     return _then(_$HubImpl(
       hubId: null == hubId
@@ -226,6 +236,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.radius
           : radius // ignore: cast_nullable_to_non_nullable
               as double?,
+      venueIds: null == venueIds
+          ? _value._venueIds
+          : venueIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }
@@ -244,10 +258,12 @@ class _$HubImpl implements _Hub {
       final Map<String, String> roles = const {},
       @GeoPointConverter() this.location,
       this.geohash,
-      this.radius})
+      this.radius,
+      final List<String> venueIds = const []})
       : _memberIds = memberIds,
         _settings = settings,
-        _roles = roles;
+        _roles = roles,
+        _venueIds = venueIds;
 
   factory _$HubImpl.fromJson(Map<String, dynamic> json) =>
       _$$HubImplFromJson(json);
@@ -294,14 +310,25 @@ class _$HubImpl implements _Hub {
   @override
   @GeoPointConverter()
   final GeoPoint? location;
+// Primary location (deprecated, use venues)
   @override
   final String? geohash;
   @override
   final double? radius;
+// radius in km
+  final List<String> _venueIds;
+// radius in km
+  @override
+  @JsonKey()
+  List<String> get venueIds {
+    if (_venueIds is EqualUnmodifiableListView) return _venueIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_venueIds);
+  }
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, settings: $settings, roles: $roles, location: $location, geohash: $geohash, radius: $radius)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, settings: $settings, roles: $roles, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds)';
   }
 
   @override
@@ -324,7 +351,8 @@ class _$HubImpl implements _Hub {
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
-            (identical(other.radius, radius) || other.radius == radius));
+            (identical(other.radius, radius) || other.radius == radius) &&
+            const DeepCollectionEquality().equals(other._venueIds, _venueIds));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -341,7 +369,8 @@ class _$HubImpl implements _Hub {
       const DeepCollectionEquality().hash(_roles),
       location,
       geohash,
-      radius);
+      radius,
+      const DeepCollectionEquality().hash(_venueIds));
 
   /// Create a copy of Hub
   /// with the given fields replaced by the non-null parameter values.
@@ -371,7 +400,8 @@ abstract class _Hub implements Hub {
       final Map<String, String> roles,
       @GeoPointConverter() final GeoPoint? location,
       final String? geohash,
-      final double? radius}) = _$HubImpl;
+      final double? radius,
+      final List<String> venueIds}) = _$HubImpl;
 
   factory _Hub.fromJson(Map<String, dynamic> json) = _$HubImpl.fromJson;
 
@@ -394,11 +424,13 @@ abstract class _Hub implements Hub {
   Map<String, String> get roles; // userId -> role (manager, moderator, member)
   @override
   @GeoPointConverter()
-  GeoPoint? get location;
+  GeoPoint? get location; // Primary location (deprecated, use venues)
   @override
   String? get geohash;
   @override
-  double? get radius;
+  double? get radius; // radius in km
+  @override
+  List<String> get venueIds;
 
   /// Create a copy of Hub
   /// with the given fields replaced by the non-null parameter values.

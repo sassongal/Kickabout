@@ -7,8 +7,10 @@ import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/kicka_ball_logo.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:flutter/foundation.dart';
 
 /// Futuristic login screen with seamless one-tap sign-in
 class LoginScreenFuturistic extends ConsumerStatefulWidget {
@@ -63,6 +65,14 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
       final authService = ref.read(authServiceProvider);
       await authService.signInAnonymously();
 
+      // Log analytics
+      try {
+        final analytics = AnalyticsService();
+        await analytics.logLogin(loginMethod: 'anonymous');
+      } catch (e) {
+        debugPrint('Failed to log analytics: $e');
+      }
+
       if (mounted) {
         context.go('/');
       }
@@ -94,12 +104,94 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
         _passwordController.text,
       );
 
+      // Log analytics
+      try {
+        final analytics = AnalyticsService();
+        await analytics.logLogin(loginMethod: 'email');
+      } catch (e) {
+        debugPrint('Failed to log analytics: $e');
+      }
+
       if (mounted) {
         context.go('/');
       }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'התחברות נכשלה: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (!Env.isFirebaseAvailable) {
+      SnackbarHelper.showError(context, 'Firebase not available');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signInWithGoogle();
+
+      // Log analytics
+      try {
+        final analytics = AnalyticsService();
+        await analytics.logLogin(loginMethod: 'google');
+      } catch (e) {
+        debugPrint('Failed to log analytics: $e');
+      }
+
+      if (mounted) {
+        context.go('/');
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMessage = e.toString().contains('canceled')
+            ? 'התחברות בוטלה'
+            : 'התחברות עם Google נכשלה: $e';
+        SnackbarHelper.showError(context, errorMessage);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    if (!Env.isFirebaseAvailable) {
+      SnackbarHelper.showError(context, 'Firebase not available');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signInWithApple();
+
+      // Log analytics
+      try {
+        final analytics = AnalyticsService();
+        await analytics.logLogin(loginMethod: 'apple');
+      } catch (e) {
+        debugPrint('Failed to log analytics: $e');
+      }
+
+      if (mounted) {
+        context.go('/');
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMessage = e.toString().contains('only available')
+            ? 'התחברות עם Apple זמינה רק ב-iOS'
+            : 'התחברות עם Apple נכשלה: $e';
+        SnackbarHelper.showError(context, errorMessage);
       }
     } finally {
       if (mounted) {
@@ -155,16 +247,14 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
       try {
         final authService = ref.read(authServiceProvider);
         await authService.sendPasswordResetEmail(emailController.text.trim());
-        if (mounted) {
-          SnackbarHelper.showSuccess(
-            context,
-            'נשלח קישור לאיפוס סיסמה לכתובת האימייל שלך',
-          );
-        }
+        if (!mounted) return;
+        SnackbarHelper.showSuccess(
+          context,
+          'נשלח קישור לאיפוס סיסמה לכתובת האימייל שלך',
+        );
       } catch (e) {
-        if (mounted) {
-          SnackbarHelper.showError(context, 'שגיאה בשליחת אימייל: $e');
-        }
+        if (!mounted) return;
+        SnackbarHelper.showError(context, 'שגיאה בשליחת אימייל: $e');
       }
     }
   }
@@ -226,10 +316,8 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
                   GradientButton(
                     label: 'התחבר עם Google',
                     icon: Icons.g_mobiledata,
-                    onPressed: () {
-                      // TODO: Implement Google Sign In
-                      SnackbarHelper.showError(context, 'התחברות עם Google בקרוב');
-                    },
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    isLoading: _isLoading,
                     gradient: FuturisticColors.accentGradient,
                     width: double.infinity,
                   ),
@@ -238,10 +326,8 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
                   GradientButton(
                     label: 'התחבר עם Apple',
                     icon: Icons.apple,
-                    onPressed: () {
-                      // TODO: Implement Apple Sign In
-                      SnackbarHelper.showError(context, 'התחברות עם Apple בקרוב');
-                    },
+                    onPressed: _isLoading ? null : _signInWithApple,
+                    isLoading: _isLoading,
                     gradient: LinearGradient(
                       colors: [
                         Colors.black,

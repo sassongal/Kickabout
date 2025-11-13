@@ -194,6 +194,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'מפה',
+      showBottomNav: true,
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),

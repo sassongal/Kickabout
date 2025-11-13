@@ -81,6 +81,10 @@ final privateMessagesRepositoryProvider = Provider<PrivateMessagesRepository>((r
   return PrivateMessagesRepository(firestore: ref.watch(firestoreProvider));
 });
 
+final venuesRepositoryProvider = Provider<VenuesRepository>((ref) {
+  return VenuesRepository(firestore: ref.watch(firestoreProvider));
+});
+
 final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
 });

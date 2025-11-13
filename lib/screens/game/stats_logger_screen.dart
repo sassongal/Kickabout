@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/whatsapp_share_button.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/recap_generator.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/services/gamification_service.dart';
 import 'package:kickadoor/core/constants.dart';
 
 /// Stats logger screen for gameday events
@@ -135,11 +138,88 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
   Future<void> _endGame() async {
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
+      final eventsRepo = ref.read(eventsRepositoryProvider);
+      final teamsRepo = ref.read(teamsRepositoryProvider);
+      final usersRepo = ref.read(usersRepositoryProvider);
+      final gamificationRepo = ref.read(gamificationRepositoryProvider);
+      
       await gamesRepo.updateGameStatus(widget.gameId, GameStatus.completed);
       _pauseTimer();
       
       // Load recap first
       await _loadRecap();
+      
+      // Update gamification for all players
+      try {
+        final game = await gamesRepo.getGame(widget.gameId);
+        if (game != null) {
+          final teams = await teamsRepo.getTeams(widget.gameId);
+          final events = await eventsRepo.getEvents(widget.gameId);
+          
+          // Determine winning team (simplified - team with most goals)
+          final teamGoals = <String, int>{};
+          for (final event in events) {
+            if (event.type == EventType.goal) {
+              // Find which team the player belongs to
+              for (final team in teams) {
+                if (team.playerIds.contains(event.playerId)) {
+                  teamGoals[team.teamId] = (teamGoals[team.teamId] ?? 0) + 1;
+                  break;
+                }
+              }
+            }
+          }
+          
+          final winningTeamId = teamGoals.entries.isNotEmpty
+              ? teamGoals.entries.reduce((a, b) => a.value > b.value ? a : b).key
+              : null;
+          
+          // Update gamification for each player
+          for (final team in teams) {
+            final isWinningTeam = team.teamId == winningTeamId;
+            final players = await usersRepo.getUsers(team.playerIds);
+            
+            for (final player in players) {
+              try {
+                // Count player's events
+                final playerGoals = events.where((e) => e.playerId == player.uid && e.type == EventType.goal).length;
+                final playerAssists = events.where((e) => e.playerId == player.uid && e.type == EventType.assist).length;
+                final playerSaves = events.where((e) => e.playerId == player.uid && e.type == EventType.save).length;
+                final isMVP = events.where((e) => e.playerId == player.uid && e.type == EventType.mvpVote).length > 0;
+                
+                // Get average rating (simplified - use default for now)
+                final averageRating = 7.0; // Could be improved by getting from ratings
+                
+                // Calculate points
+                final pointsEarned = GamificationService.calculateGamePoints(
+                  won: isWinningTeam,
+                  goals: playerGoals,
+                  assists: playerAssists,
+                  saves: playerSaves,
+                  isMVP: isMVP,
+                  averageRating: averageRating,
+                );
+                
+                // Update gamification
+                await gamificationRepo.updateGamification(
+                  userId: player.uid,
+                  pointsEarned: pointsEarned,
+                  won: isWinningTeam,
+                  goals: playerGoals,
+                  assists: playerAssists,
+                  saves: playerSaves,
+                );
+              } catch (e) {
+                debugPrint('Error updating gamification for ${player.uid}: $e');
+                // Continue with other players even if one fails
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to update gamification: $e');
+        // Don't fail game ending if gamification fails
+      }
       
       // Auto-post recap to feed if available
       if (_recapText != null && _recapText!.isNotEmpty) {
@@ -170,15 +250,11 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
       }
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('המשחק הסתיים והסיכום פורסם בפיד')),
-        );
+        SnackbarHelper.showSuccess(context, 'המשחק הסתיים! נקודות גיימיפיקציה עודכנו');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה: $e')),
-        );
+        SnackbarHelper.showErrorFromException(context, e);
       }
     }
   }

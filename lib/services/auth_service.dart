@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:io' show Platform;
 import 'package:kickadoor/config/env.dart';
 
 /// Authentication service
@@ -112,6 +115,82 @@ class AuthService {
       throw Exception('Firebase not available');
     }
     await _auth.currentUser?.reauthenticateWithCredential(credential);
+  }
+
+  /// Sign in with Google
+  Future<UserCredential> signInWithGoogle() async {
+    if (!Env.isFirebaseAvailable) {
+      debugPrint('❌ Google sign in failed: Firebase not available');
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      debugPrint('🔐 Attempting Google sign in...');
+      
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      
+      if (googleUser == null) {
+        // User canceled the sign-in
+        throw Exception('Google sign in canceled');
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final result = await _auth.signInWithCredential(credential);
+      debugPrint('✅ Google sign in successful: ${result.user?.uid}');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Google sign in failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign in with Apple
+  Future<UserCredential> signInWithApple() async {
+    if (!Env.isFirebaseAvailable) {
+      debugPrint('❌ Apple sign in failed: Firebase not available');
+      throw Exception('Firebase not available');
+    }
+
+    // Apple Sign In is only available on iOS and macOS
+    if (!Platform.isIOS && !Platform.isMacOS) {
+      throw Exception('Apple Sign In is only available on iOS and macOS');
+    }
+
+    try {
+      debugPrint('🔐 Attempting Apple sign in...');
+      
+      // Request credential for the currently signed in Apple account
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      // Create an `OAuthCredential` from the credential returned by Apple
+      final oauthCredential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      // Sign in to Firebase with the Apple credential
+      final result = await _auth.signInWithCredential(oauthCredential);
+      debugPrint('✅ Apple sign in successful: ${result.user?.uid}');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Apple sign in failed: $e');
+      rethrow;
+    }
   }
 }
 

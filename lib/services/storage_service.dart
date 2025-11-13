@@ -13,7 +13,7 @@ class StorageService {
   StorageService({FirebaseStorage? storage})
       : _storage = storage ?? FirebaseStorage.instance;
 
-  /// Upload profile photo
+  /// Upload profile photo (works on mobile and web)
   Future<String> uploadProfilePhoto(String uid, XFile imageFile) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
@@ -25,9 +25,20 @@ class StorageService {
           .child(AppConstants.profilePhotosPath)
           .child('$uid.jpg');
 
-      // Upload file
-      final uploadTask = ref.putFile(File(imageFile.path));
-      await uploadTask;
+      // Check if running on web
+      if (kIsWeb) {
+        // For web, read bytes and upload
+        final bytes = await imageFile.readAsBytes();
+        final uploadTask = ref.putData(
+          Uint8List.fromList(bytes),
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        await uploadTask;
+      } else {
+        // For mobile, upload file directly
+        final uploadTask = ref.putFile(File(imageFile.path));
+        await uploadTask;
+      }
 
       // Get download URL
       final downloadUrl = await ref.getDownloadURL();

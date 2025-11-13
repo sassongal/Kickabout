@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kickadoor/widgets/kicka_ball_logo.dart';
+import 'package:kickadoor/widgets/futuristic/offline_indicator.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// AppBar with KICKA BALL logo
@@ -49,7 +50,10 @@ class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 )
               : null,
-      actions: actions,
+      actions: [
+        const OfflineIndicatorIcon(),
+        if (actions != null) ...actions!,
+      ],
       automaticallyImplyLeading: showBackButton,
       backgroundColor: FuturisticColors.primary,
       foregroundColor: Colors.white,

@@ -15,4 +15,5 @@ export 'notifications_repository.dart';
 export 'gamification_repository.dart';
 export 'leaderboard_repository.dart';
 export 'private_messages_repository.dart';
+export 'venues_repository.dart';
 

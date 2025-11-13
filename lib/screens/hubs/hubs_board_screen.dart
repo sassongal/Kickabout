@@ -10,6 +10,7 @@ import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/services/location_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
@@ -70,6 +71,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
 
     return FuturisticScaffold(
       title: 'לוח הובים',
+      showBottomNav: true,
       body: Column(
         children: [
           // Search bar
@@ -135,8 +137,10 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
       future: _getHubs(hubsRepo, locationService),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(
-            message: 'טוען הובים...',
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: 5,
+            itemBuilder: (context, index) => const SkeletonHubCard(),
           );
         }
 

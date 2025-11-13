@@ -26,6 +26,10 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
       location: const GeoPointConverter().fromJson(json['location']),
       geohash: json['geohash'] as String?,
       radius: (json['radius'] as num?)?.toDouble(),
+      venueIds: (json['venueIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
@@ -40,4 +44,5 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'location': const GeoPointConverter().toJson(instance.location),
       'geohash': instance.geohash,
       'radius': instance.radius,
+      'venueIds': instance.venueIds,
     };

@@ -18,9 +18,10 @@ class Hub with _$Hub {
     @Default([]) List<String> memberIds,
     @Default({'ratingMode': 'basic'}) Map<String, dynamic> settings,
     @Default({}) Map<String, String> roles, // userId -> role (manager, moderator, member)
-    @GeoPointConverter() GeoPoint? location,
+    @GeoPointConverter() GeoPoint? location, // Primary location (deprecated, use venues)
     String? geohash,
     double? radius, // radius in km
+    @Default([]) List<String> venueIds, // IDs of venues where this hub plays
   }) = _Hub;
 
   factory Hub.fromJson(Map<String, dynamic> json) => _$HubFromJson(json);

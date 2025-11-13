@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/config/env.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
@@ -67,6 +69,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
 
       await usersRepo.setUser(user);
+
+      // Log analytics
+      try {
+        final analytics = AnalyticsService();
+        await analytics.logSignUp(signUpMethod: 'email');
+      } catch (e) {
+        debugPrint('Failed to log analytics: $e');
+      }
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'החשבון נוצר בהצלחה!');

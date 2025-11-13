@@ -9,7 +9,9 @@ import 'package:kickadoor/widgets/loading_widget.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
@@ -365,6 +367,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         await usersRepo.updateUser(currentUserId, {
           'totalParticipations': FieldValue.increment(1),
         });
+        
+        // Log analytics
+        try {
+          final analytics = AnalyticsService();
+          await analytics.logGameJoined(gameId: widget.gameId);
+        } catch (e) {
+          debugPrint('Failed to log analytics: $e');
+        }
+        
         if (context.mounted) {
           SnackbarHelper.showSuccess(context, 'נרשמת למשחק');
         }

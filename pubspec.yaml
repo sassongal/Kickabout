@@ -19,9 +19,13 @@ dependencies:
   # Firebase
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.1
   cloud_firestore: ^5.4.4
   firebase_storage: ^12.3.4
   firebase_messaging: ^15.0.0
+  firebase_crashlytics: ^4.0.0
+  firebase_analytics: ^11.0.0
   flutter_local_notifications: ^17.0.0
   timezone: ^0.9.4
   # Localization & Intl
@@ -33,6 +37,12 @@ dependencies:
   image_picker: ^1.1.2
   # Image Caching
   cached_network_image: ^3.3.1
+  # Connectivity
+  connectivity_plus: ^6.0.0
+  # Shimmer effect for skeleton loaders
+  shimmer: ^3.0.0
+  # Permissions
+  permission_handler: ^11.3.1
   # Location & Maps
   geolocator: ^11.0.0
   geocoding: ^3.0.0

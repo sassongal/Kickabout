@@ -12,7 +12,10 @@ import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/manage_roles_screen.dart';
 import 'package:kickadoor/screens/hub/hub_events_tab.dart';
+import 'package:kickadoor/screens/hub/hub_analytics_screen.dart';
+import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/models/hub_role.dart';
+import 'package:flutter/foundation.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -153,15 +156,37 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                           ],
                         ),
                         const SizedBox(height: 8),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.search),
-                          label: const Text('גיוס שחקנים (AI)'),
-                          onPressed: () => context.push('/hubs/${hub.hubId}/scouting'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 48),
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.search),
+                                label: const Text('גיוס שחקנים (AI)'),
+                                onPressed: () => context.push('/hubs/${hub.hubId}/scouting'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.analytics),
+                                label: const Text('אנליטיקס'),
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => HubAnalyticsScreen(hubId: hub.hubId),
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ] else if (currentUserId != null) ...[
                         const SizedBox(height: 8),
@@ -211,8 +236,13 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                     FeedScreen(hubId: widget.hubId),
                     // Chat tab
                     HubChatScreen(hubId: widget.hubId),
-                    // Members tab
-                    _MembersTab(hubId: widget.hubId, hub: hub, usersRepo: usersRepo),
+                    // Members tab - with button to full screen
+                    _MembersTab(
+                      hubId: widget.hubId,
+                      hub: hub,
+                      usersRepo: usersRepo,
+                      onViewAll: () => context.push('/hubs/${hub.hubId}/players'),
+                    ),
                   ],
                 ),
               ),
@@ -244,6 +274,15 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         }
       } else {
         await hubsRepo.addMember(widget.hubId, currentUserId);
+        
+        // Log analytics
+        try {
+          final analytics = AnalyticsService();
+          await analytics.logHubJoined(hubId: widget.hubId);
+        } catch (e) {
+          debugPrint('Failed to log analytics: $e');
+        }
+        
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('הצטרפת ל-Hub')),
@@ -335,6 +374,25 @@ class _MembersTab extends ConsumerWidget {
 
     return Column(
       children: [
+        // Header with view all button
+        if (hub.memberIds.isNotEmpty && onViewAll != null)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${hub.memberIds.length} שחקנים',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                TextButton.icon(
+                  onPressed: onViewAll,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('צפה בכולם'),
+                ),
+              ],
+            ),
+          ),
         // Add manual player button (for managers)
         if (isHubManager)
           Padding(
@@ -357,7 +415,7 @@ class _MembersTab extends ConsumerWidget {
               ),
             ),
           ),
-        // Members list
+        // Members list (limited to 10 in tab view)
         Expanded(
           child: hub.memberIds.isEmpty
               ? const Center(
@@ -366,13 +424,13 @@ class _MembersTab extends ConsumerWidget {
                     child: Text('אין חברים'),
                   ),
                 )
-              : _buildMembersList(context, ref),
+              : _buildMembersList(context, ref, limit: 10),
         ),
       ],
     );
   }
 
-  Widget _buildMembersList(BuildContext context, WidgetRef ref) {
+  Widget _buildMembersList(BuildContext context, WidgetRef ref, {int? limit}) {
     final currentUserId = ref.watch(currentUserIdProvider);
     final isHubManager = currentUserId == hub.createdBy;
 
@@ -384,12 +442,27 @@ class _MembersTab extends ConsumerWidget {
         }
 
         final users = snapshot.data ?? [];
+        final displayUsers = limit != null && users.length > limit
+            ? users.take(limit).toList()
+            : users;
 
         return ListView.builder(
-          itemCount: users.length,
+          itemCount: displayUsers.length + (limit != null && users.length > limit ? 1 : 0),
           padding: const EdgeInsets.all(8),
           itemBuilder: (context, index) {
-            final user = users[index];
+            if (limit != null && users.length > limit && index == displayUsers.length) {
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: onViewAll,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: Text('צפה ב-${users.length - limit} נוספים'),
+                  ),
+                ),
+              );
+            }
+            final user = displayUsers[index];
             final isManualPlayer = user.email.startsWith('manual_');
             
             return Card(

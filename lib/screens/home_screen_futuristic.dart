@@ -78,6 +78,7 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
 
         return FuturisticScaffold(
           title: 'לוח בקרה',
+          showBottomNav: true,
           actions: [
             // Availability Toggle
             if (user != null)

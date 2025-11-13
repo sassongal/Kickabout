@@ -37,5 +37,9 @@ class FirestorePaths {
       '${AppConstants.ratingsCollection}/$uid/${AppConstants.historySubcollection}/$ratingId';
   static String ratingHistories(String uid) =>
       '${AppConstants.ratingsCollection}/$uid/${AppConstants.historySubcollection}';
+
+  // Venues
+  static String venue(String venueId) => 'venues/$venueId';
+  static String venues() => 'venues';
 }
 

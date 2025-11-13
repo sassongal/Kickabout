@@ -9,6 +9,7 @@ import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/services/push_notification_integration_service.dart';
+import 'package:kickadoor/services/gamification_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// Player profile screen showing rating, history, and recent games
@@ -290,74 +291,219 @@ class PlayerProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // Gamification
+                    // Gamification - Enhanced UI
                     StreamBuilder<Gamification?>(
                       stream: gamificationStream,
                       builder: (context, gamificationSnapshot) {
                         final gamification = gamificationSnapshot.data;
                         if (gamification != null) {
+                          final pointsForNext = GamificationService.pointsForNextLevel(gamification.level);
+                          final progress = gamification.points / pointsForNext;
+                          
                           return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'גיימיפיקציה',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.amber.withValues(alpha: 0.1),
+                                    Colors.blue.withValues(alpha: 0.1),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.emoji_events,
+                                          color: Colors.amber[700],
+                                          size: 28,
                                         ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                    children: [
-                                      Column(
-                                        children: [
-                                          Text(
-                                            '${gamification.points}',
-                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.amber,
-                                                ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'גיימיפיקציה',
+                                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                '${gamification.points}',
+                                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.amber[700],
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'נקודות',
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                      color: Colors.grey[600],
+                                                    ),
+                                              ),
+                                            ],
                                           ),
-                                          const Text('נקודות'),
-                                        ],
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 50,
+                                          color: Colors.grey[300],
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue[700],
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  'Level ${gamification.level}',
+                                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'רמה',
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                      color: Colors.grey[600],
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    // Progress to next level
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'לעבר רמה ${gamification.level + 1}',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    color: Colors.grey[600],
+                                                  ),
+                                            ),
+                                            Text(
+                                              '${(progress * 100).toStringAsFixed(0)}%',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.blue[700],
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        LinearProgressIndicator(
+                                          value: progress.clamp(0.0, 1.0),
+                                          backgroundColor: Colors.grey[300],
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            Colors.blue[700]!,
+                                          ),
+                                          minHeight: 8,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${pointsForNext - gamification.points} נקודות נוספות',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: Colors.grey[600],
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (gamification.badges.isNotEmpty) ...[
+                                      const SizedBox(height: 20),
+                                      Divider(color: Colors.grey[300]),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'תגים',
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
-                                      Column(
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: gamification.badges.map((badge) {
+                                          return Chip(
+                                            avatar: Icon(
+                                              Icons.star,
+                                              size: 18,
+                                              color: Colors.amber[700],
+                                            ),
+                                            label: Text(badge),
+                                            backgroundColor: Colors.amber.withValues(alpha: 0.1),
+                                            side: BorderSide(color: Colors.amber[300]!),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                    // Stats summary
+                                    if (gamification.stats.isNotEmpty) ...[
+                                      const SizedBox(height: 20),
+                                      Divider(color: Colors.grey[300]),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'סטטיסטיקות',
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                                         children: [
-                                          Text(
-                                            'Level ${gamification.level}',
-                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.blue,
-                                                ),
+                                          _buildStatItem(
+                                            context,
+                                            'משחקים',
+                                            '${gamification.stats['gamesPlayed'] ?? 0}',
+                                            Icons.sports_soccer,
                                           ),
-                                          const Text('רמה'),
+                                          _buildStatItem(
+                                            context,
+                                            'ניצחונות',
+                                            '${gamification.stats['gamesWon'] ?? 0}',
+                                            Icons.emoji_events,
+                                          ),
+                                          _buildStatItem(
+                                            context,
+                                            'שערים',
+                                            '${gamification.stats['goals'] ?? 0}',
+                                            Icons.sports_soccer,
+                                          ),
                                         ],
                                       ),
                                     ],
-                                  ),
-                                  if (gamification.badges.isNotEmpty) ...[
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'תגים',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      children: gamification.badges.map((badge) {
-                                        return Chip(
-                                          label: Text(badge),
-                                          backgroundColor: Colors.blue.withValues(alpha: 0.1),
-                                        );
-                                      }).toList(),
-                                    ),
                                   ],
-                                ],
+                                ),
                               ),
                             ),
                           );
@@ -689,6 +835,29 @@ class PlayerProfileScreen extends ConsumerWidget {
             fontSize: 12,
             color: Colors.grey[600],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(BuildContext context, String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.blue[700], size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue[700],
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
+              ),
         ),
       ],
     );

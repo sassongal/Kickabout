@@ -9,8 +9,13 @@ import 'package:kickadoor/l10n/app_localizations.dart';
 import 'package:kickadoor/routing/app_router.dart';
 import 'package:kickadoor/services/push_notification_service.dart';
 import 'package:kickadoor/services/deep_link_service.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
+import 'package:kickadoor/services/analytics_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'dart:async';
+import 'dart:ui';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +29,30 @@ void main() async {
     Env.limitedMode = false;
     debugPrint('✅ Firebase initialized successfully');
     
+    // Initialize Crashlytics
+    try {
+      // Pass all uncaught Flutter framework errors to Crashlytics
+      FlutterError.onError = (errorDetails) {
+        FlutterError.presentError(errorDetails);
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      };
+      
+      // Pass all uncaught async errors to Crashlytics
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+      
+      debugPrint('✅ Crashlytics initialized');
+    } catch (e) {
+      debugPrint('⚠️ Crashlytics initialization failed: $e');
+      // Set up basic error handling even if Crashlytics fails
+      FlutterError.onError = (errorDetails) {
+        FlutterError.presentError(errorDetails);
+      };
+      PlatformDispatcher.instance.onError = (error, stack) => true;
+    }
+    
     // Enable Firestore offline persistence
     try {
       await FirebaseFirestore.instance.enablePersistence(
@@ -31,6 +60,10 @@ void main() async {
       );
       debugPrint('✅ Firestore offline persistence enabled');
     } catch (e) {
+      ErrorHandlerService().logError(
+        e,
+        reason: 'Failed to enable Firestore offline persistence',
+      );
       debugPrint('⚠️ Failed to enable offline persistence: $e');
       // Continue without offline support
     }
@@ -42,7 +75,19 @@ void main() async {
       await pushService.initialize();
       debugPrint('✅ Push notifications initialized');
     } catch (e) {
+      ErrorHandlerService().logError(
+        e,
+        reason: 'Failed to initialize push notifications',
+      );
       debugPrint('⚠️ Push notifications initialization failed: $e');
+    }
+
+    // Initialize Analytics
+    try {
+      AnalyticsService().initialize();
+      debugPrint('✅ Analytics initialized');
+    } catch (e) {
+      debugPrint('⚠️ Analytics initialization failed: $e');
     }
   } catch (e) {
     // Firebase not configured or initialization failed
@@ -87,8 +132,42 @@ class MyApp extends ConsumerWidget {
       // Router
       routerConfig: router,
       
-      // RTL Support
+      // RTL Support & Error handling
       builder: (context, child) {
+        // Set custom error widget builder
+        ErrorWidget.builder = (FlutterErrorDetails details) {
+          // Show error screen instead of red screen
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'שגיאה בטעינת האפליקציה',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    details.exception.toString(),
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Try to navigate to auth
+                      router.go('/auth');
+                    },
+                    child: const Text('נסה שוב'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        };
+        
         return Directionality(
           textDirection: TextDirection.rtl, // Hebrew is RTL
           child: child!,

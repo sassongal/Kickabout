@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
@@ -241,6 +242,14 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       } catch (e) {
         // Log error but don't fail game creation
         debugPrint('Failed to create notifications: $e');
+      }
+
+      // Log analytics
+      try {
+        final analytics = AnalyticsService();
+        await analytics.logGameCreated(hubId: _selectedHubId!);
+      } catch (e) {
+        debugPrint('Failed to log analytics: $e');
       }
 
       if (mounted) {

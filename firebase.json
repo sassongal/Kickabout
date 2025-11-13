@@ -1,1 +1,40 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"kickabout-ddc06","appId":"1:731836758075:android:0dde0fad28e8c51003441e","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"kickabout-ddc06","appId":"1:731836758075:ios:652bbc8c7695854403441e","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"kickabout-ddc06","configurations":{"android":"1:731836758075:android:0dde0fad28e8c51003441e","ios":"1:731836758075:ios:652bbc8c7695854403441e","web":"1:731836758075:web:449fbf8f2f634a2f03441e"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": {
+    "source": "functions"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kickabout-ddc06",
+          "appId": "1:731836758075:android:0dde0fad28e8c51003441e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "kickabout-ddc06",
+          "appId": "1:731836758075:ios:652bbc8c7695854403441e",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kickabout-ddc06",
+          "configurations": {
+            "android": "1:731836758075:android:0dde0fad28e8c51003441e",
+            "ios": "1:731836758075:ios:652bbc8c7695854403441e",
+            "web": "1:731836758075:web:449fbf8f2f634a2f03441e"
+          }
+        }
+      }
+    }
+  }
+}

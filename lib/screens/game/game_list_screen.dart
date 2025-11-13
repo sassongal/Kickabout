@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
@@ -33,6 +34,7 @@ class GameListScreen extends ConsumerWidget {
 
     return AppScaffold(
       title: 'משחקים',
+      showBottomNav: true,
       actions: [
         IconButton(
           icon: const Icon(Icons.calendar_today),
@@ -110,7 +112,11 @@ class GameListScreen extends ConsumerWidget {
               stream: gamesStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => const SkeletonGameCard(),
+                  );
                 }
 
                 if (snapshot.hasError) {
