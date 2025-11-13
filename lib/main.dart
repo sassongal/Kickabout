@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:kickabout/theme.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/core/constants.dart';
-import 'package:kickabout/firebase_options.dart';
-import 'package:kickabout/config/env.dart';
-import 'package:kickabout/l10n/app_localizations.dart';
-import 'package:kickabout/routing/app_router.dart';
-import 'package:kickabout/services/push_notification_service.dart';
-import 'package:kickabout/services/deep_link_service.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/firebase_options.dart';
+import 'package:kickadoor/config/env.dart';
+import 'package:kickadoor/l10n/app_localizations.dart';
+import 'package:kickadoor/routing/app_router.dart';
+import 'package:kickadoor/services/push_notification_service.dart';
+import 'package:kickadoor/services/deep_link_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 

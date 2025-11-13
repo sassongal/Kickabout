@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:kickabout/models/player.dart';
-import 'package:kickabout/models/player_stats.dart';
+import 'package:kickadoor/models/player.dart';
+import 'package:kickadoor/models/player_stats.dart';
 
 class PlayerCard extends StatelessWidget {
   final Player player;

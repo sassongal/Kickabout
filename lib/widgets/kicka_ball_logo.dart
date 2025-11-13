@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kickabout/core/app_assets.dart';
+import 'package:kickadoor/core/app_assets.dart';
 
 /// KICKADOOR Logo Widget - Uses the official logo image
 class KickaBallLogo extends StatelessWidget {

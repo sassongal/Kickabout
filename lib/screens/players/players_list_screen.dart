@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/data/repositories.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_card.dart';
-import 'package:kickabout/widgets/futuristic/loading_state.dart';
-import 'package:kickabout/widgets/futuristic/empty_state.dart';
-import 'package:kickabout/widgets/player_avatar.dart';
-import 'package:kickabout/services/location_service.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kickadoor/services/location_service.dart';
 
 /// Players List Screen - לוח שחקנים
 class PlayersListScreen extends ConsumerStatefulWidget {

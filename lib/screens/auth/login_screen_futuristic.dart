@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickabout/widgets/futuristic/gradient_button.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_card.dart';
-import 'package:kickabout/widgets/kicka_ball_logo.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
-import 'package:kickabout/config/env.dart';
-import 'package:kickabout/data/repositories_providers.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kickadoor/widgets/kicka_ball_logo.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/config/env.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
 
 /// Futuristic login screen with seamless one-tap sign-in
 class LoginScreenFuturistic extends ConsumerStatefulWidget {

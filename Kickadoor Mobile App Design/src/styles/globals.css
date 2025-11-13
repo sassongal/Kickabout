@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Kickadoor Color System */
+    --primary-blue: #1976D2;
+    --primary-light: #42A5F5;
+    --primary-dark: #1565C0;
+    
+    --secondary-green: #4CAF50;
+    --secondary-light: #81C784;
+    --secondary-dark: #388E3C;
+    
+    --accent-purple: #9C27B0;
+    --accent-light: #BA68C8;
+    --accent-dark: #7B1FA2;
+    
+    --bg-main: #F5F5F5;
+    --surface: #FFFFFF;
+    --surface-variant: #E0E0E0;
+    
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --text-tertiary: #9E9E9E;
+    
+    --success: #4CAF50;
+    --warning: #FF9800;
+    --error: #E53935;
+    --info: #1976D2;
+    
+    /* Shadcn compatibility */
+    --background: 0 0% 96%;
+    --foreground: 0 0% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+    --primary: 207 89% 46%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 123 38% 57%;
+    --secondary-foreground: 0 0% 13%;
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 46%;
+    --accent: 291 64% 42%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 207 89% 46%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+  h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  p {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  button {
+    font-family: 'Inter', sans-serif;
+  }
+  label {
+    font-family: 'Inter', sans-serif;
+  }
+  input {
+    font-family: 'Inter', sans-serif;
+  }
+}

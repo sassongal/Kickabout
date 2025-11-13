@@ -1,13 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/data/repositories.dart';
-import 'package:kickabout/services/auth_service.dart';
-import 'package:kickabout/services/storage_service.dart';
-import 'package:kickabout/services/location_service.dart';
-import 'package:kickabout/services/push_notification_service.dart';
-import 'package:kickabout/services/game_reminder_service.dart';
-import 'package:kickabout/services/push_notification_integration_service.dart';
-import 'package:kickabout/services/scouting_service.dart';
+import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/services/auth_service.dart';
+import 'package:kickadoor/services/storage_service.dart';
+import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/services/push_notification_service.dart';
+import 'package:kickadoor/services/game_reminder_service.dart';
+import 'package:kickadoor/services/push_notification_integration_service.dart';
+import 'package:kickadoor/services/scouting_service.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {

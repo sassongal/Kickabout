@@ -2,10 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:kickabout/config/env.dart';
+import 'package:kickadoor/config/env.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/services/firestore_paths.dart';
-import 'package:kickabout/services/deep_link_service.dart';
+import 'package:kickadoor/services/firestore_paths.dart';
+import 'package:kickadoor/services/deep_link_service.dart';
 
 /// Service for handling push notifications
 class PushNotificationService {

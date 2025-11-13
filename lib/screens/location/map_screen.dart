@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/services/location_service.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {

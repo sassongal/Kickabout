@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/widgets/whatsapp_share_button.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/utils/recap_generator.dart';
-import 'package:kickabout/core/constants.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/whatsapp_share_button.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/utils/recap_generator.dart';
+import 'package:kickadoor/core/constants.dart';
 
 /// Stats logger screen for gameday events
 class StatsLoggerScreen extends ConsumerStatefulWidget {

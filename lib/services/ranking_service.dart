@@ -1,7 +1,7 @@
 import 'dart:math';
-import 'package:kickabout/models/player.dart';
-import 'package:kickabout/models/player_stats.dart';
-import 'package:kickabout/models/game.dart';
+import 'package:kickadoor/models/player.dart';
+import 'package:kickadoor/models/player_stats.dart';
+import 'package:kickadoor/models/game.dart';
 
 class RankingService {
   

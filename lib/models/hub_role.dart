@@ -1,4 +1,4 @@
-import 'package:kickabout/models/models.dart';
+import 'package:kickadoor/models/models.dart';
 
 /// Hub role enum
 enum HubRole {

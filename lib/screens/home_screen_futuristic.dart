@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/data/repositories.dart';
-import 'package:kickabout/services/location_service.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/widgets/futuristic/gradient_button.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_card.dart';
-import 'package:kickabout/widgets/futuristic/stats_dashboard.dart';
-import 'package:kickabout/widgets/futuristic/player_recommendation_card.dart';
-import 'package:kickabout/widgets/futuristic/empty_state.dart';
-import 'package:kickabout/widgets/futuristic/loading_state.dart';
-import 'package:kickabout/widgets/kicka_ball_logo.dart';
-import 'package:kickabout/widgets/availability_toggle.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kickadoor/widgets/futuristic/stats_dashboard.dart';
+import 'package:kickadoor/widgets/futuristic/player_recommendation_card.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/kicka_ball_logo.dart';
+import 'package:kickadoor/widgets/availability_toggle.dart';
+import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Futuristic Home Dashboard - Next-gen mobile experience
 class HomeScreenFuturistic extends ConsumerStatefulWidget {
@@ -165,7 +167,142 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Stats Dashboard
+                    // User Profile Card (matching Figma design)
+                    if (user != null) ...[
+                      FuturisticCard(
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                // Avatar
+                                PlayerAvatar(
+                                  user: user,
+                                  size: AvatarSize.lg,
+                                ),
+                                const SizedBox(width: 16),
+                                // Name and city
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        user.name,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF212121),
+                                        ),
+                                      ),
+                                      if (user.city != null)
+                                        Text(
+                                          user.city!,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: const Color(0xFF757575),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                // Rating display
+                                Column(
+                                  children: [
+                                    Text(
+                                      user.currentRankScore.toStringAsFixed(1),
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1976D2),
+                                        height: 1,
+                                      ),
+                                    ),
+                                    Text(
+                                      'דירוג',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: const Color(0xFF757575),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24),
+                            // Availability toggle
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'זמין למשחקים',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: const Color(0xFF757575),
+                                  ),
+                                ),
+                                Switch(
+                                  value: user.availabilityStatus == 'available',
+                                  onChanged: (value) {
+                                    // Update availability
+                                    ref.read(usersRepositoryProvider).updateUser(
+                                      currentUserId,
+                                      {'availabilityStatus': value ? 'available' : 'notAvailable'},
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Quick Actions - 3 column grid (matching Figma)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.add,
+                              label: 'צור משחק',
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
+                              ),
+                              onTap: () => context.push('/games/create'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.people,
+                              label: 'מצא שחקנים',
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF4CAF50), Color(0xFF388E3C)],
+                              ),
+                              onTap: () => context.push('/players'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.trending_up,
+                              label: 'גלה קהילות',
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
+                              ),
+                              onTap: () => context.push('/hubs-board'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    
+                    // Stats Dashboard (matching Figma design)
                     StreamBuilder<Gamification?>(
                       stream: gamificationStream,
                       builder: (context, snapshot) {
@@ -175,7 +312,7 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                           return StatsDashboard(
                             gamesPlayed: stats['gamesPlayed'] ?? 0,
                             wins: stats['gamesWon'] ?? 0,
-                            averageRating: 7.5, // TODO: Get from user
+                            averageRating: user?.currentRankScore ?? 5.0,
                             goals: stats['goals'] ?? 0,
                             assists: stats['assists'] ?? 0,
                           );
@@ -844,6 +981,54 @@ class _NearbyHubsSection extends ConsumerWidget {
     } catch (e) {
       return [];
     }
+  }
+}
+
+/// Quick Action Button matching Figma design
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 24),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

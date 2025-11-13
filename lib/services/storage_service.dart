@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:kickabout/config/env.dart';
-import 'package:kickabout/core/constants.dart';
+import 'package:kickadoor/config/env.dart';
+import 'package:kickadoor/core/constants.dart';
 
 /// Service for Firebase Storage operations
 class StorageService {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
-import 'package:kickabout/screens/hub/hub_invitations_screen.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/screens/hub/hub_invitations_screen.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/logic/team_maker.dart';
-import 'package:kickabout/models/models.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/logic/team_maker.dart';
+import 'package:kickadoor/models/models.dart';
 
 /// Team builder page with draggable chips and balance meter
 class TeamBuilderPage extends ConsumerStatefulWidget {

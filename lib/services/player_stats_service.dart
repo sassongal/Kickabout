@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kickabout/models/player_stats.dart';
+import 'package:kickadoor/models/player_stats.dart';
 
 class PlayerStatsService {
   static const String _playerStatsKey = 'player_stats';

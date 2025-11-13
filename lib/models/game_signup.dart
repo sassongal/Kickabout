@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:kickabout/models/enums/signup_status.dart';
-import 'package:kickabout/models/converters/timestamp_converter.dart';
+import 'package:kickadoor/models/enums/signup_status.dart';
+import 'package:kickadoor/models/converters/timestamp_converter.dart';
 
 part 'game_signup.freezed.dart';
 part 'game_signup.g.dart';

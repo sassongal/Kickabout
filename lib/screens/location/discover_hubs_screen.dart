@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/services/location_service.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Discover hubs screen - find hubs nearby
 class DiscoverHubsScreen extends ConsumerStatefulWidget {

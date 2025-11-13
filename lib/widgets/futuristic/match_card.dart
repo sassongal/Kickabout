@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_card.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/models/enums/game_status.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/models/enums/game_status.dart';
 
 /// Futuristic match card with animated elements
 class MatchCard extends StatelessWidget {

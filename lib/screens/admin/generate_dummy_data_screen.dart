@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickabout/widgets/futuristic/gradient_button.dart';
-import 'package:kickabout/scripts/generate_dummy_data.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
+import 'package:kickadoor/scripts/generate_dummy_data.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Screen for generating dummy data (admin only)
 class GenerateDummyDataScreen extends ConsumerStatefulWidget {

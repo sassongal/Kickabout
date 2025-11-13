@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
-import 'package:kickabout/config/env.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Dialog for hub manager to add a manual player (without app)
@@ -24,7 +24,9 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _cityController = TextEditingController();
+  final _ratingController = TextEditingController(text: '3.3');
   String _selectedPosition = 'Midfielder';
   bool _isLoading = false;
 
@@ -39,7 +41,9 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _cityController.dispose();
+    _ratingController.dispose();
     super.dispose();
   }
 
@@ -78,11 +82,18 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
       // Create a unique ID for the manual player
       final playerId = firestore.collection('users').doc().id;
 
+      // Parse rating (default 3.3 if empty or invalid)
+      final ratingText = _ratingController.text.trim();
+      final rating = double.tryParse(ratingText) ?? 3.3;
+      final finalRating = rating.clamp(0.0, 10.0); // Ensure rating is between 0-10
+
       // Create user document
       final user = User(
         uid: playerId,
         name: _nameController.text.trim(),
-        email: 'manual_$playerId@kickabout.local', // Fake email for manual players
+        email: _emailController.text.trim().isNotEmpty
+            ? _emailController.text.trim()
+            : 'manual_$playerId@kickadoor.local', // Fake email for manual players without email
         phoneNumber: _phoneController.text.trim().isNotEmpty
             ? _phoneController.text.trim()
             : null,
@@ -92,7 +103,7 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
         preferredPosition: _selectedPosition,
         availabilityStatus: 'notAvailable', // Manual players are not available
         createdAt: DateTime.now(),
-        currentRankScore: 5.0, // Default rating
+        currentRankScore: finalRating,
         totalParticipations: 0,
       );
 
@@ -177,6 +188,25 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
                 },
               ),
               const SizedBox(height: 16),
+              // Email field (optional - for sending invitation)
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'אימייל (אופציונלי - לשליחת הזמנה)',
+                  border: OutlineInputBorder(),
+                  hintText: 'player@example.com',
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value != null && value.trim().isNotEmpty) {
+                    if (!value.contains('@') || !value.contains('.')) {
+                      return 'כתובת אימייל לא תקינה';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
               // City field (optional)
               TextFormField(
                 controller: _cityController,
@@ -186,6 +216,30 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
                   hintText: 'חיפה',
                 ),
                 textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
+              // Rating field
+              TextFormField(
+                controller: _ratingController,
+                decoration: const InputDecoration(
+                  labelText: 'ציון (0-10)',
+                  border: OutlineInputBorder(),
+                  hintText: '3.3',
+                  helperText: 'ברירת מחדל: 3.3',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
+                ],
+                validator: (value) {
+                  if (value != null && value.trim().isNotEmpty) {
+                    final rating = double.tryParse(value);
+                    if (rating == null || rating < 0 || rating > 10) {
+                      return 'ציון חייב להיות בין 0 ל-10';
+                    }
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               // Position dropdown

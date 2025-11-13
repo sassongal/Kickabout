@@ -76,8 +76,10 @@ class OptimizedImage extends StatelessWidget {
                 color: Colors.grey,
               ),
             ),
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) {
+            return child;
+          }
           return placeholderWidget ??
               Container(
                 width: width,

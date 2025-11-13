@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/widgets/futuristic/progress_ring.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_card.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/widgets/futuristic/stats_ring.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 
 /// Real-time stats dashboard widget
 class StatsDashboard extends StatelessWidget {
@@ -22,74 +23,54 @@ class StatsDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final winRate = gamesPlayed > 0 ? wins / gamesPlayed : 0.0;
-    
     return FuturisticCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'PERFORMANCE',
-                style: FuturisticTypography.techHeadline,
-              ),
-              Icon(
-                Icons.analytics,
-                color: FuturisticColors.secondary,
-                size: 24,
-              ),
-            ],
+          // Heading - matching Figma design
+          Text(
+            'PERFORMANCE',
+            style: GoogleFonts.orbitron(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2.0,
+              color: const Color(0xFF212121),
+            ),
           ),
           const SizedBox(height: 24),
-          // Main stats grid
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          // Stats grid - 2x2 layout matching Figma
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 24,
+            mainAxisSpacing: 24,
+            childAspectRatio: 1.1,
             children: [
-              // Win rate ring
-              ProgressRing(
-                progress: winRate,
-                size: 100,
-                label: 'WIN RATE',
-                showPercentage: true,
-                color: FuturisticColors.secondary,
+              StatsRing(
+                value: gamesPlayed,
+                maxValue: 100,
+                label: 'Games Played',
+                color: const Color(0xFF1976D2), // Primary blue
               ),
-              // Rating ring
-              ProgressRing(
-                progress: averageRating / 10.0,
-                size: 100,
-                label: 'RATING',
-                centerWidget: Text(
-                  averageRating.toStringAsFixed(1),
-                  style: FuturisticTypography.heading2.copyWith(
-                    color: FuturisticColors.secondary,
-                  ),
-                ),
-                color: FuturisticColors.primary,
+              StatsRing(
+                value: wins,
+                maxValue: gamesPlayed > 0 ? gamesPlayed : 1,
+                label: 'Wins',
+                color: const Color(0xFF4CAF50), // Secondary green
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Secondary stats
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _StatItem(
-                label: 'GAMES',
-                value: gamesPlayed.toString(),
-                icon: Icons.sports_soccer,
+              StatsRing(
+                value: goals,
+                maxValue: 50,
+                label: 'Goals',
+                color: const Color(0xFF9C27B0), // Accent purple
               ),
-              _StatItem(
-                label: 'GOALS',
-                value: goals.toString(),
-                icon: Icons.emoji_events,
-              ),
-              _StatItem(
-                label: 'ASSISTS',
-                value: assists.toString(),
-                icon: Icons.handshake,
+              StatsRing(
+                value: averageRating.toInt(),
+                maxValue: 10,
+                label: 'Avg Rating',
+                color: const Color(0xFFFF9800), // Orange
               ),
             ],
           ),

@@ -3,14 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/widgets/player_avatar.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/data/repositories.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/core/constants.dart';
-import 'package:kickabout/services/gamification_service.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/services/gamification_service.dart';
 
 /// Basic rating screen for simple 1-7 rating system
 class BasicRatingScreen extends ConsumerStatefulWidget {

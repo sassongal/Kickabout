@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/data/feed_repository.dart';
-import 'package:kickabout/data/users_repository.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/widgets/player_avatar.dart';
-import 'package:kickabout/widgets/game_photos_gallery.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/feed_repository.dart';
+import 'package:kickadoor/data/users_repository.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kickadoor/widgets/game_photos_gallery.dart';
 
 /// Feed screen - shows activity feed for a hub
 class FeedScreen extends ConsumerWidget {

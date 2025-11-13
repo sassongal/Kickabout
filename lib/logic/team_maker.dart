@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:kickabout/models/models.dart';
+import 'package:kickadoor/models/models.dart';
 
 /// Player role enum
 enum PlayerRole {

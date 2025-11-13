@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kickabout/widgets/kicka_ball_logo.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
+import 'package:kickadoor/widgets/kicka_ball_logo.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// AppBar with KICKA BALL logo
 class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {

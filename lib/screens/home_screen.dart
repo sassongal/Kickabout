@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/data/repositories.dart';
-import 'package:kickabout/services/location_service.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/widgets/player_avatar.dart';
-import 'package:kickabout/core/constants.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/core/constants.dart';
 
 /// Home screen - central hub with personalized content
 class HomeScreen extends ConsumerWidget {
@@ -32,7 +31,6 @@ class HomeScreen extends ConsumerWidget {
     }
 
     final unreadCountStream = notificationsRepo.watchUnreadCount(currentUserId);
-    final hubsStream = hubsRepo.watchHubsByMember(currentUserId);
 
     return AppScaffold(
       title: 'בית',

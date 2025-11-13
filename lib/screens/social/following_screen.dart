@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/widgets/player_avatar.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/widgets/player_avatar.dart';
 
 /// Following screen - shows users that a user is following
 class FollowingScreen extends ConsumerWidget {

@@ -102,11 +102,11 @@ class ScoutingService {
 
       // Get hub location for distance calculation
       Position? hubPosition;
-      if (criteria.maxDistanceKm != null && hub.locationPoint != null) {
+      if (criteria.maxDistanceKm != null && hub.location != null) {
         try {
           hubPosition = Position(
-            latitude: hub.locationPoint!.latitude,
-            longitude: hub.locationPoint!.longitude,
+            latitude: hub.location!.latitude,
+            longitude: hub.location!.longitude,
             timestamp: DateTime.now(),
             accuracy: 0,
             altitude: 0,

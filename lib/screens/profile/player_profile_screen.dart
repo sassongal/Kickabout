@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/data/repositories.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/core/constants.dart';
-import 'package:kickabout/services/push_notification_integration_service.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/services/push_notification_integration_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// Player profile screen showing rating, history, and recent games
@@ -603,7 +603,10 @@ class PlayerProfileScreen extends ConsumerWidget {
         tickCount: 5,
         ticksTextStyle: const TextStyle(fontSize: 10),
         tickBorderData: BorderSide(color: Colors.grey[300]!),
-        borderData: BorderSide(color: Colors.grey[400]!, width: 2),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: Colors.grey[400]!, width: 2),
+        ),
         radarBackgroundColor: Colors.grey[100]!,
         radarBorderData: BorderSide(color: Colors.grey[400]!, width: 1),
         titleTextStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),

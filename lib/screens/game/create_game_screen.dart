@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/models/notification.dart' as app_notification;
-import 'package:kickabout/core/constants.dart';
-import 'package:kickabout/services/location_service.dart';
-import 'package:kickabout/screens/location/map_picker_screen.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/screens/location/map_picker_screen.dart';
+import 'package:kickadoor/services/location_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// Create game screen

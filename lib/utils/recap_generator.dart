@@ -1,6 +1,6 @@
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/data/repositories.dart';
-import 'package:kickabout/data/teams_repository.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/data/teams_repository.dart';
 
 /// AI-powered narrative recap generator - creates engaging Hebrew summaries
 class RecapGenerator {

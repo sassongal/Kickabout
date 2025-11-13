@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/config/env.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/services/firestore_paths.dart';
+import 'package:kickadoor/config/env.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/services/firestore_paths.dart';
 
 /// Repository for Game Signup operations
 class SignupsRepository {

@@ -403,7 +403,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
         userId: playerId,
         type: 'game_invite',
         title: 'הזמנה למשחק!',
-        body: '${currentUser.name} מזמין אותך למשחק ב-${hub.name}',
+        body: '${currentUser?.name ?? 'מישהו'} מזמין אותך למשחק ב-${hub.name}',
         data: {
           'gameId': widget.gameId!,
           'hubId': widget.hubId,
@@ -465,7 +465,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
         userId: playerId,
         type: 'hub_invite',
         title: 'הזמנה ל-Hub!',
-        body: '${currentUser.name} מזמין אותך להצטרף ל-${hub.name}',
+        body: '${currentUser?.name ?? 'מישהו'} מזמין אותך להצטרף ל-${hub.name}',
         data: {
           'hubId': widget.hubId,
           'type': 'hub_invite',

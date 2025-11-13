@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/screens/social/feed_screen.dart';
-import 'package:kickabout/screens/social/hub_chat_screen.dart';
-import 'package:kickabout/data/users_repository.dart';
-import 'package:kickabout/screens/hub/add_manual_player_dialog.dart';
-import 'package:kickabout/screens/hub/manage_roles_screen.dart';
-import 'package:kickabout/screens/hub/hub_events_tab.dart';
-import 'package:kickabout/models/hub_role.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/screens/social/feed_screen.dart';
+import 'package:kickadoor/screens/social/hub_chat_screen.dart';
+import 'package:kickadoor/data/users_repository.dart';
+import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
+import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
+import 'package:kickadoor/screens/hub/manage_roles_screen.dart';
+import 'package:kickadoor/screens/hub/hub_events_tab.dart';
+import 'package:kickadoor/models/hub_role.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -372,6 +373,8 @@ class _MembersTab extends ConsumerWidget {
   }
 
   Widget _buildMembersList(BuildContext context, WidgetRef ref) {
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isHubManager = currentUserId == hub.createdBy;
 
     return FutureBuilder<List<User>>(
       future: usersRepo.getUsers(hub.memberIds),
@@ -431,16 +434,51 @@ class _MembersTab extends ConsumerWidget {
                     if (user.city != null) Text('עיר: ${user.city}'),
                     if (user.preferredPosition.isNotEmpty)
                       Text('עמדה: ${user.preferredPosition}'),
+                    Text('ציון: ${user.currentRankScore.toStringAsFixed(1)}'),
                   ],
                 ),
-                trailing: user.uid == hub.createdBy
-                    ? Chip(
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isManualPlayer && isHubManager)
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () async {
+                          final result = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => EditManualPlayerDialog(
+                              player: user,
+                              hubId: hubId,
+                            ),
+                          );
+                          if (result == true && context.mounted) {
+                            // Refresh will happen automatically via StreamBuilder
+                          }
+                        },
+                        tooltip: 'ערוך שחקן',
+                      ),
+                    if (user.uid == hub.createdBy)
+                      Chip(
                         label: const Text('יוצר'),
                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      )
-                    : null,
+                      ),
+                  ],
+                ),
                 onTap: isManualPlayer
-                    ? null
+                    ? (isHubManager
+                        ? () async {
+                            final result = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => EditManualPlayerDialog(
+                                player: user,
+                                hubId: hubId,
+                              ),
+                            );
+                            if (result == true && context.mounted) {
+                              // Refresh will happen automatically via StreamBuilder
+                            }
+                          }
+                        : null)
                     : () => context.push('/profile/${user.uid}'),
               ),
             );

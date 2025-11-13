@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kickabout/core/app_assets.dart';
+import 'package:kickadoor/core/app_assets.dart';
 
 /// Custom App Icon Widget - Uses custom icon assets instead of Material Icons
 class AppIcon extends StatelessWidget {

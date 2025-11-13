@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:kickabout/models/enums/event_type.dart';
-import 'package:kickabout/models/converters/timestamp_converter.dart';
+import 'package:kickadoor/models/enums/event_type.dart';
+import 'package:kickadoor/models/converters/timestamp_converter.dart';
 
 part 'game_event.freezed.dart';
 part 'game_event.g.dart';

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// Circular progress ring with data-visual style
 class ProgressRing extends StatefulWidget {

@@ -1,19 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/config/env.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/services/firestore_paths.dart';
-import 'package:kickabout/services/gamification_service.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/services/gamification_service.dart';
 
 /// Repository for Gamification operations
 class GamificationRepository {
-  final FirebaseFirestore _firestore;
   final GamificationService _service;
 
   GamificationRepository({
-    FirebaseFirestore? firestore,
     GamificationService? service,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _service = service ?? GamificationService(FirebaseFirestore.instance);
+  })  : _service = service ?? GamificationService(FirebaseFirestore.instance);
 
   /// Stream gamification for a user
   Stream<Gamification?> watchGamification(String userId) {

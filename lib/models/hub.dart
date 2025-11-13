@@ -1,7 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickabout/models/converters/timestamp_converter.dart';
-import 'package:kickabout/models/converters/geopoint_converter.dart';
+import 'package:kickadoor/models/converters/timestamp_converter.dart';
+import 'package:kickadoor/models/converters/geopoint_converter.dart';
 
 part 'hub.freezed.dart';
 part 'hub.g.dart';

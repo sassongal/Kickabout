@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/widgets/app_scaffold.dart';
-import 'package:kickabout/utils/snackbar_helper.dart';
-import 'package:kickabout/config/env.dart';
-import 'package:kickabout/core/constants.dart';
-import 'package:kickabout/data/repositories_providers.dart';
-import 'package:kickabout/models/models.dart';
+import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/config/env.dart';
+import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
 
 /// Register screen with email/password
 class RegisterScreen extends ConsumerStatefulWidget {

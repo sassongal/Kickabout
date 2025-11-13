@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/models/models.dart';
-import 'package:kickabout/widgets/futuristic/futuristic_card.dart';
-import 'package:kickabout/widgets/player_avatar.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kickadoor/widgets/player_avatar.dart';
 
 /// Player recommendation card with profile photo and details
 class PlayerRecommendationCard extends StatelessWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kickabout/theme/futuristic_theme.dart';
-import 'package:kickabout/widgets/futuristic/app_bar_with_logo.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/widgets/futuristic/app_bar_with_logo.dart';
 
 /// Futuristic scaffold with custom AppBar styling
 class FuturisticScaffold extends StatelessWidget {
