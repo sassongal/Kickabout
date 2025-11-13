@@ -70,7 +70,7 @@ final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) 
 });
 
 final gamificationRepositoryProvider = Provider<GamificationRepository>((ref) {
-  return GamificationRepository(firestore: ref.watch(firestoreProvider));
+  return GamificationRepository();
 });
 
 final leaderboardRepositoryProvider = Provider<LeaderboardRepository>((ref) {
