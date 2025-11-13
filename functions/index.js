@@ -1,20 +1,23 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const axios = require('axios');
-const axiosRetry = require('axios-retry');
+const axiosRetryModule = require('axios-retry');
 const NodeCache = require('node-cache');
 
 admin.initializeApp();
 
 const db = admin.firestore();
 
-// Configure axios retry
+// Configure axios retry - handle both ESM and CJS exports
+const axiosRetry = axiosRetryModule.default || axiosRetryModule;
+const { exponentialDelay, isNetworkOrIdempotentRequestError } = axiosRetryModule;
+
 axiosRetry(axios, {
   retries: 3,
-  retryDelay: axiosRetry.exponentialDelay,
+  retryDelay: exponentialDelay,
   retryCondition: (error) => {
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-           error.response?.status === 429; // Rate limit
+    return isNetworkOrIdempotentRequestError(error) ||
+           (error.response && error.response.status === 429); // Rate limit
   },
 });
 
