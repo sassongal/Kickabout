@@ -47,6 +47,8 @@ dependencies:
   geolocator: ^11.0.0
   geocoding: ^3.0.0
   google_maps_flutter: ^2.5.0
+  # HTTP requests
+  http: ^1.2.0
   # Freezed + JSON Serialization
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0

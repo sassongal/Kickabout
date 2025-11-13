@@ -23,7 +23,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Position? _currentPosition;
   Set<Marker> _markers = {};
   bool _isLoading = true;
-  String _selectedFilter = 'all'; // 'all', 'hubs', 'games'
+  String _selectedFilter = 'all'; // 'all', 'hubs', 'games', 'venues'
 
   @override
   void initState() {
@@ -80,9 +80,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final markers = <Marker>{};
 
     try {
-      // Load hubs
+      // Load hubs and their venues
       if (_selectedFilter == 'all' || _selectedFilter == 'hubs') {
         final hubsRepo = ref.read(hubsRepositoryProvider);
+        final venuesRepo = ref.read(venuesRepositoryProvider);
         final hubs = await hubsRepo.findHubsNearby(
           latitude: _currentPosition!.latitude,
           longitude: _currentPosition!.longitude,
@@ -90,6 +91,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
 
         for (final hub in hubs) {
+          // Add hub marker (if has primary location)
           if (hub.location != null) {
             markers.add(
               Marker(
@@ -111,6 +113,67 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             );
           }
+
+          // Add venue markers for this hub
+          if (hub.venueIds.isNotEmpty) {
+            final venues = await venuesRepo.getVenuesByHub(hub.hubId);
+            for (final venue in venues) {
+              markers.add(
+                Marker(
+                  markerId: MarkerId('venue_${venue.venueId}'),
+                  position: LatLng(
+                    venue.location.latitude,
+                    venue.location.longitude,
+                  ),
+                  infoWindow: InfoWindow(
+                    title: venue.name,
+                    snippet: '${hub.name} - ${venue.address ?? "מגרש"}',
+                  ),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueOrange, // Orange for venues
+                  ),
+                  onTap: () {
+                    context.push('/hubs/${hub.hubId}');
+                  },
+                ),
+              );
+            }
+          }
+        }
+      }
+
+      // Load venues only
+      if (_selectedFilter == 'venues') {
+        final venuesRepo = ref.read(venuesRepositoryProvider);
+        final venues = await venuesRepo.findVenuesNearby(
+          latitude: _currentPosition!.latitude,
+          longitude: _currentPosition!.longitude,
+          radiusKm: 50.0,
+        );
+
+        for (final venue in venues) {
+          markers.add(
+            Marker(
+              markerId: MarkerId('venue_${venue.venueId}'),
+              position: LatLng(
+                venue.location.latitude,
+                venue.location.longitude,
+              ),
+              infoWindow: InfoWindow(
+                title: venue.name,
+                snippet: venue.address ?? 'מגרש',
+              ),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueOrange,
+              ),
+              onTap: () {
+                // Navigate to hub that owns this venue
+                if (venue.hubId.isNotEmpty) {
+                  context.push('/hubs/${venue.hubId}');
+                }
+              },
+            ),
+          );
         }
       }
 
@@ -256,6 +319,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               _buildFilterChip('hubs', 'הובים'),
                               const SizedBox(width: 8),
                               _buildFilterChip('games', 'משחקים'),
+                              const SizedBox(width: 8),
+                              _buildFilterChip('venues', 'מגרשים'),
                             ],
                           ),
                         ),

@@ -171,6 +171,16 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              // Venues Management
+              Card(
+                child: ListTile(
+                  title: const Text('ניהול מגרשים'),
+                  subtitle: const Text('הוסף וערוך מגרשים של ההוב'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () => context.push('/venues/search?hubId=${widget.hubId}&select=true'),
+                ),
+              ),
+              const SizedBox(height: 8),
               // Invitations
               Card(
                 child: ListTile(

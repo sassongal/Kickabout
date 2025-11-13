@@ -6,6 +6,7 @@ import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/services/hub_venue_matcher_service.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Discover hubs screen - find hubs nearby
@@ -72,12 +73,17 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
     });
 
     try {
-      final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hubs = await hubsRepo.findHubsNearby(
+      // Use HubVenueMatcherService for smarter matching
+      final matcherService = ref.read(hubVenueMatcherServiceProvider);
+      final results = await matcherService.findRelevantHubs(
         latitude: _currentPosition!.latitude,
         longitude: _currentPosition!.longitude,
         radiusKm: _radiusKm,
+        maxResults: 50,
       );
+
+      // Extract hubs from results
+      final hubs = results.map((r) => r.hub).toList();
 
       setState(() {
         _nearbyHubs = hubs;

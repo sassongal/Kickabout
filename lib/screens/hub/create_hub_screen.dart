@@ -188,7 +188,49 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Location section
+              // Venues section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'מגרשים (אופציונלי)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'תוכל להוסיף מגרשים מאוחר יותר בהגדרות ההוב',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          // Note: Hub ID will be available after creation
+                          // For now, just show info
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('תוכל להוסיף מגרשים לאחר יצירת ההוב'),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add_location),
+                        label: const Text('הוסף מגרשים'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Location section (deprecated - use venues instead)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),

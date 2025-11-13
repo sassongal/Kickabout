@@ -10,6 +10,16 @@ class Env {
   /// Requires emulators to be running locally
   static bool useEmulators = false;
 
+  /// Google Maps API Key
+  /// Set this in your environment or config file
+  static String? googleMapsApiKey;
+
+  /// Custom API base URL (for your custom API integration)
+  static String? customApiBaseUrl;
+
+  /// Custom API key (for your custom API integration)
+  static String? customApiKey;
+
   /// Check if Firebase is available
   static bool get isFirebaseAvailable => !limitedMode;
 

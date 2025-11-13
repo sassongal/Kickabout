@@ -39,6 +39,7 @@ import 'package:kickadoor/screens/game/game_calendar_screen.dart';
 import 'package:kickadoor/screens/social/create_post_screen.dart';
 import 'package:kickadoor/screens/hub/scouting_screen.dart';
 import 'package:kickadoor/screens/hub/hub_players_list_screen.dart';
+import 'package:kickadoor/screens/venue/venue_search_screen.dart';
 import 'package:kickadoor/screens/onboarding/onboarding_screen.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -190,6 +191,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final hubId = state.uri.queryParameters['hubId'];
           return GameCalendarScreen(hubId: hubId);
+        },
+      ),
+
+      // Venue Search
+      GoRoute(
+        path: '/venues/search',
+        name: 'venueSearch',
+        builder: (context, state) {
+          final hubId = state.uri.queryParameters['hubId'];
+          final selectMode = state.uri.queryParameters['select'] == 'true';
+          return VenueSearchScreen(
+            hubId: hubId,
+            selectMode: selectMode,
+          );
         },
       ),
 

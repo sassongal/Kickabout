@@ -1,0 +1,424 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
+import 'package:kickadoor/services/google_places_service.dart';
+import 'package:kickadoor/services/custom_api_service.dart';
+import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/venue.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
+
+/// Screen for searching venues (public and rental)
+class VenueSearchScreen extends ConsumerStatefulWidget {
+  final String? hubId; // If provided, will add selected venue to this hub
+  final bool selectMode; // If true, returns selected venue
+
+  const VenueSearchScreen({
+    super.key,
+    this.hubId,
+    this.selectMode = false,
+  });
+
+  @override
+  ConsumerState<VenueSearchScreen> createState() => _VenueSearchScreenState();
+}
+
+class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  List<PlaceResult> _venues = [];
+  bool _isLoading = false;
+  bool _includeRentals = true;
+  String _selectedFilter = 'all'; // 'all', 'public', 'rental'
+  Position? _currentPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCurrentLocation() async {
+    try {
+      final locationService = ref.read(locationServiceProvider);
+      final position = await locationService.getCurrentLocation();
+      if (position != null) {
+        setState(() {
+          _currentPosition = position;
+        });
+        _searchVenues();
+      }
+    } catch (e) {
+      SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+    }
+  }
+
+  Future<void> _searchVenues() async {
+    if (_currentPosition == null) {
+      SnackbarHelper.showError(context, 'נא לאפשר גישה למיקום');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final placesService = GooglePlacesService();
+      final query = _searchController.text.trim().isEmpty
+          ? 'מגרש כדורגל'
+          : _searchController.text.trim();
+
+      final results = await placesService.searchVenues(
+        query: query,
+        latitude: _currentPosition!.latitude,
+        longitude: _currentPosition!.longitude,
+        radius: 10000, // 10km
+        includeRentals: _includeRentals && _selectedFilter != 'public',
+      );
+
+      // Filter by type if needed
+      final filteredResults = _selectedFilter == 'rental'
+          ? results.where((r) => !r.isPublic).toList()
+          : _selectedFilter == 'public'
+              ? results.where((r) => r.isPublic).toList()
+              : results;
+
+      setState(() {
+        _venues = filteredResults;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      SnackbarHelper.showError(context, 'שגיאה בחיפוש מגרשים: $e');
+    }
+  }
+
+  Future<void> _selectVenue(PlaceResult place) async {
+    if (!widget.selectMode) {
+      // Just show details
+      _showVenueDetails(place);
+      return;
+    }
+
+    // Convert to Venue and save
+    if (widget.hubId == null) {
+      SnackbarHelper.showError(context, 'Hub ID לא זמין');
+      return;
+    }
+
+    try {
+      final venuesRepo = ref.read(venuesRepositoryProvider);
+      final venue = place.toVenue(
+        hubId: widget.hubId!,
+        createdBy: ref.read(currentUserIdProvider),
+      );
+
+      final venueId = await venuesRepo.createVenue(venue);
+
+      // Update hub with new venue
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(widget.hubId!);
+      if (hub != null) {
+        final updatedVenueIds = [...hub.venueIds, venueId];
+        await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
+      }
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
+        context.pop(true);
+      }
+    } catch (e) {
+      SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
+    }
+  }
+
+  void _showVenueDetails(PlaceResult place) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(place.name),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (place.address != null) ...[
+                Text('כתובת: ${place.address}'),
+                const SizedBox(height: 8),
+              ],
+              if (place.phoneNumber != null) ...[
+                Text('טלפון: ${place.phoneNumber}'),
+                const SizedBox(height: 8),
+              ],
+              if (place.rating != null) ...[
+                Text('דירוג: ${place.rating!.toStringAsFixed(1)} ⭐'),
+                const SizedBox(height: 8),
+              ],
+              Text('סוג: ${place.isPublic ? "ציבורי" : "להשכרה"}'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('סגור'),
+          ),
+          if (widget.selectMode)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _selectVenue(place);
+              },
+              child: const Text('בחר'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FuturisticScaffold(
+      title: widget.selectMode ? 'בחר מגרש' : 'חיפוש מגרשים',
+      showBackButton: true,
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'חפש מגרש...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _searchVenues();
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onSubmitted: (_) => _searchVenues(),
+                ),
+                const SizedBox(height: 12),
+                // Filters
+                Row(
+                  children: [
+                    Text(
+                      'סינון:',
+                      style: FuturisticTypography.labelMedium,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
+                            value: 'all',
+                            label: Text('הכל'),
+                          ),
+                          ButtonSegment(
+                            value: 'public',
+                            label: Text('ציבורי'),
+                          ),
+                          ButtonSegment(
+                            value: 'rental',
+                            label: Text('להשכרה'),
+                          ),
+                        ],
+                        selected: {_selectedFilter},
+                        onSelectionChanged: (Set<String> newSelection) {
+                          setState(() {
+                            _selectedFilter = newSelection.first;
+                          });
+                          _searchVenues();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _searchVenues,
+                  icon: const Icon(Icons.search),
+                  label: const Text('חפש'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: FuturisticColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Results
+          Expanded(
+            child: _isLoading
+                ? ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: SkeletonLoader(height: 100),
+                    ),
+                  )
+                : _venues.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.location_searching,
+                              size: 64,
+                              color: FuturisticColors.textSecondary,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'לא נמצאו מגרשים',
+                              style: FuturisticTypography.heading3,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'נסה לשנות את החיפוש או להגדיל את הרדיוס',
+                              style: FuturisticTypography.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _venues.length,
+                        itemBuilder: (context, index) {
+                          final venue = _venues[index];
+                          final distance = _currentPosition != null
+                              ? Geolocator.distanceBetween(
+                                  _currentPosition!.latitude,
+                                  _currentPosition!.longitude,
+                                  venue.latitude,
+                                  venue.longitude,
+                                ) / 1000
+                              : null;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: FuturisticCard(
+                              onTap: () => _selectVenue(venue),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(12),
+                                leading: Icon(
+                                  venue.isPublic
+                                      ? Icons.sports_soccer
+                                      : Icons.business,
+                                  size: 40,
+                                  color: venue.isPublic
+                                      ? FuturisticColors.primary
+                                      : FuturisticColors.secondary,
+                                ),
+                                title: Text(
+                                  venue.name,
+                                  style: FuturisticTypography.labelLarge,
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (venue.address != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on,
+                                            size: 14,
+                                            color: FuturisticColors.textSecondary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              venue.address!,
+                                              style: FuturisticTypography.bodySmall,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                    if (distance != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${distance.toStringAsFixed(1)} ק"מ ממיקומך',
+                                        style: FuturisticTypography.bodySmall,
+                                      ),
+                                    ],
+                                    if (venue.rating != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.star,
+                                            size: 14,
+                                            color: FuturisticColors.warning,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${venue.rating!.toStringAsFixed(1)} (${venue.userRatingsTotal ?? 0} ביקורות)',
+                                            style: FuturisticTypography.bodySmall,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: venue.isPublic
+                                            ? FuturisticColors.primary.withOpacity(0.1)
+                                            : FuturisticColors.secondary.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        venue.isPublic ? 'ציבורי' : 'להשכרה',
+                                        style: FuturisticTypography.labelSmall.copyWith(
+                                          color: venue.isPublic
+                                              ? FuturisticColors.primary
+                                              : FuturisticColors.secondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: widget.selectMode
+                                    ? const Icon(Icons.chevron_left)
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

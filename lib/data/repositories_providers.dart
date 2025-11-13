@@ -8,6 +8,8 @@ import 'package:kickadoor/services/push_notification_service.dart';
 import 'package:kickadoor/services/game_reminder_service.dart';
 import 'package:kickadoor/services/push_notification_integration_service.dart';
 import 'package:kickadoor/services/scouting_service.dart';
+import 'package:kickadoor/services/google_places_service.dart';
+import 'package:kickadoor/services/custom_api_service.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -127,5 +129,15 @@ final scoutingServiceProvider = Provider<ScoutingService>((ref) {
     hubsRepo: ref.watch(hubsRepositoryProvider),
     locationService: ref.watch(locationServiceProvider),
   );
+});
+
+/// Google Places service provider
+final googlePlacesServiceProvider = Provider<GooglePlacesService>((ref) {
+  return GooglePlacesService();
+});
+
+/// Custom API service provider
+final customApiServiceProvider = Provider<CustomApiService>((ref) {
+  return CustomApiService();
 });
 
