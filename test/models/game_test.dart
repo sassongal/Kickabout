@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kickabout/models/game.dart';
-import 'package:kickabout/models/enums/game_status.dart';
+import 'package:kickadoor/models/game.dart';
+import 'package:kickadoor/models/enums/game_status.dart';
 
 void main() {
   group('Game Model', () {

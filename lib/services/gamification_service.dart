@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as math;
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/config/env.dart';
 
 /// Service for gamification calculations and updates

@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

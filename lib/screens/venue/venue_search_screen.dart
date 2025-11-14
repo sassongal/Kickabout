@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/services/google_places_service.dart';
-import 'package:kickadoor/services/custom_api_service.dart';
-import 'package:kickadoor/services/location_service.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/venue.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 
@@ -33,9 +31,11 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<PlaceResult> _venues = [];
   bool _isLoading = false;
+  bool _isLoadingLocation = true;
   bool _includeRentals = true;
   String _selectedFilter = 'all'; // 'all', 'public', 'rental'
   Position? _currentPosition;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -50,17 +50,31 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
   }
 
   Future<void> _loadCurrentLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+      _errorMessage = null;
+    });
+
     try {
       final locationService = ref.read(locationServiceProvider);
       final position = await locationService.getCurrentLocation();
       if (position != null) {
         setState(() {
           _currentPosition = position;
+          _isLoadingLocation = false;
         });
         _searchVenues();
+      } else {
+        setState(() {
+          _isLoadingLocation = false;
+          _errorMessage = 'לא ניתן לקבל את המיקום הנוכחי';
+        });
       }
     } catch (e) {
-      SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+      setState(() {
+        _isLoadingLocation = false;
+        _errorMessage = 'שגיאה בקבלת מיקום: $e';
+      });
     }
   }
 
@@ -98,12 +112,13 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
       setState(() {
         _venues = filteredResults;
         _isLoading = false;
+        _errorMessage = null;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _errorMessage = 'שגיאה בחיפוש מגרשים: $e';
       });
-      SnackbarHelper.showError(context, 'שגיאה בחיפוש מגרשים: $e');
     }
   }
 
@@ -273,39 +288,46 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
           ),
           // Results
           Expanded(
-            child: _isLoading
-                ? ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: 5,
-                    itemBuilder: (context, index) => const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: SkeletonLoader(height: 100),
-                    ),
-                  )
-                : _venues.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.location_searching,
-                              size: 64,
-                              color: FuturisticColors.textSecondary,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'לא נמצאו מגרשים',
-                              style: FuturisticTypography.heading3,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'נסה לשנות את החיפוש או להגדיל את הרדיוס',
-                              style: FuturisticTypography.bodyMedium,
-                            ),
-                          ],
+            child: _isLoadingLocation
+                ? const FuturisticLoadingState(message: 'מאתר את המיקום שלך...')
+                : _errorMessage != null && _venues.isEmpty
+                    ? FuturisticEmptyState(
+                        icon: Icons.error_outline,
+                        title: 'שגיאה',
+                        message: _errorMessage,
+                        action: ElevatedButton.icon(
+                          onPressed: () {
+                            if (_currentPosition == null) {
+                              _loadCurrentLocation();
+                            } else {
+                              _searchVenues();
+                            }
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('נסה שוב'),
                         ),
                       )
-                    : ListView.builder(
+                    : _isLoading
+                        ? ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: 5,
+                            itemBuilder: (context, index) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: SkeletonLoader(height: 100),
+                            ),
+                          )
+                        : _venues.isEmpty
+                            ? FuturisticEmptyState(
+                                icon: Icons.location_searching,
+                                title: 'לא נמצאו מגרשים',
+                                message: 'נסה לשנות את החיפוש או להגדיל את הרדיוס',
+                                action: ElevatedButton.icon(
+                                  onPressed: _searchVenues,
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('רענן חיפוש'),
+                                ),
+                              )
+                            : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _venues.length,
                         itemBuilder: (context, index) {

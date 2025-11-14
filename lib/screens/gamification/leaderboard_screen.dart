@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/leaderboard_repository.dart';
 
@@ -133,18 +135,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           // Leaderboard list
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const FuturisticLoadingState(message: 'טוען טבלת ליגה...')
                 : _entries.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.emoji_events_outlined,
-                                size: 64, color: Colors.grey),
-                            const SizedBox(height: 16),
-                            const Text('אין נתונים'),
-                          ],
-                        ),
+                    ? FuturisticEmptyState(
+                        icon: Icons.emoji_events_outlined,
+                        title: 'אין נתונים',
+                        message: 'עדיין אין שחקנים בטבלת הליגה',
                       )
                     : ListView.builder(
                         itemCount: _entries.length,

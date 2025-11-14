@@ -4,22 +4,28 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/services/push_notification_integration_service.dart';
 import 'package:kickadoor/services/gamification_service.dart';
-import 'package:flutter/foundation.dart';
 
 /// Player profile screen showing rating, history, and recent games
-class PlayerProfileScreen extends ConsumerWidget {
+class PlayerProfileScreen extends ConsumerStatefulWidget {
   final String playerId;
 
   const PlayerProfileScreen({super.key, required this.playerId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlayerProfileScreen> createState() => _PlayerProfileScreenState();
+}
+
+class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen> {
+
+  @override
+  Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
     final usersRepo = ref.watch(usersRepositoryProvider);
     final ratingsRepo = ref.watch(ratingsRepositoryProvider);
@@ -27,15 +33,15 @@ class PlayerProfileScreen extends ConsumerWidget {
     final followRepo = ref.watch(followRepositoryProvider);
     final gamificationRepo = ref.watch(gamificationRepositoryProvider);
 
-    final userStream = usersRepo.watchUser(playerId);
-    final ratingHistoryStream = ratingsRepo.watchRatingHistory(playerId);
-    final gamificationStream = gamificationRepo.watchGamification(playerId);
-    final isFollowingStream = currentUserId != null && currentUserId != playerId
-        ? followRepo.watchIsFollowing(currentUserId, playerId)
+    final userStream = usersRepo.watchUser(widget.playerId);
+    final ratingHistoryStream = ratingsRepo.watchRatingHistory(widget.playerId);
+    final gamificationStream = gamificationRepo.watchGamification(widget.playerId);
+    final isFollowingStream = currentUserId != null && currentUserId != widget.playerId
+        ? followRepo.watchIsFollowing(currentUserId, widget.playerId)
         : Stream.value(false);
-    final followingCountStream = followRepo.watchFollowingCount(playerId);
-    final followersCountStream = followRepo.watchFollowersCount(playerId);
-    final isOwnProfile = currentUserId == playerId;
+    final followingCountStream = followRepo.watchFollowingCount(widget.playerId);
+    final followersCountStream = followRepo.watchFollowersCount(widget.playerId);
+    final isOwnProfile = currentUserId == widget.playerId;
 
     return AppScaffold(
       title: 'פרופיל שחקן',
@@ -43,7 +49,7 @@ class PlayerProfileScreen extends ConsumerWidget {
           ? [
               IconButton(
                 icon: const Icon(Icons.edit),
-                onPressed: () => context.push('/profile/$playerId/edit'),
+                onPressed: () => context.push('/profile/${widget.playerId}/edit'),
                 tooltip: 'ערוך פרופיל',
               ),
             ]
@@ -52,18 +58,21 @@ class PlayerProfileScreen extends ConsumerWidget {
         stream: userStream,
         builder: (context, userSnapshot) {
           if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const FuturisticLoadingState(message: 'טוען פרופיל...');
           }
 
           if (userSnapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('שגיאה: ${userSnapshot.error}'),
-                ],
+            return FuturisticEmptyState(
+              icon: Icons.error_outline,
+              title: 'שגיאה בטעינת פרופיל',
+              message: userSnapshot.error.toString(),
+              action: ElevatedButton.icon(
+                onPressed: () {
+                  // Retry by rebuilding
+                  setState(() {});
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('נסה שוב'),
               ),
             );
           }
@@ -189,9 +198,9 @@ class PlayerProfileScreen extends ConsumerWidget {
                                             if (currentUserId == null) return;
                                             try {
                                               if (isFollowing) {
-                                                await followRepo.unfollow(currentUserId, playerId);
+                                                await followRepo.unfollow(currentUserId, widget.playerId);
                                               } else {
-                                                await followRepo.follow(currentUserId, playerId);
+                                                await followRepo.follow(currentUserId, widget.playerId);
                                                 
                                                 // Send notification
                                                 try {
@@ -200,7 +209,7 @@ class PlayerProfileScreen extends ConsumerWidget {
                                                   
                                                   await pushIntegration.notifyNewFollow(
                                                     followerName: currentUser?.name ?? 'מישהו',
-                                                    followingId: playerId,
+                                                    followingId: widget.playerId,
                                                   );
                                                 } catch (e) {
                                                   debugPrint('Failed to send follow notification: $e');
@@ -236,7 +245,7 @@ class PlayerProfileScreen extends ConsumerWidget {
                                         builder: (context, snapshot) {
                                           final count = snapshot.data ?? 0;
                                           return InkWell(
-                                            onTap: () => context.push('/profile/$playerId/followers'),
+                                            onTap: () => context.push('/profile/${widget.playerId}/followers'),
                                             child: Column(
                                               children: [
                                                 Text(
@@ -261,7 +270,7 @@ class PlayerProfileScreen extends ConsumerWidget {
                                         builder: (context, snapshot) {
                                           final count = snapshot.data ?? 0;
                                           return InkWell(
-                                            onTap: () => context.push('/profile/$playerId/following'),
+                                            onTap: () => context.push('/profile/${widget.playerId}/following'),
                                             child: Column(
                                               children: [
                                                 Text(
@@ -888,7 +897,11 @@ class PlayerProfileScreen extends ConsumerWidget {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const ListTile(
-                leading: CircularProgressIndicator(),
+                leading: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
                 title: Text('טוען...'),
               );
             }

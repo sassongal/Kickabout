@@ -69,6 +69,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '731836758075',
     projectId: 'kickabout-ddc06',
     storageBucket: 'kickabout-ddc06.firebasestorage.app',
-    iosBundleId: 'com.mycompany.CounterApp',
+    iosBundleId: 'com.kickadoor.app',
   );
 }

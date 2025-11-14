@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
-import 'package:kickadoor/services/push_notification_integration_service.dart';
-import 'package:flutter/foundation.dart';
 
 /// Hub chat screen - real-time chat for a hub
 class HubChatScreen extends ConsumerStatefulWidget {
@@ -106,32 +106,39 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
               stream: messagesStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SkeletonLoader(height: 60),
+                    ),
+                  );
                 }
 
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text('שגיאה: ${snapshot.error}'),
+                  return FuturisticEmptyState(
+                    icon: Icons.error_outline,
+                    title: 'שגיאה בטעינת הודעות',
+                    message: snapshot.error.toString(),
+                    action: ElevatedButton.icon(
+                      onPressed: () {
+                        // Retry by rebuilding
+                        setState(() {});
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('נסה שוב'),
+                    ),
                   );
                 }
 
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text('אין הודעות עדיין'),
-                        const SizedBox(height: 8),
-                        Text(
-                          'היה הראשון לשלוח הודעה!',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
+                  return FuturisticEmptyState(
+                    icon: Icons.chat_bubble_outline,
+                    title: 'אין הודעות עדיין',
+                    message: 'היה הראשון לשלוח הודעה!',
                   );
                 }
 
@@ -256,7 +263,7 @@ class _MessageBubble extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: isMe
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceVariant,
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(

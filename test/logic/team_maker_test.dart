@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kickabout/logic/team_maker.dart';
-import 'package:kickabout/models/models.dart';
+import 'package:kickadoor/logic/team_maker.dart';
+import 'package:kickadoor/models/models.dart';
 
 void main() {
   group('TeamMaker Algorithm', () {

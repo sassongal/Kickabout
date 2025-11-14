@@ -23,9 +23,9 @@ void main() {
       // Note: This test requires Firebase to be configured
       // In a real test environment, you'd use Firebase emulators
       try {
-        final user = await authService.signInAnonymously();
-        expect(user, isNotNull);
-        expect(user?.isAnonymous, true);
+        final userCredential = await authService.signInAnonymously();
+        expect(userCredential, isNotNull);
+        expect(userCredential.user?.isAnonymous, true);
       } catch (e) {
         // If Firebase is not configured, skip test
         expect(e.toString(), contains('Firebase'));

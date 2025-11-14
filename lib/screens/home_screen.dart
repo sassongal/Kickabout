@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/services/location_service.dart';
@@ -210,7 +212,14 @@ class _UpcomingGamesSection extends ConsumerWidget {
       stream: hubsStream,
       builder: (context, hubsSnapshot) {
         if (hubsSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: 5,
+            itemBuilder: (context, index) => const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: const SkeletonLoader(height: 100),
+            ),
+          );
         }
 
         final hubs = hubsSnapshot.data ?? [];
@@ -322,7 +331,7 @@ class _NearbyHubsSection extends ConsumerWidget {
           future: _getNearbyHubs(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const FuturisticLoadingState(message: 'מחפש הובים קרובים...');
             }
 
             final hubs = snapshot.data ?? [];

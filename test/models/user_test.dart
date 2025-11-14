@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kickabout/models/user.dart';
+import 'package:kickadoor/models/user.dart';
 
 void main() {
   group('User Model', () {

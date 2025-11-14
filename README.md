@@ -72,10 +72,16 @@ Kickadoor נוצרה מתוך הבנה שכדורגל שכונתי הוא יות
 - **Material 3** - עיצוב מודרני
 
 ### Backend & Services
-- **Firebase Auth** - Authentication (Anonymous + Email/Password)
-- **Cloud Firestore** - NoSQL database עם real-time updates
+- **Firebase Auth** - Authentication (Anonymous + Email/Password + Google Sign-In + Apple Sign-In)
+- **Cloud Firestore** - NoSQL database עם real-time updates ו-offline persistence
 - **Firebase Storage** - File storage (תמונות)
 - **Firebase Cloud Messaging** - Push notifications
+- **Firebase Cloud Functions v2** - Serverless functions עם:
+  - `onGameCreated` - יצירת פוסט אוטומטי בפיד כשנוצר משחק
+  - `onHubMessageCreated` - שליחת התראות פוש להודעות בצ'אט
+  - `searchVenues` - חיפוש מגרשים מאובטח דרך Google Places API
+- **Firestore Security Rules** - כללי אבטחה מפורסמים
+- **Firestore Indexes** - אינדקסים מותאמים לשאילתות
 - **Google Maps Platform** - מפות ומיקום
 
 ### Libraries
@@ -100,7 +106,19 @@ Kickadoor נוצרה מתוך הבנה שכדורגל שכונתי הוא יות
 flutter pub get
 ```
 
-### 2. הגדרת Firebase
+### 2. יצירת קוד (Code Generation) ⚠️ שלב קריטי
+
+**שלב זה הכרחי וחייב להתבצע לפני הרצת האפליקציה!**
+
+שלב זה יוצר את כל הקבצים הנדרשים עבור מודלים (Freezed) ו-Providers (Riverpod Generator).
+
+```bash
+flutter pub run build_runner build --delete-conflicting-outputs
+```
+
+**חשוב:** אם אתה משנה מודלים או providers, הרץ את הפקודה שוב.
+
+### 3. הגדרת Firebase
 
 #### אופציה א': FlutterFire CLI (מומלץ)
 
@@ -118,7 +136,7 @@ flutterfire configure
 2. הוסף את `GoogleService-Info.plist` ל-`ios/Runner/`
 3. עדכן את `lib/config/firebase_options.dart`
 
-### 3. הגדרת Google Maps
+### 4. הגדרת Google Maps
 
 הוסף את ה-API key שלך ל-`lib/config/env.dart`:
 
@@ -126,7 +144,7 @@ flutterfire configure
 static const String googleMapsApiKey = 'YOUR_API_KEY';
 ```
 
-### 4. הרצת האפליקציה
+### 5. הרצת האפליקציה
 
 ```bash
 # Web
@@ -139,7 +157,7 @@ flutter run -d ios
 flutter run -d android
 ```
 
-### 5. יצירת נתוני דמה
+### 6. יצירת נתוני דמה
 
 לאחר התחברות, ניתן ליצור נתוני דמה דרך מסך Admin:
 - יצירת שחקנים ו-Hubs כלליים
@@ -173,10 +191,33 @@ lib/
 
 - כל הקבצים הרגישים מוחרגים ב-`.gitignore`
 - אין hardcoded secrets בקוד
-- Firebase Security Rules נדרשות ל-Firestore ו-Storage
-- ראו `SECURITY_REVIEW.md` לפרטים נוספים
+- **Firebase Security Rules** - כללי אבטחה מפורסמים ל-Firestore ו-Storage
+- **API Keys מאובטחים** - Google Places API Key מוגדר ב-Environment Variables של Cloud Functions
+- **Firestore Indexes** - אינדקסים מותאמים לשאילתות מורכבות
 
 ## 📦 Deployment
+
+### Firebase Functions (Backend)
+
+**חשוב:** לפני הרצת האפליקציה, ודא ש-Firebase Functions מפורסמות:
+
+```bash
+# פרסום כל ה-Functions
+firebase deploy --only functions
+
+# או Functions ספציפיות
+firebase deploy --only functions:onGameCreated,functions:onHubMessageCreated,functions:searchVenues
+```
+
+### Firebase Firestore (Rules & Indexes)
+
+```bash
+# פרסום Security Rules
+firebase deploy --only firestore:rules
+
+# פרסום Indexes
+firebase deploy --only firestore:indexes
+```
 
 ### Firebase Hosting (Web)
 
@@ -204,24 +245,35 @@ flutter test --coverage
 
 ## ✨ תכונות חדשות שהושלמו
 
+### Backend & Infrastructure
+- ✅ **Cloud Functions v2** - שדרוג מלא ל-Firebase Functions v2 עם כל הפיצ'רים החדשים
+- ✅ **Firestore Security Rules** - כללי אבטחה מפורסמים ומאובטחים
+- ✅ **Firestore Indexes** - אינדקסים מותאמים לשאילתות מורכבות
+- ✅ **onGameCreated Function** - יצירת פוסט אוטומטי בפיד כשנוצר משחק חדש
+- ✅ **onHubMessageCreated Function** - שליחת התראות פוש אוטומטיות להודעות בצ'אט
+- ✅ **searchVenues Function** - חיפוש מגרשים מאובטח דרך Google Places API
+
+### Features
 - ✅ **משחקים חוזרים** - צור משחקים שחוזרים אוטומטית (שבועי/דו-שבועי/חודשי)
 - ✅ **תמיכה במצב לא מקוון** - Firestore offline persistence לפעולה גם ללא חיבור
 - ✅ **פיד משופר** - הוסף תמונות לפוסטים, צפה בגלריה, ושתף חוויות
 - ✅ **ניתוח מתקדם** - גרפים ומגמות בפרופיל השחקן (Line Chart, Radar Chart, Trend Indicators)
 - ✅ **מחולל סיכומים** - סיכומי משחקים נרטיביים בעברית שמופיעים אוטומטית בפיד
 - ✅ **AI-Powered Player Scouting** - גיוס שחקנים חכם למנהלי Hubs עם המלצות מותאמות אישית
-- ✅ **הוספת שחקן ידנית** - מנהלי Hubs יכולים להוסיף שחקנים שלא משתמשים באפליקציה, כולל ציון, עריכה ושליחת הזמנה במייל
-- ✅ **אופטימיזציות ביצועים** - Image caching, lazy loading infrastructure, performance utilities
+- ✅ **הוספת שחקן ידנית** - מנהלי Hubs יכולים להוסיף שחקנים שלא משתמשים באפליקציה
 - ✅ **תמיכה במגרשים מרובים** - כל Hub יכול לשחק בכמה מגרשים (אמיתיים מ-Google Maps)
 - ✅ **מסך רשימת שחקנים בהאב** - מסך נפרד עם חיפוש, סינון ומיון
-- ✅ **שיפור העלאת תמונות** - תמיכה מלאה ב-Web + Mobile
-- ✅ **שיפור ביצועי Navigation** - Restoration scope, image caching, אופטימיזציות
 - ✅ **Gamification Integration** - נקודות אוטומטיות בסיום משחק, UI משופר בפרופיל
-- ✅ **Push Notifications** - Cloud Functions מוכנות (דורש deployment)
-- ✅ **Testing Infrastructure** - Unit, Widget, Integration tests
+- ✅ **Push Notifications** - התראות פוש מלאות עם Cloud Functions
 - ✅ **Hub Analytics** - Dashboard למנהלי Hubs עם גרפים וסטטיסטיקות
 - ✅ **Onboarding/Tutorial** - חוויית התחלה עם הסבר הרשאות
 - ✅ **Firebase Analytics** - Tracking של כל הפעולות החשובות
+
+### Code Quality & Performance
+- ✅ **ניקוי קוד מקיף** - תיקון מעל 140 אזהרות unused_import
+- ✅ **תיקון deprecated methods** - עדכון ל-API החדש של Flutter
+- ✅ **אופטימיזציות ביצועים** - Image caching, lazy loading infrastructure
+- ✅ **Testing Infrastructure** - Unit, Widget, Integration tests
 
 ## 🌟 תכונות עתידיות
 

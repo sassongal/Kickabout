@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/storage_service.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';

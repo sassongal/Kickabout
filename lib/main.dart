@@ -15,7 +15,6 @@ import 'package:kickadoor/services/remote_config_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'dart:async';
 import 'dart:ui';
 
 void main() async {
@@ -56,8 +55,9 @@ void main() async {
     
     // Enable Firestore offline persistence
     try {
-      await FirebaseFirestore.instance.enablePersistence(
-        const PersistenceSettings(synchronizeTabs: true),
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
       );
       debugPrint('✅ Firestore offline persistence enabled');
     } catch (e) {

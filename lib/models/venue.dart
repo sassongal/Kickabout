@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/models/converters/timestamp_converter.dart';
-import 'package:kickadoor/models/converters/geopoint_converter.dart';
 
 part 'venue.freezed.dart';
 part 'venue.g.dart';
@@ -15,7 +14,7 @@ class Venue with _$Venue {
     required String hubId, // Which hub this venue belongs to
     required String name, // e.g., "גן דניאל - מגרש 1"
     String? description,
-    @GeoPointConverter() required GeoPoint location, // Exact location from Google Maps
+    @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson) required GeoPoint location, // Exact location from Google Maps
     String? address, // Human-readable address
     String? googlePlaceId, // Google Places API ID for real venues
     @Default([]) List<String> amenities, // e.g., ["parking", "showers", "lights"]
@@ -29,6 +28,22 @@ class Venue with _$Venue {
 
   factory Venue.fromJson(Map<String, dynamic> json) => _$VenueFromJson(json);
 }
+
+// Helper functions for GeoPoint serialization (must be top-level for json_serializable)
+GeoPoint _geoPointFromJson(Object? json) {
+  if (json == null) throw ArgumentError('GeoPoint cannot be null');
+  if (json is GeoPoint) return json;
+  if (json is Map) {
+    final lat = json['latitude'] as num?;
+    final lng = json['longitude'] as num?;
+    if (lat != null && lng != null) {
+      return GeoPoint(lat.toDouble(), lng.toDouble());
+    }
+  }
+  throw ArgumentError('Invalid GeoPoint format: $json');
+}
+
+Object? _geoPointToJson(GeoPoint object) => object;
 
 /// Firestore converter for Venue
 class VenueConverter implements JsonConverter<Venue, Map<String, dynamic>> {

@@ -3,13 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/scouting_service.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/models/notification.dart' as app_notification;
 
 /// Scouting Screen - AI-powered player discovery for Hub managers

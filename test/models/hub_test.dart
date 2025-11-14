@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kickabout/models/hub.dart';
+import 'package:kickadoor/models/hub.dart';
 
 void main() {
   group('Hub Model', () {

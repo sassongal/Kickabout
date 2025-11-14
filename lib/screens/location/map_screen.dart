@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/location_service.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {
@@ -266,21 +264,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
       ],
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? FuturisticLoadingState(message: 'טוען מפה...')
           : _currentPosition == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.location_off, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('לא ניתן לקבל מיקום'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadCurrentLocation,
-                        child: const Text('נסה שוב'),
-                      ),
-                    ],
+              ? FuturisticEmptyState(
+                  icon: Icons.location_off,
+                  title: 'לא ניתן לקבל מיקום',
+                  message: 'אנא אפשר גישה למיקום כדי לראות את המפה',
+                  action: ElevatedButton.icon(
+                    onPressed: _loadCurrentLocation,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('נסה שוב'),
                   ),
                 )
               : Stack(

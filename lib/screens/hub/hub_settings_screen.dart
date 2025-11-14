@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/screens/hub/hub_invitations_screen.dart';
+import 'package:go_router/go_router.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
@@ -31,15 +34,25 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return FuturisticScaffold(
             title: 'הגדרות Hub',
-            body: const Center(child: CircularProgressIndicator()),
+            body: const FuturisticLoadingState(message: 'טוען הגדרות...'),
           );
         }
 
         if (snapshot.hasError || snapshot.data == null) {
           return FuturisticScaffold(
             title: 'הגדרות Hub',
-            body: Center(
-              child: Text('שגיאה: ${snapshot.error ?? 'Hub לא נמצא'}'),
+            body: FuturisticEmptyState(
+              icon: Icons.error_outline,
+              title: 'שגיאה',
+              message: snapshot.error?.toString() ?? 'Hub לא נמצא',
+              action: ElevatedButton.icon(
+                onPressed: () {
+                  // Retry by rebuilding
+                  setState(() {});
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('נסה שוב'),
+              ),
             ),
           );
         }

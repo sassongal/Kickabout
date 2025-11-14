@@ -26,7 +26,7 @@ mixin _$Venue {
   String get name =>
       throw _privateConstructorUsedError; // e.g., "גן דניאל - מגרש 1"
   String? get description => throw _privateConstructorUsedError;
-  @GeoPointConverter()
+  @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
   GeoPoint get location =>
       throw _privateConstructorUsedError; // Exact location from Google Maps
   String? get address =>
@@ -66,7 +66,8 @@ abstract class $VenueCopyWith<$Res> {
       String hubId,
       String name,
       String? description,
-      @GeoPointConverter() GeoPoint location,
+      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
+      GeoPoint location,
       String? address,
       String? googlePlaceId,
       List<String> amenities,
@@ -181,7 +182,8 @@ abstract class _$$VenueImplCopyWith<$Res> implements $VenueCopyWith<$Res> {
       String hubId,
       String name,
       String? description,
-      @GeoPointConverter() GeoPoint location,
+      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
+      GeoPoint location,
       String? address,
       String? googlePlaceId,
       List<String> amenities,
@@ -290,7 +292,8 @@ class _$VenueImpl implements _Venue {
       required this.hubId,
       required this.name,
       this.description,
-      @GeoPointConverter() required this.location,
+      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
+      required this.location,
       this.address,
       this.googlePlaceId,
       final List<String> amenities = const [],
@@ -316,7 +319,7 @@ class _$VenueImpl implements _Venue {
   @override
   final String? description;
   @override
-  @GeoPointConverter()
+  @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
   final GeoPoint location;
 // Exact location from Google Maps
   @override
@@ -434,7 +437,8 @@ abstract class _Venue implements Venue {
       required final String hubId,
       required final String name,
       final String? description,
-      @GeoPointConverter() required final GeoPoint location,
+      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
+      required final GeoPoint location,
       final String? address,
       final String? googlePlaceId,
       final List<String> amenities,
@@ -456,7 +460,7 @@ abstract class _Venue implements Venue {
   @override
   String? get description;
   @override
-  @GeoPointConverter()
+  @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
   GeoPoint get location; // Exact location from Google Maps
   @override
   String? get address; // Human-readable address

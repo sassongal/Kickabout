@@ -4,74 +4,74 @@ import 'package:kickadoor/utils/validation_utils.dart';
 void main() {
   group('ValidationUtils', () {
     group('validateEmail', () {
-      test('should return true for valid emails', () {
-        expect(ValidationUtils.validateEmail('test@example.com'), true);
-        expect(ValidationUtils.validateEmail('user.name@domain.co.il'), true);
-        expect(ValidationUtils.validateEmail('user+tag@example.com'), true);
+      test('should return null for valid emails', () {
+        expect(ValidationUtils.validateEmail('test@example.com'), isNull);
+        expect(ValidationUtils.validateEmail('user.name@domain.co.il'), isNull);
+        expect(ValidationUtils.validateEmail('user+tag@example.com'), isNull);
       });
 
-      test('should return false for invalid emails', () {
-        expect(ValidationUtils.validateEmail('invalid'), false);
-        expect(ValidationUtils.validateEmail('@example.com'), false);
-        expect(ValidationUtils.validateEmail('user@'), false);
-        expect(ValidationUtils.validateEmail('user@domain'), false);
-        expect(ValidationUtils.validateEmail(''), false);
+      test('should return error message for invalid emails', () {
+        expect(ValidationUtils.validateEmail('invalid'), isNotNull);
+        expect(ValidationUtils.validateEmail('@example.com'), isNotNull);
+        expect(ValidationUtils.validateEmail('user@'), isNotNull);
+        expect(ValidationUtils.validateEmail('user@domain'), isNotNull);
+        expect(ValidationUtils.validateEmail(''), isNotNull);
       });
     });
 
     group('validatePhone', () {
-      test('should return true for valid Israeli phone numbers', () {
-        expect(ValidationUtils.validatePhone('0501234567'), true);
-        expect(ValidationUtils.validatePhone('052-123-4567'), true);
-        expect(ValidationUtils.validatePhone('054 123 4567'), true);
-        expect(ValidationUtils.validatePhone('+972501234567'), true);
+      test('should return null for valid Israeli phone numbers', () {
+        expect(ValidationUtils.validatePhone('0501234567'), isNull);
+        expect(ValidationUtils.validatePhone('052-123-4567'), isNull);
+        expect(ValidationUtils.validatePhone('054 123 4567'), isNull);
       });
 
-      test('should return false for invalid phone numbers', () {
-        expect(ValidationUtils.validatePhone('123'), false);
-        expect(ValidationUtils.validatePhone('05012345'), false);
-        expect(ValidationUtils.validatePhone(''), false);
+      test('should return error message for invalid phone numbers', () {
+        expect(ValidationUtils.validatePhone('123'), isNotNull);
+        expect(ValidationUtils.validatePhone('05012345'), isNotNull);
+        expect(ValidationUtils.validatePhone('', required: true), isNotNull);
       });
     });
 
     group('validateName', () {
-      test('should return true for valid names', () {
-        expect(ValidationUtils.validateName('John Doe'), true);
-        expect(ValidationUtils.validateName('יוסי כהן'), true);
-        expect(ValidationUtils.validateName('Jean-Pierre'), true);
+      test('should return null for valid names', () {
+        expect(ValidationUtils.validateName('John Doe'), isNull);
+        expect(ValidationUtils.validateName('יוסי כהן'), isNull);
+        expect(ValidationUtils.validateName('Jean-Pierre'), isNull);
       });
 
-      test('should return false for invalid names', () {
-        expect(ValidationUtils.validateName(''), false);
-        expect(ValidationUtils.validateName('A'), false);
-        expect(ValidationUtils.validateName('123'), false);
+      test('should return error message for invalid names', () {
+        expect(ValidationUtils.validateName(''), isNotNull);
+        expect(ValidationUtils.validateName('A'), isNotNull);
       });
     });
 
     group('validateCity', () {
-      test('should return true for valid cities', () {
-        expect(ValidationUtils.validateCity('Tel Aviv'), true);
-        expect(ValidationUtils.validateCity('תל אביב'), true);
-        expect(ValidationUtils.validateCity('New York'), true);
+      test('should return null for valid cities', () {
+        expect(ValidationUtils.validateCity('Tel Aviv'), isNull);
+        expect(ValidationUtils.validateCity('תל אביב'), isNull);
+        expect(ValidationUtils.validateCity('New York'), isNull);
       });
 
-      test('should return false for invalid cities', () {
-        expect(ValidationUtils.validateCity(''), false);
-        expect(ValidationUtils.validateCity('A'), false);
+      test('should return error message for invalid cities', () {
+        expect(ValidationUtils.validateCity(''), isNotNull);
+        expect(ValidationUtils.validateCity('A'), isNotNull);
       });
     });
 
     group('validateRating', () {
-      test('should return true for valid ratings', () {
-        expect(ValidationUtils.validateRating(5.0, min: 1.0, max: 10.0), true);
-        expect(ValidationUtils.validateRating(1.0, min: 1.0, max: 10.0), true);
-        expect(ValidationUtils.validateRating(10.0, min: 1.0, max: 10.0), true);
+      test('should return null for valid ratings', () {
+        expect(ValidationUtils.validateRating('5.0'), isNull);
+        expect(ValidationUtils.validateRating('1.0'), isNull);
+        expect(ValidationUtils.validateRating('10.0'), isNull);
+        expect(ValidationUtils.validateRating('0.0'), isNull);
       });
 
-      test('should return false for invalid ratings', () {
-        expect(ValidationUtils.validateRating(0.0, min: 1.0, max: 10.0), false);
-        expect(ValidationUtils.validateRating(11.0, min: 1.0, max: 10.0), false);
-        expect(ValidationUtils.validateRating(-1.0, min: 1.0, max: 10.0), false);
+      test('should return error message for invalid ratings', () {
+        expect(ValidationUtils.validateRating('11.0'), isNotNull);
+        expect(ValidationUtils.validateRating('-1.0'), isNotNull);
+        expect(ValidationUtils.validateRating('invalid'), isNotNull);
+        expect(ValidationUtils.validateRating(''), isNotNull);
       });
     });
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/whatsapp_share_button.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
@@ -280,7 +281,7 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
         stream: gameStream,
         builder: (context, gameSnapshot) {
           if (gameSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const FuturisticLoadingState(message: 'טוען משחק...');
           }
 
           final game = gameSnapshot.data;

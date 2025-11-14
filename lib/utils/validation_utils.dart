@@ -58,9 +58,18 @@ class ValidationUtils {
     }
 
     // Allow Hebrew, English, numbers, spaces, and common punctuation
-    final nameRegex = RegExp(r'^[\u0590-\u05FFa-zA-Z0-9\s\-\'\.]+$');
-
-    if (!nameRegex.hasMatch(trimmed)) {
+    // Check if contains only valid characters
+    final hasInvalidChars = trimmed.split('').any((char) {
+      final code = char.codeUnitAt(0);
+      final isHebrew = (code >= 0x0590 && code <= 0x05FF);
+      final isEnglish = (code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A);
+      final isNumber = (code >= 0x30 && code <= 0x39);
+      final isSpace = code == 0x20;
+      final isPunctuation = ['-', '.', '\''].contains(char);
+      return !isHebrew && !isEnglish && !isNumber && !isSpace && !isPunctuation;
+    });
+    
+    if (hasInvalidChars) {
       return '$fieldName מכיל תווים לא תקינים';
     }
 
@@ -178,14 +187,14 @@ class ValidationUtils {
 
   static List<TextInputFormatter> nameInputFormatter() {
     return [
-      FilteringTextInputFormatter.allow(RegExp(r'[\u0590-\u05FFa-zA-Z0-9\s\-\'\.]')),
+      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\s\-\.]')),
       LengthLimitingTextInputFormatter(50),
     ];
   }
 
   static List<TextInputFormatter> cityInputFormatter() {
     return [
-      FilteringTextInputFormatter.allow(RegExp(r'[\u0590-\u05FFa-zA-Z\s\-\']')),
+      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\-]')),
       LengthLimitingTextInputFormatter(50),
     ];
   }

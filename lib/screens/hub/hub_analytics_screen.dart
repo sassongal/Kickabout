@@ -7,7 +7,6 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/enums/signup_status.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 
 /// Hub Analytics Screen - Dashboard עם סטטיסטיקות למנהלי הוב

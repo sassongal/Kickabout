@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/feed_repository.dart';
 import 'package:kickadoor/data/users_repository.dart';
@@ -11,22 +13,27 @@ import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';
 
 /// Feed screen - shows activity feed for a hub
-class FeedScreen extends ConsumerWidget {
+class FeedScreen extends ConsumerStatefulWidget {
   final String hubId;
 
   const FeedScreen({super.key, required this.hubId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  @override
+  Widget build(BuildContext context) {
     final feedRepo = ref.watch(feedRepositoryProvider);
     final usersRepo = ref.watch(usersRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
-    final feedStream = feedRepo.watchFeed(hubId);
+    final feedStream = feedRepo.watchFeed(widget.hubId);
 
     return AppScaffold(
       title: 'פיד פעילות',
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/hubs/$hubId/create-post'),
+        floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
         icon: const Icon(Icons.add),
         label: const Text('צור פוסט'),
       ),
@@ -34,32 +41,43 @@ class FeedScreen extends ConsumerWidget {
         stream: feedStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 5,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SkeletonLoader(height: 120),
+              ),
+            );
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('שגיאה: ${snapshot.error}'),
+            return FuturisticEmptyState(
+              icon: Icons.error_outline,
+              title: 'שגיאה בטעינת הפיד',
+              message: snapshot.error.toString(),
+              action: ElevatedButton.icon(
+                onPressed: () {
+                // Retry by rebuilding - trigger rebuild via key change
+                // For ConsumerWidget, we can't use setState, so we'll just show the error
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('נסה שוב'),
+              ),
             );
           }
 
           final posts = snapshot.data ?? [];
 
           if (posts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.feed, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('אין פעילות עדיין'),
-                  const SizedBox(height: 8),
-                  Text(
-                    'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
-                    style: TextStyle(color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+            return FuturisticEmptyState(
+              icon: Icons.feed,
+              title: 'אין פעילות עדיין',
+              message: 'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
+              action: ElevatedButton.icon(
+                onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
+                icon: const Icon(Icons.add),
+                label: const Text('צור פוסט'),
               ),
             );
           }

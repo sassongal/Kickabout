@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/hub_event.dart';
-import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
-import 'package:kickadoor/data/users_repository.dart';
 
 /// Hub Events Tab - shows events and allows registration
 class HubEventsTab extends ConsumerStatefulWidget {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
@@ -76,7 +77,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
         stream: hubsRepo.watchHub(widget.hubId),
         builder: (context, hubSnapshot) {
           if (hubSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const FuturisticLoadingState(message: 'טוען שחקנים...');
           }
 
           if (!hubSnapshot.hasData || hubSnapshot.data == null) {
@@ -327,7 +328,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                     contentPadding: const EdgeInsets.all(12),
                                     leading: CircleAvatar(
                                       radius: 30,
-                                      backgroundColor: FuturisticColors.primaryContainer,
+                                      backgroundColor: FuturisticColors.primary.withOpacity(0.1),
                                       backgroundImage: user.photoUrl != null
                                           ? CachedNetworkImageProvider(user.photoUrl!)
                                           : null,

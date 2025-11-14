@@ -1,10 +1,12 @@
-import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:kickadoor/config/env.dart';
+// Conditional import for Remote Config (not available on web)
+import 'package:firebase_remote_config/firebase_remote_config.dart'
+    if (dart.library.html) 'package:kickadoor/services/remote_config_service_stub.dart';
 
 /// Service for Firebase Remote Config
 class RemoteConfigService {
   static RemoteConfigService? _instance;
-  RemoteConfig? _remoteConfig;
+  dynamic _remoteConfig;
 
   RemoteConfigService._();
 
@@ -18,7 +20,7 @@ class RemoteConfigService {
     if (!Env.isFirebaseAvailable) return;
 
     try {
-      _remoteConfig = RemoteConfig.instance;
+      _remoteConfig = FirebaseRemoteConfig.instance;
       
       // Set default values
       await _remoteConfig!.setConfigSettings(RemoteConfigSettings(

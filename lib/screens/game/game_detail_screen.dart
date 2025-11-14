@@ -314,7 +314,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         final user = snapshot.data;
         if (user == null) {
           return const ListTile(
-            leading: CircularProgressIndicator(),
+            leading: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
             title: Text('טוען...'),
           );
         }
@@ -444,7 +448,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
         ),
       );
 

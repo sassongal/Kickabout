@@ -3,11 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
-import 'package:kickadoor/widgets/kicka_ball_logo.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/foundation.dart';
 
 /// Onboarding screen with tutorial walkthrough
 class OnboardingScreen extends StatefulWidget {

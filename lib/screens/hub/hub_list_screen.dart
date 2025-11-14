@@ -2,17 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/data/notifications_repository.dart';
 
 /// Hub list screen - lists hubs of user
-class HubListScreen extends ConsumerWidget {
+class HubListScreen extends ConsumerStatefulWidget {
   const HubListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HubListScreen> createState() => _HubListScreenState();
+}
+
+class _HubListScreenState extends ConsumerState<HubListScreen> {
+
+  @override
+  Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
 
@@ -83,18 +90,28 @@ class HubListScreen extends ConsumerWidget {
         stream: hubsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 5,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SkeletonLoader(height: 100),
+              ),
+            );
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('שגיאה: ${snapshot.error}'),
-                ],
+            return FuturisticEmptyState(
+              icon: Icons.error_outline,
+              title: 'שגיאה בטעינת הובים',
+              message: snapshot.error.toString(),
+              action: ElevatedButton.icon(
+                onPressed: () {
+                  // Retry by rebuilding
+                  setState(() {});
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('נסה שוב'),
               ),
             );
           }
@@ -102,28 +119,14 @@ class HubListScreen extends ConsumerWidget {
           final hubs = snapshot.data ?? [];
 
           if (hubs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.group_outlined,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'אין הובס',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'צור הוב חדש כדי להתחיל',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                ],
+            return FuturisticEmptyState(
+              icon: Icons.group_outlined,
+              title: 'אין הובס',
+              message: 'צור הוב חדש כדי להתחיל',
+              action: ElevatedButton.icon(
+                onPressed: () => context.push('/hubs/create'),
+                icon: const Icon(Icons.add),
+                label: const Text('צור הוב'),
               ),
             );
           }

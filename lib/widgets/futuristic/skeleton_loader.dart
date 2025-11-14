@@ -251,3 +251,26 @@ class SkeletonGridItem extends StatelessWidget {
   }
 }
 
+/// Simple skeleton loader widget
+class SkeletonLoader extends StatelessWidget {
+  final double? width;
+  final double? height;
+  final double borderRadius;
+
+  const SkeletonLoader({
+    super.key,
+    this.width,
+    required this.height,
+    this.borderRadius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonBox(
+      width: width,
+      height: height,
+      borderRadius: borderRadius,
+    );
+  }
+}
+

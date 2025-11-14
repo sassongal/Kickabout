@@ -12,7 +12,7 @@ class Env {
 
   /// Google Maps API Key
   /// Set this in your environment or config file
-  static String? googleMapsApiKey;
+  static const String googleMapsApiKey = 'AIzaSyDhe0LjsJYUlntwSE7ich3Id4lCOJNilcE';
 
   /// Custom API base URL (for your custom API integration)
   static String? customApiBaseUrl;

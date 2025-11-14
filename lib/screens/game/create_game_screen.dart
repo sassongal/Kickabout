@@ -9,8 +9,6 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
-import 'package:kickadoor/services/location_service.dart';
-import 'package:flutter/foundation.dart';
 
 /// Create game screen
 class CreateGameScreen extends ConsumerStatefulWidget {
@@ -361,7 +359,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.orange),
                         ),

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/location_service.dart';
 import 'package:kickadoor/services/hub_venue_matcher_service.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 
@@ -120,7 +121,7 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
         ),
       ],
       body: _isLoadingLocation
-          ? const Center(child: CircularProgressIndicator())
+          ? const FuturisticLoadingState(message: 'מאתר את המיקום שלך...')
           : _currentPosition == null
               ? Center(
                   child: Column(
@@ -167,17 +168,16 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                     // Results
                     Expanded(
                       child: _isLoading
-                          ? const Center(child: CircularProgressIndicator())
+                          ? const FuturisticLoadingState(message: 'מחפש הובים...')
                           : _nearbyHubs.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.search_off,
-                                          size: 64, color: Colors.grey),
-                                      const SizedBox(height: 16),
-                                      Text('לא נמצאו הובים ברדיוס של ${_radiusKm.toStringAsFixed(1)} ק"מ'),
-                                    ],
+                              ? FuturisticEmptyState(
+                                  icon: Icons.search_off,
+                                  title: 'לא נמצאו הובים',
+                                  message: 'לא נמצאו הובים ברדיוס של ${_radiusKm.toStringAsFixed(1)} ק"מ',
+                                  action: ElevatedButton.icon(
+                                    onPressed: _searchNearbyHubs,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('נסה שוב'),
                                   ),
                                 )
                               : ListView.builder(

@@ -7,7 +7,6 @@ import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// Game Calendar Screen - לוח שנה למשחקים
 class GameCalendarScreen extends ConsumerStatefulWidget {

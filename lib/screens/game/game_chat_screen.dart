@@ -150,7 +150,7 @@ class _ChatMessageBubble extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: isMe
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceVariant,
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -232,7 +232,7 @@ class _ChatInputField extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
               onSubmitted: onSend,

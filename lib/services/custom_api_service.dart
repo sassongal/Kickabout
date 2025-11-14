@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/venue.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Service for custom API integration
 /// This service allows you to integrate with your own API endpoints

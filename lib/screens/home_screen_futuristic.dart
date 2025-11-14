@@ -14,6 +14,7 @@ import 'package:kickadoor/widgets/futuristic/stats_dashboard.dart';
 import 'package:kickadoor/widgets/futuristic/player_recommendation_card.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/kicka_ball_logo.dart';
 import 'package:kickadoor/widgets/availability_toggle.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
@@ -764,7 +765,7 @@ class _UpcomingGamesSection extends ConsumerWidget {
       stream: hubsStream,
       builder: (context, hubsSnapshot) {
         if (hubsSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const FuturisticLoadingState(message: 'טוען הובים...');
         }
 
         final hubs = hubsSnapshot.data ?? [];
@@ -788,7 +789,14 @@ class _UpcomingGamesSection extends ConsumerWidget {
               future: _getUpcomingGames(hubIds, now, nextWeek),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 3,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SkeletonLoader(height: 100),
+                    ),
+                  );
                 }
 
                 final games = snapshot.data ?? [];

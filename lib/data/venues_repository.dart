@@ -138,7 +138,7 @@ class VenuesRepository {
     try {
       // Get geohash for the location
       final centerGeohash = GeohashUtils.encode(latitude, longitude, precision: 7);
-      final neighbors = GeohashUtils.getNeighbors(centerGeohash);
+      final neighbors = GeohashUtils.neighbors(centerGeohash);
 
       // Query venues in the geohash area
       final venues = <Venue>[];

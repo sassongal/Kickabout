@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/screens/social/feed_screen.dart';
@@ -10,7 +12,6 @@ import 'package:kickadoor/screens/social/hub_chat_screen.dart';
 import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
-import 'package:kickadoor/screens/hub/manage_roles_screen.dart';
 import 'package:kickadoor/screens/hub/hub_events_tab.dart';
 import 'package:kickadoor/screens/hub/hub_analytics_screen.dart';
 import 'package:kickadoor/services/analytics_service.dart';
@@ -57,22 +58,25 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         if (snapshot.connectionState == ConnectionState.waiting) {
           return AppScaffold(
             title: 'פרטי Hub',
-            body: const Center(child: CircularProgressIndicator()),
+            body: const FuturisticLoadingState(message: 'טוען פרטי Hub...'),
           );
         }
 
         if (snapshot.hasError) {
           return AppScaffold(
             title: 'פרטי Hub',
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('שגיאה: ${snapshot.error}'),
-                ],
-              ),
+            body: FuturisticEmptyState(
+              icon: Icons.error_outline,
+              title: 'שגיאה בטעינת Hub',
+              message: snapshot.error.toString(),
+              action: ElevatedButton.icon(
+              onPressed: () {
+                // Retry by rebuilding - trigger rebuild via key change
+                // For ConsumerWidget, we can't use setState, so we'll just show the error
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('נסה שוב'),
+            ),
             ),
           );
         }
@@ -301,35 +305,59 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
 }
 
 /// Games tab widget
-class _GamesTab extends ConsumerWidget {
+class _GamesTab extends ConsumerStatefulWidget {
   final String hubId;
 
   const _GamesTab({required this.hubId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_GamesTab> createState() => _GamesTabState();
+}
+
+class _GamesTabState extends ConsumerState<_GamesTab> {
+
+  @override
+  Widget build(BuildContext context) {
     final gamesRepo = ref.watch(gamesRepositoryProvider);
-    final gamesStream = gamesRepo.watchGamesByHub(hubId);
+    final gamesStream = gamesRepo.watchGamesByHub(widget.hubId);
 
     return StreamBuilder<List<Game>>(
       stream: gamesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 3,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: SkeletonLoader(height: 80),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return FuturisticEmptyState(
+            icon: Icons.error_outline,
+            title: 'שגיאה בטעינת משחקים',
+            message: snapshot.error.toString(),
+              action: ElevatedButton.icon(
+              onPressed: () {
+                // Retry by rebuilding - trigger rebuild via key change
+                // For ConsumerWidget, we can't use setState, so we'll just show the error
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('נסה שוב'),
+            ),
+          );
         }
 
         final games = snapshot.data ?? [];
 
         if (games.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.sports_soccer, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('אין משחקים עדיין'),
-              ],
-            ),
+          return FuturisticEmptyState(
+            icon: Icons.sports_soccer,
+            title: 'אין משחקים עדיין',
+            message: 'צור משחק חדש כדי להתחיל',
           );
         }
 
@@ -360,11 +388,13 @@ class _MembersTab extends ConsumerWidget {
   final String hubId;
   final Hub hub;
   final UsersRepository usersRepo;
+  final VoidCallback? onViewAll;
 
   const _MembersTab({
     required this.hubId,
     required this.hub,
     required this.usersRepo,
+    this.onViewAll,
   });
 
   @override
@@ -418,11 +448,10 @@ class _MembersTab extends ConsumerWidget {
         // Members list (limited to 10 in tab view)
         Expanded(
           child: hub.memberIds.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Text('אין חברים'),
-                  ),
+              ? FuturisticEmptyState(
+                  icon: Icons.people_outline,
+                  title: 'אין חברים',
+                  message: 'עדיין אין חברים ב-Hub זה',
                 )
               : _buildMembersList(context, ref, limit: 10),
         ),
@@ -438,10 +467,41 @@ class _MembersTab extends ConsumerWidget {
       future: usersRepo.getUsers(hub.memberIds),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 5,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: SkeletonLoader(height: 60),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return FuturisticEmptyState(
+            icon: Icons.error_outline,
+            title: 'שגיאה בטעינת חברים',
+            message: snapshot.error.toString(),
+              action: ElevatedButton.icon(
+              onPressed: () {
+                // Retry by rebuilding - trigger rebuild via key change
+                // For ConsumerWidget, we can't use setState, so we'll just show the error
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('נסה שוב'),
+            ),
+          );
         }
 
         final users = snapshot.data ?? [];
+        if (users.isEmpty) {
+          return FuturisticEmptyState(
+            icon: Icons.people_outline,
+            title: 'אין חברים',
+            message: 'עדיין אין חברים ב-Hub זה',
+          );
+        }
+
         final displayUsers = limit != null && users.length > limit
             ? users.take(limit).toList()
             : users;
