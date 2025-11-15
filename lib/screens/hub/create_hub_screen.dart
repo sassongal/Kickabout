@@ -131,10 +131,23 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         );
         context.pop();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Error creating hub: $e');
+      debugPrint('Stack trace: $stackTrace');
       if (mounted) {
+        String errorMessage = 'שגיאה ביצירת הוב';
+        if (e.toString().contains('permission-denied')) {
+          errorMessage = 'אין הרשאה ליצור הוב. נא לבדוק את הגדרות Firebase.';
+        } else if (e.toString().contains('unauthenticated')) {
+          errorMessage = 'נא להתחבר מחדש';
+        } else {
+          errorMessage = 'שגיאה ביצירת הוב: $e';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה ביצירת הוב: $e')),
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {

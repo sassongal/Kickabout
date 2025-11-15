@@ -1,7 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+    // ============================================
+    // Helper Functions
+    // ============================================
+    
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -12,37 +15,57 @@ service cloud.firestore {
     
     function isHubMember(hubId) {
       return isAuthenticated() && 
-        request.auth.uid in resource.data.memberIds;
+        exists(/databases/$(database)/documents/hubs/$(hubId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/hubs/$(hubId)).data.memberIds;
     }
     
     function isHubManager(hubId) {
-      return isAuthenticated() && (
-        resource.data.createdBy == request.auth.uid ||
-        resource.data.roles[request.auth.uid] == 'manager'
-      );
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/hubs/$(hubId)) &&
+        (
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.createdBy == request.auth.uid ||
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] == 'manager'
+        );
     }
     
     function isHubModerator(hubId) {
-      return isAuthenticated() && (
-        resource.data.createdBy == request.auth.uid ||
-        resource.data.roles[request.auth.uid] == 'manager' ||
-        resource.data.roles[request.auth.uid] == 'moderator'
-      );
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/hubs/$(hubId)) &&
+        (
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.createdBy == request.auth.uid ||
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] == 'manager' ||
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] == 'moderator'
+        );
     }
-
-    // Users
+    
+    // ============================================
+    // Users Collection: /users/{userId}
+    // ============================================
     match /users/{userId} {
+      // Anyone authenticated can read user profiles
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
+      
+      // Only the user themselves can create/update/delete their own profile
+      allow create: if isAuthenticated() && isOwner(userId) &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['uid', 'name', 'email', 'createdAt']) &&
+        request.resource.data.uid == userId &&
+        request.resource.data.createdAt is timestamp;
+      
+      allow update: if isAuthenticated() && isOwner(userId) &&
+        // Prevent changing uid
+        request.resource.data.uid == resource.data.uid &&
+        // Prevent changing createdAt
+        request.resource.data.createdAt == resource.data.createdAt;
+      
       allow delete: if isAuthenticated() && isOwner(userId);
       
-      // FCM Tokens
+      // FCM Tokens: /users/{userId}/fcm_tokens/{tokenId}
       match /fcm_tokens/{tokenId} {
         allow read, write: if isOwner(userId);
       }
       
-      // Following/Followers
+      // Following/Followers: /users/{userId}/following/{followingId}
       match /following/{followingId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId);
@@ -53,95 +76,182 @@ service cloud.firestore {
         allow write: if isOwner(userId);
       }
       
-      // Gamification
+      // Gamification: /users/{userId}/gamification/{doc}
       match /gamification/{doc} {
         allow read: if isAuthenticated();
-        allow write: if false; // Only server-side updates
+        allow write: if false; // Only server-side updates (Cloud Functions)
       }
     }
 
-    // Hubs
+    // ============================================
+    // Hubs Collection: /hubs/{hubId}
+    // ============================================
     match /hubs/{hubId} {
+      // Anyone authenticated can read hubs
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      
+      // Anyone authenticated can create a hub
+      allow create: if isAuthenticated() &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['hubId', 'name', 'createdBy', 'createdAt']) &&
+        request.resource.data.hubId == hubId &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.createdAt is timestamp &&
+        // Validate memberIds array
+        request.resource.data.memberIds is list &&
+        request.auth.uid in request.resource.data.memberIds;
+      
+      // Only managers can update hub details
+      // Moderators can only update memberIds and roles
       allow update: if isAuthenticated() && (
         isHubManager(hubId) ||
-        (request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['memberIds', 'roles']) && isHubModerator(hubId))
-      );
+        (
+          isHubModerator(hubId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'roles'])
+        )
+      ) &&
+        // Prevent changing hubId or createdBy
+        request.resource.data.hubId == resource.data.hubId &&
+        request.resource.data.createdBy == resource.data.createdBy;
+      
+      // Only managers can delete hubs
       allow delete: if isAuthenticated() && isHubManager(hubId);
       
-      // Feed
+      // Feed Posts: /hubs/{hubId}/feed/posts/items/{postId}
       match /feed/posts/items/{postId} {
+        // Only hub members can read posts
         allow read: if isAuthenticated() && isHubMember(hubId);
-        allow create: if isAuthenticated() && isHubMember(hubId);
-        allow update, delete: if isAuthenticated() && (
+        
+        // Only hub members can create posts
+        allow create: if isAuthenticated() && isHubMember(hubId) &&
+          // Validate required fields
+          request.resource.data.keys().hasAll(['postId', 'hubId', 'authorId', 'type', 'createdAt']) &&
+          request.resource.data.postId == postId &&
+          request.resource.data.hubId == hubId &&
+          request.resource.data.authorId == request.auth.uid &&
+          request.resource.data.createdAt is timestamp;
+        
+        // Only post author or moderators can update/delete
+        allow update, delete: if isAuthenticated() && isHubMember(hubId) && (
           resource.data.authorId == request.auth.uid ||
           isHubModerator(hubId)
         );
         
-        // Comments
+        // Comments: /hubs/{hubId}/feed/posts/items/{postId}/comments/{commentId}
         match /comments/{commentId} {
           allow read: if isAuthenticated() && isHubMember(hubId);
-          allow create: if isAuthenticated() && isHubMember(hubId);
-          allow update, delete: if isAuthenticated() && (
+          
+          allow create: if isAuthenticated() && isHubMember(hubId) &&
+            // Validate required fields
+            request.resource.data.keys().hasAll(['commentId', 'postId', 'hubId', 'authorId', 'text', 'createdAt']) &&
+            request.resource.data.commentId == commentId &&
+            request.resource.data.postId == postId &&
+            request.resource.data.hubId == hubId &&
+            request.resource.data.authorId == request.auth.uid &&
+            request.resource.data.createdAt is timestamp;
+          
+          allow update, delete: if isAuthenticated() && isHubMember(hubId) && (
             resource.data.authorId == request.auth.uid ||
             isHubModerator(hubId)
           );
         }
       }
       
-      // Chat
+      // Chat Messages: /hubs/{hubId}/chat/messages/{messageId}
       match /chat/messages/{messageId} {
         allow read: if isAuthenticated() && isHubMember(hubId);
-        allow create: if isAuthenticated() && isHubMember(hubId);
-        allow update, delete: if isAuthenticated() && (
+        
+        allow create: if isAuthenticated() && isHubMember(hubId) &&
+          // Validate required fields
+          request.resource.data.keys().hasAll(['messageId', 'hubId', 'authorId', 'text', 'createdAt']) &&
+          request.resource.data.messageId == messageId &&
+          request.resource.data.hubId == hubId &&
+          request.resource.data.authorId == request.auth.uid &&
+          request.resource.data.createdAt is timestamp;
+        
+        allow update, delete: if isAuthenticated() && isHubMember(hubId) && (
           resource.data.authorId == request.auth.uid ||
           isHubModerator(hubId)
         );
       }
     }
 
-    // Games
+    // ============================================
+    // Games Collection: /games/{gameId}
+    // ============================================
     match /games/{gameId} {
+      // Anyone authenticated can read games
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      
+      // Only hub members can create games
+      allow create: if isAuthenticated() &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['gameId', 'createdBy', 'hubId', 'gameDate', 'createdAt', 'updatedAt']) &&
+        request.resource.data.gameId == gameId &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.gameDate is timestamp &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        // Must be a member of the hub
+        isHubMember(request.resource.data.hubId);
+      
+      // Only game creator or hub manager can update
       allow update: if isAuthenticated() && (
         resource.data.createdBy == request.auth.uid ||
         isHubManager(resource.data.hubId)
-      );
+      ) &&
+        // Prevent changing gameId, createdBy, or hubId
+        request.resource.data.gameId == resource.data.gameId &&
+        request.resource.data.createdBy == resource.data.createdBy &&
+        request.resource.data.hubId == resource.data.hubId &&
+        // updatedAt must be updated
+        request.resource.data.updatedAt is timestamp;
+      
+      // Only game creator or hub manager can delete
       allow delete: if isAuthenticated() && (
         resource.data.createdBy == request.auth.uid ||
         isHubManager(resource.data.hubId)
       );
       
-      // Signups
+      // Signups: /games/{gameId}/signups/{userId}
       match /signups/{userId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && isOwner(userId);
+        
+        // Users can only create/update their own signup
+        allow create: if isAuthenticated() && isOwner(userId) &&
+          // Validate required fields
+          request.resource.data.keys().hasAll(['playerId', 'signedUpAt']) &&
+          request.resource.data.playerId == userId &&
+          request.resource.data.signedUpAt is timestamp;
+        
         allow update: if isAuthenticated() && (
           isOwner(userId) ||
           isHubManager(resource.data.hubId)
         );
+        
         allow delete: if isAuthenticated() && (
           isOwner(userId) ||
           isHubManager(resource.data.hubId)
         );
       }
       
-      // Teams
+      // Teams: /games/{gameId}/teams/{teamId}
       match /teams/{teamId} {
         allow read: if isAuthenticated();
+        
+        // Only game creator or hub manager can manage teams
         allow write: if isAuthenticated() && (
           get(/databases/$(database)/documents/games/$(gameId)).data.createdBy == request.auth.uid ||
           isHubManager(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
         );
       }
       
-      // Events
+      // Events: /games/{gameId}/events/{eventId}
       match /events/{eventId} {
         allow read: if isAuthenticated();
+        
         allow create: if isAuthenticated();
+        
         allow update, delete: if isAuthenticated() && (
           resource.data.playerId == request.auth.uid ||
           isHubManager(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
@@ -149,42 +259,110 @@ service cloud.firestore {
       }
     }
 
-    // Ratings
+    // ============================================
+    // Ratings Collection: /ratings/{userId}/history/{ratingId}
+    // ============================================
     match /ratings/{userId}/history/{ratingId} {
+      // Anyone authenticated can read ratings
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if false; // Ratings are immutable
+      
+      // Anyone authenticated can create ratings
+      allow create: if isAuthenticated() &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['ratingId', 'gameId', 'playerId', 'submittedBy', 'submittedAt']) &&
+        request.resource.data.ratingId == ratingId &&
+        request.resource.data.playerId == userId &&
+        request.resource.data.submittedBy == request.auth.uid &&
+        request.resource.data.submittedAt is timestamp;
+      
+      // Ratings are immutable (only server can update/delete)
+      allow update, delete: if false;
     }
 
-    // Notifications
+    // ============================================
+    // Notifications Collection: /notifications/{notificationId}
+    // ============================================
     match /notifications/{notificationId} {
+      // Users can only read their own notifications
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if false; // Only server-side
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Only server can create notifications
+      allow create: if false;
+      
+      // Users can only update/delete their own notifications
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // Private Messages
+    // ============================================
+    // Private Messages Collection: /private_messages/{conversationId}
+    // ============================================
     match /private_messages/{conversationId} {
+      // Only participants can read
       allow read: if isAuthenticated() && 
         request.auth.uid in resource.data.participantIds;
+      
+      // Only participants can create conversations
       allow create: if isAuthenticated() && 
-        request.auth.uid in request.resource.data.participantIds;
+        request.auth.uid in request.resource.data.participantIds &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['participantIds']) &&
+        request.resource.data.participantIds is list;
+      
+      // Only participants can update
       allow update: if isAuthenticated() && 
         request.auth.uid in resource.data.participantIds;
+      
+      // Only participants can delete
       allow delete: if isAuthenticated() && 
         request.auth.uid in resource.data.participantIds;
       
-      // Messages
+      // Messages: /private_messages/{conversationId}/messages/{messageId}
       match /messages/{messageId} {
+        // Only participants can read
         allow read: if isAuthenticated() && 
           request.auth.uid in get(/databases/$(database)/documents/private_messages/$(conversationId)).data.participantIds;
+        
+        // Only participants can create messages
         allow create: if isAuthenticated() && 
           request.resource.data.senderId == request.auth.uid &&
-          request.auth.uid in get(/databases/$(database)/documents/private_messages/$(conversationId)).data.participantIds;
-        allow update, delete: if false; // Messages are immutable
+          request.auth.uid in get(/databases/$(database)/documents/private_messages/$(conversationId)).data.participantIds &&
+          // Validate required fields
+          request.resource.data.keys().hasAll(['messageId', 'senderId', 'text', 'createdAt']) &&
+          request.resource.data.messageId == messageId &&
+          request.resource.data.createdAt is timestamp;
+        
+        // Messages are immutable
+        allow update, delete: if false;
       }
+    }
+
+    // ============================================
+    // Venues Collection: /venues/{venueId}
+    // ============================================
+    match /venues/{venueId} {
+      // Anyone authenticated can read venues
+      allow read: if isAuthenticated();
+      
+      // Only hub managers can create venues
+      allow create: if isAuthenticated() &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['venueId', 'hubId', 'name', 'location', 'createdAt', 'updatedAt']) &&
+        request.resource.data.venueId == venueId &&
+        request.resource.data.location is geopoint &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        // Must be manager of the hub
+        isHubManager(request.resource.data.hubId);
+      
+      // Only hub managers can update/delete venues
+      allow update: if isAuthenticated() && isHubManager(resource.data.hubId) &&
+        // Prevent changing venueId or hubId
+        request.resource.data.venueId == resource.data.venueId &&
+        request.resource.data.hubId == resource.data.hubId &&
+        // updatedAt must be updated
+        request.resource.data.updatedAt is timestamp;
+      
+      allow delete: if isAuthenticated() && isHubManager(resource.data.hubId);
     }
   }
 }
-

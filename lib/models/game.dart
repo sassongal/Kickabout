@@ -8,6 +8,7 @@ part 'game.freezed.dart';
 part 'game.g.dart';
 
 /// Game model matching Firestore schema: /games/{gameId}
+/// Denormalized fields: createdByName, createdByPhotoUrl, hubName for efficient display
 @freezed
 class Game with _$Game {
   const factory Game({
@@ -18,7 +19,7 @@ class Game with _$Game {
     String? location, // Legacy text location (kept for backward compatibility)
     @GeoPointConverter() GeoPoint? locationPoint, // New geographic location
     String? geohash,
-    String? venueId, // Reference to venue
+    String? venueId, // Reference to venue (not denormalized - use venueId to fetch)
     @Default(2) int teamCount, // 2, 3, or 4
     @GameStatusConverter() @Default(GameStatus.teamSelection) GameStatus status,
     @Default([]) List<String> photoUrls, // URLs of game photos
@@ -29,6 +30,10 @@ class Game with _$Game {
     String? parentGameId, // ID of the original recurring game (for child games)
     String? recurrencePattern, // 'weekly', 'biweekly', 'monthly'
     @TimestampConverter() DateTime? recurrenceEndDate, // When to stop creating recurring games
+    // Denormalized fields for efficient display (no need to fetch user/hub)
+    String? createdByName, // Denormalized from users/{createdBy}.name
+    String? createdByPhotoUrl, // Denormalized from users/{createdBy}.photoUrl
+    String? hubName, // Denormalized from hubs/{hubId}.name (optional, for feed posts)
   }) = _Game;
 
   factory Game.fromJson(Map<String, dynamic> json) => _$GameFromJson(json);

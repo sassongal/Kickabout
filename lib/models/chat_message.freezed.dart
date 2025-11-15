@@ -26,7 +26,13 @@ mixin _$ChatMessage {
   String get text => throw _privateConstructorUsedError;
   List<String> get readBy => throw _privateConstructorUsedError;
   @TimestampConverter()
-  DateTime get createdAt => throw _privateConstructorUsedError;
+  DateTime get createdAt =>
+      throw _privateConstructorUsedError; // Denormalized fields for efficient display (no need to fetch user)
+  String? get senderId =>
+      throw _privateConstructorUsedError; // Alias for authorId (used by Functions)
+  String? get senderName =>
+      throw _privateConstructorUsedError; // Denormalized from users/{authorId}.name
+  String? get senderPhotoUrl => throw _privateConstructorUsedError;
 
   /// Serializes this ChatMessage to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,7 +56,10 @@ abstract class $ChatMessageCopyWith<$Res> {
       String authorId,
       String text,
       List<String> readBy,
-      @TimestampConverter() DateTime createdAt});
+      @TimestampConverter() DateTime createdAt,
+      String? senderId,
+      String? senderName,
+      String? senderPhotoUrl});
 }
 
 /// @nodoc
@@ -74,6 +83,9 @@ class _$ChatMessageCopyWithImpl<$Res, $Val extends ChatMessage>
     Object? text = null,
     Object? readBy = null,
     Object? createdAt = null,
+    Object? senderId = freezed,
+    Object? senderName = freezed,
+    Object? senderPhotoUrl = freezed,
   }) {
     return _then(_value.copyWith(
       messageId: null == messageId
@@ -100,6 +112,18 @@ class _$ChatMessageCopyWithImpl<$Res, $Val extends ChatMessage>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      senderId: freezed == senderId
+          ? _value.senderId
+          : senderId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      senderName: freezed == senderName
+          ? _value.senderName
+          : senderName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      senderPhotoUrl: freezed == senderPhotoUrl
+          ? _value.senderPhotoUrl
+          : senderPhotoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -118,7 +142,10 @@ abstract class _$$ChatMessageImplCopyWith<$Res>
       String authorId,
       String text,
       List<String> readBy,
-      @TimestampConverter() DateTime createdAt});
+      @TimestampConverter() DateTime createdAt,
+      String? senderId,
+      String? senderName,
+      String? senderPhotoUrl});
 }
 
 /// @nodoc
@@ -140,6 +167,9 @@ class __$$ChatMessageImplCopyWithImpl<$Res>
     Object? text = null,
     Object? readBy = null,
     Object? createdAt = null,
+    Object? senderId = freezed,
+    Object? senderName = freezed,
+    Object? senderPhotoUrl = freezed,
   }) {
     return _then(_$ChatMessageImpl(
       messageId: null == messageId
@@ -166,6 +196,18 @@ class __$$ChatMessageImplCopyWithImpl<$Res>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      senderId: freezed == senderId
+          ? _value.senderId
+          : senderId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      senderName: freezed == senderName
+          ? _value.senderName
+          : senderName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      senderPhotoUrl: freezed == senderPhotoUrl
+          ? _value.senderPhotoUrl
+          : senderPhotoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -179,7 +221,10 @@ class _$ChatMessageImpl implements _ChatMessage {
       required this.authorId,
       required this.text,
       final List<String> readBy = const [],
-      @TimestampConverter() required this.createdAt})
+      @TimestampConverter() required this.createdAt,
+      this.senderId,
+      this.senderName,
+      this.senderPhotoUrl})
       : _readBy = readBy;
 
   factory _$ChatMessageImpl.fromJson(Map<String, dynamic> json) =>
@@ -205,10 +250,19 @@ class _$ChatMessageImpl implements _ChatMessage {
   @override
   @TimestampConverter()
   final DateTime createdAt;
+// Denormalized fields for efficient display (no need to fetch user)
+  @override
+  final String? senderId;
+// Alias for authorId (used by Functions)
+  @override
+  final String? senderName;
+// Denormalized from users/{authorId}.name
+  @override
+  final String? senderPhotoUrl;
 
   @override
   String toString() {
-    return 'ChatMessage(messageId: $messageId, hubId: $hubId, authorId: $authorId, text: $text, readBy: $readBy, createdAt: $createdAt)';
+    return 'ChatMessage(messageId: $messageId, hubId: $hubId, authorId: $authorId, text: $text, readBy: $readBy, createdAt: $createdAt, senderId: $senderId, senderName: $senderName, senderPhotoUrl: $senderPhotoUrl)';
   }
 
   @override
@@ -224,13 +278,28 @@ class _$ChatMessageImpl implements _ChatMessage {
             (identical(other.text, text) || other.text == text) &&
             const DeepCollectionEquality().equals(other._readBy, _readBy) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.senderId, senderId) ||
+                other.senderId == senderId) &&
+            (identical(other.senderName, senderName) ||
+                other.senderName == senderName) &&
+            (identical(other.senderPhotoUrl, senderPhotoUrl) ||
+                other.senderPhotoUrl == senderPhotoUrl));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, messageId, hubId, authorId, text,
-      const DeepCollectionEquality().hash(_readBy), createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      messageId,
+      hubId,
+      authorId,
+      text,
+      const DeepCollectionEquality().hash(_readBy),
+      createdAt,
+      senderId,
+      senderName,
+      senderPhotoUrl);
 
   /// Create a copy of ChatMessage
   /// with the given fields replaced by the non-null parameter values.
@@ -250,13 +319,15 @@ class _$ChatMessageImpl implements _ChatMessage {
 
 abstract class _ChatMessage implements ChatMessage {
   const factory _ChatMessage(
-          {required final String messageId,
-          required final String hubId,
-          required final String authorId,
-          required final String text,
-          final List<String> readBy,
-          @TimestampConverter() required final DateTime createdAt}) =
-      _$ChatMessageImpl;
+      {required final String messageId,
+      required final String hubId,
+      required final String authorId,
+      required final String text,
+      final List<String> readBy,
+      @TimestampConverter() required final DateTime createdAt,
+      final String? senderId,
+      final String? senderName,
+      final String? senderPhotoUrl}) = _$ChatMessageImpl;
 
   factory _ChatMessage.fromJson(Map<String, dynamic> json) =
       _$ChatMessageImpl.fromJson;
@@ -273,7 +344,14 @@ abstract class _ChatMessage implements ChatMessage {
   List<String> get readBy;
   @override
   @TimestampConverter()
-  DateTime get createdAt;
+  DateTime
+      get createdAt; // Denormalized fields for efficient display (no need to fetch user)
+  @override
+  String? get senderId; // Alias for authorId (used by Functions)
+  @override
+  String? get senderName; // Denormalized from users/{authorId}.name
+  @override
+  String? get senderPhotoUrl;
 
   /// Create a copy of ChatMessage
   /// with the given fields replaced by the non-null parameter values.

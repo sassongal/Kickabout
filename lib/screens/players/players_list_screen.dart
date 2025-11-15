@@ -7,8 +7,8 @@ import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/services/location_service.dart';
 
@@ -132,7 +132,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: 5,
-                    itemBuilder: (context, index) => const SkeletonPlayerCard(),
+                    itemBuilder: (context, index) => SkeletonPlayerCard(),
                   );
                 }
 

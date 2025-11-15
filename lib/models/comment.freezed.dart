@@ -27,7 +27,11 @@ mixin _$Comment {
   String get text => throw _privateConstructorUsedError;
   List<String> get likes => throw _privateConstructorUsedError;
   @TimestampConverter()
-  DateTime get createdAt => throw _privateConstructorUsedError;
+  DateTime get createdAt =>
+      throw _privateConstructorUsedError; // Denormalized fields for efficient display (no need to fetch user)
+  String? get authorName =>
+      throw _privateConstructorUsedError; // Denormalized from users/{authorId}.name
+  String? get authorPhotoUrl => throw _privateConstructorUsedError;
 
   /// Serializes this Comment to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,7 +54,9 @@ abstract class $CommentCopyWith<$Res> {
       String authorId,
       String text,
       List<String> likes,
-      @TimestampConverter() DateTime createdAt});
+      @TimestampConverter() DateTime createdAt,
+      String? authorName,
+      String? authorPhotoUrl});
 }
 
 /// @nodoc
@@ -75,6 +81,8 @@ class _$CommentCopyWithImpl<$Res, $Val extends Comment>
     Object? text = null,
     Object? likes = null,
     Object? createdAt = null,
+    Object? authorName = freezed,
+    Object? authorPhotoUrl = freezed,
   }) {
     return _then(_value.copyWith(
       commentId: null == commentId
@@ -105,6 +113,14 @@ class _$CommentCopyWithImpl<$Res, $Val extends Comment>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      authorName: freezed == authorName
+          ? _value.authorName
+          : authorName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      authorPhotoUrl: freezed == authorPhotoUrl
+          ? _value.authorPhotoUrl
+          : authorPhotoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -123,7 +139,9 @@ abstract class _$$CommentImplCopyWith<$Res> implements $CommentCopyWith<$Res> {
       String authorId,
       String text,
       List<String> likes,
-      @TimestampConverter() DateTime createdAt});
+      @TimestampConverter() DateTime createdAt,
+      String? authorName,
+      String? authorPhotoUrl});
 }
 
 /// @nodoc
@@ -146,6 +164,8 @@ class __$$CommentImplCopyWithImpl<$Res>
     Object? text = null,
     Object? likes = null,
     Object? createdAt = null,
+    Object? authorName = freezed,
+    Object? authorPhotoUrl = freezed,
   }) {
     return _then(_$CommentImpl(
       commentId: null == commentId
@@ -176,6 +196,14 @@ class __$$CommentImplCopyWithImpl<$Res>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      authorName: freezed == authorName
+          ? _value.authorName
+          : authorName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      authorPhotoUrl: freezed == authorPhotoUrl
+          ? _value.authorPhotoUrl
+          : authorPhotoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -190,7 +218,9 @@ class _$CommentImpl implements _Comment {
       required this.authorId,
       required this.text,
       final List<String> likes = const [],
-      @TimestampConverter() required this.createdAt})
+      @TimestampConverter() required this.createdAt,
+      this.authorName,
+      this.authorPhotoUrl})
       : _likes = likes;
 
   factory _$CommentImpl.fromJson(Map<String, dynamic> json) =>
@@ -218,10 +248,16 @@ class _$CommentImpl implements _Comment {
   @override
   @TimestampConverter()
   final DateTime createdAt;
+// Denormalized fields for efficient display (no need to fetch user)
+  @override
+  final String? authorName;
+// Denormalized from users/{authorId}.name
+  @override
+  final String? authorPhotoUrl;
 
   @override
   String toString() {
-    return 'Comment(commentId: $commentId, postId: $postId, hubId: $hubId, authorId: $authorId, text: $text, likes: $likes, createdAt: $createdAt)';
+    return 'Comment(commentId: $commentId, postId: $postId, hubId: $hubId, authorId: $authorId, text: $text, likes: $likes, createdAt: $createdAt, authorName: $authorName, authorPhotoUrl: $authorPhotoUrl)';
   }
 
   @override
@@ -238,13 +274,26 @@ class _$CommentImpl implements _Comment {
             (identical(other.text, text) || other.text == text) &&
             const DeepCollectionEquality().equals(other._likes, _likes) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.authorName, authorName) ||
+                other.authorName == authorName) &&
+            (identical(other.authorPhotoUrl, authorPhotoUrl) ||
+                other.authorPhotoUrl == authorPhotoUrl));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, commentId, postId, hubId,
-      authorId, text, const DeepCollectionEquality().hash(_likes), createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      commentId,
+      postId,
+      hubId,
+      authorId,
+      text,
+      const DeepCollectionEquality().hash(_likes),
+      createdAt,
+      authorName,
+      authorPhotoUrl);
 
   /// Create a copy of Comment
   /// with the given fields replaced by the non-null parameter values.
@@ -270,7 +319,9 @@ abstract class _Comment implements Comment {
       required final String authorId,
       required final String text,
       final List<String> likes,
-      @TimestampConverter() required final DateTime createdAt}) = _$CommentImpl;
+      @TimestampConverter() required final DateTime createdAt,
+      final String? authorName,
+      final String? authorPhotoUrl}) = _$CommentImpl;
 
   factory _Comment.fromJson(Map<String, dynamic> json) = _$CommentImpl.fromJson;
 
@@ -288,7 +339,12 @@ abstract class _Comment implements Comment {
   List<String> get likes;
   @override
   @TimestampConverter()
-  DateTime get createdAt;
+  DateTime
+      get createdAt; // Denormalized fields for efficient display (no need to fetch user)
+  @override
+  String? get authorName; // Denormalized from users/{authorId}.name
+  @override
+  String? get authorPhotoUrl;
 
   /// Create a copy of Comment
   /// with the given fields replaced by the non-null parameter values.

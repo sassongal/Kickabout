@@ -32,6 +32,9 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       recurrencePattern: json['recurrencePattern'] as String?,
       recurrenceEndDate: _$JsonConverterFromJson<Object, DateTime>(
           json['recurrenceEndDate'], const TimestampConverter().fromJson),
+      createdByName: json['createdByName'] as String?,
+      createdByPhotoUrl: json['createdByPhotoUrl'] as String?,
+      hubName: json['hubName'] as String?,
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -54,6 +57,9 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'recurrencePattern': instance.recurrencePattern,
       'recurrenceEndDate': _$JsonConverterToJson<Object, DateTime>(
           instance.recurrenceEndDate, const TimestampConverter().toJson),
+      'createdByName': instance.createdByName,
+      'createdByPhotoUrl': instance.createdByPhotoUrl,
+      'hubName': instance.hubName,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

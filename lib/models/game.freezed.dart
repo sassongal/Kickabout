@@ -32,7 +32,7 @@ mixin _$Game {
       throw _privateConstructorUsedError; // New geographic location
   String? get geohash => throw _privateConstructorUsedError;
   String? get venueId =>
-      throw _privateConstructorUsedError; // Reference to venue
+      throw _privateConstructorUsedError; // Reference to venue (not denormalized - use venueId to fetch)
   int get teamCount => throw _privateConstructorUsedError; // 2, 3, or 4
   @GameStatusConverter()
   GameStatus get status => throw _privateConstructorUsedError;
@@ -50,7 +50,14 @@ mixin _$Game {
   String? get recurrencePattern =>
       throw _privateConstructorUsedError; // 'weekly', 'biweekly', 'monthly'
   @TimestampConverter()
-  DateTime? get recurrenceEndDate => throw _privateConstructorUsedError;
+  DateTime? get recurrenceEndDate =>
+      throw _privateConstructorUsedError; // When to stop creating recurring games
+// Denormalized fields for efficient display (no need to fetch user/hub)
+  String? get createdByName =>
+      throw _privateConstructorUsedError; // Denormalized from users/{createdBy}.name
+  String? get createdByPhotoUrl =>
+      throw _privateConstructorUsedError; // Denormalized from users/{createdBy}.photoUrl
+  String? get hubName => throw _privateConstructorUsedError;
 
   /// Serializes this Game to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -83,7 +90,10 @@ abstract class $GameCopyWith<$Res> {
       bool isRecurring,
       String? parentGameId,
       String? recurrencePattern,
-      @TimestampConverter() DateTime? recurrenceEndDate});
+      @TimestampConverter() DateTime? recurrenceEndDate,
+      String? createdByName,
+      String? createdByPhotoUrl,
+      String? hubName});
 }
 
 /// @nodoc
@@ -118,6 +128,9 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? parentGameId = freezed,
     Object? recurrencePattern = freezed,
     Object? recurrenceEndDate = freezed,
+    Object? createdByName = freezed,
+    Object? createdByPhotoUrl = freezed,
+    Object? hubName = freezed,
   }) {
     return _then(_value.copyWith(
       gameId: null == gameId
@@ -188,6 +201,18 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.recurrenceEndDate
           : recurrenceEndDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      createdByName: freezed == createdByName
+          ? _value.createdByName
+          : createdByName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdByPhotoUrl: freezed == createdByPhotoUrl
+          ? _value.createdByPhotoUrl
+          : createdByPhotoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubName: freezed == hubName
+          ? _value.hubName
+          : hubName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -216,7 +241,10 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       bool isRecurring,
       String? parentGameId,
       String? recurrencePattern,
-      @TimestampConverter() DateTime? recurrenceEndDate});
+      @TimestampConverter() DateTime? recurrenceEndDate,
+      String? createdByName,
+      String? createdByPhotoUrl,
+      String? hubName});
 }
 
 /// @nodoc
@@ -248,6 +276,9 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? parentGameId = freezed,
     Object? recurrencePattern = freezed,
     Object? recurrenceEndDate = freezed,
+    Object? createdByName = freezed,
+    Object? createdByPhotoUrl = freezed,
+    Object? hubName = freezed,
   }) {
     return _then(_$GameImpl(
       gameId: null == gameId
@@ -318,6 +349,18 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.recurrenceEndDate
           : recurrenceEndDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      createdByName: freezed == createdByName
+          ? _value.createdByName
+          : createdByName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdByPhotoUrl: freezed == createdByPhotoUrl
+          ? _value.createdByPhotoUrl
+          : createdByPhotoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubName: freezed == hubName
+          ? _value.hubName
+          : hubName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -342,7 +385,10 @@ class _$GameImpl implements _Game {
       this.isRecurring = false,
       this.parentGameId,
       this.recurrencePattern,
-      @TimestampConverter() this.recurrenceEndDate})
+      @TimestampConverter() this.recurrenceEndDate,
+      this.createdByName,
+      this.createdByPhotoUrl,
+      this.hubName})
       : _photoUrls = photoUrls;
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
@@ -368,7 +414,7 @@ class _$GameImpl implements _Game {
   final String? geohash;
   @override
   final String? venueId;
-// Reference to venue
+// Reference to venue (not denormalized - use venueId to fetch)
   @override
   @JsonKey()
   final int teamCount;
@@ -407,10 +453,20 @@ class _$GameImpl implements _Game {
   @override
   @TimestampConverter()
   final DateTime? recurrenceEndDate;
+// When to stop creating recurring games
+// Denormalized fields for efficient display (no need to fetch user/hub)
+  @override
+  final String? createdByName;
+// Denormalized from users/{createdBy}.name
+  @override
+  final String? createdByPhotoUrl;
+// Denormalized from users/{createdBy}.photoUrl
+  @override
+  final String? hubName;
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName)';
   }
 
   @override
@@ -446,30 +502,39 @@ class _$GameImpl implements _Game {
             (identical(other.recurrencePattern, recurrencePattern) ||
                 other.recurrencePattern == recurrencePattern) &&
             (identical(other.recurrenceEndDate, recurrenceEndDate) ||
-                other.recurrenceEndDate == recurrenceEndDate));
+                other.recurrenceEndDate == recurrenceEndDate) &&
+            (identical(other.createdByName, createdByName) ||
+                other.createdByName == createdByName) &&
+            (identical(other.createdByPhotoUrl, createdByPhotoUrl) ||
+                other.createdByPhotoUrl == createdByPhotoUrl) &&
+            (identical(other.hubName, hubName) || other.hubName == hubName));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      gameId,
-      createdBy,
-      hubId,
-      gameDate,
-      location,
-      locationPoint,
-      geohash,
-      venueId,
-      teamCount,
-      status,
-      const DeepCollectionEquality().hash(_photoUrls),
-      createdAt,
-      updatedAt,
-      isRecurring,
-      parentGameId,
-      recurrencePattern,
-      recurrenceEndDate);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        gameId,
+        createdBy,
+        hubId,
+        gameDate,
+        location,
+        locationPoint,
+        geohash,
+        venueId,
+        teamCount,
+        status,
+        const DeepCollectionEquality().hash(_photoUrls),
+        createdAt,
+        updatedAt,
+        isRecurring,
+        parentGameId,
+        recurrencePattern,
+        recurrenceEndDate,
+        createdByName,
+        createdByPhotoUrl,
+        hubName
+      ]);
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.
@@ -505,7 +570,10 @@ abstract class _Game implements Game {
       final bool isRecurring,
       final String? parentGameId,
       final String? recurrencePattern,
-      @TimestampConverter() final DateTime? recurrenceEndDate}) = _$GameImpl;
+      @TimestampConverter() final DateTime? recurrenceEndDate,
+      final String? createdByName,
+      final String? createdByPhotoUrl,
+      final String? hubName}) = _$GameImpl;
 
   factory _Game.fromJson(Map<String, dynamic> json) = _$GameImpl.fromJson;
 
@@ -527,7 +595,8 @@ abstract class _Game implements Game {
   @override
   String? get geohash;
   @override
-  String? get venueId; // Reference to venue
+  String?
+      get venueId; // Reference to venue (not denormalized - use venueId to fetch)
   @override
   int get teamCount; // 2, 3, or 4
   @override
@@ -550,7 +619,14 @@ abstract class _Game implements Game {
   String? get recurrencePattern; // 'weekly', 'biweekly', 'monthly'
   @override
   @TimestampConverter()
-  DateTime? get recurrenceEndDate;
+  DateTime? get recurrenceEndDate; // When to stop creating recurring games
+// Denormalized fields for efficient display (no need to fetch user/hub)
+  @override
+  String? get createdByName; // Denormalized from users/{createdBy}.name
+  @override
+  String? get createdByPhotoUrl; // Denormalized from users/{createdBy}.photoUrl
+  @override
+  String? get hubName;
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.

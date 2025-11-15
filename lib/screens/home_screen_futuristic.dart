@@ -33,12 +33,13 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
-    final notificationsRepo = ref.watch(notificationsRepositoryProvider);
-    final gamificationRepo = ref.watch(gamificationRepositoryProvider);
-    final locationService = ref.watch(locationServiceProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final notificationsRepo = ref.read(notificationsRepositoryProvider);
+    final gamificationRepo = ref.read(gamificationRepositoryProvider);
+    final locationService = ref.read(locationServiceProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
 
     if (currentUserId == null) {
       return FuturisticScaffold(
@@ -67,6 +68,7 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
       );
     }
 
+    // Create streams - Firestore streams are efficient and handle updates automatically
     final unreadCountStream = notificationsRepo.watchUnreadCount(currentUserId);
     final gamificationStream = gamificationRepo.watchGamification(currentUserId);
     final userStream = usersRepo.watchUser(currentUserId);

@@ -13,11 +13,13 @@ _$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
       authorId: json['authorId'] as String,
       type: json['type'] as String,
       content: json['content'] as String?,
+      text: json['text'] as String?,
       gameId: json['gameId'] as String?,
       achievementId: json['achievementId'] as String?,
       likes:
           (json['likes'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
+      likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
       commentsCount: (json['commentsCount'] as num?)?.toInt() ?? 0,
       photoUrls: (json['photoUrls'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -25,6 +27,11 @@ _$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
           const [],
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
+      hubName: json['hubName'] as String?,
+      hubLogoUrl: json['hubLogoUrl'] as String?,
+      authorName: json['authorName'] as String?,
+      authorPhotoUrl: json['authorPhotoUrl'] as String?,
+      entityId: json['entityId'] as String?,
     );
 
 Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
@@ -34,10 +41,17 @@ Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
       'authorId': instance.authorId,
       'type': instance.type,
       'content': instance.content,
+      'text': instance.text,
       'gameId': instance.gameId,
       'achievementId': instance.achievementId,
       'likes': instance.likes,
+      'likeCount': instance.likeCount,
       'commentsCount': instance.commentsCount,
       'photoUrls': instance.photoUrls,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
+      'hubName': instance.hubName,
+      'hubLogoUrl': instance.hubLogoUrl,
+      'authorName': instance.authorName,
+      'authorPhotoUrl': instance.authorPhotoUrl,
+      'entityId': instance.entityId,
     };

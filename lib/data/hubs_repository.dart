@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
@@ -49,13 +50,19 @@ class HubsRepository {
       final data = hub.toJson();
       data.remove('hubId'); // Remove hubId from data (it's the document ID)
       
+      // Debug: Print data to see what we're sending
+      debugPrint('Creating hub with data: $data');
+      
       final docRef = hub.hubId.isNotEmpty
           ? _firestore.doc(FirestorePaths.hub(hub.hubId))
           : _firestore.collection(FirestorePaths.hubs()).doc();
       
-      await docRef.set(data);
+      await docRef.set(data, SetOptions(merge: false));
+      debugPrint('Hub created successfully with ID: ${docRef.id}');
       return docRef.id;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Error creating hub: $e');
+      debugPrint('Stack trace: $stackTrace');
       throw Exception('Failed to create hub: $e');
     }
   }
@@ -121,44 +128,107 @@ class HubsRepository {
     }
   }
 
-  /// Add member to hub
+  /// Add member to hub (atomic operation)
+  /// Updates both hub.memberIds and user.hubIds atomically
   Future<void> addMember(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
-      await _firestore.doc(FirestorePaths.hub(hubId)).update({
-        'memberIds': FieldValue.arrayUnion([uid]),
+      // Use transaction to ensure atomicity
+      await _firestore.runTransaction((transaction) async {
+        final hubRef = _firestore.doc(FirestorePaths.hub(hubId));
+        final userRef = _firestore.doc(FirestorePaths.user(uid));
+        
+        // Read both documents
+        final hubDoc = await transaction.get(hubRef);
+        final userDoc = await transaction.get(userRef);
+        
+        if (!hubDoc.exists) {
+          throw Exception('Hub not found');
+        }
+        if (!userDoc.exists) {
+          throw Exception('User not found');
+        }
+        
+        final hubData = hubDoc.data()!;
+        final userData = userDoc.data()!;
+        
+        // Check if already a member
+        final memberIds = List<String>.from(hubData['memberIds'] ?? []);
+        if (memberIds.contains(uid)) {
+          return; // Already a member
+        }
+        
+        // Update hub
+        transaction.update(hubRef, {
+          'memberIds': FieldValue.arrayUnion([uid]),
+        });
+        
+        // Update user (denormalized)
+        final userHubIds = List<String>.from(userData['hubIds'] ?? []);
+        if (!userHubIds.contains(hubId)) {
+          transaction.update(userRef, {
+            'hubIds': FieldValue.arrayUnion([hubId]),
+          });
+        }
       });
     } catch (e) {
       throw Exception('Failed to add member: $e');
     }
   }
 
-  /// Remove member from hub
+  /// Remove member from hub (atomic operation)
+  /// Updates both hub.memberIds, hub.roles, and user.hubIds atomically
   Future<void> removeMember(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
-      final hub = await getHub(hubId);
-      if (hub == null) throw Exception('Hub not found');
-      
-      // Remove from memberIds
-      await _firestore.doc(FirestorePaths.hub(hubId)).update({
-        'memberIds': FieldValue.arrayRemove([uid]),
-      });
-      
-      // Remove from roles if exists
-      if (hub.roles.containsKey(uid)) {
-        final updatedRoles = Map<String, String>.from(hub.roles);
-        updatedRoles.remove(uid);
-        await _firestore.doc(FirestorePaths.hub(hubId)).update({
-          'roles': updatedRoles,
+      // Use transaction to ensure atomicity
+      await _firestore.runTransaction((transaction) async {
+        final hubRef = _firestore.doc(FirestorePaths.hub(hubId));
+        final userRef = _firestore.doc(FirestorePaths.user(uid));
+        
+        // Read both documents
+        final hubDoc = await transaction.get(hubRef);
+        final userDoc = await transaction.get(userRef);
+        
+        if (!hubDoc.exists) {
+          throw Exception('Hub not found');
+        }
+        if (!userDoc.exists) {
+          throw Exception('User not found');
+        }
+        
+        final hubData = hubDoc.data()!;
+        final userData = userDoc.data()!;
+        
+        // Remove from hub.memberIds
+        transaction.update(hubRef, {
+          'memberIds': FieldValue.arrayRemove([uid]),
         });
-      }
+        
+        // Remove from hub.roles if exists
+        final roles = Map<String, String>.from(hubData['roles'] ?? {});
+        if (roles.containsKey(uid)) {
+          final updatedRoles = Map<String, String>.from(roles);
+          updatedRoles.remove(uid);
+          transaction.update(hubRef, {
+            'roles': updatedRoles,
+          });
+        }
+        
+        // Remove from user.hubIds (denormalized)
+        final userHubIds = List<String>.from(userData['hubIds'] ?? []);
+        if (userHubIds.contains(hubId)) {
+          transaction.update(userRef, {
+            'hubIds': FieldValue.arrayRemove([hubId]),
+          });
+        }
+      });
     } catch (e) {
       throw Exception('Failed to remove member: $e');
     }
@@ -330,14 +400,35 @@ class HubsRepository {
       return Stream.value([]);
     }
 
-    return _firestore
-        .collection(FirestorePaths.hubs())
-        .where('createdBy', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
-            .toList());
+    try {
+      return _firestore
+          .collection(FirestorePaths.hubs())
+          .where('createdBy', isEqualTo: uid)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+            debugPrint('watchHubsByCreator: Found ${snapshot.docs.length} hubs for user $uid');
+            return snapshot.docs
+                .map((doc) {
+                  try {
+                    return Hub.fromJson({...doc.data(), 'hubId': doc.id});
+                  } catch (e) {
+                    debugPrint('Error parsing hub ${doc.id}: $e');
+                    return null;
+                  }
+                })
+                .whereType<Hub>()
+                .toList();
+          })
+          .handleError((error) {
+            debugPrint('Error in watchHubsByCreator: $error');
+            // Return empty list on error instead of crashing
+            return <Hub>[];
+          });
+    } catch (e) {
+      debugPrint('Exception in watchHubsByCreator: $e');
+      return Stream.value(<Hub>[]);
+    }
   }
 
   /// Get hubs created by user (non-streaming)

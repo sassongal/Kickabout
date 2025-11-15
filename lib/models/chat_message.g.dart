@@ -18,6 +18,9 @@ _$ChatMessageImpl _$$ChatMessageImplFromJson(Map<String, dynamic> json) =>
           const [],
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
+      senderId: json['senderId'] as String?,
+      senderName: json['senderName'] as String?,
+      senderPhotoUrl: json['senderPhotoUrl'] as String?,
     );
 
 Map<String, dynamic> _$$ChatMessageImplToJson(_$ChatMessageImpl instance) =>
@@ -28,4 +31,7 @@ Map<String, dynamic> _$$ChatMessageImplToJson(_$ChatMessageImpl instance) =>
       'text': instance.text,
       'readBy': instance.readBy,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
+      'senderId': instance.senderId,
+      'senderName': instance.senderName,
+      'senderPhotoUrl': instance.senderPhotoUrl,
     };

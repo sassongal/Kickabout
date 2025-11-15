@@ -7,6 +7,7 @@ import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {

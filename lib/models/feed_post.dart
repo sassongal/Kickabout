@@ -4,21 +4,30 @@ import 'package:kickadoor/models/converters/timestamp_converter.dart';
 part 'feed_post.freezed.dart';
 part 'feed_post.g.dart';
 
-/// Feed post model matching Firestore schema: /hubs/{hubId}/feed/{postId}
+/// Feed post model matching Firestore schema: /hubs/{hubId}/feed/posts/items/{postId}
+/// Denormalized fields: hubName, hubLogoUrl, authorName, authorPhotoUrl for efficient display
 @freezed
 class FeedPost with _$FeedPost {
   const factory FeedPost({
     required String postId,
     required String hubId,
     required String authorId,
-    required String type, // 'game' | 'achievement' | 'rating' | 'post'
+    required String type, // 'game' | 'achievement' | 'rating' | 'post' | 'game_created'
     String? content,
+    String? text, // Alternative to content (used by onGameCreated)
     String? gameId,
     String? achievementId,
     @Default([]) List<String> likes,
+    @Default(0) int likeCount, // Denormalized count for sorting
     @Default(0) int commentsCount,
     @Default([]) List<String> photoUrls, // URLs of photos/videos in the post
     @TimestampConverter() required DateTime createdAt,
+    // Denormalized fields for efficient display (no need to fetch hub/user)
+    String? hubName, // Denormalized from hubs/{hubId}.name
+    String? hubLogoUrl, // Denormalized from hubs/{hubId}.logoUrl
+    String? authorName, // Denormalized from users/{authorId}.name
+    String? authorPhotoUrl, // Denormalized from users/{authorId}.photoUrl
+    String? entityId, // ID of related entity (gameId, etc.)
   }) = _FeedPost;
 
   factory FeedPost.fromJson(Map<String, dynamic> json) => _$FeedPostFromJson(json);

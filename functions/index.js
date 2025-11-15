@@ -144,18 +144,42 @@ exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
   info(`New game created: ${gameId} in hub: ${game.hubId}`);
 
   try {
-    const hubRef = db.collection("hubs").doc(game.hubId);
-    const hubSnap = await hubRef.get();
+    // Fetch hub and user data in parallel for denormalization
+    const [hubSnap, userSnap] = await Promise.all([
+      db.collection("hubs").doc(game.hubId).get(),
+      db.collection("users").doc(game.createdBy).get(),
+    ]);
+
     if (!hubSnap.exists) {
       info("Hub does not exist");
       return;
     }
     const hub = hubSnap.data();
+    const user = userSnap.exists ? userSnap.data() : null;
 
-    // ... (rest of your logic is identical)
-    const postRef = db.collection("feed").doc();
+    // Denormalize user data into game document for efficient queries
+    const gameUpdate = {};
+    if (user) {
+      gameUpdate.createdByName = user.name || null;
+      gameUpdate.createdByPhotoUrl = user.photoUrl || null;
+    }
+
+    // Update game with denormalized data
+    if (Object.keys(gameUpdate).length > 0) {
+      await db.collection("games").doc(gameId).update(gameUpdate);
+    }
+
+    // Create feed post in the correct structure: /hubs/{hubId}/feed/posts/items/{postId}
+    const postRef = db
+      .collection("hubs")
+      .doc(game.hubId)
+      .collection("feed")
+      .doc("posts")
+      .collection("items")
+      .doc();
+    
     await postRef.set({
-      id: postRef.id,
+      postId: postRef.id,
       hubId: game.hubId,
       hubName: hub.name,
       hubLogoUrl: hub.logoUrl || null,
@@ -163,15 +187,18 @@ exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
       text: `משחק חדש נוצר ב-${hub.name}!`,
       createdAt: game.createdAt,
       authorId: game.createdBy,
-      authorName: game.createdByName,
-      authorPhotoUrl: game.createdByPhotoUrl || null,
+      authorName: user?.name || null,
+      authorPhotoUrl: user?.photoUrl || null,
       entityId: gameId,
+      gameId: gameId,
       likeCount: 0,
       commentCount: 0,
+      likes: [],
+      comments: [],
     });
 
     // Update hub stats
-    await hubRef.update({
+    await hubSnap.ref.update({
       gameCount: FieldValue.increment(1),
       lastActivity: game.createdAt,
     });
@@ -183,40 +210,85 @@ exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
 });
 
 exports.onHubMessageCreated = onDocumentCreated(
-  "hubs/{hubId}/chat/{messageId}",
+  "hubs/{hubId}/chat/messages/{messageId}",
   async (event) => {
     const message = event.data.data();
     const hubId = event.params.hubId;
+    const messageId = event.params.messageId;
 
-    info(`New message in hub: ${hubId} by ${message.senderName}`);
+    info(`New message in hub: ${hubId} by ${message.authorId || message.senderId}`);
 
     try {
+      // Fetch hub and user data in parallel for denormalization
+      const [hubSnap, userSnap] = await Promise.all([
+        db.collection("hubs").doc(hubId).get(),
+        db.collection("users").doc(message.authorId || message.senderId).get(),
+      ]);
+
+      if (!hubSnap.exists) {
+        info("Hub does not exist");
+        return;
+      }
+      const hub = hubSnap.data();
+      const user = userSnap.exists ? userSnap.data() : null;
+
+      // Denormalize user data into message document
+      const messageUpdate = {};
+      if (user) {
+        messageUpdate.senderId = message.authorId || message.senderId;
+        messageUpdate.senderName = user.name || null;
+        messageUpdate.senderPhotoUrl = user.photoUrl || null;
+      }
+
+      // Update message with denormalized data
+      if (Object.keys(messageUpdate).length > 0) {
+        await db
+          .collection("hubs")
+          .doc(hubId)
+          .collection("chat")
+          .collection("messages")
+          .doc(messageId)
+          .update(messageUpdate);
+      }
+
       // Update hub last activity
-      const hubRef = db.collection("hubs").doc(hubId);
-      await hubRef.update({
+      await hubSnap.ref.update({
         lastActivity: message.createdAt,
       });
 
-      // ... (rest of your logic is identical)
-      const hubSnap = await hubRef.get();
-      if (!hubSnap.exists) return;
-      const hubName = hubSnap.data().name;
+      const hubName = hub.name;
 
-      const membersSnap = await db
-        .collection("hubs")
-        .doc(hubId)
-        .collection("members")
-        .get();
-      if (membersSnap.empty) return;
+      // Get hub members
+      const hubData = hubSnap.data();
+      const memberIds = hubData.memberIds || [];
+      if (memberIds.length === 0) return;
 
+      // Get FCM tokens for all members except sender
       const tokens = [];
-      membersSnap.forEach((doc) => {
-        const member = doc.data();
-        // Don't send notification to the sender
-        if (member.fcmToken && doc.id !== message.senderId) {
-          tokens.push(member.fcmToken);
+      for (const memberId of memberIds) {
+        if (memberId === message.senderId) continue;
+        
+        try {
+          // FCM tokens are stored in users/{userId}/fcm_tokens/tokens
+          const tokenDoc = await db
+            .collection("users")
+            .doc(memberId)
+            .collection("fcm_tokens")
+            .doc("tokens")
+            .get();
+          
+          if (tokenDoc.exists) {
+            const tokenData = tokenDoc.data();
+            const userTokens = tokenData.tokens || [];
+            // Add all tokens for this user (users can have multiple devices)
+            if (Array.isArray(userTokens) && userTokens.length > 0) {
+              tokens.push(...userTokens);
+            }
+          }
+        } catch (error) {
+          info(`Failed to get FCM token for user ${memberId}: ${error}`);
         }
-      });
+      }
 
       if (tokens.length === 0) return;
       const uniqueTokens = [...new Set(tokens)];
@@ -242,21 +314,55 @@ exports.onHubMessageCreated = onDocumentCreated(
 );
 
 exports.onCommentCreated = onDocumentCreated(
-  "feed/{postId}/comments/{commentId}",
+  "hubs/{hubId}/feed/posts/items/{postId}/comments/{commentId}",
   async (event) => {
     const comment = event.data.data();
+    const hubId = event.params.hubId;
     const postId = event.params.postId;
-    info(`New comment on post: ${postId} by ${comment.authorName}`);
+    const commentId = event.params.commentId;
+
+    info(`New comment on post: ${postId} by ${comment.authorId}`);
 
     try {
-      const postRef = db.collection("feed").doc(postId);
+      // Fetch user data for denormalization
+      const userSnap = await db.collection("users").doc(comment.authorId).get();
+      const user = userSnap.exists ? userSnap.data() : null;
+
+      // Denormalize user data into comment document
+      const commentUpdate = {};
+      if (user) {
+        commentUpdate.authorName = user.name || null;
+        commentUpdate.authorPhotoUrl = user.photoUrl || null;
+      }
+
+      // Update comment with denormalized data
+      if (Object.keys(commentUpdate).length > 0) {
+        await db
+          .collection("hubs")
+          .doc(hubId)
+          .collection("feed")
+          .doc("posts")
+          .collection("items")
+          .doc(postId)
+          .collection("comments")
+          .doc(commentId)
+          .update(commentUpdate);
+      }
 
       // Increment comment count on post
+      const postRef = db
+        .collection("hubs")
+        .doc(hubId)
+        .collection("feed")
+        .doc("posts")
+        .collection("items")
+        .doc(postId);
+
       await postRef.update({
         commentCount: FieldValue.increment(1),
       });
 
-      // ... (rest of your logic is identical)
+      // Get post data for notification
       const postSnap = await postRef.get();
       if (!postSnap.exists) return;
       const post = postSnap.data();
@@ -264,22 +370,23 @@ exports.onCommentCreated = onDocumentCreated(
       // Don't send notification if user comments on their own post
       if (post.authorId === comment.authorId) return;
 
-      const userSnap = await db.collection("users").doc(post.authorId).get();
-      if (!userSnap.exists) return;
-      const fcmToken = userSnap.data().fcmToken;
+      // Get post author's FCM token
+      const postAuthorSnap = await db.collection("users").doc(post.authorId).get();
+      if (!postAuthorSnap.exists) return;
+      const fcmToken = postAuthorSnap.data().fcmToken;
 
       if (!fcmToken) return;
 
       const payload = {
         notification: {
-          title: `💬 ${comment.authorName} הגיב לפוסט שלך`,
+          title: `💬 ${user?.name || 'מישהו'} הגיב לפוסט שלך`,
           body: comment.text,
         },
         token: fcmToken,
         data: {
           type: "new_comment",
           postId: postId,
-          hubId: post.hubId || "",
+          hubId: hubId,
         },
       };
 
@@ -387,6 +494,86 @@ exports.onVenueChanged = onDocumentWritten(
 
     await batch.commit();
     info(`Updated venue ${venueId} in ${hubsSnap.size} hubs.`);
+  },
+);
+
+// --- Rating Calculation Function (moved from client to server) ---
+// This function automatically calculates and updates a user's average rating
+// whenever a new rating snapshot is added
+exports.onRatingSnapshotCreated = onDocumentCreated(
+  "ratings/{userId}/history/{ratingId}",
+  async (event) => {
+    const rating = event.data.data();
+    const userId = event.params.userId;
+    const ratingId = event.params.ratingId;
+
+    info(`New rating snapshot created: ${ratingId} for user ${userId}`);
+
+    try {
+      // Get user's hub settings to determine rating mode
+      const userSnap = await db.collection("users").doc(userId).get();
+      if (!userSnap.exists) {
+        info("User does not exist");
+        return;
+      }
+
+      // Get all rating history for this user
+      const historySnap = await db
+        .collection("ratings")
+        .doc(userId)
+        .collection("history")
+        .orderBy("submittedAt", "desc")
+        .limit(10) // Last 10 games
+        .get();
+
+      if (historySnap.empty) {
+        info("No rating history found");
+        return;
+      }
+
+      // Calculate average rating based on rating mode
+      // For simplicity, we'll use the last 10 games
+      let totalRating = 0.0;
+      let count = 0;
+
+      historySnap.forEach((doc) => {
+        const snapshot = doc.data();
+        if (snapshot.basicScore != null) {
+          // Basic mode: use basicScore
+          totalRating += snapshot.basicScore;
+          count += 1;
+        } else {
+          // Advanced mode: average of 8 categories
+          totalRating +=
+            (snapshot.defense +
+              snapshot.passing +
+              snapshot.shooting +
+              snapshot.dribbling +
+              snapshot.physical +
+              snapshot.leadership +
+              snapshot.teamPlay +
+              snapshot.consistency) /
+            8.0;
+          count += 1;
+        }
+      });
+
+      if (count === 0) {
+        info("No valid ratings to calculate average");
+        return;
+      }
+
+      const averageRating = totalRating / count;
+
+      // Update user's currentRankScore (denormalized)
+      await db.collection("users").doc(userId).update({
+        currentRankScore: averageRating,
+      });
+
+      info(`Updated user ${userId} rating to ${averageRating} (from ${count} games).`);
+    } catch (error) {
+      info(`Error in onRatingSnapshotCreated for user ${userId}:`, error);
+    }
   },
 );
 
