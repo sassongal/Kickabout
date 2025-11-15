@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// Stats Ring component matching Figma design
 /// Shows a circular progress indicator with value and label
@@ -17,7 +16,7 @@ class StatsRing extends StatefulWidget {
     required this.value,
     required this.maxValue,
     required this.label,
-    this.size = 120,
+    this.size = 80,
     this.color = const Color(0xFF1976D2), // Primary blue
   });
 
@@ -66,14 +65,11 @@ class _StatsRingState extends State<StatsRing>
 
   @override
   Widget build(BuildContext context) {
-    final radius = 45.0;
-    final circumference = 2 * math.pi * radius;
+    final radius = widget.size * 0.35; // Adaptive radius based on size
     
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        final strokeDashoffset = circumference - (_animation.value * circumference);
-        
         return Column(
           children: [
             SizedBox(
@@ -112,7 +108,7 @@ class _StatsRingState extends State<StatsRing>
                   Text(
                     '${widget.value}',
                     style: GoogleFonts.montserrat(
-                      fontSize: 24,
+                      fontSize: widget.size * 0.25, // Adaptive font size
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF212121),
                     ),
@@ -120,12 +116,12 @@ class _StatsRingState extends State<StatsRing>
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             // Label
             Text(
               widget.label,
               style: GoogleFonts.inter(
-                fontSize: 14,
+                fontSize: 11,
                 color: const Color(0xFF757575),
               ),
               textAlign: TextAlign.center,

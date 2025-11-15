@@ -215,7 +215,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               gradient: LinearGradient(
                 colors: [
                   page.color,
-                  page.color.withOpacity(0.7),
+                  page.color.withValues(alpha: 0.7),
                 ],
               ),
             ),
@@ -253,88 +253,90 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPermissionsPage(OnboardingPage page) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  page.color,
-                  page.color.withOpacity(0.7),
-                ],
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icon
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    page.color,
+                    page.color.withValues(alpha: 0.7),
+                  ],
+                ),
+              ),
+              child: Icon(
+                page.icon,
+                size: 60,
+                color: Colors.white,
               ),
             ),
-            child: Icon(
-              page.icon,
-              size: 60,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 48),
+            const SizedBox(height: 48),
 
-          // Title
-          Text(
-            page.title,
-            style: FuturisticTypography.techHeadline.copyWith(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+            // Title
+            Text(
+              page.title,
+              style: FuturisticTypography.techHeadline.copyWith(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Description
-          Text(
-            page.description,
-            style: FuturisticTypography.bodyLarge.copyWith(
-              fontSize: 18,
-              color: FuturisticColors.textSecondary,
+            // Description
+            Text(
+              page.description,
+              style: FuturisticTypography.bodyLarge.copyWith(
+                fontSize: 18,
+                color: FuturisticColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
-          // Permissions list
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildPermissionItem(
-                    Icons.location_on,
-                    'מיקום',
-                    'למציאת Hubs ומשחקים לידך',
-                  ),
-                  const Divider(),
-                  _buildPermissionItem(
-                    Icons.notifications,
-                    'התראות',
-                    'לקבלת עדכונים על משחקים והודעות',
-                  ),
-                  const Divider(),
-                  _buildPermissionItem(
-                    Icons.camera_alt,
-                    'מצלמה',
-                    'לצילום תמונות במשחקים',
-                  ),
-                  const Divider(),
-                  _buildPermissionItem(
-                    Icons.photo_library,
-                    'גלריה',
-                    'לשיתוף תמונות מהמשחקים',
-                  ),
-                ],
+            // Permissions list
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildPermissionItem(
+                      Icons.location_on,
+                      'מיקום',
+                      'למציאת Hubs ומשחקים לידך',
+                    ),
+                    const Divider(),
+                    _buildPermissionItem(
+                      Icons.notifications,
+                      'התראות',
+                      'לקבלת עדכונים על משחקים והודעות',
+                    ),
+                    const Divider(),
+                    _buildPermissionItem(
+                      Icons.camera_alt,
+                      'מצלמה',
+                      'לצילום תמונות במשחקים',
+                    ),
+                    const Divider(),
+                    _buildPermissionItem(
+                      Icons.photo_library,
+                      'גלריה',
+                      'לשיתוף תמונות מהמשחקים',
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

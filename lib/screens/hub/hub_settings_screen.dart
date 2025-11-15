@@ -75,19 +75,37 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                         : 'דירוג בסיסי (1-7)',
                   ),
                   children: [
-                    RadioListTile<String>(
+                    ListTile(
                       title: const Text('דירוג בסיסי (1-7)'),
                       subtitle: const Text('ציון יחיד לכל שחקן'),
-                      value: 'basic',
-                      groupValue: settings['ratingMode'] as String? ?? 'basic',
-                      onChanged: (value) => _updateSetting('ratingMode', value),
+                      leading: Radio<String>(
+                        value: 'basic',
+                        // ignore: deprecated_member_use
+                        groupValue: settings['ratingMode'] as String? ?? 'basic',
+                        // ignore: deprecated_member_use
+                        onChanged: (value) {
+                          if (value != null) {
+                            _updateSetting('ratingMode', value);
+                          }
+                        },
+                      ),
+                      onTap: () => _updateSetting('ratingMode', 'basic'),
                     ),
-                    RadioListTile<String>(
+                    ListTile(
                       title: const Text('דירוג מתקדם (1-10)'),
                       subtitle: const Text('8 קטגוריות דירוג'),
-                      value: 'advanced',
-                      groupValue: settings['ratingMode'] as String? ?? 'basic',
-                      onChanged: (value) => _updateSetting('ratingMode', value),
+                      leading: Radio<String>(
+                        value: 'advanced',
+                        // ignore: deprecated_member_use
+                        groupValue: settings['ratingMode'] as String? ?? 'basic',
+                        // ignore: deprecated_member_use
+                        onChanged: (value) {
+                          if (value != null) {
+                            _updateSetting('ratingMode', value);
+                          }
+                        },
+                      ),
+                      onTap: () => _updateSetting('ratingMode', 'advanced'),
                     ),
                   ],
                 ),
@@ -104,19 +122,37 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                         : 'Hub פתוח',
                   ),
                   children: [
-                    RadioListTile<String>(
+                    ListTile(
                       title: const Text('Hub פתוח'),
                       subtitle: const Text('כל אחד יכול להצטרף'),
-                      value: 'public',
-                      groupValue: settings['privacy'] as String? ?? 'public',
-                      onChanged: (value) => _updateSetting('privacy', value),
+                      leading: Radio<String>(
+                        value: 'public',
+                        // ignore: deprecated_member_use
+                        groupValue: settings['privacy'] as String? ?? 'public',
+                        // ignore: deprecated_member_use
+                        onChanged: (value) {
+                          if (value != null) {
+                            _updateSetting('privacy', value);
+                          }
+                        },
+                      ),
+                      onTap: () => _updateSetting('privacy', 'public'),
                     ),
-                    RadioListTile<String>(
+                    ListTile(
                       title: const Text('Hub פרטי'),
                       subtitle: const Text('רק בהזמנה'),
-                      value: 'private',
-                      groupValue: settings['privacy'] as String? ?? 'public',
-                      onChanged: (value) => _updateSetting('privacy', value),
+                      leading: Radio<String>(
+                        value: 'private',
+                        // ignore: deprecated_member_use
+                        groupValue: settings['privacy'] as String? ?? 'public',
+                        // ignore: deprecated_member_use
+                        onChanged: (value) {
+                          if (value != null) {
+                            _updateSetting('privacy', value);
+                          }
+                        },
+                      ),
+                      onTap: () => _updateSetting('privacy', 'private'),
                     ),
                   ],
                 ),
@@ -133,19 +169,37 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                         : 'הצטרפות אוטומטית',
                   ),
                   children: [
-                    RadioListTile<String>(
+                    ListTile(
                       title: const Text('הצטרפות אוטומטית'),
                       subtitle: const Text('כל אחד יכול להצטרף מיד'),
-                      value: 'auto',
-                      groupValue: settings['joinMode'] as String? ?? 'auto',
-                      onChanged: (value) => _updateSetting('joinMode', value),
+                      leading: Radio<String>(
+                        value: 'auto',
+                        // ignore: deprecated_member_use
+                        groupValue: settings['joinMode'] as String? ?? 'auto',
+                        // ignore: deprecated_member_use
+                        onChanged: (value) {
+                          if (value != null) {
+                            _updateSetting('joinMode', value);
+                          }
+                        },
+                      ),
+                      onTap: () => _updateSetting('joinMode', 'auto'),
                     ),
-                    RadioListTile<String>(
+                    ListTile(
                       title: const Text('דורש אישור'),
                       subtitle: const Text('מנהל Hub צריך לאשר'),
-                      value: 'approval',
-                      groupValue: settings['joinMode'] as String? ?? 'auto',
-                      onChanged: (value) => _updateSetting('joinMode', value),
+                      leading: Radio<String>(
+                        value: 'approval',
+                        // ignore: deprecated_member_use
+                        groupValue: settings['joinMode'] as String? ?? 'auto',
+                        // ignore: deprecated_member_use
+                        onChanged: (value) {
+                          if (value != null) {
+                            _updateSetting('joinMode', value);
+                          }
+                        },
+                      ),
+                      onTap: () => _updateSetting('joinMode', 'approval'),
                     ),
                   ],
                 ),
@@ -219,6 +273,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(widget.hubId);
+      if (!context.mounted) return;
       if (hub == null) {
         SnackbarHelper.showError(context, 'Hub לא נמצא');
         return;
@@ -231,13 +286,11 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
         'settings': updatedSettings,
       });
 
-      if (mounted) {
-        SnackbarHelper.showSuccess(context, 'ההגדרה עודכנה בהצלחה');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showSuccess(context, 'ההגדרה עודכנה בהצלחה');
     } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בעדכון הגדרה: $e');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showError(context, 'שגיאה בעדכון הגדרה: $e');
     }
   }
 }

@@ -49,8 +49,17 @@ class GamificationService {
   }
 
   /// Calculate points needed for next level
+  /// Based on calculateLevel: level = sqrt(points/100).floor() + 1
+  /// So for level N, we need points such that sqrt(points/100) >= N-1
+  /// Which means points >= (N-1)^2 * 100
+  /// For next level (N+1), we need points >= N^2 * 100
   static int pointsForNextLevel(int currentLevel) {
-    return (currentLevel * 100) * (currentLevel * 100);
+    // Level 1 needs 0 points (already at level 1)
+    // Level 2 needs 100 points (1^2 * 100)
+    // Level 3 needs 400 points (2^2 * 100)
+    // Level 4 needs 900 points (3^2 * 100)
+    // So for currentLevel N, next level needs (N)^2 * 100
+    return (currentLevel * currentLevel) * 100;
   }
 
   /// Get gamification for a user

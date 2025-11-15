@@ -7,7 +7,6 @@ class DeepLinkService {
   factory DeepLinkService() => _instance;
   DeepLinkService._internal();
 
-  GlobalKey<NavigatorState>? _navigatorKey;
   GoRouter? _router;
 
   /// Initialize with navigator key and router
@@ -15,7 +14,6 @@ class DeepLinkService {
     GlobalKey<NavigatorState>? navigatorKey,
     GoRouter? router,
   }) {
-    _navigatorKey = navigatorKey;
     _router = router;
   }
 

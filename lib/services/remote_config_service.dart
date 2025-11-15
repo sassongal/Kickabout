@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
 // Conditional import for Remote Config (not available on web)
 import 'package:firebase_remote_config/firebase_remote_config.dart'
@@ -43,7 +44,7 @@ class RemoteConfigService {
       await _remoteConfig!.fetchAndActivate();
     } catch (e) {
       // Remote Config not available, use defaults
-      print('Remote Config initialization failed: $e');
+      debugPrint('Remote Config initialization failed: $e');
     }
   }
 
@@ -95,7 +96,7 @@ class RemoteConfigService {
       await _remoteConfig!.fetch();
       await _remoteConfig!.activate();
     } catch (e) {
-      print('Failed to fetch Remote Config: $e');
+      debugPrint('Failed to fetch Remote Config: $e');
     }
   }
 }

@@ -97,7 +97,7 @@ class GooglePlacesService {
   final http.Client _httpClient;
 
   GooglePlacesService({String? apiKey, http.Client? httpClient})
-      : apiKey = apiKey ?? Env.googleMapsApiKey ?? '',
+      : apiKey = apiKey ?? Env.googleMapsApiKey,
         _httpClient = httpClient ?? http.Client();
 
   /// Search for venues near a location

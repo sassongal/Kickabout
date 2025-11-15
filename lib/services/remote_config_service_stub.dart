@@ -1,5 +1,5 @@
-/// Stub for Remote Config on web (not supported)
-/// This file is used as a fallback when firebase_remote_config is not available
+// Stub for Remote Config on web (not supported)
+// This file is used as a fallback when firebase_remote_config is not available
 
 class FirebaseRemoteConfig {
   static FirebaseRemoteConfig get instance => FirebaseRemoteConfig();

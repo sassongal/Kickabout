@@ -279,7 +279,6 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   ) async {
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      final locationService = ref.read(locationServiceProvider);
       
       Duration interval;
       switch (pattern) {
@@ -379,7 +378,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                     }
 
                     return DropdownButtonFormField<String>(
-                      value: _selectedHubId,
+                      initialValue: _selectedHubId,
                       decoration: const InputDecoration(
                         labelText: 'הוב',
                         border: OutlineInputBorder(),
@@ -438,16 +437,16 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
               // Team count
               DropdownButtonFormField<int>(
-                value: _teamCount,
+                initialValue: _teamCount,
                 decoration: const InputDecoration(
                   labelText: 'מספר קבוצות',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.group),
                 ),
-                items: AppConstants.supportedTeamCounts.map((count) =>
+                items: AppConstants.supportedTeamCounts.map((teamCount) =>
                   DropdownMenuItem<int>(
-                    value: count,
-                    child: Text('$count קבוצות'),
+                    value: teamCount,
+                    child: Text('$teamCount קבוצות'),
                   ),
                 ).toList(),
                 onChanged: (value) {
@@ -485,7 +484,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       if (_isRecurring) ...[
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
-                          value: _recurrencePattern,
+                          initialValue: _recurrencePattern,
                           decoration: const InputDecoration(
                             labelText: 'תדירות',
                             border: OutlineInputBorder(),

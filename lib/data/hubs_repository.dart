@@ -328,7 +328,7 @@ class HubsRepository {
       final queries = allHashes.map((hash) => _firestore
           .collection(FirestorePaths.hubs())
           .where('geohash', isGreaterThanOrEqualTo: hash)
-          .where('geohash', isLessThan: hash + '~')
+          .where('geohash', isLessThan: '$hash~')
           .get());
 
       final results = await Future.wait(queries);

@@ -84,9 +84,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final feedRepo = ref.watch(feedRepositoryProvider);
-    final commentsRepo = ref.watch(commentsRepositoryProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final feedRepo = ref.read(feedRepositoryProvider);
+    final commentsRepo = ref.read(commentsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
     
     final postStream = feedRepo.watchPost(widget.hubId, widget.postId);
@@ -130,7 +131,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              color: Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Row(
@@ -318,9 +319,9 @@ class _PostHeader extends ConsumerWidget {
                   onPressed: currentUserId != null
                       ? () {
                           if (isLiked) {
-                            feedRepo.unlikePost(post.hubId, post.postId, currentUserId!);
+                            feedRepo.unlikePost(post.hubId, post.postId, currentUserId);
                           } else {
-                            feedRepo.likePost(post.hubId, post.postId, currentUserId!);
+                            feedRepo.likePost(post.hubId, post.postId, currentUserId);
                           }
                         }
                       : null,

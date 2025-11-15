@@ -20,7 +20,7 @@ class OfflineIndicator extends ConsumerWidget {
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: FuturisticColors.warning.withOpacity(0.9),
+          color: FuturisticColors.warning.withValues(alpha: 0.9),
           child: Row(
             children: [
               const Icon(
@@ -93,7 +93,7 @@ class SyncStatusIndicator extends ConsumerWidget {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: FuturisticColors.warning.withOpacity(0.2),
+              color: FuturisticColors.warning.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(

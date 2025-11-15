@@ -257,7 +257,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: ':id',
             name: 'hubDetail',
             builder: (context, state) {
-              final hubId = state.pathParameters['id']!;
+              final hubId = state.pathParameters['id'];
+              if (hubId == null || hubId.isEmpty) {
+                // Redirect to hubs list if hubId is missing
+                return const HubListScreen();
+              }
               return HubDetailScreen(hubId: hubId);
             },
             routes: [

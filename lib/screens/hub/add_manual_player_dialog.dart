@@ -244,7 +244,7 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
               const SizedBox(height: 16),
               // Position dropdown
               DropdownButtonFormField<String>(
-                value: _selectedPosition,
+                initialValue: _selectedPosition,
                 decoration: const InputDecoration(
                   labelText: 'עמדה מועדפת',
                   border: OutlineInputBorder(),

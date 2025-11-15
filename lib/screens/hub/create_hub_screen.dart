@@ -8,7 +8,6 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
 
 /// Create hub screen

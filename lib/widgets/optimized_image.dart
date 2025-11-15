@@ -54,8 +54,8 @@ class OptimizedImage extends StatelessWidget {
                 color: Colors.grey,
               ),
             ),
-        memCacheWidth: width != null ? width!.toInt() : null,
-        memCacheHeight: height != null ? height!.toInt() : null,
+        memCacheWidth: width?.toInt(),
+        memCacheHeight: height?.toInt(),
         maxWidthDiskCache: 1000,
         maxHeightDiskCache: 1000,
       );

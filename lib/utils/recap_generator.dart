@@ -1,6 +1,5 @@
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/data/teams_repository.dart';
 
 /// AI-powered narrative recap generator - creates engaging Hebrew summaries
 class RecapGenerator {
@@ -13,7 +12,7 @@ class RecapGenerator {
     GamesRepository gamesRepo,
   ) async {
     final events = await eventsRepo.getEvents(gameId);
-    final game = await gamesRepo.getGame(gameId);
+    await gamesRepo.getGame(gameId);
     final teams = await teamsRepo.getTeams(gameId);
 
     if (events.isEmpty) {
@@ -73,7 +72,7 @@ class RecapGenerator {
           final adjectives = ['מרשים', 'מדהים', 'מצוין', 'מעולה', 'מצוין'];
           final adjective = adjectives[DateTime.now().millisecond % adjectives.length];
           
-          buffer.writeln('${winnerName} השיגו ניצחון $adjective ${winner.value}-${loser.value} על ${loserName}!');
+          buffer.writeln('$winnerName השיגו ניצחון $adjective ${winner.value}-${loser.value} על $loserName!');
         } else {
           buffer.writeln('משחק צמוד ומרתק שהסתיים בשוויון!');
         }
@@ -97,11 +96,11 @@ class RecapGenerator {
       final topScorerName = playerMap[topScorer.key] ?? 'שחקן לא ידוע';
       
       if (topScorer.value >= 3) {
-        buffer.writeln('${topScorerName} ביצע שלושער מדהים וסיים עם ${topScorer.value} שערים!');
+        buffer.writeln('$topScorerName ביצע שלושער מדהים וסיים עם ${topScorer.value} שערים!');
       } else if (topScorer.value == 2) {
-        buffer.writeln('${topScorerName} כבש צמד וסיים עם ${topScorer.value} שערים.');
+        buffer.writeln('$topScorerName כבש צמד וסיים עם ${topScorer.value} שערים.');
       } else {
-        buffer.writeln('${topScorerName} הוביל את מלכות השערים עם ${topScorer.value} שערים.');
+        buffer.writeln('$topScorerName הוביל את מלכות השערים עם ${topScorer.value} שערים.');
       }
     }
 
@@ -116,7 +115,7 @@ class RecapGenerator {
       final mvpAdjectives = ['שלט', 'התבלט', 'הוביל', 'בלט', 'הצטיין'];
       final mvpAdjective = mvpAdjectives[DateTime.now().millisecond % mvpAdjectives.length];
       
-      buffer.writeln('${mvpName} נבחר ל-MVP של המשחק ו${mvpAdjective} במגרש.');
+      buffer.writeln('$mvpName נבחר ל-MVP של המשחק ו$mvpAdjective במגרש.');
     }
 
     // Assists mention
@@ -128,9 +127,9 @@ class RecapGenerator {
       final topAssistName = playerMap[topAssist.key] ?? 'שחקן לא ידוע';
       
       if (topAssist.value >= 2) {
-        buffer.writeln('${topAssistName} ביצע ${topAssist.value} בישולים מעולים.');
+        buffer.writeln('$topAssistName ביצע ${topAssist.value} בישולים מעולים.');
       } else {
-        buffer.writeln('${topAssistName} ביצע בישול מעולה.');
+        buffer.writeln('$topAssistName ביצע בישול מעולה.');
       }
     }
 

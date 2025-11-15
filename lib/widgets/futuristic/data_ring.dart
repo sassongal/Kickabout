@@ -18,7 +18,6 @@ class DataRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = this.color ?? FuturisticColors.secondary;
-    final entries = metrics.entries.toList();
     
     return SizedBox(
       width: size,
@@ -118,8 +117,8 @@ class _DataRingPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          color.withOpacity(0.2),
-          color.withOpacity(0.05),
+          color.withValues(alpha: 0.2),
+          color.withValues(alpha: 0.05),
         ],
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.fill;

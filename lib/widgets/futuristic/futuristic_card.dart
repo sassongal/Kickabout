@@ -67,19 +67,19 @@ class _FuturisticCardState extends State<FuturisticCard>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: widget.showGlow
-                  ? FuturisticColors.secondary.withOpacity(_glowAnimation.value * 0.5)
+                  ? FuturisticColors.secondary.withValues(alpha: _glowAnimation.value * 0.5)
                   : borderColor,
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
               if (widget.showGlow && _isHovered)
                 BoxShadow(
-                  color: FuturisticColors.secondary.withOpacity(_glowAnimation.value * 0.3),
+                  color: FuturisticColors.secondary.withValues(alpha: _glowAnimation.value * 0.3),
                   blurRadius: 16,
                   spreadRadius: 2,
                 ),

@@ -188,10 +188,10 @@ class _NotificationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      color: notification.read ? null : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+      color: notification.read ? null : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getColor(notification.type).withOpacity(0.2),
+          backgroundColor: _getColor(notification.type).withValues(alpha: 0.2),
           child: Icon(
             _getIcon(notification.type),
             color: _getColor(notification.type),

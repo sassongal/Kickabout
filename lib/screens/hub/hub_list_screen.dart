@@ -38,7 +38,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
       title: 'הובס',
       actions: [
         StreamBuilder<int>(
-          stream: ref.watch(notificationsRepositoryProvider).watchUnreadCount(currentUserId!),
+          stream: ref.read(notificationsRepositoryProvider).watchUnreadCount(currentUserId),
           builder: (context, snapshot) {
             final count = snapshot.data ?? 0;
             return Badge(

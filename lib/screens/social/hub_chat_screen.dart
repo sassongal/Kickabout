@@ -91,8 +91,9 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final chatRepo = ref.watch(chatRepositoryProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final chatRepo = ref.read(chatRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
     final messagesStream = chatRepo.watchMessages(widget.hubId);
 
@@ -171,7 +172,7 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, -2),
                 ),
@@ -299,7 +300,7 @@ class _MessageBubble extends ConsumerWidget {
                           color: (isMe
                                   ? Theme.of(context).colorScheme.onPrimary
                                   : Theme.of(context).colorScheme.onSurfaceVariant)
-                              .withOpacity(0.7),
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                     ],

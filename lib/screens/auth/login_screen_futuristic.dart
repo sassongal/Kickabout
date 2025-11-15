@@ -10,7 +10,6 @@ import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:flutter/foundation.dart';
 
 /// Futuristic login screen with seamless one-tap sign-in
 class LoginScreenFuturistic extends ConsumerStatefulWidget {
@@ -247,13 +246,13 @@ class _LoginScreenFuturisticState extends ConsumerState<LoginScreenFuturistic>
       try {
         final authService = ref.read(authServiceProvider);
         await authService.sendPasswordResetEmail(emailController.text.trim());
-        if (!mounted) return;
+        if (!context.mounted) return;
         SnackbarHelper.showSuccess(
           context,
           'נשלח קישור לאיפוס סיסמה לכתובת האימייל שלך',
         );
       } catch (e) {
-        if (!mounted) return;
+        if (!context.mounted) return;
         SnackbarHelper.showError(context, 'שגיאה בשליחת אימייל: $e');
       }
     }

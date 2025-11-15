@@ -25,8 +25,9 @@ class FeedScreen extends ConsumerStatefulWidget {
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   @override
   Widget build(BuildContext context) {
-    final feedRepo = ref.watch(feedRepositoryProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final feedRepo = ref.read(feedRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
     final feedStream = feedRepo.watchFeed(widget.hubId);
 
@@ -127,15 +128,30 @@ class _PostCard extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: StreamBuilder<User?>(
-        stream: userStream,
-        builder: (context, userSnapshot) {
-          final author = userSnapshot.data;
-          if (author == null) {
-            return const ListTile(
-              leading: CircularProgressIndicator(),
-              title: Text('טוען...'),
-            );
-          }
+      stream: userStream,
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return const ListTile(
+            leading: CircularProgressIndicator(),
+            title: Text('טוען...'),
+          );
+        }
+
+        if (userSnapshot.hasError) {
+          return ListTile(
+            leading: const Icon(Icons.error_outline, color: Colors.red),
+            title: const Text('שגיאה בטעינת המשתמש'),
+            subtitle: Text(userSnapshot.error.toString()),
+          );
+        }
+
+        final author = userSnapshot.data;
+        if (author == null) {
+          return const ListTile(
+            leading: Icon(Icons.person_off),
+            title: Text('משתמש לא נמצא'),
+          );
+        }
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -202,7 +218,7 @@ class _PostCard extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
@@ -186,7 +185,7 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
                 final playerGoals = events.where((e) => e.playerId == player.uid && e.type == EventType.goal).length;
                 final playerAssists = events.where((e) => e.playerId == player.uid && e.type == EventType.assist).length;
                 final playerSaves = events.where((e) => e.playerId == player.uid && e.type == EventType.save).length;
-                final isMVP = events.where((e) => e.playerId == player.uid && e.type == EventType.mvpVote).length > 0;
+                final isMVP = events.where((e) => e.playerId == player.uid && e.type == EventType.mvpVote).isNotEmpty;
                 
                 // Get average rating (simplified - use default for now)
                 final averageRating = 7.0; // Could be improved by getting from ratings
@@ -268,9 +267,10 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
-    final teamsRepo = ref.watch(teamsRepositoryProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final teamsRepo = ref.read(teamsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
 
     final gameStream = gamesRepo.watchGame(widget.gameId);
     final teamsStream = teamsRepo.watchTeams(widget.gameId);

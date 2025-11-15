@@ -1,7 +1,29 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:kickadoor/firebase_options.dart';
+import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/utils/retry_utils.dart';
 
 void main() {
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    try {
+      // Only initialize if not already initialized
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        Env.limitedMode = false;
+      }
+    } catch (e) {
+      // Firebase initialization may fail in test environment
+      // Set limited mode so ErrorHandlerService handles it gracefully
+      Env.limitedMode = true;
+      debugPrint('Firebase initialization skipped in test: $e');
+    }
+  });
+
   group('RetryUtils', () {
     test('should retry on retryable errors', () async {
       int attempts = 0;

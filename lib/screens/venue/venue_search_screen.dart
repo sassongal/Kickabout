@@ -32,7 +32,7 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
   List<PlaceResult> _venues = [];
   bool _isLoading = false;
   bool _isLoadingLocation = true;
-  bool _includeRentals = true;
+  final bool _includeRentals = true;
   String _selectedFilter = 'all'; // 'all', 'public', 'rental'
   Position? _currentPosition;
   String? _errorMessage;
@@ -152,11 +152,11 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
         await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
       }
 
-      if (mounted) {
-        SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
-        context.pop(true);
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
+      context.pop(true);
     } catch (e) {
+      if (!context.mounted) return;
       SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
     }
   }
@@ -414,8 +414,8 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: venue.isPublic
-                                            ? FuturisticColors.primary.withOpacity(0.1)
-                                            : FuturisticColors.secondary.withOpacity(0.1),
+                                            ? FuturisticColors.primary.withValues(alpha: 0.1)
+                                            : FuturisticColors.secondary.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(

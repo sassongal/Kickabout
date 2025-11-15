@@ -97,18 +97,16 @@ class _EditManualPlayerDialogState extends ConsumerState<EditManualPlayerDialog>
 
       await usersRepo.setUser(updatedUser);
 
-      if (mounted) {
-        Navigator.of(context).pop(true);
-        SnackbarHelper.showSuccess(
-          context,
-          'פרטי השחקן עודכנו בהצלחה',
-        );
-      }
+      if (!context.mounted) return;
+      Navigator.of(context).pop(true);
+      SnackbarHelper.showSuccess(
+        context,
+        'פרטי השחקן עודכנו בהצלחה',
+      );
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        SnackbarHelper.showErrorFromException(context, e);
-      }
+      if (!context.mounted) return;
+      setState(() => _isLoading = false);
+      SnackbarHelper.showErrorFromException(context, e);
     }
   }
 
@@ -123,6 +121,7 @@ class _EditManualPlayerDialogState extends ConsumerState<EditManualPlayerDialog>
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(widget.hubId);
       
+      if (!context.mounted) return;
       if (hub == null) {
         SnackbarHelper.showError(context, 'Hub לא נמצא');
         return;
@@ -161,23 +160,20 @@ $invitationLink
 
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
-        if (mounted) {
-          SnackbarHelper.showSuccess(context, 'נפתחה תוכנת המייל');
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showSuccess(context, 'נפתחה תוכנת המייל');
       } else {
         // Fallback: Copy invitation link to clipboard
         await Clipboard.setData(ClipboardData(text: invitationLink));
-        if (mounted) {
-          SnackbarHelper.showSuccess(
-            context,
-            'הקישור הועתק ללוח - נא לשלוח במייל ידנית',
-          );
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showSuccess(
+          context,
+          'הקישור הועתק ללוח - נא לשלוח במייל ידנית',
+        );
       }
     } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showErrorFromException(context, e);
     }
   }
 
@@ -289,7 +285,7 @@ $invitationLink
                 const SizedBox(height: 16),
                 // Position dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedPosition,
+                  initialValue: _selectedPosition,
                   decoration: const InputDecoration(
                     labelText: 'עמדה מועדפת',
                     border: OutlineInputBorder(),

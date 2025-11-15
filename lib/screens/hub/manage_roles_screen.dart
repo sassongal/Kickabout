@@ -93,16 +93,14 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                                     newRole.firestoreValue,
                                   );
                                   
-                                  if (mounted) {
-                                    SnackbarHelper.showSuccess(
-                                      context,
-                                      'תפקיד עודכן בהצלחה',
-                                    );
-                                  }
+                                  if (!context.mounted) return;
+                                  SnackbarHelper.showSuccess(
+                                    context,
+                                    'תפקיד עודכן בהצלחה',
+                                  );
                                 } catch (e) {
-                                  if (mounted) {
-                                    SnackbarHelper.showErrorFromException(context, e);
-                                  }
+                                  if (!context.mounted) return;
+                                  SnackbarHelper.showErrorFromException(context, e);
                                 }
                               },
                             ),

@@ -132,15 +132,15 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                     text.trim(),
                   );
                   _messageController.clear();
+                  if (!context.mounted) return;
                   _scrollController.animateTo(
                     0.0,
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOut,
                   );
                 } catch (e) {
-                  if (mounted) {
-                    SnackbarHelper.showError(context, 'שגיאה בשליחת הודעה: $e');
-                  }
+                  if (!context.mounted) return;
+                  SnackbarHelper.showError(context, 'שגיאה בשליחת הודעה: $e');
                 }
               },
             ),
@@ -226,8 +226,8 @@ class _PrivateMessageBubble extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 10,
                               color: isMe
-                                  ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
-                                  : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                  ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)
+                                  : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                             ),
                           ),
                           if (isMe && message.read) ...[
@@ -235,7 +235,7 @@ class _PrivateMessageBubble extends ConsumerWidget {
                             Icon(
                               Icons.done_all,
                               size: 12,
-                              color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
+                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                             ),
                           ],
                         ],

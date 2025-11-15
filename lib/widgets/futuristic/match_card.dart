@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/enums/game_status.dart';
 
 /// Futuristic match card with animated elements
 class MatchCard extends StatelessWidget {
@@ -60,7 +59,7 @@ class MatchCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(game.status).withOpacity(0.2),
+                    color: _getStatusColor(game.status).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: _getStatusColor(game.status),

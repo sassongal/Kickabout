@@ -5,8 +5,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Map screen - shows hubs and games on map
@@ -40,16 +40,46 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           _currentPosition = position;
         });
         _updateMapCamera();
-        await _loadMarkers();
       } else {
-        if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
+        // If no location, set default to Israel center (Jerusalem)
+        setState(() {
+          _currentPosition = Position(
+            latitude: 31.7683,
+            longitude: 35.2137,
+            timestamp: DateTime.now(),
+            accuracy: 0,
+            altitude: 0,
+            altitudeAccuracy: 0,
+            heading: 0,
+            headingAccuracy: 0,
+            speed: 0,
+            speedAccuracy: 0,
           );
-        }
+        });
+        _updateMapCamera();
       }
+      
+      // Load markers regardless of location
+      await _loadMarkers();
     } catch (e) {
+      // If location fails, still try to load hubs with default location
+      setState(() {
+        _currentPosition = Position(
+          latitude: 31.7683,
+          longitude: 35.2137,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          heading: 0,
+          headingAccuracy: 0,
+          speed: 0,
+          speedAccuracy: 0,
+        );
+      });
+      _updateMapCamera();
+      await _loadMarkers();
+      
       if (mounted) {
         SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
       }
@@ -74,8 +104,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _loadMarkers() async {
-    if (_currentPosition == null) return;
-
     final markers = <Marker>{};
 
     try {
@@ -83,11 +111,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (_selectedFilter == 'all' || _selectedFilter == 'hubs') {
         final hubsRepo = ref.read(hubsRepositoryProvider);
         final venuesRepo = ref.read(venuesRepositoryProvider);
-        final hubs = await hubsRepo.findHubsNearby(
-          latitude: _currentPosition!.latitude,
-          longitude: _currentPosition!.longitude,
-          radiusKm: 50.0, // 50km radius
-        );
+        
+        // Get all hubs (or nearby if we have location)
+        final List<Hub> hubs;
+        if (_currentPosition != null) {
+          hubs = await hubsRepo.findHubsNearby(
+            latitude: _currentPosition!.latitude,
+            longitude: _currentPosition!.longitude,
+            radiusKm: 50.0, // 50km radius
+          );
+        } else {
+          // Load all hubs if no location available
+          hubs = await hubsRepo.getAllHubs(limit: 200);
+        }
 
         for (final hub in hubs) {
           // Add hub marker (if has primary location)
@@ -144,11 +180,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // Load venues only
       if (_selectedFilter == 'venues') {
         final venuesRepo = ref.read(venuesRepositoryProvider);
-        final venues = await venuesRepo.findVenuesNearby(
-          latitude: _currentPosition!.latitude,
-          longitude: _currentPosition!.longitude,
-          radiusKm: 50.0,
-        );
+        final List<Venue> venues;
+        if (_currentPosition != null) {
+          venues = await venuesRepo.findVenuesNearby(
+            latitude: _currentPosition!.latitude,
+            longitude: _currentPosition!.longitude,
+            radiusKm: 50.0,
+          );
+        } else {
+          // If no location, get venues from all hubs
+          final hubsRepo = ref.read(hubsRepositoryProvider);
+          final allHubs = await hubsRepo.getAllHubs(limit: 200);
+          venues = [];
+          for (final hub in allHubs) {
+            final hubVenues = await venuesRepo.getVenuesByHub(hub.hubId);
+            venues.addAll(hubVenues);
+          }
+        }
 
         for (final venue in venues) {
           markers.add(
@@ -189,36 +237,39 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             final games = await gamesRepo.getGamesByHub(hub.hubId);
             for (final game in games) {
               if (game.locationPoint != null) {
-                final distance = Geolocator.distanceBetween(
-                  _currentPosition!.latitude,
-                  _currentPosition!.longitude,
-                  game.locationPoint!.latitude,
-                  game.locationPoint!.longitude,
-                ) / 1000;
+                // If we have current position, filter by distance
+                if (_currentPosition != null) {
+                  final distance = Geolocator.distanceBetween(
+                    _currentPosition!.latitude,
+                    _currentPosition!.longitude,
+                    game.locationPoint!.latitude,
+                    game.locationPoint!.longitude,
+                  ) / 1000;
 
-                if (distance <= 50.0) {
-                  final dateFormat = '${game.gameDate.day}/${game.gameDate.month}';
-                  final timeFormat = '${game.gameDate.hour}:${game.gameDate.minute.toString().padLeft(2, '0')}';
-                  markers.add(
-                    Marker(
-                      markerId: MarkerId('game_${game.gameId}'),
-                      position: LatLng(
-                        game.locationPoint!.latitude,
-                        game.locationPoint!.longitude,
-                      ),
-                      infoWindow: InfoWindow(
-                        title: 'משחק',
-                        snippet: '$dateFormat $timeFormat',
-                      ),
-                      icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueGreen,
-                      ),
-                      onTap: () {
-                        context.push('/games/${game.gameId}');
-                      },
-                    ),
-                  );
+                  if (distance > 50.0) continue;
                 }
+                
+                final dateFormat = '${game.gameDate.day}/${game.gameDate.month}';
+                final timeFormat = '${game.gameDate.hour}:${game.gameDate.minute.toString().padLeft(2, '0')}';
+                markers.add(
+                  Marker(
+                    markerId: MarkerId('game_${game.gameId}'),
+                    position: LatLng(
+                      game.locationPoint!.latitude,
+                      game.locationPoint!.longitude,
+                    ),
+                    infoWindow: InfoWindow(
+                      title: 'משחק',
+                      snippet: '$dateFormat $timeFormat',
+                    ),
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueGreen,
+                    ),
+                    onTap: () {
+                      context.push('/games/${game.gameId}');
+                    },
+                  ),
+                );
               }
             }
           }
@@ -265,19 +316,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
       ],
       body: _isLoading
-          ? FuturisticLoadingState(message: 'טוען מפה...')
-          : _currentPosition == null
-              ? FuturisticEmptyState(
-                  icon: Icons.location_off,
-                  title: 'לא ניתן לקבל מיקום',
-                  message: 'אנא אפשר גישה למיקום כדי לראות את המפה',
-                  action: ElevatedButton.icon(
-                    onPressed: _loadCurrentLocation,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('נסה שוב'),
-                  ),
-                )
-              : Stack(
+          ? const FuturisticLoadingState(message: 'טוען מפה...')
+          : Stack(
                   children: [
                     GoogleMap(
                       initialCameraPosition: CameraPosition(

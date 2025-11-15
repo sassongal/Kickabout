@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/data/repositories.dart';
@@ -45,15 +44,13 @@ class ScoutingResult {
 class ScoutingService {
   final UsersRepository _usersRepo;
   final HubsRepository _hubsRepo;
-  final LocationService _locationService;
 
   ScoutingService({
     required UsersRepository usersRepo,
     required HubsRepository hubsRepo,
     required LocationService locationService,
   })  : _usersRepo = usersRepo,
-        _hubsRepo = hubsRepo,
-        _locationService = locationService;
+        _hubsRepo = hubsRepo;
 
   /// Find players matching scouting criteria
   Future<List<ScoutingResult>> scoutPlayers(ScoutingCriteria criteria) async {

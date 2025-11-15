@@ -10,6 +10,7 @@ import 'package:kickadoor/services/push_notification_integration_service.dart';
 import 'package:kickadoor/services/scouting_service.dart';
 import 'package:kickadoor/services/google_places_service.dart';
 import 'package:kickadoor/services/custom_api_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -139,5 +140,38 @@ final googlePlacesServiceProvider = Provider<GooglePlacesService>((ref) {
 /// Custom API service provider
 final customApiServiceProvider = Provider<CustomApiService>((ref) {
   return CustomApiService();
+});
+
+/// Home dashboard data provider (weather & vibe)
+final homeDashboardDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  try {
+    final locationService = ref.read(locationServiceProvider);
+    final position = await locationService.getCurrentLocation();
+
+    if (position == null) {
+      return {
+        'vibeMessage': 'יום ענק לכדורגל! ⚽',
+        'temperature': null,
+        'condition': null,
+        'aqiIndex': null,
+      };
+    }
+
+    final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+    final result = await functions.httpsCallable('getHomeDashboardData').call({
+      'lat': position.latitude,
+      'lon': position.longitude,
+    });
+
+    return Map<String, dynamic>.from(result.data);
+  } catch (e) {
+    // In case of error, return default message
+    return {
+      'vibeMessage': 'יום טוב לכדורגל! ☀️',
+      'temperature': null,
+      'condition': null,
+      'aqiIndex': null,
+    };
+  }
 });
 

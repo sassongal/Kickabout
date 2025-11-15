@@ -52,15 +52,15 @@ class _AIInsightBadgeState extends State<AIInsightBadge>
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: color.withOpacity(_glowAnimation.value),
+              color: color.withValues(alpha: _glowAnimation.value),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(_glowAnimation.value * 0.3),
+                color: color.withValues(alpha: _glowAnimation.value * 0.3),
                 blurRadius: 8,
                 spreadRadius: 1,
               ),

@@ -66,16 +66,16 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
 
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'נא להתחבר תחילה');
-        context.go('/auth');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showError(context, 'נא להתחבר תחילה');
+      context.go('/auth');
       return;
     }
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(_hub!.hubId);
+      if (!context.mounted) return;
       if (hub == null) {
         SnackbarHelper.showError(context, 'Hub לא נמצא');
         return;
@@ -83,6 +83,7 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
 
       // Check if invitations are enabled
       final invitationsEnabled = hub.settings['invitationsEnabled'] as bool? ?? true;
+      if (!context.mounted) return;
       if (!invitationsEnabled) {
         SnackbarHelper.showError(context, 'הזמנות ל-Hub זה מושבתות');
         return;
@@ -94,23 +95,20 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
       if (joinMode == 'auto') {
         // Auto join
         await hubsRepo.addMember(_hub!.hubId, currentUserId);
-        if (mounted) {
-          SnackbarHelper.showSuccess(context, 'הצטרפת ל-Hub "${hub.name}"!');
-          context.go('/hubs/${hub.hubId}');
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showSuccess(context, 'הצטרפת ל-Hub "${hub.name}"!');
+        context.go('/hubs/${hub.hubId}');
       } else {
         // Approval required - create a join request
         // For now, we'll just add them (in production, you'd create a join request)
         await hubsRepo.addMember(_hub!.hubId, currentUserId);
-        if (mounted) {
-          SnackbarHelper.showSuccess(context, 'הבקשה להצטרפות נשלחה למנהל Hub');
-          context.go('/hubs/${hub.hubId}');
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showSuccess(context, 'הבקשה להצטרפות נשלחה למנהל Hub');
+        context.go('/hubs/${hub.hubId}');
       }
     } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בהצטרפות: $e');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showError(context, 'שגיאה בהצטרפות: $e');
     }
   }
 
@@ -196,7 +194,7 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
             const SizedBox(height: 24),
             if (requiresApproval)
               Card(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 child: const Padding(
                   padding: EdgeInsets.all(16),
                   child: Row(

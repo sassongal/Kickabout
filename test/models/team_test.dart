@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kickadoor/models/team.dart';
 
 void main() {
   group('Team Model', () {

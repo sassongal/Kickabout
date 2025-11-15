@@ -154,8 +154,10 @@ class ValidationUtils {
   /// Sanitize text input (remove dangerous characters)
   static String sanitizeText(String text) {
     // Remove null bytes and control characters
+    // Collapse multiple spaces into a single space
     return text
         .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ') // Collapse multiple whitespace to single space
         .trim();
   }
 

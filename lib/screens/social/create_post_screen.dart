@@ -8,7 +8,6 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';
-import 'package:flutter/foundation.dart';
 import 'package:kickadoor/core/constants.dart';
 
 /// Create Feed Post Screen - Create a post with text and photos

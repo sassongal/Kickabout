@@ -89,7 +89,7 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: DropdownButtonFormField<String>(
-                  value: selectedHubId,
+                  initialValue: selectedHubId,
                   decoration: const InputDecoration(
                     labelText: 'בחר הוב',
                     border: InputBorder.none,
@@ -170,7 +170,7 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: _getStatusColor(game.status, context).withOpacity(0.2),
+                          backgroundColor: _getStatusColor(game.status, context).withValues(alpha: 0.2),
                           child: Icon(
                             Icons.sports_soccer,
                             color: _getStatusColor(game.status, context),
@@ -196,7 +196,7 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
                                     style: const TextStyle(fontSize: 12),
                                   ),
                                   backgroundColor: _getStatusColor(game.status, context)
-                                      .withOpacity(0.1),
+                                      .withValues(alpha: 0.1),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(

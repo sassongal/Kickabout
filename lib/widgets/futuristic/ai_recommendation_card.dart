@@ -42,7 +42,7 @@ class AIRecommendationCard extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [
                   accent,
-                  accent.withOpacity(0.6),
+                  accent.withValues(alpha: 0.6),
                 ],
               ),
               borderRadius: BorderRadius.circular(12),

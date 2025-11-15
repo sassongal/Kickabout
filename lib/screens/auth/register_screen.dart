@@ -5,7 +5,6 @@ import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/config/env.dart';
-import 'package:flutter/foundation.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';

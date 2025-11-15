@@ -76,6 +76,34 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
     return StreamBuilder<User?>(
       stream: userStream,
       builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return FuturisticScaffold(
+            title: 'לוח בקרה',
+            showBottomNav: true,
+            body: const FuturisticLoadingState(message: 'טוען...'),
+          );
+        }
+
+        if (userSnapshot.hasError) {
+          return FuturisticScaffold(
+            title: 'לוח בקרה',
+            showBottomNav: true,
+            body: FuturisticEmptyState(
+              icon: Icons.error_outline,
+              title: 'שגיאה בטעינת הנתונים',
+              message: userSnapshot.error.toString(),
+              action: ElevatedButton.icon(
+                onPressed: () {
+                  // Retry by rebuilding
+                  setState(() {});
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('נסה שוב'),
+              ),
+            ),
+          );
+        }
+
         final user = userSnapshot.data;
         final availabilityStatus = user?.availabilityStatus ?? 'available';
 
@@ -306,7 +334,11 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                       const SizedBox(height: 24),
                     ],
                     
-                    // Stats Dashboard (matching Figma design)
+                    // Weather & Vibe Widget
+                    const HomeWeatherVibeWidget(),
+                    const SizedBox(height: 24),
+                    
+                    // Stats Dashboard (compact version)
                     StreamBuilder<Gamification?>(
                       stream: gamificationStream,
                       builder: (context, snapshot) {
@@ -327,7 +359,8 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                     const SizedBox(height: 24),
 
                     // My Hubs & Associated Hubs
-                    if (currentUserId != null) ...[
+                    // currentUserId is guaranteed to be non-null here (checked at line 44)
+                    ...[
                       Row(
                         children: [
                           Expanded(
@@ -1038,6 +1071,90 @@ class _QuickActionButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Weather & Vibe Widget for Home Screen
+class HomeWeatherVibeWidget extends ConsumerWidget {
+  const HomeWeatherVibeWidget({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardData = ref.watch(homeDashboardDataProvider);
+
+    return dashboardData.when(
+      data: (data) {
+        final vibeMessage = data['vibeMessage'] as String? ?? 'יום טוב לכדורגל!';
+        final temp = data['temperature'] as int?;
+        final aqi = data['aqiIndex'] as int?;
+
+        return FuturisticCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 1. Vibe Message (משמאל, תופס את רוב המקום)
+              Expanded(
+                child: Text(
+                  vibeMessage,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: FuturisticColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // 2. Data Icons (מימין, קומפקטי)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // טמפרטורה
+                  if (temp != null) ...[
+                    Icon(
+                      Icons.thermostat,
+                      size: 16,
+                      color: FuturisticColors.primary.withValues(alpha: 0.8),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$temp°',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: FuturisticColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  // איכות אוויר
+                  if (aqi != null) ...[
+                    Icon(
+                      Icons.air,
+                      size: 16,
+                      color: FuturisticColors.secondary.withValues(alpha: 0.8),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$aqi',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: FuturisticColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SkeletonLoader(height: 100),
+      error: (err, stack) => FuturisticEmptyState(
+        icon: Icons.cloud_off,
+        title: 'שגיאה בטעינת נתוני מזג אוויר',
+        message: 'לא ניתן לטעון את נתוני מזג האוויר כרגע',
       ),
     );
   }

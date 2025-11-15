@@ -21,7 +21,6 @@ class HubInvitationsScreen extends ConsumerStatefulWidget {
 }
 
 class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
-  String? _invitationCode;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +48,6 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
 
         final hub = snapshot.data!;
         final invitationCode = hub.settings['invitationCode'] as String? ?? widget.hubId.substring(0, 8).toUpperCase();
-        _invitationCode = invitationCode;
 
         // Generate invitation link
         final invitationLink = 'https://kickadoor.app/invite/$invitationCode';
@@ -191,6 +189,7 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(widget.hubId);
+      if (!context.mounted) return;
       if (hub == null) {
         SnackbarHelper.showError(context, 'Hub לא נמצא');
         return;
@@ -203,13 +202,11 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
         'settings': updatedSettings,
       });
 
-      if (mounted) {
-        SnackbarHelper.showSuccess(context, 'ההגדרה עודכנה בהצלחה');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showSuccess(context, 'ההגדרה עודכנה בהצלחה');
     } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בעדכון הגדרה: $e');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showError(context, 'שגיאה בעדכון הגדרה: $e');
     }
   }
 }

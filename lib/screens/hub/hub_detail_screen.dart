@@ -6,17 +6,16 @@ import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/screens/social/feed_screen.dart';
 import 'package:kickadoor/screens/social/hub_chat_screen.dart';
-import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/hub_events_tab.dart';
 import 'package:kickadoor/screens/hub/hub_analytics_screen.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/models/hub_role.dart';
-import 'package:flutter/foundation.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -45,10 +44,22 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+    // Validate hubId before proceeding
+    if (widget.hubId.isEmpty) {
+      return AppScaffold(
+        title: 'פרטי Hub',
+        body: const Center(
+          child: Text('שגיאה: מזהה Hub לא תקין'),
+        ),
+      );
+    }
+
     // ConsumerState provides 'ref' automatically
     final currentUserId = ref.watch(currentUserIdProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
+    final venuesRepo = ref.read(venuesRepositoryProvider);
 
     final hubStream = hubsRepo.watchHub(widget.hubId);
 
@@ -119,7 +130,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                           Icon(
                             Icons.group,
                             size: 20,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -128,6 +139,9 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                           ),
                         ],
                       ),
+                      const SizedBox(height: 8),
+                      // Venues list
+                      _VenuesList(hubId: widget.hubId, venuesRepo: venuesRepo),
                       const SizedBox(height: 8),
                       // Actions
                       if (isHubManager) ...[
@@ -567,7 +581,7 @@ class _MembersTab extends ConsumerWidget {
                     if (user.city != null) Text('עיר: ${user.city}'),
                     if (user.preferredPosition.isNotEmpty)
                       Text('עמדה: ${user.preferredPosition}'),
-                    Text('ציון: ${user.currentRankScore.toStringAsFixed(1)}'),
+                    Text('דירוג: ${user.currentRankScore.toStringAsFixed(1)}'),
                   ],
                 ),
                 trailing: Row(
@@ -616,6 +630,133 @@ class _MembersTab extends ConsumerWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+/// Venues list widget
+class _VenuesList extends ConsumerWidget {
+  final String hubId;
+  final VenuesRepository venuesRepo;
+
+  const _VenuesList({
+    required this.hubId,
+    required this.venuesRepo,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final venuesStream = venuesRepo.watchVenuesByHub(hubId);
+
+    return StreamBuilder<List<Venue>>(
+      stream: venuesStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: SkeletonLoader(height: 60),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'שגיאה בטעינת מגרשים',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final venues = snapshot.data ?? [];
+
+        if (venues.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.location_off,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'אין מגרשים רשומים',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'מגרשים (${venues.length})',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            ...venues.map((venue) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          venue.name,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (venue.address != null && venue.address!.isNotEmpty)
+                          Text(
+                            venue.address!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
         );
       },
     );

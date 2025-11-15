@@ -217,7 +217,7 @@ class _UpcomingGamesSection extends ConsumerWidget {
             itemCount: 5,
             itemBuilder: (context, index) => const Padding(
               padding: EdgeInsets.only(bottom: 12),
-              child: const SkeletonLoader(height: 100),
+              child: SkeletonLoader(height: 100),
             ),
           );
         }

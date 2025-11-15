@@ -1,9 +1,25 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/logic/team_maker.dart';
 import 'package:kickadoor/models/models.dart';
+
+/// Top-level function for compute isolate - balances teams in background
+List<Team> _computeBalanceTeams(Map<String, dynamic> params) {
+  final players = (params['players'] as List).map((p) => PlayerForTeam(
+    uid: p['uid'] as String,
+    rating: p['rating'] as double,
+    role: PlayerRole.values.firstWhere((r) => r.name == p['role']),
+  )).toList();
+  final teamCount = params['teamCount'] as int;
+  
+  return TeamMaker.createBalancedTeams(
+    players,
+    teamCount: teamCount,
+  );
+}
 
 /// Team builder page with draggable chips and balance meter
 class TeamBuilderPage extends ConsumerStatefulWidget {
@@ -54,10 +70,21 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
       final users = await usersRepo.getUsers(widget.playerIds);
 
       final players = users.map((u) => PlayerForTeam.fromUser(u)).toList();
-      final teams = TeamMaker.createBalancedTeams(
-        players,
-        teamCount: widget.teamCount,
-      );
+      
+      // Prepare data for compute (must be serializable)
+      final playersData = players.map((p) => {
+        'uid': p.uid,
+        'rating': p.rating,
+        'role': p.role.name,
+      }).toList();
+      
+      final params = {
+        'players': playersData,
+        'teamCount': widget.teamCount,
+      };
+      
+      // Run heavy computation in isolate to prevent UI blocking
+      final teams = await compute(_computeBalanceTeams, params);
 
       if (mounted) {
         setState(() {

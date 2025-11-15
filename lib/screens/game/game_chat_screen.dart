@@ -186,8 +186,8 @@ class _ChatMessageBubble extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 10,
                             color: isMe
-                                ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
-                                : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)
+                                : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                           ),
                         ),
                       ),

@@ -111,7 +111,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
 
             // Position filter
             DropdownButtonFormField<String>(
-              value: _selectedPosition,
+              initialValue: _selectedPosition,
               decoration: const InputDecoration(
                 labelText: 'עמדה',
                 border: OutlineInputBorder(),
@@ -238,7 +238,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
               children: [
                 Icon(Icons.star, size: 16, color: Colors.amber),
                 const SizedBox(width: 4),
-                Text('${player.currentRankScore.toStringAsFixed(1)}'),
+                Text(player.currentRankScore.toStringAsFixed(1)),
                 const SizedBox(width: 16),
                 Icon(Icons.sports_soccer, size: 16),
                 const SizedBox(width: 4),
@@ -369,7 +369,6 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
-      final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
       final currentUserId = ref.read(currentUserIdProvider);
 
       if (currentUserId == null) {

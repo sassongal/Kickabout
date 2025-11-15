@@ -62,7 +62,7 @@ class GameReminderService {
         await _scheduleNotification(
           id: '${game.gameId}_24h'.hashCode,
           title: 'תזכורת משחק',
-          body: 'המשחק "${gameTitle}" מתחיל מחר ב-${_formatTime(gameDate)}',
+          body: 'המשחק "$gameTitle" מתחיל מחר ב-${_formatTime(gameDate)}',
           scheduledDate: reminder24h,
           payload: 'game:${game.gameId}',
         );
@@ -74,7 +74,7 @@ class GameReminderService {
         await _scheduleNotification(
           id: '${game.gameId}_2h'.hashCode,
           title: 'תזכורת משחק',
-          body: 'המשחק "${gameTitle}" מתחיל בעוד שעתיים',
+          body: 'המשחק "$gameTitle" מתחיל בעוד שעתיים',
           scheduledDate: reminder2h,
           payload: 'game:${game.gameId}',
         );
@@ -86,7 +86,7 @@ class GameReminderService {
         await _scheduleNotification(
           id: '${game.gameId}_30m'.hashCode,
           title: 'תזכורת משחק',
-          body: 'המשחק "${gameTitle}" מתחיל בעוד 30 דקות',
+          body: 'המשחק "$gameTitle" מתחיל בעוד 30 דקות',
           scheduledDate: reminder30m,
           payload: 'game:${game.gameId}',
         );

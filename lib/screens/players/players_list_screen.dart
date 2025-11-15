@@ -11,6 +11,7 @@ import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Players List Screen - לוח שחקנים
 class PlayersListScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,9 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
   String? _selectedCity;
   String? _selectedPosition;
   double? _minRating;
+  
+  // Store distances for each player (in meters)
+  final Map<String, double> _playerDistances = {};
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +162,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                   itemCount: players.length,
                   itemBuilder: (context, index) {
                     final player = players[index];
+                    final distance = _playerDistances[player.uid];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: FuturisticCard(
@@ -261,6 +266,29 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                         ),
                                       ],
                                     ),
+                                    // Distance display
+                                    if (distance != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on,
+                                            size: 14,
+                                            color: FuturisticColors.primary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            distance < 1000
+                                                ? 'מרחק: ${distance.toStringAsFixed(0)} מ\''
+                                                : 'מרחק: ${(distance / 1000).toStringAsFixed(1)} ק"מ',
+                                            style: FuturisticTypography.bodySmall.copyWith(
+                                              color: FuturisticColors.primary,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -347,6 +375,23 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
         players = players.where((p) => p.currentRankScore >= _minRating!).toList();
       }
 
+      // Calculate distances and sort
+      _playerDistances.clear();
+      if (position != null) {
+        // Calculate distance for each player with location
+        for (final player in players) {
+          if (player.location != null) {
+            final distance = Geolocator.distanceBetween(
+              position.latitude,
+              position.longitude,
+              player.location!.latitude,
+              player.location!.longitude,
+            );
+            _playerDistances[player.uid] = distance;
+          }
+        }
+      }
+
       // Sort
       switch (_sortBy) {
         case 'rating':
@@ -356,8 +401,23 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
           players.sort((a, b) => a.name.compareTo(b.name));
           break;
         case 'distance':
-          // Distance sorting would require calculating distance for each player
-          // For now, keep as is (already sorted by distance from findAvailablePlayersNearby)
+          if (position != null) {
+            // Sort by distance (closest first)
+            players.sort((a, b) {
+              final distA = _playerDistances[a.uid];
+              final distB = _playerDistances[b.uid];
+              
+              // Players with location come first
+              if (distA == null && distB == null) return 0;
+              if (distA == null) return 1; // a goes to end
+              if (distB == null) return -1; // b goes to end
+              
+              return distA.compareTo(distB); // Sort by distance ascending
+            });
+          } else {
+            // If no location, sort by rating as fallback
+            players.sort((a, b) => b.currentRankScore.compareTo(a.currentRankScore));
+          }
           break;
       }
 
@@ -396,7 +456,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                 children: [
                   // City filter
                   DropdownButtonFormField<String>(
-                    value: _selectedCity,
+                    initialValue: _selectedCity,
                     decoration: const InputDecoration(
                       labelText: 'עיר',
                       border: OutlineInputBorder(),
@@ -417,7 +477,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                   const SizedBox(height: 16),
                   // Position filter
                   DropdownButtonFormField<String>(
-                    value: _selectedPosition,
+                    initialValue: _selectedPosition,
                     decoration: const InputDecoration(
                       labelText: 'עמדה',
                       border: OutlineInputBorder(),

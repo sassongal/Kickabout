@@ -174,7 +174,11 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: FuturisticCard(
-                onTap: () => context.push('/hubs/${hub.hubId}'),
+                onTap: () {
+                  if (hub.hubId.isNotEmpty) {
+                    context.push('/hubs/${hub.hubId}');
+                  }
+                },
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -305,7 +309,9 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
                     snippet: '${hub.memberIds.length} חברים',
                   ),
                   onTap: () {
-                    context.push('/hubs/${hub.hubId}');
+                    if (hub.hubId.isNotEmpty) {
+                      context.push('/hubs/${hub.hubId}');
+                    }
                   },
                 );
               })

@@ -328,7 +328,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                     contentPadding: const EdgeInsets.all(12),
                                     leading: CircleAvatar(
                                       radius: 30,
-                                      backgroundColor: FuturisticColors.primary.withOpacity(0.1),
+                                      backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
                                       backgroundImage: user.photoUrl != null
                                           ? CachedNetworkImageProvider(user.photoUrl!)
                                           : null,
@@ -435,7 +435,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              '${user.currentRankScore.toStringAsFixed(1)}',
+                                              user.currentRankScore.toStringAsFixed(1),
                                               style: FuturisticTypography.labelMedium.copyWith(
                                                 fontWeight: FontWeight.bold,
                                                 color: FuturisticColors.warning,

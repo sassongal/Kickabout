@@ -41,32 +41,6 @@ class ImagePickerButton extends StatelessWidget {
     }
   }
 
-  // Optimized image picker for web
-  Future<void> _pickImageWeb(BuildContext context) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        onImagePicked(image);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('שגיאה בבחירת תמונה: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   void _showImageSourceDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,

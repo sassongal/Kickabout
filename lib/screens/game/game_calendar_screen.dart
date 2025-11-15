@@ -246,9 +246,9 @@ class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: isToday
-                ? Colors.blue.withOpacity(0.2)
+                ? Colors.blue.withValues(alpha: 0.2)
                 : hasGames
-                    ? Colors.green.withOpacity(0.1)
+                    ? Colors.green.withValues(alpha: 0.1)
                     : Colors.transparent,
             border: isToday
                 ? Border.all(color: Colors.blue, width: 2)

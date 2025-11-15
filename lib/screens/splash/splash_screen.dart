@@ -17,9 +17,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _ballController;
   late AnimationController _logoController;
   late AnimationController _glowController;
-  late Animation<Offset> _ballAnimation;
   late Animation<double> _logoScale;
-  late Animation<double> _glowAnimation;
 
   @override
   void initState() {
@@ -30,14 +28,6 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
-    
-    _ballAnimation = Tween<Offset>(
-      begin: const Offset(-0.5, 0.5),
-      end: const Offset(0.5, -0.3),
-    ).animate(CurvedAnimation(
-      parent: _ballController,
-      curve: Curves.easeInOut,
-    ));
     
     // Logo scale animation
     _logoController = AnimationController(
@@ -57,10 +47,6 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    
-    _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
-    );
     
     _startAnimations();
   }

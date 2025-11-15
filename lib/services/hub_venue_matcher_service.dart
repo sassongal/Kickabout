@@ -90,7 +90,7 @@ class HubVenueMatcherService {
           results.add(HubMatchResult(
             hub: hub,
             closestVenue: closestVenue,
-            distanceKm: closestDistance!,
+            distanceKm: closestDistance,
             relevanceScore: relevanceScore,
             venueCount: hubVenues.length,
           ));

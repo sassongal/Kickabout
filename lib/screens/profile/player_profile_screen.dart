@@ -27,11 +27,12 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
-    final ratingsRepo = ref.watch(ratingsRepositoryProvider);
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
-    final followRepo = ref.watch(followRepositoryProvider);
-    final gamificationRepo = ref.watch(gamificationRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final usersRepo = ref.read(usersRepositoryProvider);
+    final ratingsRepo = ref.read(ratingsRepositoryProvider);
+    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final followRepo = ref.read(followRepositoryProvider);
+    final gamificationRepo = ref.read(gamificationRepositoryProvider);
 
     final userStream = usersRepo.watchUser(widget.playerId);
     final ratingHistoryStream = ratingsRepo.watchRatingHistory(widget.playerId);

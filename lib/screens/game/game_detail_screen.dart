@@ -11,11 +11,9 @@ import 'package:kickadoor/widgets/game_photos_gallery.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:flutter/foundation.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
-import 'package:kickadoor/data/hubs_repository.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -33,9 +31,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
-    final signupsRepo = ref.watch(signupsRepositoryProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    // Use ref.read for repositories - they don't change, so no need to watch
+    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final signupsRepo = ref.read(signupsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
 
     final gameStream = gamesRepo.watchGame(widget.gameId);
     final signupsStream = signupsRepo.watchSignups(widget.gameId);
@@ -68,7 +67,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
           final isCreator = currentUserId == game.createdBy;
           final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
-          final hubsRepo = ref.watch(hubsRepositoryProvider);
+          final hubsRepo = ref.read(hubsRepositoryProvider);
 
           return StreamBuilder<List<GameSignup>>(
             stream: signupsStream,

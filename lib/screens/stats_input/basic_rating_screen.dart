@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -218,7 +217,7 @@ class _BasicRatingScreenState extends ConsumerState<BasicRatingScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _getRatingColor(currentRating).withOpacity(0.2),
+                    color: _getRatingColor(currentRating).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -374,15 +373,13 @@ class _BasicRatingScreenState extends ConsumerState<BasicRatingScreen> {
         }
       }
 
-      if (mounted) {
-        SnackbarHelper.showSuccess(context, 'הדירוגים נשמרו בהצלחה!');
-        context.pop();
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showSuccess(context, 'הדירוגים נשמרו בהצלחה!');
+      context.pop();
     } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-        setState(() => _isSubmitting = false);
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showErrorFromException(context, e);
+      setState(() => _isSubmitting = false);
     }
   }
 }

@@ -306,13 +306,11 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
       try {
         final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
         await hubEventsRepo.createHubEvent(event);
-        if (context.mounted) {
-          SnackbarHelper.showSuccess(context, 'אירוע נוצר בהצלחה!');
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showSuccess(context, 'אירוע נוצר בהצלחה!');
       } catch (e) {
-        if (context.mounted) {
-          SnackbarHelper.showErrorFromException(context, e);
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showErrorFromException(context, e);
       }
     }
   }
@@ -324,13 +322,11 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
     try {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       await hubEventsRepo.registerToEvent(widget.hubId, event.eventId, currentUserId);
-      if (context.mounted) {
-        SnackbarHelper.showSuccess(context, 'נרשמת לאירוע!');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showSuccess(context, 'נרשמת לאירוע!');
     } catch (e) {
-      if (context.mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showErrorFromException(context, e);
     }
   }
 
@@ -341,13 +337,11 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
     try {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       await hubEventsRepo.unregisterFromEvent(widget.hubId, event.eventId, currentUserId);
-      if (context.mounted) {
-        SnackbarHelper.showSuccess(context, 'ביטלת הרשמה לאירוע');
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showSuccess(context, 'ביטלת הרשמה לאירוע');
     } catch (e) {
-      if (context.mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-      }
+      if (!context.mounted) return;
+      SnackbarHelper.showErrorFromException(context, e);
     }
   }
 
@@ -523,13 +517,11 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
       try {
         final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
         await hubEventsRepo.deleteEvent(widget.hubId, event.eventId);
-        if (context.mounted) {
-          SnackbarHelper.showSuccess(context, 'אירוע נמחק');
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showSuccess(context, 'אירוע נמחק');
       } catch (e) {
-        if (context.mounted) {
-          SnackbarHelper.showErrorFromException(context, e);
-        }
+        if (!context.mounted) return;
+        SnackbarHelper.showErrorFromException(context, e);
       }
     }
   }

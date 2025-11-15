@@ -65,8 +65,8 @@ class _GradientButtonState extends State<GradientButton>
             boxShadow: widget.onPressed != null && !widget.isLoading
                 ? [
                     BoxShadow(
-                      color: FuturisticColors.secondary.withOpacity(
-                        _glowAnimation.value * 0.5,
+                      color: FuturisticColors.secondary.withValues(
+                        alpha: _glowAnimation.value * 0.5,
                       ),
                       blurRadius: 12,
                       spreadRadius: 2,
