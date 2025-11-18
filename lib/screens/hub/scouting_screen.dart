@@ -127,14 +127,14 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                         max: 50,
                         divisions: 34,
                         label: '$_minAge',
-                        onChanged: (value) {
-                          setState(() {
+                    onChanged: (value) {
+                      setState(() {
                             _minAge = value.toInt();
                             if (_minAge > _maxAge) {
                               _maxAge = _minAge;
                             }
-                          });
-                        },
+                      });
+                    },
                       ),
                     ],
                   ),
@@ -150,14 +150,14 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                         max: 50,
                         divisions: 34,
                         label: '$_maxAge',
-                        onChanged: (value) {
-                          setState(() {
+                    onChanged: (value) {
+                      setState(() {
                             _maxAge = value.toInt();
                             if (_maxAge < _minAge) {
                               _minAge = _maxAge;
                             }
-                          });
-                        },
+                      });
+                    },
                       ),
                     ],
                   ),

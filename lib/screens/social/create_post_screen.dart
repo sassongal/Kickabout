@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';
@@ -150,6 +151,22 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     if (currentUserId == null) {
       SnackbarHelper.showError(context, 'נא להתחבר');
       return;
+    }
+
+    // Check permissions
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(widget.hubId);
+      if (hub != null) {
+        final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
+        if (!hubPermissions.canCreatePosts()) {
+          SnackbarHelper.showError(context, 'אין לך הרשאה ליצור פוסטים בהאב זה');
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking post permissions: $e');
+      // Continue anyway - let Firestore rules handle it
     }
 
     setState(() => _isLoading = true);

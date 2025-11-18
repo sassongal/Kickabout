@@ -117,6 +117,23 @@ void main() async {
       debugPrint('⚠️ Push notifications initialization failed: $e');
     }
 
+    // Sign out any anonymous users on startup (force real login)
+    // This MUST happen before the app starts to prevent race conditions
+    try {
+      final auth = FirebaseAuth.instance;
+      final currentUser = auth.currentUser;
+      if (currentUser != null && currentUser.isAnonymous) {
+        debugPrint('🔓 Signing out anonymous user on startup...');
+        await auth.signOut();
+        debugPrint('✅ Anonymous user signed out - app will start at /auth');
+        // Wait a bit to ensure sign out completes before app starts
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error signing out anonymous user on startup: $e');
+      // Continue anyway - router will handle it
+    }
+    
     // Initialize Analytics and Remote Config in background (non-blocking)
     // This improves cold start time
     _initializeBackgroundServices(); // Fire and forget

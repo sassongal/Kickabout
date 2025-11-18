@@ -250,7 +250,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                   onPressed: (event.registeredPlayerIds.length >= event.maxParticipants && !isRegistered)
                                       ? null
                                       : (isRegistered
-                                          ? () => _unregisterFromEvent(event)
+                                      ? () => _unregisterFromEvent(event)
                                           : () => _registerToEvent(event)),
                                   icon: Icon(
                                     isRegistered ? Icons.cancel : Icons.check_circle,
@@ -338,7 +338,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
       if (e.toString().contains('full')) {
         SnackbarHelper.showError(context, 'האירוע מלא, אין מקום להרשמה נוספת');
       } else {
-        SnackbarHelper.showErrorFromException(context, e);
+      SnackbarHelper.showErrorFromException(context, e);
       }
     }
   }

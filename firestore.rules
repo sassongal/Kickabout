@@ -53,6 +53,35 @@ service cloud.firestore {
         );
     }
     
+    // פונקציה לבדיקת הרשאה ליצירת אירועים (manager/moderator או הרשאה מותאמת אישית)
+    function canCreateEvents(hubId) {
+      let hubData = get(/databases/$(database)/documents/hubs/$(hubId)).data;
+      return isAuthenticated() && (
+        // Check default permissions (manager/moderator)
+        hubData.createdBy == request.auth.uid ||
+        (hubData.roles != null && hubData.roles[request.auth.uid] in ['manager', 'moderator', 'admin']) ||
+        // Check custom permissions (set by manager)
+        (hubData.permissions != null && 
+         hubData.permissions.canCreateEvents != null &&
+         hubData.permissions.canCreateEvents is list &&
+         request.auth.uid in hubData.permissions.canCreateEvents)
+      );
+    }
+    
+    // פונקציה לבדיקת הרשאה ליצירת פוסטים (כל חבר או הרשאה מותאמת אישית)
+    function canCreatePosts(hubId) {
+      let hubData = get(/databases/$(database)/documents/hubs/$(hubId)).data;
+      return isAuthenticated() && 
+        request.auth.uid in hubData.memberIds && (
+        // If custom permissions exist, check if user is in the list
+        // Otherwise, all members can post (default)
+        hubData.permissions == null ||
+        hubData.permissions.canCreatePosts == null ||
+        !(hubData.permissions.canCreatePosts is list) ||
+        request.auth.uid in hubData.permissions.canCreatePosts
+      );
+    }
+    
     // ============================================
     // Users Collection: /users/{userId}
     // ============================================
@@ -129,8 +158,8 @@ service cloud.firestore {
         // Only hub members can read posts
         allow read: if isAuthenticated() && isHubMember(hubId);
         
-        // Only hub members can create posts
-        allow create: if isAuthenticated() && isHubMember(hubId) &&
+        // Hub members with permissions can create posts
+        allow create: if isAuthenticated() && canCreatePosts(hubId) &&
           // Validate required fields
           request.resource.data.keys().hasAll(['postId', 'hubId', 'authorId', 'type', 'createdAt']) &&
           request.resource.data.postId == postId &&
@@ -237,8 +266,8 @@ service cloud.firestore {
         // Only hub members can read events
         allow read: if isAuthenticated() && isHubMember(hubId);
         
-        // Only hub managers can create events
-        allow create: if isAuthenticated() && isHubManager(hubId) &&
+        // Hub managers/moderators or users with custom permissions can create events
+        allow create: if isAuthenticated() && canCreateEvents(hubId) &&
           // Validate required fields
           request.resource.data.keys().hasAll(['eventId', 'hubId', 'createdBy', 'title', 'eventDate', 'createdAt', 'updatedAt']) &&
           request.resource.data.eventId == eventId &&

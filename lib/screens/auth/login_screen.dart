@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
@@ -50,6 +51,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     } else {
       // On Web, just set to a static value to avoid rendering loops
       _pulseController.value = 1.0;
+    }
+    
+    // Auto-login in debug mode (only on emulator/device, not Web)
+    if (kDebugMode && !kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _autoLogin();
+      });
+    }
+  }
+  
+  /// Auto-login with configured email in debug mode
+  Future<void> _autoLogin() async {
+    if (!Env.isFirebaseAvailable || !Env.isAutoLoginEnabled) return;
+    
+    try {
+      final authService = ref.read(authServiceProvider);
+      
+      // Check if already logged in
+      final currentUser = authService.currentUser;
+      if (currentUser != null) {
+        // If user is anonymous, sign them out first
+        if (authService.isAnonymous) {
+          debugPrint('🔓 Signing out anonymous user before auto-login...');
+          await authService.signOut();
+        } else {
+          debugPrint('✅ Already logged in as: ${currentUser.email ?? currentUser.uid}');
+          return;
+        }
+      }
+      
+      // Try to sign in with email/password
+      debugPrint('🔐 Attempting auto-login with ${Env.autoLoginEmail}...');
+      
+      try {
+        await authService.signInWithEmailAndPassword(
+          Env.autoLoginEmail!,
+          Env.autoLoginPassword!,
+        );
+        
+        debugPrint('✅ Auto-login successful!');
+        
+        // Navigate to home (router will handle onboarding if needed)
+        if (mounted) {
+          context.go('/');
+        }
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+          debugPrint('⚠️ Auto-login failed: Invalid credentials. Please check Env.autoLoginEmail and Env.autoLoginPassword');
+        } else {
+          debugPrint('⚠️ Auto-login failed: ${e.code} - ${e.message}');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Auto-login failed: $e');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Auto-login error: $e');
     }
   }
 

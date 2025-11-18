@@ -276,7 +276,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   minimumSize: const Size(0, 40),
-                                ),
+                            ),
                                 child: const Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -323,7 +323,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                                     const SnackBar(
                                       content: Text('בקרוב'),
                                       duration: Duration(seconds: 2),
-                                    ),
+                                  ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -379,9 +379,9 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                     label: const Text('חוקי ההאב'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
                   ),
                 ),
+              ),
               // Tabs
               TabBar(
                 controller: _tabController,
@@ -566,23 +566,23 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
             Expanded(
               child: games.isEmpty
                   ? FuturisticEmptyState(
-                      icon: Icons.sports_soccer,
-                      title: 'אין משחקים עדיין',
+            icon: Icons.sports_soccer,
+            title: 'אין משחקים עדיין',
                       message: canCreateGames
                           ? 'תעד משחק חדש כדי להתחיל'
                           : 'אין משחקים להצגה',
                     )
                   : ListView.builder(
-                      itemCount: games.length,
-                      padding: const EdgeInsets.all(8),
-                      itemBuilder: (context, index) {
-                        final game = games[index];
+          itemCount: games.length,
+          padding: const EdgeInsets.all(8),
+          itemBuilder: (context, index) {
+            final game = games[index];
                         final isCompleted = game.status == GameStatus.completed;
                         final canEdit = currentUserId == game.createdBy || canCreateGames;
                         
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          child: ListTile(
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: ListTile(
                             leading: Icon(
                               isCompleted ? Icons.check_circle : Icons.sports_soccer,
                               color: isCompleted ? Colors.green : null,
@@ -611,10 +611,10 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
                                 const Icon(Icons.chevron_left),
                               ],
                             ),
-                            onTap: () => context.push('/games/${game.gameId}'),
-                          ),
-                        );
-                      },
+                onTap: () => context.push('/games/${game.gameId}'),
+              ),
+            );
+          },
                     ),
             ),
           ],
@@ -712,6 +712,10 @@ class _MembersTab extends ConsumerWidget {
     final isAdmin = roleAsync.valueOrNull == UserRole.admin;
     final isManagerOrAdmin = isHubManager || isAdmin;
 
+    // Debug: Log memberIds to help diagnose issues
+    debugPrint('🔍 Members Tab - hub.memberIds: ${hub.memberIds}');
+    debugPrint('🔍 Members Tab - memberIds.length: ${hub.memberIds.length}');
+
     return FutureBuilder<List<User>>(
       future: usersRepo.getUsers(hub.memberIds),
       builder: (context, snapshot) {
@@ -746,6 +750,27 @@ class _MembersTab extends ConsumerWidget {
         }
 
         final users = snapshot.data ?? [];
+        
+        // Debug: Log users found
+        debugPrint('🔍 Members Tab - users found: ${users.length}');
+        if (users.isEmpty && hub.memberIds.isNotEmpty) {
+          // If memberIds exist but no users found, show error with more info
+          debugPrint('⚠️ Members Tab - memberIds exist but no users found. memberIds: ${hub.memberIds}');
+          return FuturisticEmptyState(
+            icon: Icons.error_outline,
+            title: 'שגיאה בטעינת חברים',
+            message: 'נמצאו ${hub.memberIds.length} חברים ברשימה, אך לא ניתן לטעון את הפרטים שלהם',
+            action: ElevatedButton.icon(
+              onPressed: () {
+                // Force rebuild by invalidating provider
+                ref.invalidate(hubRoleProvider(hubId));
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('נסה שוב'),
+            ),
+          );
+        }
+        
         if (users.isEmpty) {
           return FuturisticEmptyState(
             icon: Icons.people_outline,
@@ -793,8 +818,8 @@ class _MembersTab extends ConsumerWidget {
                       : null,
                   child: user.photoUrl == null
                       ? Icon(
-                          Icons.person,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              Icons.person,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
                         )
                       : null,
                 ),
@@ -802,7 +827,7 @@ class _MembersTab extends ConsumerWidget {
                   firstName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                  ),
+                      ),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

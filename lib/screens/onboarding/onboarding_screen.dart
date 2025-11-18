@@ -115,22 +115,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           final container = ProviderScope.containerOf(context);
           container.invalidate(onboardingStatusProvider);
           
-          // Wait a bit for the provider to reload
-          await Future.delayed(const Duration(milliseconds: 100));
+          // Wait longer for provider to reload and state to update
+          await Future.delayed(const Duration(milliseconds: 300));
+          
+          // Use Future.microtask to ensure navigation happens after state update
+          // This ensures the router sees the updated onboarding status
+          Future.microtask(() {
+            if (mounted) {
+              context.go('/');
+            }
+          });
         } catch (e) {
           debugPrint('Error invalidating provider: $e');
-          // Continue anyway - the router might still work
-        }
-        
-        // Now navigate - the router will see the updated value
+          // Fallback: navigate directly after a delay
+          await Future.delayed(const Duration(milliseconds: 200));
+          if (mounted) {
         context.go('/');
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error completing onboarding: $e');
       if (mounted) {
-        // Even if saving fails, try to navigate
-        // The router will handle the redirect logic
+        // Even if saving fails, try to navigate after a delay
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (mounted) {
         context.go('/');
+        }
       }
     }
   }

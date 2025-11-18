@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,10 +30,59 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _isLoading = true;
   String _selectedFilter = 'all'; // 'all', 'hubs', 'games', 'venues'
 
+  // Cache for custom icons to avoid recreating them
+  BitmapDescriptor? _venuePublicIcon;
+  BitmapDescriptor? _venueRentalIcon;
+  BitmapDescriptor? _hubMarkerIcon;
+  bool _iconsLoaded = false;
+
   @override
   void initState() {
     super.initState();
+    _loadCustomIcons();
     _loadCurrentLocation();
+  }
+  
+  /// Load custom icons for map markers
+  Future<void> _loadCustomIcons() async {
+    try {
+      // Add timeout to prevent infinite loading
+      final iconsFuture = Future.wait([
+        BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(100, 100)),
+          'assets/icons/venue_public.png',
+        ),
+        BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(100, 100)),
+          'assets/icons/venue_rental.png',
+        ),
+        BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(100, 100)),
+          'assets/icons/hub_marker.png',
+        ),
+      ]).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          debugPrint('⚠️ Timeout loading custom icons - using default markers');
+          throw TimeoutException('Loading icons timeout', const Duration(seconds: 5));
+        },
+      );
+      
+      final icons = await iconsFuture;
+      _venuePublicIcon = icons[0];
+      _venueRentalIcon = icons[1];
+      _hubMarkerIcon = icons[2];
+      
+      setState(() {
+        _iconsLoaded = true;
+      });
+    } catch (e) {
+      debugPrint('Error loading custom icons: $e');
+      // Fallback to default markers if custom icons fail
+      setState(() {
+        _iconsLoaded = true;
+      });
+    }
   }
 
   Future<void> _loadCurrentLocation() async {
@@ -64,8 +114,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         _updateMapCamera();
       }
       
-      // Load markers regardless of location
-      await _loadMarkers();
+      // Load markers regardless of location (wait for icons to load first, with timeout)
+      if (_iconsLoaded) {
+        await _loadMarkers();
+      } else {
+        // Wait for icons to load, but with timeout
+        try {
+          await Future.delayed(const Duration(milliseconds: 500))
+              .timeout(const Duration(seconds: 3));
+          if (_iconsLoaded) {
+            await _loadMarkers();
+          } else {
+            // Icons still not loaded, proceed anyway with default markers
+            debugPrint('⚠️ Icons not loaded after timeout, proceeding with default markers');
+            await _loadMarkers();
+          }
+        } catch (e) {
+          debugPrint('⚠️ Timeout waiting for icons: $e');
+          // Proceed anyway
+          await _loadMarkers();
+        }
+      }
     } catch (e) {
       // If location fails, still try to load hubs with default location
       setState(() {
@@ -163,7 +232,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   title: hub.name,
                   snippet: hub.description ?? '${hub.memberIds.length} חברים',
                 ),
-                icon: BitmapDescriptor.defaultMarkerWithHue(
+                icon: _hubMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(
                   BitmapDescriptor.hueBlue,
                 ),
                 onTap: () {
@@ -443,6 +512,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           final location = geometry?['location'] as Map<String, dynamic>?;
 
           if (placeId != null && name != null && location != null) {
+            // Determine icon based on venueType
+            final venueType = place['venueType'] as String? ?? 'unknown';
+            BitmapDescriptor icon;
+            
+            if (venueType == 'rental' && _venueRentalIcon != null) {
+              icon = _venueRentalIcon!;
+            } else if ((venueType == 'public' || venueType == 'school') && _venuePublicIcon != null) {
+              icon = _venuePublicIcon!;
+            } else {
+              // Fallback to default marker
+              icon = BitmapDescriptor.defaultMarkerWithHue(
+                venueType == 'rental' 
+                  ? BitmapDescriptor.hueOrange 
+                  : BitmapDescriptor.hueGreen,
+              );
+            }
+            
             markers.add(
               Marker(
                 markerId: MarkerId('google_place_$placeId'),
@@ -452,11 +538,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ),
                 infoWindow: InfoWindow(
                   title: name,
-                  snippet: 'לחץ לפרטים',
+                  snippet: venueType == 'rental' 
+                    ? 'מגרש להשכרה - לחץ לפרטים'
+                    : venueType == 'school'
+                      ? 'מגרש בית ספר - לחץ לפרטים'
+                      : 'מגרש ציבורי - לחץ לפרטים',
                 ),
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen, // Green for Google Places venues
-                ),
+                icon: icon,
                 onTap: () => _onVenueMarkerTapped(placeId),
               ),
             );

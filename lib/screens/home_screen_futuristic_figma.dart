@@ -11,7 +11,6 @@ import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/stats_dashboard.dart';
-import 'package:kickadoor/widgets/futuristic/player_recommendation_card.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
@@ -464,63 +463,7 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                     ),
                     const SizedBox(height: 24),
 
-                    // AI Recommendations - Players
-                    Text(
-                      'AI RECOMMENDATIONS',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2.0,
-                        color: const Color(0xFF212121),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    FutureBuilder<List<User>>(
-                      future: _getRecommendedPlayers(currentUserId, locationService),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const FuturisticLoadingState(
-                            message: 'מחפש שחקנים מומלצים...',
-                          );
-                        }
-
-                        final recommendedPlayers = snapshot.data ?? [];
-                        if (recommendedPlayers.isEmpty) {
-                          return FuturisticEmptyState(
-                            icon: Icons.people_outline,
-                            title: 'אין שחקנים מומלצים כרגע',
-                            message: 'נסה שוב מאוחר יותר או בדוק הובים קרובים',
-                            action: ElevatedButton.icon(
-                              onPressed: () => context.push('/players'),
-                              icon: const Icon(Icons.explore),
-                              label: const Text('גלה שחקנים'),
-                            ),
-                          );
-                        }
-
-                        return Column(
-                          children: recommendedPlayers.map((player) {
-                            return FutureBuilder<double?>(
-                              future: _calculateDistance(locationService, player),
-                              builder: (context, distanceSnapshot) {
-                                final distance = distanceSnapshot.data;
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12.0),
-                                  child: PlayerRecommendationCard(
-                                    player: player,
-                                    reason: _getRecommendationReason(player),
-                                    distanceKm: distance,
-                                  ),
-                                );
-                              },
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Quick Actions
+                    // Quick Actions - moved up to replace AI Recommendations
                     Text(
                       'פעולות מהירות',
                       style: GoogleFonts.orbitron(
@@ -1006,61 +949,6 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
       ..sort((a, b) => a.gameDate.compareTo(b.gameDate));
   }
 
-  Future<List<User>> _getRecommendedPlayers(
-    String? currentUserId,
-    LocationService locationService,
-  ) async {
-    if (currentUserId == null) return [];
-
-    try {
-      final position = await locationService.getCurrentLocation();
-      if (position == null) return [];
-
-      final usersRepo = ref.read(usersRepositoryProvider);
-      return await usersRepo.getRecommendedPlayers(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        excludeUserId: currentUserId,
-        limit: 3,
-      );
-    } catch (e) {
-      return [];
-    }
-  }
-
-  Future<double?> _calculateDistance(
-    LocationService locationService,
-    User player,
-  ) async {
-    if (player.location == null) return null;
-
-    try {
-      final position = await locationService.getCurrentLocation();
-      if (position == null) return null;
-
-      final distance = Geolocator.distanceBetween(
-        position.latitude,
-        position.longitude,
-        player.location!.latitude,
-        player.location!.longitude,
-      ) / 1000; // Convert to km
-      return distance;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  String? _getRecommendationReason(User player) {
-    if (player.availabilityStatus == 'available') {
-      return 'זמין למשחק';
-    } else if (player.availabilityStatus == 'busy') {
-      return 'עסוק כרגע';
-    }
-    if (player.currentRankScore >= 8.0) {
-      return 'דירוג גבוה';
-    }
-    return null;
-  }
 
   Future<List<Hub>> _getAssociatedHubs(HubsRepository hubsRepo, String userId) async {
     try {

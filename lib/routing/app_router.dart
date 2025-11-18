@@ -33,6 +33,7 @@ import 'package:kickadoor/screens/social/private_chat_screen.dart';
 import 'package:kickadoor/screens/gamification/leaderboard_screen.dart';
 import 'package:kickadoor/screens/splash/splash_screen.dart';
 import 'package:kickadoor/screens/players/players_list_screen.dart';
+import 'package:kickadoor/screens/players/players_map_screen.dart';
 import 'package:kickadoor/screens/hubs/hubs_board_screen.dart';
 import 'package:kickadoor/screens/admin/generate_dummy_data_screen.dart';
 import 'package:kickadoor/screens/hub/manage_roles_screen.dart';
@@ -89,6 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Wait for auth state to be available
         final authValue = authState.valueOrNull;
         final isAuthenticated = authValue != null;
+        
         final isGoingToAuth = state.matchedLocation == '/auth' || state.matchedLocation == '/register';
         final isGoingToOnboarding = state.matchedLocation == '/onboarding';
         final isGoingToSplash = state.matchedLocation == '/splash';
@@ -98,7 +100,31 @@ final routerProvider = Provider<GoRouter>((ref) {
           return null;
         }
 
-        // Check onboarding status (only for authenticated users)
+        // Check if user is anonymous - if so, redirect to auth immediately
+        // (Sign out already happened in main.dart, but check here as fallback)
+        // This check MUST happen before other checks to prevent anonymous users from accessing the app
+        if (isAuthenticated) {
+          final authService = ref.read(authServiceProvider);
+          if (authService.isAnonymous) {
+            // Sign out anonymous user (async, but redirect happens immediately)
+            // This is a fallback in case main.dart didn't catch it
+            authService.signOut().then((_) {
+              debugPrint('🔓 Router: Signed out anonymous user');
+            }).catchError((e) {
+              debugPrint('⚠️ Router: Error signing out anonymous user: $e');
+            });
+            // Redirect to auth immediately - don't wait for sign out
+            // This prevents anonymous users from seeing the home screen
+            return '/auth';
+          }
+        }
+
+        // If not authenticated and not going to auth/onboarding/splash, redirect to auth
+        if (!isAuthenticated && !isGoingToAuth && !isGoingToOnboarding && !isGoingToSplash) {
+          return '/auth';
+        }
+
+        // Check onboarding status (only for authenticated non-anonymous users)
         // Use cached provider value - this is now synchronous
         if (isAuthenticated && !isGoingToOnboarding && !isGoingToSplash) {
           final onboardingStatus = ref.read(onboardingStatusProvider);
@@ -114,12 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // If still loading, don't redirect (allow navigation to proceed)
         }
 
-        // If not authenticated and not going to auth/onboarding/splash, redirect to auth
-        if (!isAuthenticated && !isGoingToAuth && !isGoingToOnboarding && !isGoingToSplash) {
-          return '/auth';
-        }
-
-        // If authenticated and going to auth, redirect to home
+        // If authenticated (non-anonymous) and going to auth, redirect to home
         if (isAuthenticated && isGoingToAuth) {
           return '/';
         }
@@ -182,6 +203,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/players',
         name: 'playersBoard',
         builder: (context, state) => const PlayersListScreen(),
+      ),
+      
+      // Players Map
+      GoRoute(
+        path: '/players/map',
+        name: 'playersMap',
+        builder: (context, state) => const PlayersMapScreen(),
       ),
 
       // Hubs Board

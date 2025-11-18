@@ -4,6 +4,8 @@ import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
 import 'package:kickadoor/scripts/generate_dummy_data.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kickadoor/routing/app_router.dart';
 
 /// Screen for generating dummy data (admin only)
 class GenerateDummyDataScreen extends ConsumerStatefulWidget {
@@ -298,10 +300,48 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
             const Text('• משחקים (עבר ועתיד)'),
             const Text('• פוסטים בפיד'),
             const Text('• מיקומים גיאוגרפיים'),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text(
+              'הגדרות מערכת:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            // Reset Onboarding button
+            GradientButton(
+              label: 'איפוס Onboarding (לצורך בדיקה)',
+              icon: Icons.refresh,
+              onPressed: _isGenerating ? null : _resetOnboarding,
+              isLoading: false,
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Reset onboarding status - useful for testing
+  Future<void> _resetOnboarding() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('onboarding_completed');
+      
+      // Invalidate provider to force reload
+      final container = ProviderScope.containerOf(context);
+      container.invalidate(onboardingStatusProvider);
+      
+      if (mounted) {
+        SnackbarHelper.showSuccess(
+          context,
+          '✅ Onboarding אופס! בפעם הבאה שתריץ את האפליקציה, ה-onboarding יוצג שוב.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה באיפוס Onboarding: $e');
+      }
+    }
   }
 }
 

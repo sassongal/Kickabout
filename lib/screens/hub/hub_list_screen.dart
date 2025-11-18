@@ -26,7 +26,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
 
     if (currentUserId == null) {
       return AppScaffold(
-        title: 'הובס',
+        title: 'Hubs שיצרת',
         body: const Center(
           child: Text('נא להתחבר'),
         ),
@@ -36,7 +36,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
     final hubsStream = hubsRepo.watchHubsByMember(currentUserId);
 
     return AppScaffold(
-      title: 'הובס',
+      title: 'Hubs שיצרת',
       actions: [
         StreamBuilder<int>(
           stream: ref.read(notificationsRepositoryProvider).watchUnreadCount(currentUserId),
@@ -63,23 +63,9 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
           onPressed: () => context.push('/discover'),
         ),
         IconButton(
-          icon: const Icon(Icons.logout),
-          tooltip: 'התנתק',
-          onPressed: () async {
-            final authService = ref.read(authServiceProvider);
-            try {
-              await authService.signOut();
-              if (context.mounted) {
-                context.go('/auth');
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('שגיאה בהתנתקות: $e')),
-                );
-              }
-            }
-          },
+          icon: const Icon(Icons.home),
+          tooltip: 'חזרה למסך הבית',
+          onPressed: () => context.go('/'),
         ),
       ],
       floatingActionButton: FloatingActionButton.extended(

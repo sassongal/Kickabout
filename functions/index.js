@@ -1043,6 +1043,65 @@ exports.notifyHubOnNewGame = onCall(
 
 // --- v2 Callable Functions (already v2, no change needed) ---
 
+/**
+ * Helper function to determine venue type based on name, types, and address
+ * @param {Object} place - Google Places API place object
+ * @return {string} 'public', 'rental', 'school', or 'unknown'
+ */
+function determineVenueType(place) {
+  const name = (place.name || '').toLowerCase();
+  const address = (place.formatted_address || '').toLowerCase();
+  const types = (place.types || []).map((t) => t.toLowerCase());
+  const vicinity = (place.vicinity || '').toLowerCase();
+  
+  const allText = `${name} ${address} ${vicinity}`.toLowerCase();
+  
+  // Keywords for public venues
+  const publicKeywords = [
+    'ציבורי', 'public', 'פארק', 'park', 'גן', 'גן ציבורי',
+    'municipal', 'עירוני', 'רשות', 'municipality',
+  ];
+  
+  // Keywords for rental venues
+  const rentalKeywords = [
+    'השכרה', 'rental', 'rent', 'שכירות', 'להשכרה',
+    'rentals', 'renting', 'lease', 'leasing',
+  ];
+  
+  // Keywords for school venues
+  const schoolKeywords = [
+    'בית ספר', 'school', 'תיכון', 'יסודי', 'גן ילדים',
+    'high school', 'elementary', 'kindergarten', 'בית ספר יסודי',
+    'בית ספר תיכון', 'מגרש בית ספר',
+  ];
+  
+  // Check for school first (most specific)
+  if (schoolKeywords.some((keyword) => allText.includes(keyword)) ||
+      types.includes('school') || types.includes('primary_school')) {
+    return 'school';
+  }
+  
+  // Check for rental
+  if (rentalKeywords.some((keyword) => allText.includes(keyword))) {
+    return 'rental';
+  }
+  
+  // Check for public (default for parks, municipal facilities)
+  if (publicKeywords.some((keyword) => allText.includes(keyword)) ||
+      types.includes('park') || types.includes('stadium') ||
+      types.includes('sports_complex')) {
+    return 'public';
+  }
+  
+  // Default: if it's a stadium or sports complex, assume public
+  if (types.includes('stadium') || types.includes('sports_complex') ||
+      types.includes('gym') || types.includes('establishment')) {
+    return 'public';
+  }
+  
+  return 'unknown';
+}
+
 exports.searchVenues = onCall(
     {secrets: [googleApisKey]},
     async (request) => {
@@ -1068,7 +1127,20 @@ exports.searchVenues = onCall(
 
       try {
         const response = await axios.get(url);
-        return response.data;
+        const data = response.data;
+        
+        // Add venueType to each result
+        if (data.results && Array.isArray(data.results)) {
+          data.results = data.results.map((place) => {
+            const venueType = determineVenueType(place);
+            return {
+              ...place,
+              venueType: venueType,
+            };
+          });
+        }
+        
+        return data;
       } catch (error) {
         throw new HttpsError('internal', 'Failed to call Google Places API.', error);
       }

@@ -5,7 +5,7 @@
 הפורמט מבוסס על [Keep a Changelog](https://keepachangelog.com/he/1.0.0/),
 והפרויקט עוקב אחר [Semantic Versioning](https://semver.org/lang/he/).
 
-## [Unreleased] - 2024-11-14
+## [Unreleased] - 2024-11-18
 
 ### Added
 - **Cloud Functions v2 Migration** - שדרוג מלא של כל Firebase Functions ל-v2 API
@@ -14,8 +14,26 @@
   - `searchVenues` - חיפוש מגרשים מאובטח דרך Google Places API עם API Key מוגן
 - **Firestore Security Rules** - כללי אבטחה מפורסמים ומאובטחים ל-Firestore ו-Storage
 - **Firestore Indexes** - אינדקסים מותאמים לשאילתות מורכבות (games, hubs, users)
-- **Manual Testing Guides** - מדריכי בדיקה מפורטים (`MANUAL_TESTING_GUIDE.md`, `TESTING_CHECKLIST.md`)
-- **Feature Verification Documentation** - תיעוד מלא של כל הפיצ'רים (`FEATURE_VERIFICATION.md`)
+- **Custom Permissions System** - מערכת הרשאות מותאמות אישית ליצירת אירועים ופוסטים
+  - מנהלי Hubs יכולים להגדיר מי יכול ליצור אירועים ופוסטים
+  - תמיכה ב-Firestore rules וב-application code
+- **Enhanced Event Creation** - שיפורים מקיפים ליצירת אירועים:
+  - מספר קבוצות (ברירת מחדל: 3)
+  - סוג משחק (3v3 עד 11v11)
+  - משך דקות המשחק (גלגלת אנכית)
+  - מספר משתתפים מקסימלי (גלגלת אנכית, ברירת מחדל: 15)
+  - התראות אוטומטיות לחברי ההאב
+  - הגבלת הרשמה למקסימום משתתפים
+- **Enhanced Scouting System** - שיפורים למערכת גיוס שחקנים:
+  - פילטרים חדשים: טווח גילאים ואיזור מגורים
+  - מיון לפי מרחק (הקרוב ביותר למעלה)
+  - כרטיס שחקן מפורט עם כל הפרטים
+- **Game-Event Linking** - משחקים יכולים להיות קשורים לאירועים
+- **Hub Management Improvements** - שיפורי UI/UX למנהלי Hubs:
+  - תצוגת תפקיד המשתמש
+  - תאריך יצירת ההאב
+  - רשימת חברים משופרת
+  - כפתורי ניהול מעוצבים
 
 ### Changed
 - **Firestore Persistence** - עדכון מ-`enablePersistence()` ל-`Settings.persistenceEnabled` (API החדש)

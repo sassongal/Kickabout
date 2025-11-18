@@ -27,6 +27,7 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
             (k, e) => MapEntry(k, e as String),
           ) ??
           const {},
+      permissions: json['permissions'] as Map<String, dynamic>? ?? const {},
       location: const NullableGeoPointConverter().fromJson(json['location']),
       geohash: json['geohash'] as String?,
       radius: (json['radius'] as num?)?.toDouble(),
@@ -58,6 +59,7 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
           const TimestampMapConverter().toJson(instance.memberJoinDates),
       'settings': instance.settings,
       'roles': instance.roles,
+      'permissions': instance.permissions,
       'location': const NullableGeoPointConverter().toJson(instance.location),
       'geohash': instance.geohash,
       'radius': instance.radius,

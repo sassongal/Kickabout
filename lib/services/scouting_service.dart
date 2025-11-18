@@ -92,12 +92,12 @@ class ScoutingService {
             return false;
           }
           if (criteria.maxAge != null && actualAge > criteria.maxAge!) {
-            return false;
-          }
+          return false;
+        }
         } else {
           // If no birthDate, exclude if age filter is set
           if (criteria.minAge != null || criteria.maxAge != null) {
-            return false;
+          return false;
           }
         }
 

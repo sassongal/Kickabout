@@ -161,7 +161,39 @@ class HubPermissions {
   bool canManageSettings() => userRole.canManageSettings();
   bool canDeleteHub() => userRole.canDeleteHub();
   bool canCreateGames() => userRole.canCreateGames();
-  bool canCreateEvents() => userRole.canCreateEvents();
+  
+  /// Check if user can create events
+  /// Checks: 1) Default role permissions, 2) Custom permissions set by manager
+  bool canCreateEvents() {
+    // First check default role permissions
+    if (userRole.canCreateEvents()) return true;
+    
+    // Then check custom permissions (set by manager)
+    final canCreateEventsList = hub.permissions['canCreateEvents'] as List?;
+    if (canCreateEventsList != null && canCreateEventsList.contains(userId)) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /// Check if user can create posts
+  /// Checks: 1) Default role permissions (all members can), 2) Custom permissions set by manager
+  bool canCreatePosts() {
+    // All hub members can create posts by default
+    if (isMember()) return true;
+    
+    // Check custom permissions (if manager restricted posting)
+    final canCreatePostsList = hub.permissions['canCreatePosts'] as List?;
+    if (canCreatePostsList != null) {
+      // If list exists, only users in the list can post
+      return canCreatePostsList.contains(userId);
+    }
+    
+    // Default: all members can post
+    return isMember();
+  }
+  
   bool canModerateContent() => userRole.canModerateContent();
   bool canInvitePlayers() => userRole.canInvitePlayers();
   bool canViewAnalytics() => userRole.canViewAnalytics();

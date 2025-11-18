@@ -33,6 +33,8 @@ mixin _$Hub {
   Map<String, dynamic> get settings => throw _privateConstructorUsedError;
   Map<String, String> get roles =>
       throw _privateConstructorUsedError; // userId -> role (manager, moderator, member)
+  Map<String, dynamic> get permissions =>
+      throw _privateConstructorUsedError; // Custom permissions: {canCreateEvents: [userId1, userId2], canCreatePosts: [userId1, userId2]}
   @NullableGeoPointConverter()
   GeoPoint? get location =>
       throw _privateConstructorUsedError; // Primary location (deprecated, use venues)
@@ -85,6 +87,7 @@ abstract class $HubCopyWith<$Res> {
       @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
       Map<String, String> roles,
+      Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius,
@@ -123,6 +126,7 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? memberJoinDates = null,
     Object? settings = null,
     Object? roles = null,
+    Object? permissions = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
@@ -174,6 +178,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.roles
           : roles // ignore: cast_nullable_to_non_nullable
               as Map<String, String>,
+      permissions: null == permissions
+          ? _value.permissions
+          : permissions // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -246,6 +254,7 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
       Map<String, String> roles,
+      Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius,
@@ -281,6 +290,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? memberJoinDates = null,
     Object? settings = null,
     Object? roles = null,
+    Object? permissions = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
@@ -332,6 +342,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value._roles
           : roles // ignore: cast_nullable_to_non_nullable
               as Map<String, String>,
+      permissions: null == permissions
+          ? _value._permissions
+          : permissions // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -402,6 +416,7 @@ class _$HubImpl implements _Hub {
       final Map<String, Timestamp> memberJoinDates = const {},
       final Map<String, dynamic> settings = const {'ratingMode': 'basic'},
       final Map<String, String> roles = const {},
+      final Map<String, dynamic> permissions = const {},
       @NullableGeoPointConverter() this.location,
       this.geohash,
       this.radius,
@@ -419,6 +434,7 @@ class _$HubImpl implements _Hub {
         _memberJoinDates = memberJoinDates,
         _settings = settings,
         _roles = roles,
+        _permissions = permissions,
         _venueIds = venueIds;
 
   factory _$HubImpl.fromJson(Map<String, dynamic> json) =>
@@ -475,6 +491,17 @@ class _$HubImpl implements _Hub {
   }
 
 // userId -> role (manager, moderator, member)
+  final Map<String, dynamic> _permissions;
+// userId -> role (manager, moderator, member)
+  @override
+  @JsonKey()
+  Map<String, dynamic> get permissions {
+    if (_permissions is EqualUnmodifiableMapView) return _permissions;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_permissions);
+  }
+
+// Custom permissions: {canCreateEvents: [userId1, userId2], canCreatePosts: [userId1, userId2]}
   @override
   @NullableGeoPointConverter()
   final GeoPoint? location;
@@ -527,7 +554,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, gameCount: $gameCount, lastActivity: $lastActivity)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, gameCount: $gameCount, lastActivity: $lastActivity)';
   }
 
   @override
@@ -549,6 +576,8 @@ class _$HubImpl implements _Hub {
                 .equals(other._memberJoinDates, _memberJoinDates) &&
             const DeepCollectionEquality().equals(other._settings, _settings) &&
             const DeepCollectionEquality().equals(other._roles, _roles) &&
+            const DeepCollectionEquality()
+                .equals(other._permissions, _permissions) &&
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
@@ -585,6 +614,7 @@ class _$HubImpl implements _Hub {
         const DeepCollectionEquality().hash(_memberJoinDates),
         const DeepCollectionEquality().hash(_settings),
         const DeepCollectionEquality().hash(_roles),
+        const DeepCollectionEquality().hash(_permissions),
         location,
         geohash,
         radius,
@@ -627,6 +657,7 @@ abstract class _Hub implements Hub {
       @TimestampMapConverter() final Map<String, Timestamp> memberJoinDates,
       final Map<String, dynamic> settings,
       final Map<String, String> roles,
+      final Map<String, dynamic> permissions,
       @NullableGeoPointConverter() final GeoPoint? location,
       final String? geohash,
       final double? radius,
@@ -663,6 +694,9 @@ abstract class _Hub implements Hub {
   Map<String, dynamic> get settings;
   @override
   Map<String, String> get roles; // userId -> role (manager, moderator, member)
+  @override
+  Map<String, dynamic>
+      get permissions; // Custom permissions: {canCreateEvents: [userId1, userId2], canCreatePosts: [userId1, userId2]}
   @override
   @NullableGeoPointConverter()
   GeoPoint? get location; // Primary location (deprecated, use venues)

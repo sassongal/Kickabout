@@ -170,7 +170,7 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
                     return _GameCard(
                       game: game,
                       dateFormat: dateFormat,
-                      onTap: () => context.push('/games/${game.gameId}'),
+                        onTap: () => context.push('/games/${game.gameId}'),
                     );
                   },
                 );
