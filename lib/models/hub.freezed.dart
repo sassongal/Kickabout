@@ -27,15 +27,39 @@ mixin _$Hub {
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
   List<String> get memberIds => throw _privateConstructorUsedError;
+  @TimestampMapConverter()
+  Map<String, Timestamp> get memberJoinDates =>
+      throw _privateConstructorUsedError; // userId -> join date timestamp
   Map<String, dynamic> get settings => throw _privateConstructorUsedError;
   Map<String, String> get roles =>
       throw _privateConstructorUsedError; // userId -> role (manager, moderator, member)
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get location =>
       throw _privateConstructorUsedError; // Primary location (deprecated, use venues)
   String? get geohash => throw _privateConstructorUsedError;
   double? get radius => throw _privateConstructorUsedError; // radius in km
-  List<String> get venueIds => throw _privateConstructorUsedError;
+  List<String> get venueIds =>
+      throw _privateConstructorUsedError; // IDs of venues where this hub plays
+  String? get profileImageUrl =>
+      throw _privateConstructorUsedError; // Profile picture chosen by hub manager
+  String? get mainVenueId =>
+      throw _privateConstructorUsedError; // ID of the main venue (home field) - required
+  String? get primaryVenueId =>
+      throw _privateConstructorUsedError; // ID of the primary venue (for map display) - denormalized
+  @NullableGeoPointConverter()
+  GeoPoint? get primaryVenueLocation =>
+      throw _privateConstructorUsedError; // Location of primary venue - denormalized
+  String? get logoUrl =>
+      throw _privateConstructorUsedError; // Hub logo URL (used for feed posts)
+  String? get hubRules =>
+      throw _privateConstructorUsedError; // Rules and guidelines for the hub
+  String? get region =>
+      throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים
+// Denormalized fields (updated by Cloud Functions, not written by client)
+  int? get gameCount =>
+      throw _privateConstructorUsedError; // Denormalized: Total games created (updated by onGameCreated)
+  @TimestampConverter()
+  DateTime? get lastActivity => throw _privateConstructorUsedError;
 
   /// Serializes this Hub to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -58,12 +82,22 @@ abstract class $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       List<String> memberIds,
+      @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
       Map<String, String> roles,
-      @GeoPointConverter() GeoPoint? location,
+      @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius,
-      List<String> venueIds});
+      List<String> venueIds,
+      String? profileImageUrl,
+      String? mainVenueId,
+      String? primaryVenueId,
+      @NullableGeoPointConverter() GeoPoint? primaryVenueLocation,
+      String? logoUrl,
+      String? hubRules,
+      String? region,
+      int? gameCount,
+      @TimestampConverter() DateTime? lastActivity});
 }
 
 /// @nodoc
@@ -86,12 +120,22 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? createdBy = null,
     Object? createdAt = null,
     Object? memberIds = null,
+    Object? memberJoinDates = null,
     Object? settings = null,
     Object? roles = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
     Object? venueIds = null,
+    Object? profileImageUrl = freezed,
+    Object? mainVenueId = freezed,
+    Object? primaryVenueId = freezed,
+    Object? primaryVenueLocation = freezed,
+    Object? logoUrl = freezed,
+    Object? hubRules = freezed,
+    Object? region = freezed,
+    Object? gameCount = freezed,
+    Object? lastActivity = freezed,
   }) {
     return _then(_value.copyWith(
       hubId: null == hubId
@@ -118,6 +162,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.memberIds
           : memberIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      memberJoinDates: null == memberJoinDates
+          ? _value.memberJoinDates
+          : memberJoinDates // ignore: cast_nullable_to_non_nullable
+              as Map<String, Timestamp>,
       settings: null == settings
           ? _value.settings
           : settings // ignore: cast_nullable_to_non_nullable
@@ -142,6 +190,42 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.venueIds
           : venueIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      profileImageUrl: freezed == profileImageUrl
+          ? _value.profileImageUrl
+          : profileImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mainVenueId: freezed == mainVenueId
+          ? _value.mainVenueId
+          : mainVenueId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      primaryVenueId: freezed == primaryVenueId
+          ? _value.primaryVenueId
+          : primaryVenueId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      primaryVenueLocation: freezed == primaryVenueLocation
+          ? _value.primaryVenueLocation
+          : primaryVenueLocation // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      logoUrl: freezed == logoUrl
+          ? _value.logoUrl
+          : logoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubRules: freezed == hubRules
+          ? _value.hubRules
+          : hubRules // ignore: cast_nullable_to_non_nullable
+              as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      gameCount: freezed == gameCount
+          ? _value.gameCount
+          : gameCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      lastActivity: freezed == lastActivity
+          ? _value.lastActivity
+          : lastActivity // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -159,12 +243,22 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       List<String> memberIds,
+      @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
       Map<String, String> roles,
-      @GeoPointConverter() GeoPoint? location,
+      @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius,
-      List<String> venueIds});
+      List<String> venueIds,
+      String? profileImageUrl,
+      String? mainVenueId,
+      String? primaryVenueId,
+      @NullableGeoPointConverter() GeoPoint? primaryVenueLocation,
+      String? logoUrl,
+      String? hubRules,
+      String? region,
+      int? gameCount,
+      @TimestampConverter() DateTime? lastActivity});
 }
 
 /// @nodoc
@@ -184,12 +278,22 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? createdBy = null,
     Object? createdAt = null,
     Object? memberIds = null,
+    Object? memberJoinDates = null,
     Object? settings = null,
     Object? roles = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
     Object? venueIds = null,
+    Object? profileImageUrl = freezed,
+    Object? mainVenueId = freezed,
+    Object? primaryVenueId = freezed,
+    Object? primaryVenueLocation = freezed,
+    Object? logoUrl = freezed,
+    Object? hubRules = freezed,
+    Object? region = freezed,
+    Object? gameCount = freezed,
+    Object? lastActivity = freezed,
   }) {
     return _then(_$HubImpl(
       hubId: null == hubId
@@ -216,6 +320,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value._memberIds
           : memberIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      memberJoinDates: null == memberJoinDates
+          ? _value._memberJoinDates
+          : memberJoinDates // ignore: cast_nullable_to_non_nullable
+              as Map<String, Timestamp>,
       settings: null == settings
           ? _value._settings
           : settings // ignore: cast_nullable_to_non_nullable
@@ -240,6 +348,42 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value._venueIds
           : venueIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      profileImageUrl: freezed == profileImageUrl
+          ? _value.profileImageUrl
+          : profileImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mainVenueId: freezed == mainVenueId
+          ? _value.mainVenueId
+          : mainVenueId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      primaryVenueId: freezed == primaryVenueId
+          ? _value.primaryVenueId
+          : primaryVenueId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      primaryVenueLocation: freezed == primaryVenueLocation
+          ? _value.primaryVenueLocation
+          : primaryVenueLocation // ignore: cast_nullable_to_non_nullable
+              as GeoPoint?,
+      logoUrl: freezed == logoUrl
+          ? _value.logoUrl
+          : logoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubRules: freezed == hubRules
+          ? _value.hubRules
+          : hubRules // ignore: cast_nullable_to_non_nullable
+              as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      gameCount: freezed == gameCount
+          ? _value.gameCount
+          : gameCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      lastActivity: freezed == lastActivity
+          ? _value.lastActivity
+          : lastActivity // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -254,13 +398,25 @@ class _$HubImpl implements _Hub {
       required this.createdBy,
       @TimestampConverter() required this.createdAt,
       final List<String> memberIds = const [],
+      @TimestampMapConverter()
+      final Map<String, Timestamp> memberJoinDates = const {},
       final Map<String, dynamic> settings = const {'ratingMode': 'basic'},
       final Map<String, String> roles = const {},
-      @GeoPointConverter() this.location,
+      @NullableGeoPointConverter() this.location,
       this.geohash,
       this.radius,
-      final List<String> venueIds = const []})
+      final List<String> venueIds = const [],
+      this.profileImageUrl,
+      this.mainVenueId,
+      this.primaryVenueId,
+      @NullableGeoPointConverter() this.primaryVenueLocation,
+      this.logoUrl,
+      this.hubRules,
+      this.region,
+      this.gameCount,
+      @TimestampConverter() this.lastActivity})
       : _memberIds = memberIds,
+        _memberJoinDates = memberJoinDates,
         _settings = settings,
         _roles = roles,
         _venueIds = venueIds;
@@ -288,7 +444,19 @@ class _$HubImpl implements _Hub {
     return EqualUnmodifiableListView(_memberIds);
   }
 
+  final Map<String, Timestamp> _memberJoinDates;
+  @override
+  @JsonKey()
+  @TimestampMapConverter()
+  Map<String, Timestamp> get memberJoinDates {
+    if (_memberJoinDates is EqualUnmodifiableMapView) return _memberJoinDates;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_memberJoinDates);
+  }
+
+// userId -> join date timestamp
   final Map<String, dynamic> _settings;
+// userId -> join date timestamp
   @override
   @JsonKey()
   Map<String, dynamic> get settings {
@@ -308,7 +476,7 @@ class _$HubImpl implements _Hub {
 
 // userId -> role (manager, moderator, member)
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   final GeoPoint? location;
 // Primary location (deprecated, use venues)
   @override
@@ -326,9 +494,40 @@ class _$HubImpl implements _Hub {
     return EqualUnmodifiableListView(_venueIds);
   }
 
+// IDs of venues where this hub plays
+  @override
+  final String? profileImageUrl;
+// Profile picture chosen by hub manager
+  @override
+  final String? mainVenueId;
+// ID of the main venue (home field) - required
+  @override
+  final String? primaryVenueId;
+// ID of the primary venue (for map display) - denormalized
+  @override
+  @NullableGeoPointConverter()
+  final GeoPoint? primaryVenueLocation;
+// Location of primary venue - denormalized
+  @override
+  final String? logoUrl;
+// Hub logo URL (used for feed posts)
+  @override
+  final String? hubRules;
+// Rules and guidelines for the hub
+  @override
+  final String? region;
+// אזור: צפון, מרכז, דרום, ירושלים
+// Denormalized fields (updated by Cloud Functions, not written by client)
+  @override
+  final int? gameCount;
+// Denormalized: Total games created (updated by onGameCreated)
+  @override
+  @TimestampConverter()
+  final DateTime? lastActivity;
+
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, settings: $settings, roles: $roles, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, gameCount: $gameCount, lastActivity: $lastActivity)';
   }
 
   @override
@@ -346,31 +545,60 @@ class _$HubImpl implements _Hub {
                 other.createdAt == createdAt) &&
             const DeepCollectionEquality()
                 .equals(other._memberIds, _memberIds) &&
+            const DeepCollectionEquality()
+                .equals(other._memberJoinDates, _memberJoinDates) &&
             const DeepCollectionEquality().equals(other._settings, _settings) &&
             const DeepCollectionEquality().equals(other._roles, _roles) &&
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
             (identical(other.radius, radius) || other.radius == radius) &&
-            const DeepCollectionEquality().equals(other._venueIds, _venueIds));
+            const DeepCollectionEquality().equals(other._venueIds, _venueIds) &&
+            (identical(other.profileImageUrl, profileImageUrl) ||
+                other.profileImageUrl == profileImageUrl) &&
+            (identical(other.mainVenueId, mainVenueId) ||
+                other.mainVenueId == mainVenueId) &&
+            (identical(other.primaryVenueId, primaryVenueId) ||
+                other.primaryVenueId == primaryVenueId) &&
+            (identical(other.primaryVenueLocation, primaryVenueLocation) ||
+                other.primaryVenueLocation == primaryVenueLocation) &&
+            (identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl) &&
+            (identical(other.hubRules, hubRules) ||
+                other.hubRules == hubRules) &&
+            (identical(other.region, region) || other.region == region) &&
+            (identical(other.gameCount, gameCount) ||
+                other.gameCount == gameCount) &&
+            (identical(other.lastActivity, lastActivity) ||
+                other.lastActivity == lastActivity));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      hubId,
-      name,
-      description,
-      createdBy,
-      createdAt,
-      const DeepCollectionEquality().hash(_memberIds),
-      const DeepCollectionEquality().hash(_settings),
-      const DeepCollectionEquality().hash(_roles),
-      location,
-      geohash,
-      radius,
-      const DeepCollectionEquality().hash(_venueIds));
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        hubId,
+        name,
+        description,
+        createdBy,
+        createdAt,
+        const DeepCollectionEquality().hash(_memberIds),
+        const DeepCollectionEquality().hash(_memberJoinDates),
+        const DeepCollectionEquality().hash(_settings),
+        const DeepCollectionEquality().hash(_roles),
+        location,
+        geohash,
+        radius,
+        const DeepCollectionEquality().hash(_venueIds),
+        profileImageUrl,
+        mainVenueId,
+        primaryVenueId,
+        primaryVenueLocation,
+        logoUrl,
+        hubRules,
+        region,
+        gameCount,
+        lastActivity
+      ]);
 
   /// Create a copy of Hub
   /// with the given fields replaced by the non-null parameter values.
@@ -396,12 +624,22 @@ abstract class _Hub implements Hub {
       required final String createdBy,
       @TimestampConverter() required final DateTime createdAt,
       final List<String> memberIds,
+      @TimestampMapConverter() final Map<String, Timestamp> memberJoinDates,
       final Map<String, dynamic> settings,
       final Map<String, String> roles,
-      @GeoPointConverter() final GeoPoint? location,
+      @NullableGeoPointConverter() final GeoPoint? location,
       final String? geohash,
       final double? radius,
-      final List<String> venueIds}) = _$HubImpl;
+      final List<String> venueIds,
+      final String? profileImageUrl,
+      final String? mainVenueId,
+      final String? primaryVenueId,
+      @NullableGeoPointConverter() final GeoPoint? primaryVenueLocation,
+      final String? logoUrl,
+      final String? hubRules,
+      final String? region,
+      final int? gameCount,
+      @TimestampConverter() final DateTime? lastActivity}) = _$HubImpl;
 
   factory _Hub.fromJson(Map<String, dynamic> json) = _$HubImpl.fromJson;
 
@@ -419,18 +657,45 @@ abstract class _Hub implements Hub {
   @override
   List<String> get memberIds;
   @override
+  @TimestampMapConverter()
+  Map<String, Timestamp> get memberJoinDates; // userId -> join date timestamp
+  @override
   Map<String, dynamic> get settings;
   @override
   Map<String, String> get roles; // userId -> role (manager, moderator, member)
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get location; // Primary location (deprecated, use venues)
   @override
   String? get geohash;
   @override
   double? get radius; // radius in km
   @override
-  List<String> get venueIds;
+  List<String> get venueIds; // IDs of venues where this hub plays
+  @override
+  String? get profileImageUrl; // Profile picture chosen by hub manager
+  @override
+  String? get mainVenueId; // ID of the main venue (home field) - required
+  @override
+  String?
+      get primaryVenueId; // ID of the primary venue (for map display) - denormalized
+  @override
+  @NullableGeoPointConverter()
+  GeoPoint?
+      get primaryVenueLocation; // Location of primary venue - denormalized
+  @override
+  String? get logoUrl; // Hub logo URL (used for feed posts)
+  @override
+  String? get hubRules; // Rules and guidelines for the hub
+  @override
+  String? get region; // אזור: צפון, מרכז, דרום, ירושלים
+// Denormalized fields (updated by Cloud Functions, not written by client)
+  @override
+  int?
+      get gameCount; // Denormalized: Total games created (updated by onGameCreated)
+  @override
+  @TimestampConverter()
+  DateTime? get lastActivity;
 
   /// Create a copy of Hub
   /// with the given fields replaced by the non-null parameter values.

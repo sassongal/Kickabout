@@ -8,6 +8,7 @@ import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/notifications_repository.dart';
 import 'package:kickadoor/models/notification.dart' as app_notification;
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Notifications screen - shows all notifications for current user
 class NotificationsScreen extends ConsumerStatefulWidget {
@@ -82,7 +83,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             return FuturisticEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת התראות',
-              message: snapshot.error.toString(),
+              message: ErrorHandlerService().handleException(
+                snapshot.error,
+                context: 'Notifications screen',
+              ),
               action: ElevatedButton.icon(
                 onPressed: () {
                 // Retry by rebuilding - trigger rebuild via key change

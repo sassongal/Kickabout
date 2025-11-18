@@ -7,20 +7,18 @@ import 'package:kickadoor/services/location_service.dart';
 /// Scouting criteria
 class ScoutingCriteria {
   final String hubId;
-  final String? requiredPosition;
-  final double? minRating;
-  final double? maxRating;
-  final double? maxDistanceKm; // Maximum distance in kilometers
-  final bool availableOnly;
+  final int? minAge; // Minimum age (default: 18)
+  final int? maxAge; // Maximum age (default: 45)
+  final String? region; // איזור מגורים: צפון, מרכז, דרום, ירושלים
+  final bool activeOnly; // Only active players (isActive = true)
   final int? limit;
 
   const ScoutingCriteria({
     required this.hubId,
-    this.requiredPosition,
-    this.minRating,
-    this.maxRating,
-    this.maxDistanceKm,
-    this.availableOnly = true,
+    this.minAge,
+    this.maxAge,
+    this.region,
+    this.activeOnly = true,
     this.limit,
   });
 }
@@ -68,6 +66,9 @@ class ScoutingService {
       final excludedPlayerIds = hub.memberIds.toSet();
       final allUsers = await _usersRepo.getAllUsers();
       
+      // Calculate current date for age calculation
+      final now = DateTime.now();
+      
       // Filter players
       final candidates = allUsers.where((user) {
         // Exclude hub members
@@ -75,31 +76,59 @@ class ScoutingService {
           return false;
         }
 
-        // Filter by availability
-        if (criteria.availableOnly && user.availabilityStatus != 'available') {
+        // Filter by active status
+        if (criteria.activeOnly && !user.isActive) {
           return false;
         }
 
-        // Filter by position
-        if (criteria.requiredPosition != null &&
-            user.preferredPosition != criteria.requiredPosition) {
-          return false;
+        // Filter by age
+        if (user.birthDate != null) {
+          final age = now.year - user.birthDate!.year;
+          final monthDiff = now.month - user.birthDate!.month;
+          final dayDiff = now.day - user.birthDate!.day;
+          final actualAge = age - (monthDiff < 0 || (monthDiff == 0 && dayDiff < 0) ? 1 : 0);
+          
+          if (criteria.minAge != null && actualAge < criteria.minAge!) {
+            return false;
+          }
+          if (criteria.maxAge != null && actualAge > criteria.maxAge!) {
+            return false;
+          }
+        } else {
+          // If no birthDate, exclude if age filter is set
+          if (criteria.minAge != null || criteria.maxAge != null) {
+            return false;
+          }
         }
 
-        // Filter by rating
-        if (criteria.minRating != null && user.currentRankScore < criteria.minRating!) {
-          return false;
-        }
-        if (criteria.maxRating != null && user.currentRankScore > criteria.maxRating!) {
+        // Filter by region
+        if (criteria.region != null && user.region != criteria.region) {
           return false;
         }
 
         return true;
       }).toList();
 
-      // Get hub location for distance calculation
+      // Get hub location for distance calculation (always calculate distance for sorting)
       Position? hubPosition;
-      if (criteria.maxDistanceKm != null && hub.location != null) {
+      if (hub.primaryVenueLocation != null) {
+        try {
+          hubPosition = Position(
+            latitude: hub.primaryVenueLocation!.latitude,
+            longitude: hub.primaryVenueLocation!.longitude,
+            timestamp: DateTime.now(),
+            accuracy: 0,
+            altitude: 0,
+            altitudeAccuracy: 0,
+            heading: 0,
+            headingAccuracy: 0,
+            speed: 0,
+            speedAccuracy: 0,
+          );
+        } catch (e) {
+          hubPosition = null;
+        }
+      } else if (hub.location != null) {
         try {
           hubPosition = Position(
             latitude: hub.location!.latitude,
@@ -114,7 +143,6 @@ class ScoutingService {
             speedAccuracy: 0,
           );
         } catch (e) {
-          // If Position creation fails, continue without distance filtering
           hubPosition = null;
         }
       }
@@ -144,57 +172,31 @@ class ScoutingService {
               playerPosition.latitude,
               playerPosition.longitude,
             ) / 1000; // Convert to km
-
-            // Filter by distance
-            if (criteria.maxDistanceKm != null && distanceKm > criteria.maxDistanceKm!) {
-              continue;
-            }
           } catch (e) {
             // If distance calculation fails, skip distance filtering for this player
             distanceKm = null;
           }
         }
 
-        // Calculate match score (0-100)
+        // Calculate match score (0-100) - simpler scoring
         double matchScore = 50.0; // Base score
         final matchReasons = <String>[];
 
-        // Availability bonus
-        if (player.availabilityStatus == 'available') {
+        // Active status bonus
+        if (player.isActive) {
           matchScore += 20;
-          matchReasons.add('זמין למשחק');
-        }
-
-        // Position match bonus
-        if (criteria.requiredPosition != null &&
-            player.preferredPosition == criteria.requiredPosition) {
-          matchScore += 15;
-          matchReasons.add('תואם לעמדה: ${_getPositionName(player.preferredPosition)}');
-        }
-
-        // Rating bonus (higher rating = higher score, but not too high)
-        if (criteria.minRating != null && criteria.maxRating != null) {
-          final ratingRange = criteria.maxRating! - criteria.minRating!;
-          final ratingPosition = (player.currentRankScore - criteria.minRating!) / ratingRange;
-          matchScore += ratingPosition * 10; // Up to 10 points
-          matchReasons.add('דירוג: ${player.currentRankScore.toStringAsFixed(1)}');
-        } else {
-          // General rating bonus
-          matchScore += (player.currentRankScore / 10) * 10;
-          matchReasons.add('דירוג: ${player.currentRankScore.toStringAsFixed(1)}');
-        }
-
-        // Distance bonus (closer = higher score)
-        if (distanceKm != null && criteria.maxDistanceKm != null) {
-          final distanceRatio = 1 - (distanceKm / criteria.maxDistanceKm!);
-          matchScore += distanceRatio * 15; // Up to 15 points
-          matchReasons.add('${distanceKm.toStringAsFixed(1)} ק"מ מההוב');
+          matchReasons.add('פעיל');
         }
 
         // Participation bonus (more games = more reliable)
         if (player.totalParticipations > 10) {
-          matchScore += 5;
+          matchScore += 10;
           matchReasons.add('${player.totalParticipations} משחקים');
+        }
+
+        // Distance info (will be used for sorting, not scoring)
+        if (distanceKm != null) {
+          matchReasons.add('${distanceKm.toStringAsFixed(1)} ק"מ מההוב');
         }
 
         // Cap score at 100
@@ -208,8 +210,19 @@ class ScoutingService {
         ));
       }
 
-      // Sort by match score (descending)
-      results.sort((a, b) => b.matchScore.compareTo(a.matchScore));
+      // Sort by distance (ascending - closest first), then by match score
+      results.sort((a, b) {
+        // If both have distances, sort by distance first
+        if (a.distanceKm != null && b.distanceKm != null) {
+          final distanceCompare = a.distanceKm!.compareTo(b.distanceKm!);
+          if (distanceCompare != 0) return distanceCompare;
+        }
+        // If only one has distance, prioritize the one with distance
+        if (a.distanceKm != null && b.distanceKm == null) return -1;
+        if (a.distanceKm == null && b.distanceKm != null) return 1;
+        // Otherwise sort by match score
+        return b.matchScore.compareTo(a.matchScore);
+      });
 
       // Apply limit
       if (criteria.limit != null && results.length > criteria.limit!) {

@@ -26,17 +26,37 @@ mixin _$User {
   String? get photoUrl => throw _privateConstructorUsedError;
   String? get phoneNumber => throw _privateConstructorUsedError;
   String? get city => throw _privateConstructorUsedError; // עיר מגורים
+// New profile fields
+  String? get firstName => throw _privateConstructorUsedError;
+  String? get lastName => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime? get birthDate => throw _privateConstructorUsedError;
+  String? get favoriteTeamId =>
+      throw _privateConstructorUsedError; // ID of favorite team from Firestore
+  String? get facebookProfileUrl => throw _privateConstructorUsedError;
+  String? get instagramProfileUrl => throw _privateConstructorUsedError;
   String get availabilityStatus =>
-      throw _privateConstructorUsedError; // available, busy, notAvailable
+      throw _privateConstructorUsedError; // available, busy, notAvailable (deprecated, use isActive)
+  bool get isActive =>
+      throw _privateConstructorUsedError; // true = פתוח להאבים והזמנות, false = לא פתוח
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
   List<String> get hubIds => throw _privateConstructorUsedError;
   double get currentRankScore => throw _privateConstructorUsedError;
   String get preferredPosition => throw _privateConstructorUsedError;
+  String? get playingStyle =>
+      throw _privateConstructorUsedError; // goalkeeper, defensive, offensive
   int get totalParticipations => throw _privateConstructorUsedError;
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get location => throw _privateConstructorUsedError;
   String? get geohash => throw _privateConstructorUsedError;
+  String? get region =>
+      throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים
+// Denormalized fields (updated by Cloud Functions, not written by client)
+  int get followerCount =>
+      throw _privateConstructorUsedError; // Denormalized: Count of followers (updated by onFollowCreated)
+// Privacy settings - control what data is visible in search and profile
+  Map<String, bool> get privacySettings => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -59,14 +79,25 @@ abstract class $UserCopyWith<$Res> {
       String? photoUrl,
       String? phoneNumber,
       String? city,
+      String? firstName,
+      String? lastName,
+      @TimestampConverter() DateTime? birthDate,
+      String? favoriteTeamId,
+      String? facebookProfileUrl,
+      String? instagramProfileUrl,
       String availabilityStatus,
+      bool isActive,
       @TimestampConverter() DateTime createdAt,
       List<String> hubIds,
       double currentRankScore,
       String preferredPosition,
+      String? playingStyle,
       int totalParticipations,
-      @GeoPointConverter() GeoPoint? location,
-      String? geohash});
+      @NullableGeoPointConverter() GeoPoint? location,
+      String? geohash,
+      String? region,
+      int followerCount,
+      Map<String, bool> privacySettings});
 }
 
 /// @nodoc
@@ -90,14 +121,25 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? photoUrl = freezed,
     Object? phoneNumber = freezed,
     Object? city = freezed,
+    Object? firstName = freezed,
+    Object? lastName = freezed,
+    Object? birthDate = freezed,
+    Object? favoriteTeamId = freezed,
+    Object? facebookProfileUrl = freezed,
+    Object? instagramProfileUrl = freezed,
     Object? availabilityStatus = null,
+    Object? isActive = null,
     Object? createdAt = null,
     Object? hubIds = null,
     Object? currentRankScore = null,
     Object? preferredPosition = null,
+    Object? playingStyle = freezed,
     Object? totalParticipations = null,
     Object? location = freezed,
     Object? geohash = freezed,
+    Object? region = freezed,
+    Object? followerCount = null,
+    Object? privacySettings = null,
   }) {
     return _then(_value.copyWith(
       uid: null == uid
@@ -124,10 +166,38 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.city
           : city // ignore: cast_nullable_to_non_nullable
               as String?,
+      firstName: freezed == firstName
+          ? _value.firstName
+          : firstName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      lastName: freezed == lastName
+          ? _value.lastName
+          : lastName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      birthDate: freezed == birthDate
+          ? _value.birthDate
+          : birthDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      favoriteTeamId: freezed == favoriteTeamId
+          ? _value.favoriteTeamId
+          : favoriteTeamId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      facebookProfileUrl: freezed == facebookProfileUrl
+          ? _value.facebookProfileUrl
+          : facebookProfileUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      instagramProfileUrl: freezed == instagramProfileUrl
+          ? _value.instagramProfileUrl
+          : instagramProfileUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       availabilityStatus: null == availabilityStatus
           ? _value.availabilityStatus
           : availabilityStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -144,6 +214,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.preferredPosition
           : preferredPosition // ignore: cast_nullable_to_non_nullable
               as String,
+      playingStyle: freezed == playingStyle
+          ? _value.playingStyle
+          : playingStyle // ignore: cast_nullable_to_non_nullable
+              as String?,
       totalParticipations: null == totalParticipations
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
@@ -156,6 +230,18 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.geohash
           : geohash // ignore: cast_nullable_to_non_nullable
               as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      followerCount: null == followerCount
+          ? _value.followerCount
+          : followerCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      privacySettings: null == privacySettings
+          ? _value.privacySettings
+          : privacySettings // ignore: cast_nullable_to_non_nullable
+              as Map<String, bool>,
     ) as $Val);
   }
 }
@@ -174,14 +260,25 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String? photoUrl,
       String? phoneNumber,
       String? city,
+      String? firstName,
+      String? lastName,
+      @TimestampConverter() DateTime? birthDate,
+      String? favoriteTeamId,
+      String? facebookProfileUrl,
+      String? instagramProfileUrl,
       String availabilityStatus,
+      bool isActive,
       @TimestampConverter() DateTime createdAt,
       List<String> hubIds,
       double currentRankScore,
       String preferredPosition,
+      String? playingStyle,
       int totalParticipations,
-      @GeoPointConverter() GeoPoint? location,
-      String? geohash});
+      @NullableGeoPointConverter() GeoPoint? location,
+      String? geohash,
+      String? region,
+      int followerCount,
+      Map<String, bool> privacySettings});
 }
 
 /// @nodoc
@@ -202,14 +299,25 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? photoUrl = freezed,
     Object? phoneNumber = freezed,
     Object? city = freezed,
+    Object? firstName = freezed,
+    Object? lastName = freezed,
+    Object? birthDate = freezed,
+    Object? favoriteTeamId = freezed,
+    Object? facebookProfileUrl = freezed,
+    Object? instagramProfileUrl = freezed,
     Object? availabilityStatus = null,
+    Object? isActive = null,
     Object? createdAt = null,
     Object? hubIds = null,
     Object? currentRankScore = null,
     Object? preferredPosition = null,
+    Object? playingStyle = freezed,
     Object? totalParticipations = null,
     Object? location = freezed,
     Object? geohash = freezed,
+    Object? region = freezed,
+    Object? followerCount = null,
+    Object? privacySettings = null,
   }) {
     return _then(_$UserImpl(
       uid: null == uid
@@ -236,10 +344,38 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.city
           : city // ignore: cast_nullable_to_non_nullable
               as String?,
+      firstName: freezed == firstName
+          ? _value.firstName
+          : firstName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      lastName: freezed == lastName
+          ? _value.lastName
+          : lastName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      birthDate: freezed == birthDate
+          ? _value.birthDate
+          : birthDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      favoriteTeamId: freezed == favoriteTeamId
+          ? _value.favoriteTeamId
+          : favoriteTeamId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      facebookProfileUrl: freezed == facebookProfileUrl
+          ? _value.facebookProfileUrl
+          : facebookProfileUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      instagramProfileUrl: freezed == instagramProfileUrl
+          ? _value.instagramProfileUrl
+          : instagramProfileUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       availabilityStatus: null == availabilityStatus
           ? _value.availabilityStatus
           : availabilityStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -256,6 +392,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.preferredPosition
           : preferredPosition // ignore: cast_nullable_to_non_nullable
               as String,
+      playingStyle: freezed == playingStyle
+          ? _value.playingStyle
+          : playingStyle // ignore: cast_nullable_to_non_nullable
+              as String?,
       totalParticipations: null == totalParticipations
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
@@ -268,6 +408,18 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.geohash
           : geohash // ignore: cast_nullable_to_non_nullable
               as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      followerCount: null == followerCount
+          ? _value.followerCount
+          : followerCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      privacySettings: null == privacySettings
+          ? _value._privacySettings
+          : privacySettings // ignore: cast_nullable_to_non_nullable
+              as Map<String, bool>,
     ));
   }
 }
@@ -282,15 +434,34 @@ class _$UserImpl implements _User {
       this.photoUrl,
       this.phoneNumber,
       this.city,
+      this.firstName,
+      this.lastName,
+      @TimestampConverter() this.birthDate,
+      this.favoriteTeamId,
+      this.facebookProfileUrl,
+      this.instagramProfileUrl,
       this.availabilityStatus = 'available',
+      this.isActive = true,
       @TimestampConverter() required this.createdAt,
       final List<String> hubIds = const [],
       this.currentRankScore = 5.0,
       this.preferredPosition = 'Midfielder',
+      this.playingStyle,
       this.totalParticipations = 0,
-      @GeoPointConverter() this.location,
-      this.geohash})
-      : _hubIds = hubIds;
+      @NullableGeoPointConverter() this.location,
+      this.geohash,
+      this.region,
+      this.followerCount = 0,
+      final Map<String, bool> privacySettings = const {
+        'hideFromSearch': false,
+        'hideEmail': false,
+        'hidePhone': false,
+        'hideCity': false,
+        'hideStats': false,
+        'hideRatings': false
+      }})
+      : _hubIds = hubIds,
+        _privacySettings = privacySettings;
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserImplFromJson(json);
@@ -308,10 +479,29 @@ class _$UserImpl implements _User {
   @override
   final String? city;
 // עיר מגורים
+// New profile fields
+  @override
+  final String? firstName;
+  @override
+  final String? lastName;
+  @override
+  @TimestampConverter()
+  final DateTime? birthDate;
+  @override
+  final String? favoriteTeamId;
+// ID of favorite team from Firestore
+  @override
+  final String? facebookProfileUrl;
+  @override
+  final String? instagramProfileUrl;
   @override
   @JsonKey()
   final String availabilityStatus;
-// available, busy, notAvailable
+// available, busy, notAvailable (deprecated, use isActive)
+  @override
+  @JsonKey()
+  final bool isActive;
+// true = פתוח להאבים והזמנות, false = לא פתוח
   @override
   @TimestampConverter()
   final DateTime createdAt;
@@ -331,17 +521,39 @@ class _$UserImpl implements _User {
   @JsonKey()
   final String preferredPosition;
   @override
+  final String? playingStyle;
+// goalkeeper, defensive, offensive
+  @override
   @JsonKey()
   final int totalParticipations;
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   final GeoPoint? location;
   @override
   final String? geohash;
+  @override
+  final String? region;
+// אזור: צפון, מרכז, דרום, ירושלים
+// Denormalized fields (updated by Cloud Functions, not written by client)
+  @override
+  @JsonKey()
+  final int followerCount;
+// Denormalized: Count of followers (updated by onFollowCreated)
+// Privacy settings - control what data is visible in search and profile
+  final Map<String, bool> _privacySettings;
+// Denormalized: Count of followers (updated by onFollowCreated)
+// Privacy settings - control what data is visible in search and profile
+  @override
+  @JsonKey()
+  Map<String, bool> get privacySettings {
+    if (_privacySettings is EqualUnmodifiableMapView) return _privacySettings;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_privacySettings);
+  }
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, city: $city, availabilityStatus: $availabilityStatus, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, location: $location, geohash: $geohash)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, city: $city, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, playingStyle: $playingStyle, totalParticipations: $totalParticipations, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, privacySettings: $privacySettings)';
   }
 
   @override
@@ -357,8 +569,22 @@ class _$UserImpl implements _User {
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
             (identical(other.city, city) || other.city == city) &&
+            (identical(other.firstName, firstName) ||
+                other.firstName == firstName) &&
+            (identical(other.lastName, lastName) ||
+                other.lastName == lastName) &&
+            (identical(other.birthDate, birthDate) ||
+                other.birthDate == birthDate) &&
+            (identical(other.favoriteTeamId, favoriteTeamId) ||
+                other.favoriteTeamId == favoriteTeamId) &&
+            (identical(other.facebookProfileUrl, facebookProfileUrl) ||
+                other.facebookProfileUrl == facebookProfileUrl) &&
+            (identical(other.instagramProfileUrl, instagramProfileUrl) ||
+                other.instagramProfileUrl == instagramProfileUrl) &&
             (identical(other.availabilityStatus, availabilityStatus) ||
                 other.availabilityStatus == availabilityStatus) &&
+            (identical(other.isActive, isActive) ||
+                other.isActive == isActive) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             const DeepCollectionEquality().equals(other._hubIds, _hubIds) &&
@@ -366,31 +592,50 @@ class _$UserImpl implements _User {
                 other.currentRankScore == currentRankScore) &&
             (identical(other.preferredPosition, preferredPosition) ||
                 other.preferredPosition == preferredPosition) &&
+            (identical(other.playingStyle, playingStyle) ||
+                other.playingStyle == playingStyle) &&
             (identical(other.totalParticipations, totalParticipations) ||
                 other.totalParticipations == totalParticipations) &&
             (identical(other.location, location) ||
                 other.location == location) &&
-            (identical(other.geohash, geohash) || other.geohash == geohash));
+            (identical(other.geohash, geohash) || other.geohash == geohash) &&
+            (identical(other.region, region) || other.region == region) &&
+            (identical(other.followerCount, followerCount) ||
+                other.followerCount == followerCount) &&
+            const DeepCollectionEquality()
+                .equals(other._privacySettings, _privacySettings));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      uid,
-      name,
-      email,
-      photoUrl,
-      phoneNumber,
-      city,
-      availabilityStatus,
-      createdAt,
-      const DeepCollectionEquality().hash(_hubIds),
-      currentRankScore,
-      preferredPosition,
-      totalParticipations,
-      location,
-      geohash);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        uid,
+        name,
+        email,
+        photoUrl,
+        phoneNumber,
+        city,
+        firstName,
+        lastName,
+        birthDate,
+        favoriteTeamId,
+        facebookProfileUrl,
+        instagramProfileUrl,
+        availabilityStatus,
+        isActive,
+        createdAt,
+        const DeepCollectionEquality().hash(_hubIds),
+        currentRankScore,
+        preferredPosition,
+        playingStyle,
+        totalParticipations,
+        location,
+        geohash,
+        region,
+        followerCount,
+        const DeepCollectionEquality().hash(_privacySettings)
+      ]);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -416,14 +661,25 @@ abstract class _User implements User {
       final String? photoUrl,
       final String? phoneNumber,
       final String? city,
+      final String? firstName,
+      final String? lastName,
+      @TimestampConverter() final DateTime? birthDate,
+      final String? favoriteTeamId,
+      final String? facebookProfileUrl,
+      final String? instagramProfileUrl,
       final String availabilityStatus,
+      final bool isActive,
       @TimestampConverter() required final DateTime createdAt,
       final List<String> hubIds,
       final double currentRankScore,
       final String preferredPosition,
+      final String? playingStyle,
       final int totalParticipations,
-      @GeoPointConverter() final GeoPoint? location,
-      final String? geohash}) = _$UserImpl;
+      @NullableGeoPointConverter() final GeoPoint? location,
+      final String? geohash,
+      final String? region,
+      final int followerCount,
+      final Map<String, bool> privacySettings}) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
 
@@ -439,8 +695,25 @@ abstract class _User implements User {
   String? get phoneNumber;
   @override
   String? get city; // עיר מגורים
+// New profile fields
   @override
-  String get availabilityStatus; // available, busy, notAvailable
+  String? get firstName;
+  @override
+  String? get lastName;
+  @override
+  @TimestampConverter()
+  DateTime? get birthDate;
+  @override
+  String? get favoriteTeamId; // ID of favorite team from Firestore
+  @override
+  String? get facebookProfileUrl;
+  @override
+  String? get instagramProfileUrl;
+  @override
+  String
+      get availabilityStatus; // available, busy, notAvailable (deprecated, use isActive)
+  @override
+  bool get isActive; // true = פתוח להאבים והזמנות, false = לא פתוח
   @override
   @TimestampConverter()
   DateTime get createdAt;
@@ -451,12 +724,22 @@ abstract class _User implements User {
   @override
   String get preferredPosition;
   @override
+  String? get playingStyle; // goalkeeper, defensive, offensive
+  @override
   int get totalParticipations;
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get location;
   @override
   String? get geohash;
+  @override
+  String? get region; // אזור: צפון, מרכז, דרום, ירושלים
+// Denormalized fields (updated by Cloud Functions, not written by client)
+  @override
+  int get followerCount; // Denormalized: Count of followers (updated by onFollowCreated)
+// Privacy settings - control what data is visible in search and profile
+  @override
+  Map<String, bool> get privacySettings;
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.

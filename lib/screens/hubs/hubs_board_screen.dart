@@ -12,6 +12,7 @@ import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -40,7 +41,19 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _mapController?.dispose();
+    // Safely dispose map controller - handle web platform issue
+    // On Web, the map might not be fully initialized when dispose is called
+    if (_mapController != null) {
+      try {
+        // Check if controller is still valid before disposing
+        // On Web, the controller might already be disposed by the map widget
+        _mapController!.dispose();
+      } catch (e) {
+        // Ignore errors during dispose (web platform may throw if map not fully initialized)
+        // This is expected behavior on Web when the map is disposed before controller is ready
+        debugPrint('Error disposing map controller (expected on Web): $e');
+      }
+    }
     super.dispose();
   }
 
@@ -69,9 +82,20 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     final locationService = ref.watch(locationServiceProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
 
+    final currentUserId = ref.watch(currentUserIdProvider);
+    
     return FuturisticScaffold(
       title: 'לוח הובים',
       showBottomNav: true,
+      floatingActionButton: currentUserId != null
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push('/hubs/create'),
+              icon: const Icon(Icons.add),
+              label: const Text('צור הוב'),
+              backgroundColor: FuturisticColors.primary,
+              foregroundColor: Colors.white,
+            )
+          : null,
       body: Column(
         children: [
           // Search bar
@@ -148,7 +172,10 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
           return FuturisticEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת הובים',
-            message: snapshot.error.toString(),
+            message: ErrorHandlerService().handleException(
+              snapshot.error,
+              context: 'Hubs board screen',
+            ),
           );
         }
 
@@ -285,37 +312,45 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
             ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
             : const LatLng(31.7683, 35.2137); // Default to Jerusalem
 
-        return GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: initialPosition,
-            zoom: 12.0,
-          ),
-          onMapCreated: (controller) {
-            _mapController = controller;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return SizedBox(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: initialPosition,
+                  zoom: 12.0,
+                ),
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                },
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                markers: hubs
+                    .where((hub) => hub.location != null)
+                    .map((hub) {
+                      return Marker(
+                        markerId: MarkerId(hub.hubId),
+                        position: LatLng(
+                          hub.location!.latitude,
+                          hub.location!.longitude,
+                        ),
+                        infoWindow: InfoWindow(
+                          title: hub.name,
+                          snippet: '${hub.memberIds.length} חברים',
+                        ),
+                        onTap: () {
+                          if (hub.hubId.isNotEmpty) {
+                            context.push('/hubs/${hub.hubId}');
+                          }
+                        },
+                      );
+                    })
+                    .toSet(),
+              ),
+            );
           },
-          myLocationEnabled: true,
-          myLocationButtonEnabled: true,
-          markers: hubs
-              .where((hub) => hub.location != null)
-              .map((hub) {
-                return Marker(
-                  markerId: MarkerId(hub.hubId),
-                  position: LatLng(
-                    hub.location!.latitude,
-                    hub.location!.longitude,
-                  ),
-                  infoWindow: InfoWindow(
-                    title: hub.name,
-                    snippet: '${hub.memberIds.length} חברים',
-                  ),
-                  onTap: () {
-                    if (hub.hubId.isNotEmpty) {
-                      context.push('/hubs/${hub.hubId}');
-                    }
-                  },
-                );
-              })
-              .toSet(),
         );
       },
     );

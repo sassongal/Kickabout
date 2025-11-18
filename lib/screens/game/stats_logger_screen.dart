@@ -6,6 +6,7 @@ import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/whatsapp_share_button.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/utils/recap_generator.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/gamification_service.dart';
@@ -27,6 +28,8 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
   DateTime? _gameStartTime;
   bool _isPaused = true;
   String? _recapText;
+  final _teamAScoreController = TextEditingController();
+  final _teamBScoreController = TextEditingController();
 
   @override
   void initState() {
@@ -37,6 +40,8 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _teamAScoreController.dispose();
+    _teamBScoreController.dispose();
     super.dispose();
   }
 
@@ -143,7 +148,17 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
       final usersRepo = ref.read(usersRepositoryProvider);
       final gamificationRepo = ref.read(gamificationRepositoryProvider);
       
-      await gamesRepo.updateGameStatus(widget.gameId, GameStatus.completed);
+      // Get scores from text fields
+      final teamAScore = int.tryParse(_teamAScoreController.text.trim()) ?? 0;
+      final teamBScore = int.tryParse(_teamBScoreController.text.trim()) ?? 0;
+      
+      // Update game with scores and status
+      await gamesRepo.updateGame(widget.gameId, {
+        'teamAScore': teamAScore,
+        'teamBScore': teamBScore,
+        'status': GameStatus.completed.toFirestore(),
+      });
+      
       _pauseTimer();
       
       // Load recap first
@@ -289,6 +304,36 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
             return const Center(child: Text('משחק לא נמצא'));
           }
 
+          // Check admin permissions
+          final roleAsync = ref.watch(hubRoleProvider(game.hubId));
+          return roleAsync.when(
+            data: (role) {
+              if (role != UserRole.admin) {
+                return Scaffold(
+                  appBar: AppBar(
+                    title: const Text('רישום סטטיסטיקות'),
+                  ),
+                  body: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock, size: 64, color: Colors.orange),
+                        SizedBox(height: 16),
+                        Text(
+                          'אין לך הרשאת ניהול למסך זה',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'רק מנהלי Hub יכולים לרשום סטטיסטיקות',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
           return StreamBuilder<List<Team>>(
             stream: teamsStream,
             builder: (context, teamsSnapshot) {
@@ -299,6 +344,57 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Score section
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'תוצאות המשחק',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _teamAScoreController,
+                                    decoration: InputDecoration(
+                                      labelText: teams.isNotEmpty ? teams[0].name : 'תוצאת קבוצה א\'',
+                                      border: const OutlineInputBorder(),
+                                      prefixIcon: const Icon(Icons.sports_soccer),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Text(
+                                  ':',
+                                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _teamBScoreController,
+                                    decoration: InputDecoration(
+                                      labelText: teams.length > 1 ? teams[1].name : 'תוצאת קבוצה ב\'',
+                                      border: const OutlineInputBorder(),
+                                      prefixIcon: const Icon(Icons.sports_soccer),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     // Timer section
                     Card(
                       child: Padding(
@@ -436,6 +532,19 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
                 ),
               );
             },
+          );
+            },
+            loading: () => const FuturisticLoadingState(message: 'בודק הרשאות...'),
+            error: (error, stack) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('שגיאה בבדיקת הרשאות: $error'),
+                ],
+              ),
+            ),
           );
         },
       ),

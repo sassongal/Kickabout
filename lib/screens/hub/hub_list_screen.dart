@@ -7,6 +7,7 @@ import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Hub list screen - lists hubs of user
 class HubListScreen extends ConsumerStatefulWidget {
@@ -104,7 +105,10 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
             return FuturisticEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת הובים',
-              message: snapshot.error.toString(),
+              message: ErrorHandlerService().handleException(
+                snapshot.error,
+                context: 'Hub list screen',
+              ),
               action: ElevatedButton.icon(
                 onPressed: () {
                   // Retry by rebuilding

@@ -38,6 +38,8 @@ class SignupsRepository {
   }
 
   /// Set signup (create or update)
+  /// 
+  /// Throws an exception if the game is full (playerCount >= maxPlayers)
   Future<void> setSignup(
     String gameId,
     String uid,
@@ -48,6 +50,35 @@ class SignupsRepository {
     }
 
     try {
+      // Check if game is full (only for confirmed signups)
+      if (status == SignupStatus.confirmed) {
+        // Get game to check maxPlayers
+        final gameDoc = await _firestore.doc(FirestorePaths.game(gameId)).get();
+        if (!gameDoc.exists) {
+          throw Exception('Game not found');
+        }
+        
+        final gameData = gameDoc.data()!;
+        final teamCount = gameData['teamCount'] as int? ?? 2;
+        final maxPlayers = teamCount * 3; // 3 players per team minimum (from AppConstants.minPlayersPerTeam)
+        
+        // Count current confirmed signups
+        final confirmedSignups = await _firestore
+            .collection(FirestorePaths.gameSignups(gameId))
+            .where('status', isEqualTo: SignupStatus.confirmed.toFirestore())
+            .get();
+        
+        final currentPlayerCount = confirmedSignups.docs.length;
+        
+        // Check if user is already signed up (to allow updates)
+        final existingSignup = await getSignup(gameId, uid);
+        final isNewSignup = existingSignup == null || existingSignup.status != SignupStatus.confirmed;
+        
+        if (isNewSignup && currentPlayerCount >= maxPlayers) {
+          throw Exception('המשחק מלא. אין מקום לשחקנים נוספים.');
+        }
+      }
+      
       final signup = GameSignup(
         playerId: uid,
         signedUpAt: DateTime.now(),

@@ -10,9 +10,11 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       gameId: json['gameId'] as String,
       createdBy: json['createdBy'] as String,
       hubId: json['hubId'] as String,
+      eventId: json['eventId'] as String?,
       gameDate: const TimestampConverter().fromJson(json['gameDate'] as Object),
       location: json['location'] as String?,
-      locationPoint: const GeoPointConverter().fromJson(json['locationPoint']),
+      locationPoint:
+          const NullableGeoPointConverter().fromJson(json['locationPoint']),
       geohash: json['geohash'] as String?,
       venueId: json['venueId'] as String?,
       teamCount: (json['teamCount'] as num?)?.toInt() ?? 2,
@@ -35,6 +37,15 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       createdByName: json['createdByName'] as String?,
       createdByPhotoUrl: json['createdByPhotoUrl'] as String?,
       hubName: json['hubName'] as String?,
+      teams: (json['teams'] as List<dynamic>?)
+              ?.map((e) => Team.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      teamAScore: (json['teamAScore'] as num?)?.toInt(),
+      teamBScore: (json['teamBScore'] as num?)?.toInt(),
+      durationInMinutes: (json['durationInMinutes'] as num?)?.toInt(),
+      gameEndCondition: json['gameEndCondition'] as String?,
+      region: json['region'] as String?,
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -42,9 +53,11 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'gameId': instance.gameId,
       'createdBy': instance.createdBy,
       'hubId': instance.hubId,
+      'eventId': instance.eventId,
       'gameDate': const TimestampConverter().toJson(instance.gameDate),
       'location': instance.location,
-      'locationPoint': const GeoPointConverter().toJson(instance.locationPoint),
+      'locationPoint':
+          const NullableGeoPointConverter().toJson(instance.locationPoint),
       'geohash': instance.geohash,
       'venueId': instance.venueId,
       'teamCount': instance.teamCount,
@@ -60,6 +73,12 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'createdByName': instance.createdByName,
       'createdByPhotoUrl': instance.createdByPhotoUrl,
       'hubName': instance.hubName,
+      'teams': instance.teams,
+      'teamAScore': instance.teamAScore,
+      'teamBScore': instance.teamBScore,
+      'durationInMinutes': instance.durationInMinutes,
+      'gameEndCondition': instance.gameEndCondition,
+      'region': instance.region,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

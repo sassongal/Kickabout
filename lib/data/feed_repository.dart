@@ -1,6 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/models.dart';
+
+/// Result of a paginated feed query
+class FeedPageResult {
+  final List<FeedPost> posts;
+  final DocumentSnapshot? lastDocument;
+  final bool hasMore;
+
+  FeedPageResult({
+    required this.posts,
+    required this.lastDocument,
+    required this.hasMore,
+  });
+}
 
 /// Repository for Feed operations
 class FeedRepository {
@@ -9,7 +23,7 @@ class FeedRepository {
   FeedRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Stream feed posts for a hub
+  /// Stream feed posts for a hub (for real-time updates)
   Stream<List<FeedPost>> watchFeed(String hubId) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
@@ -27,6 +41,82 @@ class FeedRepository {
         .map((snapshot) => snapshot.docs
             .map((doc) => FeedPost.fromJson({...doc.data(), 'postId': doc.id}))
             .toList());
+  }
+
+  /// Stream regional feed posts (from feedPosts root collection)
+  /// Filters by region if provided
+  Stream<List<FeedPost>> streamRegionalFeed({String? region}) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
+    Query query = _firestore
+        .collection('feedPosts')
+        .orderBy('createdAt', descending: true)
+        .limit(50);
+
+    // Filter by region if provided
+    if (region != null && region.isNotEmpty) {
+      query = query.where('region', isEqualTo: region);
+    }
+
+    return query.snapshots().map((snapshot) => snapshot.docs
+        .map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return FeedPost.fromJson({...data, 'postId': doc.id});
+        })
+        .toList());
+  }
+
+  /// Get feed posts with pagination
+  /// Returns a FeedPageResult containing posts and the last document snapshot
+  Future<FeedPageResult> getFeedPosts({
+    required String hubId,
+    DocumentSnapshot? lastDocumentSnapshot,
+    int limit = 15,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      return FeedPageResult(posts: [], lastDocument: null, hasMore: false);
+    }
+
+    try {
+      Query query = _firestore
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
+          .orderBy('createdAt', descending: true)
+          .limit(limit + 1); // Get one extra to check if there's more
+
+      if (lastDocumentSnapshot != null) {
+        query = query.startAfterDocument(lastDocumentSnapshot);
+      }
+
+      final snapshot = await query.get();
+      final docs = snapshot.docs;
+      final hasMore = docs.length > limit;
+      
+      // Remove the extra document if we got more than limit
+      final postsToReturn = hasMore ? docs.take(limit).toList() : docs;
+      final lastDoc = postsToReturn.isNotEmpty ? postsToReturn.last : null;
+
+      final posts = postsToReturn
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return FeedPost.fromJson({...data, 'postId': doc.id});
+          })
+          .toList();
+
+      return FeedPageResult(
+        posts: posts,
+        lastDocument: lastDoc,
+        hasMore: hasMore,
+      );
+    } catch (e) {
+      debugPrint('Failed to get feed posts: $e');
+      return FeedPageResult(posts: [], lastDocument: null, hasMore: false);
+    }
   }
 
   /// Create feed post

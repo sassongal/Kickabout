@@ -9,6 +9,7 @@ import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/models/notification.dart' as app_notification;
+import 'package:kickadoor/models/models.dart';
 
 /// Scouting Screen - AI-powered player discovery for Hub managers
 class ScoutingScreen extends ConsumerStatefulWidget {
@@ -26,19 +27,18 @@ class ScoutingScreen extends ConsumerStatefulWidget {
 }
 
 class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
-  String? _selectedPosition;
-  double? _minRating;
-  double? _maxRating;
-  double? _maxDistanceKm;
-  bool _availableOnly = true;
+  int _minAge = 18;
+  int _maxAge = 45;
+  String? _selectedRegion;
+  bool _activeOnly = true;
   bool _isLoading = false;
   List<ScoutingResult> _results = [];
 
-  final List<String> _positions = [
-    'Goalkeeper',
-    'Defender',
-    'Midfielder',
-    'Forward',
+  final List<String> _regions = [
+    'צפון',
+    'מרכז',
+    'דרום',
+    'ירושלים',
   ];
 
   @override
@@ -109,87 +109,90 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Position filter
-            DropdownButtonFormField<String>(
-              initialValue: _selectedPosition,
-              decoration: const InputDecoration(
-                labelText: 'עמדה',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.sports_soccer),
-              ),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('כל העמדות')),
-                ..._positions.map((pos) => DropdownMenuItem(
-                      value: pos,
-                      child: Text(_getPositionName(pos)),
-                    )),
-              ],
-              onChanged: (value) {
-                setState(() => _selectedPosition = value);
-              },
+            // Age range filter
+            Text(
+              'טווח גילאים',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 16),
-
-            // Rating range
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'דירוג מינימלי',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.star),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      setState(() {
-                        _minRating = value.isEmpty ? null : double.tryParse(value);
-                      });
-                    },
+                  child: Column(
+                    children: [
+                      Text('גיל מינימלי: $_minAge'),
+                      Slider(
+                        value: _minAge.toDouble(),
+                        min: 16,
+                        max: 50,
+                        divisions: 34,
+                        label: '$_minAge',
+                        onChanged: (value) {
+                          setState(() {
+                            _minAge = value.toInt();
+                            if (_minAge > _maxAge) {
+                              _maxAge = _minAge;
+                            }
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 16),
                 Expanded(
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'דירוג מקסימלי',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.star),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      setState(() {
-                        _maxRating = value.isEmpty ? null : double.tryParse(value);
-                      });
-                    },
+                  child: Column(
+                    children: [
+                      Text('גיל מקסימלי: $_maxAge'),
+                      Slider(
+                        value: _maxAge.toDouble(),
+                        min: 16,
+                        max: 50,
+                        divisions: 34,
+                        label: '$_maxAge',
+                        onChanged: (value) {
+                          setState(() {
+                            _maxAge = value.toInt();
+                            if (_maxAge < _minAge) {
+                              _minAge = _maxAge;
+                            }
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
-            // Distance filter
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'מרחק מקסימלי (ק"מ)',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.location_on),
+            // Region filter
+            DropdownButtonFormField<String>(
+              value: _selectedRegion,
+              decoration: const InputDecoration(
+                labelText: 'איזור מגורים',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.location_on),
               ),
-              keyboardType: TextInputType.number,
+              items: [
+                const DropdownMenuItem(value: null, child: Text('כל האיזורים')),
+                ..._regions.map((region) => DropdownMenuItem(
+                      value: region,
+                      child: Text(region),
+                    )),
+              ],
               onChanged: (value) {
-                setState(() {
-                  _maxDistanceKm = value.isEmpty ? null : double.tryParse(value);
-                });
+                setState(() => _selectedRegion = value);
               },
             ),
             const SizedBox(height: 16),
 
-            // Available only checkbox
+            // Active only checkbox
             CheckboxListTile(
-              title: const Text('רק שחקנים זמינים'),
-              value: _availableOnly,
+              title: const Text('רק שחקנים פעילים'),
+              value: _activeOnly,
               onChanged: (value) {
-                setState(() => _availableOnly = value ?? true);
+                setState(() => _activeOnly = value ?? true);
               },
             ),
           ],
@@ -295,12 +298,12 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                 ),
               ),
             const PopupMenuItem(
-              value: 'view_profile',
+              value: 'view_player_card',
               child: Row(
                 children: [
                   Icon(Icons.person, size: 20),
                   SizedBox(width: 8),
-                  Text('צפה בפרופיל'),
+                  Text('כרטיס שחקן'),
                 ],
               ),
             ),
@@ -313,12 +316,13 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
               case 'invite_hub':
                 _inviteToHub(player.uid);
                 break;
-              case 'view_profile':
-                context.push('/profile/${player.uid}');
+              case 'view_player_card':
+                _showPlayerCard(context, player);
                 break;
             }
           },
         ),
+        onTap: () => _showPlayerCard(context, player),
       ),
     );
   }
@@ -338,11 +342,10 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
 
       final criteria = ScoutingCriteria(
         hubId: widget.hubId,
-        requiredPosition: _selectedPosition,
-        minRating: _minRating,
-        maxRating: _maxRating,
-        maxDistanceKm: _maxDistanceKm,
-        availableOnly: _availableOnly,
+        minAge: _minAge,
+        maxAge: _maxAge,
+        region: _selectedRegion,
+        activeOnly: _activeOnly,
         limit: 50,
       );
 
@@ -502,6 +505,226 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
       'Forward': 'חלוץ',
     };
     return positionNames[position] ?? position;
+  }
+
+  void _showPlayerCard(BuildContext context, User player) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _PlayerCardSheet(player: player, hubId: widget.hubId),
+    );
+  }
+}
+
+/// Player card sheet - shows detailed player information
+class _PlayerCardSheet extends ConsumerWidget {
+  final User player;
+  final String hubId;
+
+  const _PlayerCardSheet({
+    required this.player,
+    required this.hubId,
+  });
+
+  int _calculateAge(DateTime? birthDate) {
+    if (birthDate == null) return 0;
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    final monthDiff = now.month - birthDate.month;
+    final dayDiff = now.day - birthDate.day;
+    if (monthDiff < 0 || (monthDiff == 0 && dayDiff < 0)) {
+      age--;
+    }
+    return age;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final age = _calculateAge(player.birthDate);
+    
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with close button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'כרטיס שחקן',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                const SizedBox(height: 16),
+                
+                // Profile picture and name
+                Center(
+                  child: Column(
+                    children: [
+                      PlayerAvatar(user: player, radius: 60),
+                      const SizedBox(height: 16),
+                      Text(
+                        player.firstName != null && player.lastName != null
+                            ? '${player.firstName} ${player.lastName}'
+                            : player.name,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Player details
+                _buildDetailRow(
+                  context,
+                  Icons.person,
+                  'שם מלא',
+                  player.firstName != null && player.lastName != null
+                      ? '${player.firstName} ${player.lastName}'
+                      : player.name,
+                ),
+                if (player.lastName != null && player.firstName != null)
+                  _buildDetailRow(
+                    context,
+                    Icons.badge,
+                    'שם משפחה',
+                    player.lastName!,
+                  ),
+                if (player.region != null)
+                  _buildDetailRow(
+                    context,
+                    Icons.location_on,
+                    'איזור מגורים',
+                    player.region!,
+                  ),
+                if (player.phoneNumber != null && !player.privacySettings['hidePhone']!)
+                  _buildDetailRow(
+                    context,
+                    Icons.phone,
+                    'טלפון',
+                    player.phoneNumber!,
+                  ),
+                if (!player.privacySettings['hideEmail']!)
+                  _buildDetailRow(
+                    context,
+                    Icons.email,
+                    'מייל',
+                    player.email,
+                  ),
+                if (age > 0)
+                  _buildDetailRow(
+                    context,
+                    Icons.cake,
+                    'גיל',
+                    '$age',
+                  ),
+                
+                // Hubs
+                if (player.hubIds.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'האבים',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FutureBuilder<List<Hub>>(
+                    future: Future.wait(
+                      player.hubIds.map((hubId) => hubsRepo.getHub(hubId)),
+                    ).then((hubs) => hubs.whereType<Hub>().toList()),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      }
+                      final hubs = snapshot.data ?? [];
+                      if (hubs.isEmpty) {
+                        return const Text('אין האבים');
+                      }
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: hubs.map((hub) {
+                          return Chip(
+                            label: Text(hub.name),
+                            avatar: const Icon(Icons.group, size: 18),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ],
+                
+                // Favorite team
+                if (player.favoriteTeamId != null) ...[
+                  const SizedBox(height: 16),
+                  _buildDetailRow(
+                    context,
+                    Icons.favorite,
+                    'קבוצה אהודה',
+                    'ID: ${player.favoriteTeamId}',
+                  ),
+                ],
+                
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

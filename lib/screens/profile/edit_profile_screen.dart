@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/image_picker_button.dart';
 import 'package:kickadoor/widgets/loading_widget.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/services/storage_service.dart';
+import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/utils/geohash_utils.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/screens/location/map_picker_screen.dart';
 
 /// Edit profile screen
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -27,6 +32,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _phoneController = TextEditingController();
   final _positionController = TextEditingController();
   final _cityController = TextEditingController();
+  String? _selectedPlayingStyle;
+  String? _selectedRegion;
 
   XFile? _selectedImage;
   bool _isLoading = false;
@@ -61,11 +68,192 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           _phoneController.text = user.phoneNumber ?? '';
           _positionController.text = user.preferredPosition;
           _cityController.text = user.city ?? '';
+          _selectedPlayingStyle = user.playingStyle;
+          _selectedRegion = user.region;
         });
       }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _setLocation() async {
+    // Show dialog with options: current location or search address
+    final option = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('הגדר מיקום'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.my_location),
+              title: const Text('מיקום נוכחי'),
+              onTap: () => Navigator.pop(context, 'current'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.search),
+              title: const Text('חיפוש כתובת'),
+              onTap: () => Navigator.pop(context, 'search'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.map),
+              title: const Text('בחר במפה'),
+              onTap: () => Navigator.pop(context, 'map'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (option == null) return;
+
+    if (option == 'current') {
+      // Get current location
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final locationService = ref.read(locationServiceProvider);
+        final position = await locationService.getCurrentLocation();
+
+        if (position != null) {
+          final geoPoint = locationService.positionToGeoPoint(position);
+          final address = await locationService.coordinatesToAddress(
+            position.latitude,
+            position.longitude,
+          );
+
+          // Update user location
+          final usersRepo = ref.read(usersRepositoryProvider);
+          await usersRepo.updateUser(widget.userId, {
+            'location': geoPoint,
+            'geohash': GeohashUtils.encode(position.latitude, position.longitude, precision: 7),
+          });
+
+          if (mounted) {
+            SnackbarHelper.showSuccess(
+              context,
+              'מיקום עודכן: ${address ?? '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}'}',
+            );
+            _loadUser(); // Reload user data
+          }
+        } else {
+          if (mounted) {
+            SnackbarHelper.showError(
+              context,
+              'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } else if (option == 'map') {
+      // Open map picker
+      final result = await context.push<Map<String, dynamic>?>(
+        '/map-picker',
+        extra: _currentUser?.location,
+      );
+
+      if (result != null && mounted) {
+        final geoPoint = result['location'] as GeoPoint;
+        final address = result['address'] as String?;
+
+        // Update user location
+        final usersRepo = ref.read(usersRepositoryProvider);
+        await usersRepo.updateUser(widget.userId, {
+          'location': geoPoint,
+          'geohash': GeohashUtils.encode(geoPoint.latitude, geoPoint.longitude, precision: 7),
+        });
+
+        if (mounted) {
+          SnackbarHelper.showSuccess(
+            context,
+            'מיקום עודכן: ${address ?? '${geoPoint.latitude.toStringAsFixed(6)}, ${geoPoint.longitude.toStringAsFixed(6)}'}',
+          );
+          _loadUser(); // Reload user data
+        }
+      }
+    } else if (option == 'search') {
+      // Show address search dialog
+      final addressController = TextEditingController();
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('חיפוש כתובת'),
+          content: TextField(
+            controller: addressController,
+            decoration: const InputDecoration(
+              labelText: 'הזן כתובת',
+              hintText: 'לדוגמה: תל אביב, רחוב רוטשילד 1',
+            ),
+            autofocus: true,
+            onSubmitted: (value) => Navigator.pop(context, value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, addressController.text),
+              child: const Text('חפש'),
+            ),
+          ],
+        ),
+      );
+
+      if (result != null && result.isNotEmpty && mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+
+        try {
+          final locationService = ref.read(locationServiceProvider);
+          final position = await locationService.addressToCoordinates(result);
+
+          if (position != null) {
+            final geoPoint = locationService.positionToGeoPoint(position);
+
+            // Update user location
+            final usersRepo = ref.read(usersRepositoryProvider);
+            await usersRepo.updateUser(widget.userId, {
+              'location': geoPoint,
+              'geohash': GeohashUtils.encode(position.latitude, position.longitude, precision: 7),
+            });
+
+            if (mounted) {
+              SnackbarHelper.showSuccess(context, 'מיקום עודכן: $result');
+              _loadUser(); // Reload user data
+            }
+          } else {
+            if (mounted) {
+              SnackbarHelper.showError(context, 'לא נמצא מיקום לכתובת זו');
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            SnackbarHelper.showError(context, 'שגיאה בחיפוש כתובת: $e');
+          }
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        }
       }
     }
   }
@@ -109,6 +297,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         city: _cityController.text.trim().isEmpty
             ? null
             : _cityController.text.trim(),
+        playingStyle: _selectedPlayingStyle,
+        region: _selectedRegion,
         photoUrl: photoUrl,
       );
 
@@ -256,6 +446,85 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                
+                // Playing Style field
+                DropdownButtonFormField<String>(
+                  value: _selectedPlayingStyle,
+                  decoration: const InputDecoration(
+                    labelText: 'סגנון משחק',
+                    hintText: 'בחר סגנון משחק',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.style),
+                    helperText: 'משפיע על חלוקת הקבוצות במשחקים',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'goalkeeper',
+                      child: Text('שוער'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'defensive',
+                      child: Text('הגנתי'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'offensive',
+                      child: Text('התקפי'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedPlayingStyle = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Region field
+                DropdownButtonFormField<String>(
+                  value: _selectedRegion,
+                  decoration: const InputDecoration(
+                    labelText: 'אזור',
+                    hintText: 'בחר אזור',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.map),
+                    helperText: 'משפיע על הפיד האזורי שתראה',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'צפון',
+                      child: Text('צפון'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'מרכז',
+                      child: Text('מרכז'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'דרום',
+                      child: Text('דרום'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'ירושלים',
+                      child: Text('ירושלים'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRegion = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Set location button
+                OutlinedButton.icon(
+                  onPressed: _setLocation,
+                  icon: const Icon(Icons.location_on),
+                  label: const Text('הגדר מיקום'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
                 const SizedBox(height: 32),
 

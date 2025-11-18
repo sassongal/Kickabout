@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/widgets/kicka_ball_logo.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/futuristic/offline_indicator.dart';
+import 'package:kickadoor/widgets/notifications_badge_button.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// AppBar with KICKA BALL logo
 class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
@@ -20,45 +22,50 @@ class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      title: showLogo
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                KickaBallLogo(
-                  size: 32,
-                  showText: false,
+    // Figma design: White AppBar with border-bottom, uppercase title
+    return Container(
+      decoration: BoxDecoration(
+        color: FuturisticColors.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: FuturisticColors.surfaceVariant,
+            width: 1,
+          ),
+        ),
+      ),
+      child: AppBar(
+        title: title != null
+            ? Text(
+                title!.toUpperCase(),
+                style: GoogleFonts.orbitron(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2.0,
+                  color: FuturisticColors.textPrimary,
                 ),
-                if (title != null) ...[
-                  const SizedBox(width: 12),
-                  Text(
-                    title!,
-                    style: FuturisticTypography.techHeadline.copyWith(
-                      fontSize: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ],
-            )
-          : title != null
-              ? Text(
-                  title!,
-                  style: FuturisticTypography.techHeadline.copyWith(
-                    fontSize: 18,
-                    color: Colors.white,
-                  ),
-                )
-              : null,
-      actions: [
-        const OfflineIndicatorIcon(),
-        if (actions != null) ...actions!,
-      ],
-      automaticallyImplyLeading: showBackButton,
-      backgroundColor: FuturisticColors.primary,
-      foregroundColor: Colors.white,
-      elevation: 2,
-      centerTitle: true,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+            : null,
+        leading: showBackButton
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new),
+                onPressed: () => context.pop(),
+                tooltip: 'חזור',
+                color: FuturisticColors.textPrimary,
+              )
+            : null,
+        actions: [
+          const OfflineIndicatorIcon(),
+          const NotificationsBadgeButton(),
+          if (actions != null) ...actions!,
+        ],
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        foregroundColor: FuturisticColors.textPrimary,
+        elevation: 0,
+        centerTitle: false,
+      ),
     );
   }
 

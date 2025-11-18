@@ -1,9 +1,11 @@
 // Barrel file for all models
 export 'user.dart';
 export 'hub.dart';
+export 'hub_event.dart';
 export 'game.dart';
 export 'game_signup.dart';
 export 'team.dart';
+export 'team_data.dart';
 export 'game_event.dart';
 export 'rating_snapshot.dart';
 export 'feed_post.dart';

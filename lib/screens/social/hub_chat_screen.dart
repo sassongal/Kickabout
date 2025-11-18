@@ -8,6 +8,7 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Hub chat screen - real-time chat for a hub
 class HubChatScreen extends ConsumerStatefulWidget {
@@ -121,7 +122,10 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
                   return FuturisticEmptyState(
                     icon: Icons.error_outline,
                     title: 'שגיאה בטעינת הודעות',
-                    message: snapshot.error.toString(),
+                    message: ErrorHandlerService().handleException(
+                      snapshot.error,
+                      context: 'Hub chat screen',
+                    ),
                     action: ElevatedButton.icon(
                       onPressed: () {
                         // Retry by rebuilding

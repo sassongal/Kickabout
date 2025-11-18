@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:731836758075:android:0dde0fad28e8c51003441e",
         "android_client_info": {
-          "package_name": "com.kickadoor.app"
+          "package_name": "com.mycompany.CounterApp"
         }
       },
       "oauth_client": [
@@ -34,7 +34,7 @@
               "client_id": "731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.kickadoor.app"
+                "bundle_id": "com.mycompany.CounterApp"
               }
             }
           ]

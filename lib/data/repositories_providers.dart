@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/data/repositories.dart';
+import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/services/auth_service.dart';
 import 'package:kickadoor/services/storage_service.dart';
 import 'package:kickadoor/services/location_service.dart';
@@ -33,9 +35,22 @@ final signupsRepositoryProvider = Provider<SignupsRepository>((ref) {
   return SignupsRepository(firestore: ref.watch(firestoreProvider));
 });
 
-final teamsRepositoryProvider = Provider<TeamsRepository>((ref) {
-  return TeamsRepository(firestore: ref.watch(firestoreProvider));
+final favoriteTeamsRepositoryProvider = Provider<FavoriteTeamsRepository>((ref) {
+  return FavoriteTeamsRepository(ref.watch(firestoreProvider));
 });
+
+/// Provider that caches the list of all teams
+final allTeamsProvider = FutureProvider<List<TeamData>>((ref) {
+  return ref.watch(favoriteTeamsRepositoryProvider).getAllTeams();
+});
+
+/// Provider for game teams repository (teams within a game)
+final gameTeamsRepositoryProvider = Provider<GameTeamsRepository>((ref) {
+  return GameTeamsRepository(ref.watch(firestoreProvider));
+});
+
+/// Legacy alias for gameTeamsRepositoryProvider (for backward compatibility)
+final teamsRepositoryProvider = gameTeamsRepositoryProvider;
 
 final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
   return EventsRepository(firestore: ref.watch(firestoreProvider));
@@ -123,6 +138,12 @@ final currentUserIdProvider = Provider<String?>((ref) {
   return authService.currentUserId;
 });
 
+/// Check if current user is anonymous
+final isAnonymousUserProvider = Provider<bool>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return authService.isAnonymous;
+});
+
 /// Scouting service provider
 final scoutingServiceProvider = Provider<ScoutingService>((ref) {
   return ScoutingService(
@@ -140,6 +161,155 @@ final googlePlacesServiceProvider = Provider<GooglePlacesService>((ref) {
 /// Custom API service provider
 final customApiServiceProvider = Provider<CustomApiService>((ref) {
   return CustomApiService();
+});
+
+/// Leaderboard provider - watches top ranked users
+final leaderboardProvider = FutureProvider.family<List<LeaderboardEntry>, LeaderboardParams>((ref, params) async {
+  final leaderboardRepo = ref.watch(leaderboardRepositoryProvider);
+  return leaderboardRepo.getLeaderboard(
+    type: params.type,
+    hubId: params.hubId,
+    period: params.period,
+    limit: params.limit,
+  );
+});
+
+/// Leaderboard parameters
+class LeaderboardParams {
+  final LeaderboardType type;
+  final String? hubId;
+  final TimePeriod period;
+  final int limit;
+
+  LeaderboardParams({
+    required this.type,
+    this.hubId,
+    required this.period,
+    this.limit = 100,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LeaderboardParams &&
+          runtimeType == other.runtimeType &&
+          type == other.type &&
+          hubId == other.hubId &&
+          period == other.period &&
+          limit == other.limit;
+
+  @override
+  int get hashCode => type.hashCode ^ hubId.hashCode ^ period.hashCode ^ limit.hashCode;
+}
+
+/// Feed state for pagination
+class FeedState {
+  final List<FeedPost> posts;
+  final DocumentSnapshot? lastDocument;
+  final bool isLoading;
+  final bool hasMore;
+  final String? error;
+
+  FeedState({
+    required this.posts,
+    this.lastDocument,
+    this.isLoading = false,
+    this.hasMore = true,
+    this.error,
+  });
+
+  FeedState copyWith({
+    List<FeedPost>? posts,
+    DocumentSnapshot? lastDocument,
+    bool? isLoading,
+    bool? hasMore,
+    String? error,
+  }) {
+    return FeedState(
+      posts: posts ?? this.posts,
+      lastDocument: lastDocument ?? this.lastDocument,
+      isLoading: isLoading ?? this.isLoading,
+      hasMore: hasMore ?? this.hasMore,
+      error: error,
+    );
+  }
+}
+
+/// Feed notifier for pagination
+class FeedNotifier extends StateNotifier<FeedState> {
+  final FeedRepository _feedRepo;
+  final String _hubId;
+
+  FeedNotifier(this._feedRepo, this._hubId)
+      : super(FeedState(posts: [])) {
+    _loadInitialPage();
+  }
+
+  Future<void> _loadInitialPage() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final result = await _feedRepo.getFeedPosts(
+        hubId: _hubId,
+        limit: 15,
+      );
+      state = FeedState(
+        posts: result.posts,
+        lastDocument: result.lastDocument,
+        isLoading: false,
+        hasMore: result.hasMore,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> fetchNextPage() async {
+    if (state.isLoading || !state.hasMore || state.lastDocument == null) {
+      return;
+    }
+
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final result = await _feedRepo.getFeedPosts(
+        hubId: _hubId,
+        lastDocumentSnapshot: state.lastDocument,
+        limit: 15,
+      );
+      state = FeedState(
+        posts: [...state.posts, ...result.posts],
+        lastDocument: result.lastDocument,
+        isLoading: false,
+        hasMore: result.hasMore,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> refresh() async {
+    state = FeedState(posts: []);
+    await _loadInitialPage();
+  }
+}
+
+/// Feed provider for a specific hub
+final feedNotifierProvider = StateNotifierProvider.family<FeedNotifier, FeedState, String>(
+  (ref, hubId) {
+    final feedRepo = ref.watch(feedRepositoryProvider);
+    return FeedNotifier(feedRepo, hubId);
+  },
+);
+
+/// Unread notifications count provider
+final unreadNotificationsCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  final notificationsRepo = ref.watch(notificationsRepositoryProvider);
+  return notificationsRepo.watchUnreadCount(userId);
 });
 
 /// Home dashboard data provider (weather & vibe)
@@ -172,6 +342,164 @@ final homeDashboardDataProvider = FutureProvider<Map<String, dynamic>>((ref) asy
       'condition': null,
       'aqiIndex': null,
     };
+  }
+});
+
+/// Hub role provider - determines user's role in a specific hub
+/// 
+/// Hub permissions provider - provides HubPermissions for a user in a hub
+/// Usage: ref.watch(hubPermissionsProvider((hubId: 'xxx', userId: 'yyy')))
+final hubPermissionsProvider = FutureProvider.family<HubPermissions, ({String hubId, String userId})>((ref, params) async {
+  try {
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final hub = await hubsRepo.getHub(params.hubId);
+    
+    if (hub == null) {
+      throw Exception('Hub not found');
+    }
+    
+    return HubPermissions(hub: hub, userId: params.userId);
+  } catch (e) {
+    rethrow;
+  }
+});
+
+/// Returns UserRole.admin if user is the hub creator or has manager/moderator role
+/// Returns UserRole.member if user is a member of the hub
+/// Returns UserRole.none if user is not a member
+final hubRoleProvider = FutureProvider.family<UserRole, String>((ref, hubId) async {
+  try {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) {
+      return UserRole.none;
+    }
+
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final hub = await hubsRepo.getHub(hubId);
+    
+    if (hub == null) {
+      return UserRole.none;
+    }
+
+    // Check if user is the creator (always admin)
+    if (hub.createdBy == currentUserId) {
+      return UserRole.admin;
+    }
+
+    // Check explicit roles map
+    final roleString = hub.roles[currentUserId];
+    if (roleString != null) {
+      // Check for 'admin' role directly (used by Super Admin and Firestore rules)
+      if (roleString == 'admin') {
+        return UserRole.admin;
+      }
+      
+      // Check HubRole enum values
+      final hubRole = HubRole.fromFirestore(roleString);
+      // Manager and moderator are considered admin
+      if (hubRole == HubRole.manager || hubRole == HubRole.moderator) {
+        return UserRole.admin;
+      }
+      // Member and veteran are considered members
+      if (hubRole == HubRole.member || hubRole == HubRole.veteran) {
+        return UserRole.member;
+      }
+    }
+
+    // Check if user is a member
+    if (hub.memberIds.contains(currentUserId)) {
+      return UserRole.member;
+    }
+
+    // User is not a member
+    return UserRole.none;
+  } catch (e) {
+    // On error, return none
+    return UserRole.none;
+  }
+});
+
+/// Admin tasks provider - counts games that need to be closed
+/// 
+/// Returns the number of games that:
+/// - User is admin of (hub manager)
+/// - Status is 'teamsFormed' or 'inProgress'
+/// - gameDate is in the past
+final adminTasksProvider = StreamProvider<int>((ref) {
+  try {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) {
+      return Stream.value(0);
+    }
+
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
+
+    // Get current user to check hubRoles
+    return usersRepo.watchUser(currentUserId).asyncMap((user) async {
+      if (user == null) return 0;
+
+      // Get all hubs where user is admin
+      final adminHubIds = <String>{};
+      
+      // Check user.hubIds (if exists) or query hubs
+      final userHubIds = user.hubIds;
+      if (userHubIds.isNotEmpty) {
+        for (final hubId in userHubIds) {
+          try {
+            final hub = await hubsRepo.getHub(hubId);
+            if (hub != null) {
+              // Check if user is creator or manager
+              if (hub.createdBy == currentUserId) {
+                adminHubIds.add(hubId);
+              } else {
+                final roleString = hub.roles[currentUserId];
+                if (roleString != null) {
+                  final hubRole = HubRole.fromFirestore(roleString);
+                  if (hubRole == HubRole.manager || hubRole == HubRole.moderator) {
+                    adminHubIds.add(hubId);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Skip this hub if error
+            continue;
+          }
+        }
+      }
+
+      if (adminHubIds.isEmpty) return 0;
+
+      // Query games for each hub
+      int totalStuckGames = 0;
+      final now = DateTime.now();
+
+      for (final hubId in adminHubIds) {
+        try {
+          // Get games for this hub
+          final games = await gamesRepo.listGamesByHub(hubId);
+          
+          // Filter stuck games
+          final stuckGames = games.where((game) {
+            final isStuckStatus = game.status == GameStatus.teamsFormed ||
+                game.status == GameStatus.inProgress;
+            final isPastDate = game.gameDate.isBefore(now);
+            return isStuckStatus && isPastDate;
+          });
+
+          totalStuckGames += stuckGames.length;
+        } catch (e) {
+          // Skip this hub if error
+          continue;
+        }
+      }
+
+      return totalStuckGames;
+    });
+  } catch (e) {
+    return Stream.value(0);
   }
 });
 

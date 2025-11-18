@@ -28,11 +28,13 @@ class PlayerForTeam {
   final String uid;
   final double rating;
   final PlayerRole role;
+  final String? playingStyle; // goalkeeper, defensive, offensive
 
   PlayerForTeam({
     required this.uid,
     required this.rating,
     required this.role,
+    this.playingStyle,
   });
 
   static PlayerForTeam fromUser(User user) {
@@ -40,8 +42,18 @@ class PlayerForTeam {
       uid: user.uid,
       rating: user.currentRankScore,
       role: PlayerRole.fromPosition(user.preferredPosition),
+      playingStyle: user.playingStyle,
     );
   }
+  
+  /// Check if player is a goalkeeper based on playingStyle
+  bool get isGoalkeeper => playingStyle == 'goalkeeper';
+  
+  /// Check if player is defensive
+  bool get isDefensive => playingStyle == 'defensive';
+  
+  /// Check if player is offensive
+  bool get isOffensive => playingStyle == 'offensive';
 }
 
 /// Team balance metrics
@@ -84,13 +96,17 @@ class TeamMaker {
       );
     }
 
-    // Step 1: Bucket players by role
-    final roleBuckets = _bucketByRole(players);
+    // Step 1: Separate goalkeepers from other players
+    final goalkeepers = players.where((p) => p.isGoalkeeper).toList();
+    final fieldPlayers = players.where((p) => !p.isGoalkeeper).toList();
 
-    // Step 2: Snake draft distributing strongest players first
-    final teams = _snakeDraft(roleBuckets, teamCount);
+    // Step 2: Distribute goalkeepers evenly across teams
+    final teams = _distributeGoalkeepers(goalkeepers, teamCount);
 
-    // Step 3: Local swap to reduce stddev while maintaining role coverage
+    // Step 3: Distribute field players with style and rating balance
+    _distributeFieldPlayers(fieldPlayers, teams, teamCount);
+
+    // Step 4: Local swap to optimize balance while maintaining constraints
     final optimizedTeams = _localSwap(teams, teamCount);
 
     // Convert to Team objects
@@ -112,58 +128,80 @@ class TeamMaker {
     }).toList();
   }
 
-  /// Bucket players by role
-  static Map<PlayerRole, List<PlayerForTeam>> _bucketByRole(
-    List<PlayerForTeam> players,
-  ) {
-    final buckets = <PlayerRole, List<PlayerForTeam>>{
-      for (var role in PlayerRole.values) role: [],
-    };
-
-    for (var player in players) {
-      buckets[player.role]!.add(player);
-    }
-
-    // Sort each bucket by rating (descending)
-    for (var bucket in buckets.values) {
-      bucket.sort((a, b) => b.rating.compareTo(a.rating));
-    }
-
-    return buckets;
-  }
-
-  /// Snake draft allocation
-  static List<List<PlayerForTeam>> _snakeDraft(
-    Map<PlayerRole, List<PlayerForTeam>> roleBuckets,
+  /// Distribute goalkeepers evenly across teams
+  static List<List<PlayerForTeam>> _distributeGoalkeepers(
+    List<PlayerForTeam> goalkeepers,
     int teamCount,
   ) {
     final teams = List.generate(teamCount, (_) => <PlayerForTeam>[]);
-
-    // Collect all players sorted by rating
-    final allPlayers = <PlayerForTeam>[];
-    for (var bucket in roleBuckets.values) {
-      allPlayers.addAll(bucket);
+    
+    // Sort goalkeepers by rating (descending)
+    goalkeepers.sort((a, b) => b.rating.compareTo(a.rating));
+    
+    // Round-robin distribution
+    for (int i = 0; i < goalkeepers.length; i++) {
+      teams[i % teamCount].add(goalkeepers[i]);
     }
-    allPlayers.sort((a, b) => b.rating.compareTo(a.rating));
+    
+    return teams;
+  }
 
-    // Snake draft
-    for (int i = 0; i < allPlayers.length; i++) {
+  /// Distribute field players with style and rating balance
+  static void _distributeFieldPlayers(
+    List<PlayerForTeam> fieldPlayers,
+    List<List<PlayerForTeam>> teams,
+    int teamCount,
+  ) {
+    // Separate by playing style
+    final defensivePlayers = fieldPlayers.where((p) => p.isDefensive).toList();
+    final offensivePlayers = fieldPlayers.where((p) => p.isOffensive).toList();
+    final neutralPlayers = fieldPlayers.where((p) => 
+      p.playingStyle == null || (!p.isDefensive && !p.isOffensive)
+    ).toList();
+
+    // Sort each group by rating (descending)
+    defensivePlayers.sort((a, b) => b.rating.compareTo(a.rating));
+    offensivePlayers.sort((a, b) => b.rating.compareTo(a.rating));
+    neutralPlayers.sort((a, b) => b.rating.compareTo(a.rating));
+
+    // Distribute defensive players (snake draft)
+    for (int i = 0; i < defensivePlayers.length; i++) {
       final roundNumber = i ~/ teamCount;
       final positionInRound = i % teamCount;
-
       int teamIndex;
       if (roundNumber % 2 == 0) {
-        // Even round: normal order (0, 1, 2, ...)
         teamIndex = positionInRound;
       } else {
-        // Odd round: reverse order (2, 1, 0, ...)
         teamIndex = teamCount - 1 - positionInRound;
       }
-
-      teams[teamIndex].add(allPlayers[i]);
+      teams[teamIndex].add(defensivePlayers[i]);
     }
 
-    return teams;
+    // Distribute offensive players (snake draft, reverse order)
+    for (int i = 0; i < offensivePlayers.length; i++) {
+      final roundNumber = i ~/ teamCount;
+      final positionInRound = i % teamCount;
+      int teamIndex;
+      if (roundNumber % 2 == 0) {
+        teamIndex = teamCount - 1 - positionInRound; // Reverse for balance
+      } else {
+        teamIndex = positionInRound;
+      }
+      teams[teamIndex].add(offensivePlayers[i]);
+    }
+
+    // Distribute neutral players (snake draft)
+    for (int i = 0; i < neutralPlayers.length; i++) {
+      final roundNumber = i ~/ teamCount;
+      final positionInRound = i % teamCount;
+      int teamIndex;
+      if (roundNumber % 2 == 0) {
+        teamIndex = positionInRound;
+      } else {
+        teamIndex = teamCount - 1 - positionInRound;
+      }
+      teams[teamIndex].add(neutralPlayers[i]);
+    }
   }
 
   /// Local swap to reduce stddev while maintaining role coverage

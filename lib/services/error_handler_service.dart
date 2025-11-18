@@ -1,6 +1,8 @@
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:kickadoor/config/env.dart';
+// Conditional import for Crashlytics (not available on Web)
+import 'package:firebase_crashlytics/firebase_crashlytics.dart'
+    if (dart.library.html) 'package:kickadoor/services/crashlytics_stub.dart';
 
 /// Centralized error handling service
 class ErrorHandlerService {
@@ -15,8 +17,8 @@ class ErrorHandlerService {
     String? reason,
     bool fatal = false,
   }) {
-    if (!Env.isFirebaseAvailable) {
-      debugPrint('Error (Firebase not available): $error');
+    if (!Env.isFirebaseAvailable || kIsWeb) {
+      debugPrint('Error (Firebase not available or Web platform): $error');
       if (stackTrace != null) {
         debugPrint('Stack trace: $stackTrace');
       }
@@ -47,7 +49,7 @@ class ErrorHandlerService {
 
   /// Log a message to Crashlytics
   void logMessage(String message) {
-    if (!Env.isFirebaseAvailable) {
+    if (!Env.isFirebaseAvailable || kIsWeb) {
       debugPrint('Log: $message');
       return;
     }
@@ -62,7 +64,7 @@ class ErrorHandlerService {
 
   /// Set user identifier for crash reports
   void setUserId(String userId) {
-    if (!Env.isFirebaseAvailable) return;
+    if (!Env.isFirebaseAvailable || kIsWeb) return;
 
     try {
       FirebaseCrashlytics.instance.setUserIdentifier(userId);
@@ -73,7 +75,7 @@ class ErrorHandlerService {
 
   /// Set custom key-value pair for crash reports
   void setCustomKey(String key, dynamic value) {
-    if (!Env.isFirebaseAvailable) return;
+    if (!Env.isFirebaseAvailable || kIsWeb) return;
 
     try {
       FirebaseCrashlytics.instance.setCustomKey(key, value);

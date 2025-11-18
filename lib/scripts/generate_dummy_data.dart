@@ -38,6 +38,14 @@ class DummyDataGenerator {
     'Goalkeeper', 'Defender', 'Midfielder', 'Forward',
   ];
 
+  final List<String> regions = [
+    'צפון', 'מרכז', 'דרום', 'ירושלים',
+  ];
+
+  final List<String> playingStyles = [
+    'goalkeeper', 'defensive', 'offensive',
+  ];
+
   /// Generate a random coordinate near Haifa
   GeoPoint _randomCoordinateNearHaifa() {
     // Generate random offset in km
@@ -87,6 +95,8 @@ class DummyDataGenerator {
       totalParticipations: random.nextInt(50),
       location: location,
       geohash: geohash,
+      region: regions[random.nextInt(regions.length)],
+      playingStyle: playingStyles[random.nextInt(playingStyles.length)],
     );
 
     await firestore.doc(FirestorePaths.user(userId)).set(user.toJson());
@@ -159,6 +169,20 @@ class DummyDataGenerator {
       }
     }
 
+    // Determine region based on hub name or random
+    String? hubRegion;
+    if (finalName.contains('חיפה') || finalName.contains('קריית') || finalName.contains('נשר') || finalName.contains('טירת')) {
+      hubRegion = 'צפון';
+    } else if (finalName.contains('תל אביב') || finalName.contains('רמת גן') || finalName.contains('גבעתיים')) {
+      hubRegion = 'מרכז';
+    } else if (finalName.contains('באר שבע') || finalName.contains('אשדוד') || finalName.contains('אשקלון')) {
+      hubRegion = 'דרום';
+    } else if (finalName.contains('ירושלים')) {
+      hubRegion = 'ירושלים';
+    } else {
+      hubRegion = regions[random.nextInt(regions.length)];
+    }
+
     final hub = Hub(
       hubId: hubId,
       name: finalName,
@@ -167,6 +191,7 @@ class DummyDataGenerator {
           ? finalMemberIds[0] 
           : firestore.collection('users').doc().id,
       memberIds: finalMemberIds,
+      region: hubRegion,
       createdAt: DateTime.now().subtract(Duration(days: random.nextInt(180))),
       location: finalLocation,
       geohash: geohash,
@@ -433,7 +458,333 @@ class DummyDataGenerator {
     print('👤 Players not in Hub: 7');
   }
 
-  /// Generate all dummy data
+  /// Generate comprehensive dummy data
+  /// Creates 20 users, 3 hubs, assigns players, and creates past games with stats
+  Future<void> generateComprehensiveData() async {
+    print('🚀 Starting comprehensive dummy data generation...');
+    print('📊 Generating 20 users, 3 hubs, and game history...');
+
+    // Step 1: Generate 20 users with Israeli names, photos, and playing styles
+    print('\n👥 Step 1: Generating 20 users...');
+    final userIds = <String>[];
+    final playingStyles = ['goalkeeper', 'defensive', 'offensive'];
+    
+    for (int i = 0; i < 20; i++) {
+      final firstName = firstNames[random.nextInt(firstNames.length)];
+      final lastName = lastNames[random.nextInt(lastNames.length)];
+      final fullName = '$firstName $lastName';
+      final playingStyle = playingStyles[i % playingStyles.length]; // Distribute styles
+      
+      // Use random user photos (men for variety)
+      final photoId = 47 + (i * 3); // Vary photo IDs
+      final photoUrl = 'https://randomuser.me/api/portraits/men/${photoId % 100}.jpg';
+      
+      final userId = firestore.collection('users').doc().id;
+      final location = _randomCoordinateNearHaifa();
+      final geohash = GeohashUtils.encode(location.latitude, location.longitude);
+
+      final user = User(
+        uid: userId,
+        name: fullName,
+        email: '${firstName.toLowerCase()}.${lastName.toLowerCase()}@kickadoor.local',
+        phoneNumber: '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
+        city: cities[random.nextInt(cities.length)],
+        preferredPosition: positions[random.nextInt(positions.length)],
+        playingStyle: playingStyle, // Add playing style
+        availabilityStatus: ['available', 'busy', 'notAvailable'][random.nextInt(3)],
+        createdAt: DateTime.now().subtract(Duration(days: random.nextInt(365))),
+        currentRankScore: 4.0 + random.nextDouble() * 3.0, // 4.0-7.0
+        totalParticipations: random.nextInt(50),
+        location: location,
+        geohash: geohash,
+        photoUrl: photoUrl, // Add photo URL
+        region: regions[random.nextInt(regions.length)], // Add random region
+      );
+
+      await firestore.doc(FirestorePaths.user(userId)).set(user.toJson());
+      userIds.add(userId);
+      
+      if ((i + 1) % 5 == 0) {
+        print('✅ Generated ${i + 1}/20 users');
+      }
+    }
+
+    // Step 2: Create 3 hubs with names
+    print('\n🏟️ Step 2: Creating 3 hubs...');
+    final hubNames = [
+      'הכוכבים של חיפה',
+      'ליגת האלופות תל אביב',
+      'השדים האדומים',
+    ];
+    final hubRegions = [
+      'צפון', // חיפה
+      'מרכז', // תל אביב
+      'צפון', // חיפה (השדים האדומים)
+    ];
+    final hubDescriptions = [
+      'קבוצת כדורגל פעילה וחזקה מחיפה',
+      'ליגת אלופות תל אביב - משחקים תחרותיים',
+      'קבוצה תחרותית עם מסורת ארוכה',
+    ];
+    
+    final hubIds = <String>[];
+    final hubMemberAssignments = <String, List<String>>{};
+    
+    // Distribute users: first hub gets 8, second gets 7, third gets 5
+    final hubSizes = [8, 7, 5];
+    int userIndex = 0;
+    
+    for (int i = 0; i < 3; i++) {
+      final hubSize = hubSizes[i];
+      final hubMemberIds = userIds.skip(userIndex).take(hubSize).toList();
+      userIndex += hubSize;
+      
+      // First user in each hub is the manager
+      final managerId = hubMemberIds[0];
+      
+      final hubLocation = _randomCoordinateNearHaifa();
+      final hubGeohash = GeohashUtils.encode(hubLocation.latitude, hubLocation.longitude);
+      
+      final hubId = firestore.collection('hubs').doc().id;
+      
+      final hub = Hub(
+        hubId: hubId,
+        name: hubNames[i],
+        description: hubDescriptions[i],
+        createdBy: managerId,
+        memberIds: hubMemberIds,
+        createdAt: DateTime.now().subtract(Duration(days: 180 + i * 30)),
+        location: hubLocation,
+        geohash: hubGeohash,
+        region: hubRegions[i], // Add region
+        settings: {
+          'ratingMode': ['basic', 'advanced'][random.nextInt(2)],
+        },
+        roles: {
+          managerId: 'manager', // Set first user as manager
+        },
+      );
+
+      await firestore.doc(FirestorePaths.hub(hubId)).set(hub.toJson());
+      hubIds.add(hubId);
+      hubMemberAssignments[hubId] = hubMemberIds;
+      
+      print('✅ Created hub ${i + 1}/3: ${hubNames[i]} (${hubMemberIds.length} members)');
+    }
+
+    // Step 3: Create game history (5 past games per hub)
+    print('\n⚽ Step 3: Creating game history (5 past games per hub)...');
+    
+    for (int hubIndex = 0; hubIndex < hubIds.length; hubIndex++) {
+      final hubId = hubIds[hubIndex];
+      final hubMembers = hubMemberAssignments[hubId]!;
+      
+      print('   Creating games for ${hubNames[hubIndex]}...');
+      
+      for (int gameIndex = 0; gameIndex < 5; gameIndex++) {
+        // Games in the past: 1 week, 2 weeks, 3 weeks, 4 weeks, 5 weeks ago
+        final daysAgo = (gameIndex + 1) * 7;
+        final gameDate = DateTime.now().subtract(Duration(days: daysAgo));
+        
+        // Select 10-16 players for this game (random from hub members)
+        final playerCount = 10 + random.nextInt(7);
+        final selectedPlayers = (hubMembers.toList()..shuffle()).take(playerCount).toList();
+        
+        // Create teams (2 teams)
+        final teams = _createBalancedTeams(selectedPlayers, hubMembers);
+        
+        // Random scores (e.g., 3-5, 2-4, etc.)
+        final teamAScore = 1 + random.nextInt(5);
+        final teamBScore = 1 + random.nextInt(5);
+        
+        // Create game document
+        final gameId = firestore.collection('games').doc().id;
+        final gameLocation = _randomCoordinateNearHaifa();
+        final gameGeohash = GeohashUtils.encode(gameLocation.latitude, gameLocation.longitude);
+        
+        // Get hub to copy region
+        final hubDoc = await firestore.doc(FirestorePaths.hub(hubId)).get();
+        final hubData = hubDoc.data();
+        final hubRegion = hubData?['region'] as String?;
+        
+        final game = Game(
+          gameId: gameId,
+          hubId: hubId,
+          createdBy: hubMembers[0], // Manager creates the game
+          gameDate: gameDate,
+          locationPoint: gameLocation,
+          geohash: gameGeohash,
+          teamCount: 2,
+          status: GameStatus.completed,
+          createdAt: gameDate.subtract(const Duration(days: 7)),
+          updatedAt: gameDate,
+          teams: teams,
+          teamAScore: teamAScore,
+          teamBScore: teamBScore,
+          region: hubRegion, // Copy region from hub
+        );
+
+        await firestore.doc(FirestorePaths.game(gameId)).set(game.toJson());
+
+        // Create signups for all selected players
+        for (final playerId in selectedPlayers) {
+          final signup = GameSignup(
+            playerId: playerId,
+            signedUpAt: gameDate.subtract(const Duration(days: 7)),
+            status: SignupStatus.confirmed,
+          );
+          await firestore
+              .doc(FirestorePaths.gameSignup(gameId, playerId))
+              .set(signup.toJson());
+        }
+        
+        // Generate some random game events (goals, assists, saves)
+        await _generateGameEvents(gameId, selectedPlayers, teams, teamAScore, teamBScore);
+        
+        print('     ✅ Created game ${gameIndex + 1}/5 ($daysAgo days ago, $teamAScore-$teamBScore)');
+      }
+    }
+
+    print('\n🎉 Comprehensive dummy data generation complete!');
+    print('📈 Generated:');
+    print('   - 20 users with photos and playing styles');
+    print('   - 3 hubs with assigned members');
+    print('   - 15 past games (5 per hub) with scores and teams');
+    print('   - Game events (goals, assists, saves)');
+    print('   - Signups for all games');
+    print('\n💡 Note: Cloud Function onGameCompleted will automatically calculate');
+    print('   player statistics (points, level, gamesWon, etc.) for completed games.');
+  }
+
+  /// Create balanced teams from players
+  List<Team> _createBalancedTeams(List<String> playerIds, List<String> allHubMembers) {
+    // Shuffle players for random distribution
+    final shuffled = (playerIds.toList()..shuffle());
+    
+    // Split into two teams
+    final teamASize = (playerIds.length / 2).ceil();
+    final teamAPlayers = shuffled.take(teamASize).toList();
+    final teamBPlayers = shuffled.skip(teamASize).toList();
+    
+    return [
+      Team(
+        teamId: 'team_a',
+        name: 'קבוצה א',
+        playerIds: teamAPlayers,
+        totalScore: 0.0, // Will be calculated by Cloud Function
+        color: 'red',
+      ),
+      Team(
+        teamId: 'team_b',
+        name: 'קבוצה ב',
+        playerIds: teamBPlayers,
+        totalScore: 0.0,
+        color: 'blue',
+      ),
+    ];
+  }
+
+  /// Generate random game events (goals, assists, saves)
+  Future<void> _generateGameEvents(
+    String gameId,
+    List<String> playerIds,
+    List<Team> teams,
+    int teamAScore,
+    int teamBScore,
+  ) async {
+    final teamAPlayers = teams[0].playerIds;
+    final teamBPlayers = teams[1].playerIds;
+    
+    // Generate goals for team A
+    for (int i = 0; i < teamAScore; i++) {
+      final scorer = teamAPlayers[random.nextInt(teamAPlayers.length)];
+      final assister = random.nextDouble() > 0.3 // 70% chance of assist
+          ? teamAPlayers[random.nextInt(teamAPlayers.length)]
+          : null;
+      
+      // Goal event
+      await firestore
+          .collection('games')
+          .doc(gameId)
+          .collection('events')
+          .add({
+        'type': 'goal',
+        'playerId': scorer,
+        'gameId': gameId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Assist event (if applicable)
+      if (assister != null && assister != scorer) {
+        await firestore
+            .collection('games')
+            .doc(gameId)
+            .collection('events')
+            .add({
+          'type': 'assist',
+          'playerId': assister,
+          'gameId': gameId,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+    
+    // Generate goals for team B
+    for (int i = 0; i < teamBScore; i++) {
+      final scorer = teamBPlayers[random.nextInt(teamBPlayers.length)];
+      final assister = random.nextDouble() > 0.3
+          ? teamBPlayers[random.nextInt(teamBPlayers.length)]
+          : null;
+      
+      // Goal event
+      await firestore
+          .collection('games')
+          .doc(gameId)
+          .collection('events')
+          .add({
+        'type': 'goal',
+        'playerId': scorer,
+        'gameId': gameId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Assist event (if applicable)
+      if (assister != null && assister != scorer) {
+        await firestore
+            .collection('games')
+            .doc(gameId)
+            .collection('events')
+            .add({
+          'type': 'assist',
+          'playerId': assister,
+          'gameId': gameId,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+    
+    // Generate some saves (for goalkeepers)
+    final goalkeepers = playerIds.where((id) {
+      // In real implementation, check user.playingStyle == 'goalkeeper'
+      // For now, randomly select some players as goalkeepers
+      return random.nextDouble() > 0.7; // 30% chance
+    }).toList();
+    
+    for (final goalkeeper in goalkeepers.take(2)) { // Max 2 saves per game
+      await firestore
+          .collection('games')
+          .doc(gameId)
+          .collection('events')
+          .add({
+        'type': 'save',
+        'playerId': goalkeeper,
+        'gameId': gameId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  /// Generate all dummy data (legacy method - kept for backward compatibility)
   Future<void> generateAll({
     int userCount = 30,
     int hubCount = 5,

@@ -10,12 +10,14 @@ class Notification with _$Notification {
   const factory Notification({
     required String notificationId,
     required String userId,
-    required String type, // 'game' | 'message' | 'like' | 'comment' | 'signup'
+    required String type, // 'game_reminder' | 'message' | 'like' | 'comment' | 'signup' | 'new_follower' | 'hub_chat' | 'new_comment' | 'new_game'
     required String title,
     required String body,
     Map<String, dynamic>? data,
     @Default(false) bool read,
     @TimestampConverter() required DateTime createdAt,
+    String? entityId, // ID of related entity (gameId, hubId, etc.)
+    String? hubId, // Hub ID if notification is hub-related
   }) = _Notification;
 
   factory Notification.fromJson(Map<String, dynamic> json) => _$NotificationFromJson(json);

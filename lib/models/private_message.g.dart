@@ -10,7 +10,7 @@ _$PrivateMessageImpl _$$PrivateMessageImplFromJson(Map<String, dynamic> json) =>
     _$PrivateMessageImpl(
       messageId: json['messageId'] as String,
       conversationId: json['conversationId'] as String,
-      authorId: json['authorId'] as String,
+      senderId: json['senderId'] as String,
       text: json['text'] as String,
       read: json['read'] as bool? ?? false,
       createdAt:
@@ -22,7 +22,7 @@ Map<String, dynamic> _$$PrivateMessageImplToJson(
     <String, dynamic>{
       'messageId': instance.messageId,
       'conversationId': instance.conversationId,
-      'authorId': instance.authorId,
+      'senderId': instance.senderId,
       'text': instance.text,
       'read': instance.read,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
@@ -31,7 +31,7 @@ Map<String, dynamic> _$$PrivateMessageImplToJson(
 _$ConversationImpl _$$ConversationImplFromJson(Map<String, dynamic> json) =>
     _$ConversationImpl(
       conversationId: json['conversationId'] as String,
-      participants: (json['participants'] as List<dynamic>)
+      participantIds: (json['participantIds'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
       lastMessage: json['lastMessage'] as String?,
@@ -46,7 +46,7 @@ _$ConversationImpl _$$ConversationImplFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$$ConversationImplToJson(_$ConversationImpl instance) =>
     <String, dynamic>{
       'conversationId': instance.conversationId,
-      'participants': instance.participants,
+      'participantIds': instance.participantIds,
       'lastMessage': instance.lastMessage,
       'lastMessageAt': _$JsonConverterToJson<Object, DateTime>(
           instance.lastMessageAt, const TimestampConverter().toJson),

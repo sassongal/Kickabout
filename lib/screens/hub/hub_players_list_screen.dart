@@ -11,6 +11,7 @@ import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Dedicated screen for viewing all players in a hub
 class HubPlayersListScreen extends ConsumerStatefulWidget {
@@ -164,7 +165,10 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        snapshot.error.toString(),
+                        ErrorHandlerService().handleException(
+                          snapshot.error,
+                          context: 'Hub players list screen',
+                        ),
                         style: FuturisticTypography.bodySmall,
                         textAlign: TextAlign.center,
                       ),

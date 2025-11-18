@@ -23,13 +23,16 @@ mixin _$Notification {
   String get notificationId => throw _privateConstructorUsedError;
   String get userId => throw _privateConstructorUsedError;
   String get type =>
-      throw _privateConstructorUsedError; // 'game' | 'message' | 'like' | 'comment' | 'signup'
+      throw _privateConstructorUsedError; // 'game_reminder' | 'message' | 'like' | 'comment' | 'signup' | 'new_follower' | 'hub_chat' | 'new_comment' | 'new_game'
   String get title => throw _privateConstructorUsedError;
   String get body => throw _privateConstructorUsedError;
   Map<String, dynamic>? get data => throw _privateConstructorUsedError;
   bool get read => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
+  String? get entityId =>
+      throw _privateConstructorUsedError; // ID of related entity (gameId, hubId, etc.)
+  String? get hubId => throw _privateConstructorUsedError;
 
   /// Serializes this Notification to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -55,7 +58,9 @@ abstract class $NotificationCopyWith<$Res> {
       String body,
       Map<String, dynamic>? data,
       bool read,
-      @TimestampConverter() DateTime createdAt});
+      @TimestampConverter() DateTime createdAt,
+      String? entityId,
+      String? hubId});
 }
 
 /// @nodoc
@@ -81,6 +86,8 @@ class _$NotificationCopyWithImpl<$Res, $Val extends Notification>
     Object? data = freezed,
     Object? read = null,
     Object? createdAt = null,
+    Object? entityId = freezed,
+    Object? hubId = freezed,
   }) {
     return _then(_value.copyWith(
       notificationId: null == notificationId
@@ -115,6 +122,14 @@ class _$NotificationCopyWithImpl<$Res, $Val extends Notification>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      entityId: freezed == entityId
+          ? _value.entityId
+          : entityId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubId: freezed == hubId
+          ? _value.hubId
+          : hubId // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -135,7 +150,9 @@ abstract class _$$NotificationImplCopyWith<$Res>
       String body,
       Map<String, dynamic>? data,
       bool read,
-      @TimestampConverter() DateTime createdAt});
+      @TimestampConverter() DateTime createdAt,
+      String? entityId,
+      String? hubId});
 }
 
 /// @nodoc
@@ -159,6 +176,8 @@ class __$$NotificationImplCopyWithImpl<$Res>
     Object? data = freezed,
     Object? read = null,
     Object? createdAt = null,
+    Object? entityId = freezed,
+    Object? hubId = freezed,
   }) {
     return _then(_$NotificationImpl(
       notificationId: null == notificationId
@@ -193,6 +212,14 @@ class __$$NotificationImplCopyWithImpl<$Res>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      entityId: freezed == entityId
+          ? _value.entityId
+          : entityId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubId: freezed == hubId
+          ? _value.hubId
+          : hubId // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -208,7 +235,9 @@ class _$NotificationImpl implements _Notification {
       required this.body,
       final Map<String, dynamic>? data,
       this.read = false,
-      @TimestampConverter() required this.createdAt})
+      @TimestampConverter() required this.createdAt,
+      this.entityId,
+      this.hubId})
       : _data = data;
 
   factory _$NotificationImpl.fromJson(Map<String, dynamic> json) =>
@@ -220,7 +249,7 @@ class _$NotificationImpl implements _Notification {
   final String userId;
   @override
   final String type;
-// 'game' | 'message' | 'like' | 'comment' | 'signup'
+// 'game_reminder' | 'message' | 'like' | 'comment' | 'signup' | 'new_follower' | 'hub_chat' | 'new_comment' | 'new_game'
   @override
   final String title;
   @override
@@ -241,10 +270,15 @@ class _$NotificationImpl implements _Notification {
   @override
   @TimestampConverter()
   final DateTime createdAt;
+  @override
+  final String? entityId;
+// ID of related entity (gameId, hubId, etc.)
+  @override
+  final String? hubId;
 
   @override
   String toString() {
-    return 'Notification(notificationId: $notificationId, userId: $userId, type: $type, title: $title, body: $body, data: $data, read: $read, createdAt: $createdAt)';
+    return 'Notification(notificationId: $notificationId, userId: $userId, type: $type, title: $title, body: $body, data: $data, read: $read, createdAt: $createdAt, entityId: $entityId, hubId: $hubId)';
   }
 
   @override
@@ -261,13 +295,26 @@ class _$NotificationImpl implements _Notification {
             const DeepCollectionEquality().equals(other._data, _data) &&
             (identical(other.read, read) || other.read == read) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.entityId, entityId) ||
+                other.entityId == entityId) &&
+            (identical(other.hubId, hubId) || other.hubId == hubId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, notificationId, userId, type,
-      title, body, const DeepCollectionEquality().hash(_data), read, createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      notificationId,
+      userId,
+      type,
+      title,
+      body,
+      const DeepCollectionEquality().hash(_data),
+      read,
+      createdAt,
+      entityId,
+      hubId);
 
   /// Create a copy of Notification
   /// with the given fields replaced by the non-null parameter values.
@@ -287,15 +334,16 @@ class _$NotificationImpl implements _Notification {
 
 abstract class _Notification implements Notification {
   const factory _Notification(
-          {required final String notificationId,
-          required final String userId,
-          required final String type,
-          required final String title,
-          required final String body,
-          final Map<String, dynamic>? data,
-          final bool read,
-          @TimestampConverter() required final DateTime createdAt}) =
-      _$NotificationImpl;
+      {required final String notificationId,
+      required final String userId,
+      required final String type,
+      required final String title,
+      required final String body,
+      final Map<String, dynamic>? data,
+      final bool read,
+      @TimestampConverter() required final DateTime createdAt,
+      final String? entityId,
+      final String? hubId}) = _$NotificationImpl;
 
   factory _Notification.fromJson(Map<String, dynamic> json) =
       _$NotificationImpl.fromJson;
@@ -305,7 +353,8 @@ abstract class _Notification implements Notification {
   @override
   String get userId;
   @override
-  String get type; // 'game' | 'message' | 'like' | 'comment' | 'signup'
+  String
+      get type; // 'game_reminder' | 'message' | 'like' | 'comment' | 'signup' | 'new_follower' | 'hub_chat' | 'new_comment' | 'new_game'
   @override
   String get title;
   @override
@@ -317,6 +366,10 @@ abstract class _Notification implements Notification {
   @override
   @TimestampConverter()
   DateTime get createdAt;
+  @override
+  String? get entityId; // ID of related entity (gameId, hubId, etc.)
+  @override
+  String? get hubId;
 
   /// Create a copy of Notification
   /// with the given fields replaced by the non-null parameter values.

@@ -18,15 +18,21 @@ class ChatRepository {
     return _firestore
         .collection('hubs')
         .doc(hubId)
-        .collection('chat')
-        .doc('messages')
-        .collection('items')
+        .collection('chatMessages')
         .orderBy('createdAt', descending: false)
         .limit(100)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => ChatMessage.fromJson({...doc.data(), 'messageId': doc.id}))
+            .map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return ChatMessage.fromJson({...data, 'messageId': doc.id});
+            })
             .toList());
+  }
+
+  /// Alias for watchMessages (for consistency)
+  Stream<List<ChatMessage>> getHubChatStream(String hubId) {
+    return watchMessages(hubId);
   }
 
   /// Send message
@@ -52,9 +58,7 @@ class ChatRepository {
       final docRef = _firestore
           .collection('hubs')
           .doc(hubId)
-          .collection('chat')
-          .doc('messages')
-          .collection('items')
+          .collection('chatMessages')
           .doc();
 
       await docRef.set(data);
@@ -68,6 +72,15 @@ class ChatRepository {
     }
   }
 
+  /// Alias for sendMessage (for consistency)
+  Future<String> sendHubMessage(String hubId, ChatMessage message) async {
+    return sendMessage(
+      hubId,
+      message.authorId,
+      message.text,
+    );
+  }
+
   /// Mark message as read
   Future<void> markAsRead(String hubId, String messageId, String userId) async {
     if (!Env.isFirebaseAvailable) {
@@ -78,9 +91,7 @@ class ChatRepository {
       await _firestore
           .collection('hubs')
           .doc(hubId)
-          .collection('chat')
-          .doc('messages')
-          .collection('items')
+          .collection('chatMessages')
           .doc(messageId)
           .update({
         'readBy': FieldValue.arrayUnion([userId]),
@@ -91,6 +102,9 @@ class ChatRepository {
   }
 
   /// Stream messages for a game
+  /// 
+  /// Reads from games/{gameId}/chatMessages collection
+  /// Note: Game chat messages use 'senderId' (not 'authorId'), so we map it to authorId for the model
   Stream<List<ChatMessage>> watchGameMessages(String gameId) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
@@ -99,21 +113,37 @@ class ChatRepository {
     return _firestore
         .collection('games')
         .doc(gameId)
-        .collection('chat')
-        .doc('messages')
-        .collection('items')
+        .collection('chatMessages')
         .orderBy('createdAt', descending: false)
         .limit(100)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatMessage.fromJson({...doc.data(), 'messageId': doc.id}))
-            .toList());
+        .map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data();
+          // Game chat uses senderId, but ChatMessage model expects authorId
+          // Map senderId to authorId for compatibility
+          final mappedData = Map<String, dynamic>.from(data);
+          if (mappedData.containsKey('senderId') && !mappedData.containsKey('authorId')) {
+            mappedData['authorId'] = mappedData['senderId'];
+          }
+          // Game chat doesn't have hubId, set empty string (model requires it but won't be used)
+          if (!mappedData.containsKey('hubId')) {
+            mappedData['hubId'] = '';
+          }
+          // Game chat doesn't have readBy array
+          if (!mappedData.containsKey('readBy')) {
+            mappedData['readBy'] = [];
+          }
+          return ChatMessage.fromJson({...mappedData, 'messageId': doc.id});
+        }).toList());
   }
 
   /// Send message to game chat
+  /// 
+  /// Writes to games/{gameId}/chatMessages collection
+  /// Note: Game chat messages use 'senderId' (not 'authorId') per Firestore rules
   Future<String> sendGameMessage(
     String gameId,
-    String authorId,
+    String senderId,
     String text,
   ) async {
     if (!Env.isFirebaseAvailable) {
@@ -122,19 +152,16 @@ class ChatRepository {
 
     try {
       final data = {
-        'hubId': gameId, // Using gameId as hubId for compatibility
-        'authorId': authorId,
+        'gameId': gameId,
+        'senderId': senderId, // Game chat uses senderId per Firestore rules
         'text': text.trim(),
-        'readBy': [authorId],
         'createdAt': FieldValue.serverTimestamp(),
       };
 
       final docRef = _firestore
           .collection('games')
           .doc(gameId)
-          .collection('chat')
-          .doc('messages')
-          .collection('items')
+          .collection('chatMessages')
           .doc();
 
       await docRef.set(data);
@@ -142,6 +169,11 @@ class ChatRepository {
     } catch (e) {
       throw Exception('Failed to send game message: $e');
     }
+  }
+
+  /// Alias for watchGameMessages (for consistency)
+  Stream<List<ChatMessage>> getGameChatStream(String gameId) {
+    return watchGameMessages(gameId);
   }
 
   /// Delete message
@@ -154,9 +186,7 @@ class ChatRepository {
       await _firestore
           .collection('hubs')
           .doc(hubId)
-          .collection('chat')
-          .doc('messages')
-          .collection('items')
+          .collection('chatMessages')
           .doc(messageId)
           .delete();
     } catch (e) {

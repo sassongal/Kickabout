@@ -1,29 +1,32 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 import 'package:kickadoor/routing/go_router_refresh_stream.dart';
 import 'package:kickadoor/utils/performance_utils.dart';
-import 'package:kickadoor/screens/auth/login_screen_futuristic.dart';
+import 'package:kickadoor/screens/auth/login_screen.dart';
 import 'package:kickadoor/screens/auth/register_screen.dart';
 import 'package:kickadoor/screens/hub/hub_list_screen.dart';
 import 'package:kickadoor/screens/hub/create_hub_screen.dart';
 import 'package:kickadoor/screens/hub/hub_detail_screen.dart';
+import 'package:kickadoor/screens/hub/create_hub_event_screen.dart';
 import 'package:kickadoor/screens/game/game_list_screen.dart';
 import 'package:kickadoor/screens/game/create_game_screen.dart';
 import 'package:kickadoor/screens/game/game_detail_screen.dart';
 import 'package:kickadoor/screens/game/team_maker_screen.dart';
 import 'package:kickadoor/screens/game/stats_logger_screen.dart';
 import 'package:kickadoor/screens/stats_input/basic_rating_screen.dart';
-import 'package:kickadoor/screens/profile/player_profile_screen.dart';
+import 'package:kickadoor/screens/profile/player_profile_screen_futuristic.dart';
 import 'package:kickadoor/screens/profile/edit_profile_screen.dart';
+import 'package:kickadoor/screens/profile/privacy_settings_screen.dart';
 import 'package:kickadoor/screens/location/discover_hubs_screen.dart';
 import 'package:kickadoor/screens/location/map_screen.dart';
 import 'package:kickadoor/screens/social/notifications_screen.dart';
 import 'package:kickadoor/screens/social/post_detail_screen.dart';
 import 'package:kickadoor/screens/social/following_screen.dart';
 import 'package:kickadoor/screens/social/followers_screen.dart';
-import 'package:kickadoor/screens/home_screen_futuristic.dart';
+import 'package:kickadoor/screens/social/feed_screen.dart';
+import 'package:kickadoor/screens/home_screen_futuristic_figma.dart';
 import 'package:kickadoor/screens/game/game_chat_screen.dart';
 import 'package:kickadoor/screens/social/messages_list_screen.dart';
 import 'package:kickadoor/screens/social/private_chat_screen.dart';
@@ -39,21 +42,41 @@ import 'package:kickadoor/screens/game/game_calendar_screen.dart';
 import 'package:kickadoor/screens/social/create_post_screen.dart';
 import 'package:kickadoor/screens/hub/scouting_screen.dart';
 import 'package:kickadoor/screens/hub/hub_players_list_screen.dart';
+import 'package:kickadoor/screens/hub/hub_rules_screen.dart';
+import 'package:kickadoor/screens/hub/edit_game_screen.dart';
 import 'package:kickadoor/screens/venue/venue_search_screen.dart';
+import 'package:kickadoor/screens/venue/create_manual_venue_screen.dart';
+import 'package:kickadoor/screens/location/map_picker_screen.dart';
 import 'package:kickadoor/screens/onboarding/onboarding_screen.dart';
+import 'package:kickadoor/screens/game/log_past_game_screen.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Auth state stream provider
-final authStateProvider = StreamProvider<User?>((ref) {
+final authStateProvider = StreamProvider<firebase_auth.User?>((ref) {
   final authService = ref.watch(authServiceProvider);
   return authService.authStateChanges;
+});
+
+/// Onboarding status provider - loads once and caches the value
+final onboardingStatusProvider = FutureProvider<bool>((ref) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('onboarding_completed') ?? false;
+  } catch (e) {
+    debugPrint('Failed to load onboarding status: $e');
+    return false; // Default to not completed if error
+  }
 });
 
 /// Router configuration
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final authService = ref.watch(authServiceProvider);
+  
+  // Pre-load onboarding status to cache it before redirect runs
+  ref.read(onboardingStatusProvider);
 
   return GoRouter(
     debugLogDiagnostics: PerformanceUtils.isDebugMode,
@@ -61,7 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
     // Optimize navigation performance
     restorationScopeId: 'app_router',
-    redirect: (context, state) async {
+    redirect: (context, state) {
       try {
         // Wait for auth state to be available
         final authValue = authState.valueOrNull;
@@ -76,18 +99,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         // Check onboarding status (only for authenticated users)
+        // Use cached provider value - this is now synchronous
         if (isAuthenticated && !isGoingToOnboarding && !isGoingToSplash) {
-          try {
-            final prefs = await SharedPreferences.getInstance();
-            final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+          final onboardingStatus = ref.read(onboardingStatusProvider);
+          // Handle async loading state - if still loading, allow navigation to proceed
+          // The provider will update once SharedPreferences loads
+          if (onboardingStatus.hasValue) {
+            final onboardingCompleted = onboardingStatus.value ?? false;
             
             if (!onboardingCompleted) {
               return '/onboarding';
             }
-          } catch (e) {
-            // If SharedPreferences fails, continue without onboarding check
-            debugPrint('Failed to check onboarding status: $e');
           }
+          // If still loading, don't redirect (allow navigation to proceed)
         }
 
         // If not authenticated and not going to auth/onboarding/splash, redirect to auth
@@ -126,7 +150,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth',
         name: 'auth',
-        builder: (context, state) => const LoginScreenFuturistic(),
+        builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/register',
@@ -138,7 +162,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         name: 'home',
-        builder: (context, state) => const HomeScreenFuturistic(),
+        builder: (context, state) => const HomeScreenFuturisticFigma(),
       ),
 
       // Location/Discovery routes
@@ -207,6 +231,24 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      
+      // Create Manual Venue
+      GoRoute(
+        path: '/venues/create',
+        name: 'createManualVenue',
+        builder: (context, state) => const CreateManualVenueScreen(),
+      ),
+      
+      // Map Picker
+      GoRoute(
+        path: '/map-picker',
+        name: 'mapPicker',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final initialLocation = extra?['initialLocation'];
+          return MapPickerScreen(initialLocation: initialLocation);
+        },
+      ),
 
       // Notifications route
       GoRoute(
@@ -239,6 +281,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final hubId = state.uri.queryParameters['hubId'];
           return LeaderboardScreen(hubId: hubId);
+        },
+      ),
+
+      // Feed route - requires hubId as query parameter
+      GoRoute(
+        path: '/feed',
+        name: 'feed',
+        builder: (context, state) {
+          final hubId = state.uri.queryParameters['hubId'];
+          if (hubId == null || hubId.isEmpty) {
+            // If no hubId, redirect to hubs list
+            return const HubListScreen();
+          }
+          return FeedScreen(hubId: hubId);
         },
       ),
 
@@ -299,6 +355,23 @@ final routerProvider = Provider<GoRouter>((ref) {
                 },
               ),
               GoRoute(
+                path: 'events/create',
+                name: 'createHubEvent',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  // Hub will be loaded in the screen itself
+                  return CreateHubEventScreen(
+                    hubId: hubId,
+                    hub: Hub(
+                      hubId: hubId,
+                      name: '',
+                      createdBy: '',
+                      createdAt: DateTime.now(),
+                    ), // Temporary - will be loaded in screen
+                  );
+                },
+              ),
+              GoRoute(
                 path: 'scouting',
                 name: 'scouting',
                 builder: (context, state) {
@@ -313,6 +386,31 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) {
                   final hubId = state.pathParameters['id']!;
                   return HubPlayersListScreen(hubId: hubId);
+                },
+              ),
+              GoRoute(
+                path: 'log-past-game',
+                name: 'logPastGame',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return LogPastGameScreen(hubId: hubId);
+                },
+              ),
+              GoRoute(
+                path: 'rules',
+                name: 'hubRules',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return HubRulesScreen(hubId: hubId);
+                },
+              ),
+              GoRoute(
+                path: 'games/:gameId/edit',
+                name: 'editGame',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  final gameId = state.pathParameters['gameId']!;
+                  return EditGameScreen(hubId: hubId, gameId: gameId);
                 },
               ),
             ],
@@ -385,7 +483,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'playerProfile',
         builder: (context, state) {
           final playerId = state.pathParameters['uid']!;
-          return PlayerProfileScreen(playerId: playerId);
+          return PlayerProfileScreenFuturistic(playerId: playerId);
         },
         routes: [
           GoRoute(
@@ -394,6 +492,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final userId = state.pathParameters['uid']!;
               return EditProfileScreen(userId: userId);
+            },
+          ),
+          GoRoute(
+            path: 'privacy',
+            name: 'privacySettings',
+            builder: (context, state) {
+              final userId = state.pathParameters['uid']!;
+              return PrivacySettingsScreen(userId: userId);
             },
           ),
           GoRoute(

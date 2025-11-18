@@ -9,6 +9,7 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Messages list screen - shows all conversations
 class MessagesListScreen extends ConsumerStatefulWidget {
@@ -56,7 +57,10 @@ class _MessagesListScreenState extends ConsumerState<MessagesListScreen> {
             return FuturisticEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת הודעות',
-              message: snapshot.error.toString(),
+              message: ErrorHandlerService().handleException(
+                snapshot.error,
+                context: 'Messages list screen',
+              ),
               action: ElevatedButton.icon(
                 onPressed: () {
                 // Retry by rebuilding - trigger rebuild via key change
@@ -83,7 +87,7 @@ class _MessagesListScreenState extends ConsumerState<MessagesListScreen> {
             padding: const EdgeInsets.all(8),
             itemBuilder: (context, index) {
               final conversation = conversations[index];
-              final otherUserId = conversation.participants
+                final otherUserId = conversation.participantIds
                   .firstWhere((id) => id != currentUserId);
               final unreadCount = conversation.unreadCount[currentUserId] ?? 0;
 

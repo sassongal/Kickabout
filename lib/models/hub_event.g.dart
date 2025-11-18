@@ -25,8 +25,14 @@ _$HubEventImpl _$$HubEventImplFromJson(Map<String, dynamic> json) =>
           const [],
       status: json['status'] as String? ?? 'upcoming',
       location: json['location'] as String?,
-      locationPoint: const GeoPointConverter().fromJson(json['locationPoint']),
+      locationPoint:
+          const NullableGeoPointConverter().fromJson(json['locationPoint']),
       geohash: json['geohash'] as String?,
+      teamCount: (json['teamCount'] as num?)?.toInt() ?? 3,
+      gameType: json['gameType'] as String?,
+      durationMinutes: (json['durationMinutes'] as num?)?.toInt(),
+      maxParticipants: (json['maxParticipants'] as num?)?.toInt() ?? 15,
+      notifyMembers: json['notifyMembers'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
@@ -42,6 +48,12 @@ Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
       'registeredPlayerIds': instance.registeredPlayerIds,
       'status': instance.status,
       'location': instance.location,
-      'locationPoint': const GeoPointConverter().toJson(instance.locationPoint),
+      'locationPoint':
+          const NullableGeoPointConverter().toJson(instance.locationPoint),
       'geohash': instance.geohash,
+      'teamCount': instance.teamCount,
+      'gameType': instance.gameType,
+      'durationMinutes': instance.durationMinutes,
+      'maxParticipants': instance.maxParticipants,
+      'notifyMembers': instance.notifyMembers,
     };

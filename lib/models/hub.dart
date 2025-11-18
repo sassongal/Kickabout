@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/models/converters/timestamp_converter.dart';
+import 'package:kickadoor/models/converters/timestamp_map_converter.dart';
 import 'package:kickadoor/models/converters/geopoint_converter.dart';
 
 part 'hub.freezed.dart';
@@ -16,12 +17,23 @@ class Hub with _$Hub {
     required String createdBy,
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> memberIds,
+    @Default({}) @TimestampMapConverter() Map<String, Timestamp> memberJoinDates, // userId -> join date timestamp
     @Default({'ratingMode': 'basic'}) Map<String, dynamic> settings,
     @Default({}) Map<String, String> roles, // userId -> role (manager, moderator, member)
-    @GeoPointConverter() GeoPoint? location, // Primary location (deprecated, use venues)
+    @NullableGeoPointConverter() GeoPoint? location, // Primary location (deprecated, use venues)
     String? geohash,
     double? radius, // radius in km
     @Default([]) List<String> venueIds, // IDs of venues where this hub plays
+    String? profileImageUrl, // Profile picture chosen by hub manager
+    String? mainVenueId, // ID of the main venue (home field) - required
+    String? primaryVenueId, // ID of the primary venue (for map display) - denormalized
+    @NullableGeoPointConverter() GeoPoint? primaryVenueLocation, // Location of primary venue - denormalized
+    String? logoUrl, // Hub logo URL (used for feed posts)
+    String? hubRules, // Rules and guidelines for the hub
+    String? region, // אזור: צפון, מרכז, דרום, ירושלים
+    // Denormalized fields (updated by Cloud Functions, not written by client)
+    int? gameCount, // Denormalized: Total games created (updated by onGameCreated)
+    @TimestampConverter() DateTime? lastActivity, // Denormalized: Last activity time (updated by Cloud Functions)
   }) = _Hub;
 
   factory Hub.fromJson(Map<String, dynamic> json) => _$HubFromJson(json);

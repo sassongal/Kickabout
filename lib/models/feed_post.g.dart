@@ -20,7 +20,12 @@ _$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
           (json['likes'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
       likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
+      commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
       commentsCount: (json['commentsCount'] as num?)?.toInt() ?? 0,
+      comments: (json['comments'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       photoUrls: (json['photoUrls'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -32,6 +37,7 @@ _$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
       authorName: json['authorName'] as String?,
       authorPhotoUrl: json['authorPhotoUrl'] as String?,
       entityId: json['entityId'] as String?,
+      region: json['region'] as String?,
     );
 
 Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
@@ -46,7 +52,9 @@ Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
       'achievementId': instance.achievementId,
       'likes': instance.likes,
       'likeCount': instance.likeCount,
+      'commentCount': instance.commentCount,
       'commentsCount': instance.commentsCount,
+      'comments': instance.comments,
       'photoUrls': instance.photoUrls,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'hubName': instance.hubName,
@@ -54,4 +62,5 @@ Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
       'authorName': instance.authorName,
       'authorPhotoUrl': instance.authorPhotoUrl,
       'entityId': instance.entityId,
+      'region': instance.region,
     };

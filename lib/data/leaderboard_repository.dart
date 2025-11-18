@@ -180,5 +180,112 @@ class LeaderboardRepository {
       return null;
     }
   }
+
+  /// Stream leaderboard from gamification/stats collection
+  /// 
+  /// Queries the gamification/stats subcollection across all users,
+  /// sorted by points in descending order
+  Stream<List<LeaderboardEntry>> streamLeaderboard({
+    LeaderboardType type = LeaderboardType.points,
+    String? hubId,
+    TimePeriod period = TimePeriod.allTime,
+    int limit = 100,
+  }) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
+    try {
+      // We need to query users first, then get their gamification stats
+      // Since Firestore doesn't support cross-collection queries directly,
+      // we'll use a composite approach:
+      // 1. Get all users (optionally filtered by hub)
+      // 2. For each user, get their gamification stats
+      // 3. Sort and limit
+      
+      // For now, we'll use a simpler approach: query users and then
+      // watch their gamification stats in parallel
+      // This is not ideal for large datasets, but works for MVP
+      
+      Query query = _firestore.collection(FirestorePaths.users());
+      
+      // Filter by hub if specified
+      if (hubId != null) {
+        query = query.where('hubIds', arrayContains: hubId);
+      }
+      
+      // Order by a field that exists on User (we'll sort by gamification later)
+      query = query.limit(limit * 2); // Get more users to account for filtering
+      
+      return query.snapshots().asyncMap((snapshot) async {
+        final entries = <LeaderboardEntry>[];
+        
+        for (int i = 0; i < snapshot.docs.length; i++) {
+          final doc = snapshot.docs[i];
+          final data = doc.data() as Map<String, dynamic>;
+          final user = User.fromJson({...data, 'uid': doc.id});
+          
+          // Get gamification stats
+          final gamification = await _getGamification(user.uid);
+          if (gamification == null) continue;
+          
+          int score;
+          switch (type) {
+            case LeaderboardType.points:
+              score = gamification.points;
+              break;
+            case LeaderboardType.gamesPlayed:
+              score = gamification.stats['gamesPlayed'] ?? 0;
+              break;
+            case LeaderboardType.goals:
+              score = gamification.stats['goals'] ?? 0;
+              break;
+            case LeaderboardType.assists:
+              score = gamification.stats['assists'] ?? 0;
+              break;
+            case LeaderboardType.rating:
+              score = (user.currentRankScore * 10).round();
+              break;
+            case LeaderboardType.winRate:
+              final gamesPlayed = gamification.stats['gamesPlayed'] ?? 0;
+              if (gamesPlayed == 0) {
+                score = 0;
+              } else {
+                final gamesWon = gamification.stats['gamesWon'] ?? 0;
+                score = ((gamesWon / gamesPlayed) * 100).round();
+              }
+              break;
+          }
+          
+          entries.add(LeaderboardEntry(
+            userId: user.uid,
+            userName: user.name,
+            userPhotoUrl: user.photoUrl,
+            score: score,
+            rank: 0, // Will be set after sorting
+          ));
+        }
+        
+        // Sort by score (descending)
+        entries.sort((a, b) => b.score.compareTo(a.score));
+        
+        // Set ranks and limit
+        for (int i = 0; i < entries.length && i < limit; i++) {
+          entries[i] = LeaderboardEntry(
+            userId: entries[i].userId,
+            userName: entries[i].userName,
+            userPhotoUrl: entries[i].userPhotoUrl,
+            score: entries[i].score,
+            rank: i + 1,
+          );
+        }
+        
+        return entries.take(limit).toList();
+      });
+    } catch (e) {
+      debugPrint('Failed to stream leaderboard: $e');
+      return Stream.value([]);
+    }
+  }
 }
 

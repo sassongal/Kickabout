@@ -1,10 +1,24 @@
 import 'package:kickadoor/models/models.dart';
 
+/// Simple user role enum for permission checks
+enum UserRole {
+  admin,
+  member,
+  none;
+
+  /// Check if user has admin permissions
+  bool get isAdmin => this == UserRole.admin;
+  
+  /// Check if user is a member
+  bool get isMember => this == UserRole.member || this == UserRole.admin;
+}
+
 /// Hub role enum
 enum HubRole {
   manager,
   moderator,
-  member;
+  member,
+  veteran; // Veteran player (in hub for more than 2 months)
 
   String get displayName {
     switch (this) {
@@ -14,6 +28,8 @@ enum HubRole {
         return 'מנחה';
       case HubRole.member:
         return 'חבר';
+      case HubRole.veteran:
+        return 'שחקן ותיק';
     }
   }
 
@@ -25,6 +41,8 @@ enum HubRole {
         return 'moderator';
       case HubRole.member:
         return 'member';
+      case HubRole.veteran:
+        return 'veteran';
     }
   }
 
@@ -34,6 +52,8 @@ enum HubRole {
         return HubRole.manager;
       case 'moderator':
         return HubRole.moderator;
+      case 'veteran':
+        return HubRole.veteran;
       case 'member':
       default:
         return HubRole.member;
@@ -41,12 +61,24 @@ enum HubRole {
   }
 
   /// Check if role has permission to perform action
+  /// 
+  /// Permission Matrix:
+  /// - Manager: Full access to everything
+  /// - Moderator: Can manage members, create games/events, moderate content
+  /// - Veteran: Can create games, view analytics (future), invite players (future)
+  /// - Member: Can create games, view content, participate
   bool canManageMembers() => this == HubRole.manager || this == HubRole.moderator;
   bool canManageRoles() => this == HubRole.manager;
   bool canManageSettings() => this == HubRole.manager;
   bool canDeleteHub() => this == HubRole.manager;
-  bool canCreateGames() => this == HubRole.manager || this == HubRole.moderator || this == HubRole.member;
+  bool canCreateGames() => this == HubRole.manager || this == HubRole.moderator || this == HubRole.member || this == HubRole.veteran;
+  bool canCreateEvents() => this == HubRole.manager || this == HubRole.moderator;
   bool canModerateContent() => this == HubRole.manager || this == HubRole.moderator;
+  bool canInvitePlayers() => this == HubRole.manager || this == HubRole.moderator || this == HubRole.veteran;
+  bool canViewAnalytics() => this == HubRole.manager || this == HubRole.moderator || this == HubRole.veteran;
+  bool canEditHubInfo() => this == HubRole.manager;
+  bool canDeletePosts() => this == HubRole.manager || this == HubRole.moderator;
+  bool canDeleteComments() => this == HubRole.manager || this == HubRole.moderator;
 }
 
 /// Helper class for hub permissions
@@ -56,32 +88,93 @@ class HubPermissions {
 
   HubPermissions({required this.hub, required this.userId});
 
+  /// Get the user's role in the hub
+  /// Priority: Manager (creator) > Explicit role > Veteran (if >2 months) > Member
   HubRole get userRole {
     // Creator is always manager
     if (userId == hub.createdBy) return HubRole.manager;
     
-    // Check roles map
+    // Check explicit roles map (assigned by manager)
     final roleString = hub.roles[userId];
     if (roleString != null) {
-      return HubRole.fromFirestore(roleString);
+      final explicitRole = HubRole.fromFirestore(roleString);
+      // If explicitly set to moderator, return moderator (not veteran)
+      if (explicitRole == HubRole.moderator) return HubRole.moderator;
+      // If explicitly set to member, check if veteran
+      if (explicitRole == HubRole.member) {
+        return _isVeteranPlayer() ? HubRole.veteran : HubRole.member;
+      }
+      return explicitRole;
     }
     
-    // Default to member if in memberIds
+    // Check if member
     if (hub.memberIds.contains(userId)) {
-      return HubRole.member;
+      // Check if veteran (in hub for more than 2 months)
+      return _isVeteranPlayer() ? HubRole.veteran : HubRole.member;
     }
     
     // Not a member
     throw Exception('User is not a member of this hub');
   }
 
+  /// Check if user is a veteran player (in hub for more than 2 months)
+  bool _isVeteranPlayer() {
+    if (!hub.memberIds.contains(userId)) return false;
+    
+    // Get join date from memberJoinDates
+    final joinDateTimestamp = hub.memberJoinDates[userId];
+    if (joinDateTimestamp == null) {
+      // If no join date recorded, use hub creation date as fallback
+      // This handles legacy data where join dates weren't tracked
+      final daysSinceHubCreation = DateTime.now().difference(hub.createdAt).inDays;
+      return daysSinceHubCreation >= 60; // 2 months = ~60 days
+    }
+    
+    // Convert Timestamp to DateTime
+    final joinDate = joinDateTimestamp.toDate();
+    
+    // Check if more than 2 months (60 days)
+    final daysSinceJoin = DateTime.now().difference(joinDate).inDays;
+    return daysSinceJoin >= 60;
+  }
+
+  /// Check if user is a veteran player (public method)
+  bool isVeteranPlayer() => _isVeteranPlayer();
+
+  /// Get the date when user joined the hub
+  DateTime? getJoinDate() {
+    final joinDateTimestamp = hub.memberJoinDates[userId];
+    if (joinDateTimestamp == null) return null;
+    return joinDateTimestamp.toDate();
+  }
+
+  /// Get days since joining the hub
+  int? getDaysSinceJoin() {
+    final joinDate = getJoinDate();
+    if (joinDate == null) return null;
+    return DateTime.now().difference(joinDate).inDays;
+  }
+
+  // Permission methods
   bool canManageMembers() => userRole.canManageMembers();
   bool canManageRoles() => userRole.canManageRoles();
   bool canManageSettings() => userRole.canManageSettings();
   bool canDeleteHub() => userRole.canDeleteHub();
   bool canCreateGames() => userRole.canCreateGames();
+  bool canCreateEvents() => userRole.canCreateEvents();
   bool canModerateContent() => userRole.canModerateContent();
+  bool canInvitePlayers() => userRole.canInvitePlayers();
+  bool canViewAnalytics() => userRole.canViewAnalytics();
+  bool canEditHubInfo() => userRole.canEditHubInfo();
+  bool canDeletePosts() => userRole.canDeletePosts();
+  bool canDeleteComments() => userRole.canDeleteComments();
+  
+  // Role check methods
   bool isManager() => userRole == HubRole.manager;
   bool isModerator() => userRole == HubRole.moderator || userRole == HubRole.manager;
+  bool isVeteran() => userRole == HubRole.veteran;
   bool isMember() => hub.memberIds.contains(userId);
+  
+  /// Get role display name
+  String getRoleDisplayName() => userRole.displayName;
 }

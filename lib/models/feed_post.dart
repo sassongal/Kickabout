@@ -19,7 +19,10 @@ class FeedPost with _$FeedPost {
     String? achievementId,
     @Default([]) List<String> likes,
     @Default(0) int likeCount, // Denormalized count for sorting
-    @Default(0) int commentsCount,
+    @Default(0) int commentCount, // Denormalized: Count of comments (Cloud Function writes this)
+    // Note: commentsCount is kept for backward compatibility. Prefer using commentCount.
+    @Default(0) int commentsCount, // Legacy alias - maps to commentCount in Firestore
+    @Default([]) List<String> comments, // Legacy: Array of comment IDs (deprecated, use subcollection)
     @Default([]) List<String> photoUrls, // URLs of photos/videos in the post
     @TimestampConverter() required DateTime createdAt,
     // Denormalized fields for efficient display (no need to fetch hub/user)
@@ -28,6 +31,7 @@ class FeedPost with _$FeedPost {
     String? authorName, // Denormalized from users/{authorId}.name
     String? authorPhotoUrl, // Denormalized from users/{authorId}.photoUrl
     String? entityId, // ID of related entity (gameId, etc.)
+    String? region, // אזור: צפון, מרכז, דרום, ירושלים (לסינון פיד אזורי)
   }) = _FeedPost;
 
   factory FeedPost.fromJson(Map<String, dynamic> json) => _$FeedPostFromJson(json);

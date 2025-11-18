@@ -17,19 +17,34 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      memberJoinDates: json['memberJoinDates'] == null
+          ? const {}
+          : const TimestampMapConverter()
+              .fromJson(json['memberJoinDates'] as Map<String, dynamic>),
       settings: json['settings'] as Map<String, dynamic>? ??
           const {'ratingMode': 'basic'},
       roles: (json['roles'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, e as String),
           ) ??
           const {},
-      location: const GeoPointConverter().fromJson(json['location']),
+      location: const NullableGeoPointConverter().fromJson(json['location']),
       geohash: json['geohash'] as String?,
       radius: (json['radius'] as num?)?.toDouble(),
       venueIds: (json['venueIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      profileImageUrl: json['profileImageUrl'] as String?,
+      mainVenueId: json['mainVenueId'] as String?,
+      primaryVenueId: json['primaryVenueId'] as String?,
+      primaryVenueLocation: const NullableGeoPointConverter()
+          .fromJson(json['primaryVenueLocation']),
+      logoUrl: json['logoUrl'] as String?,
+      hubRules: json['hubRules'] as String?,
+      region: json['region'] as String?,
+      gameCount: (json['gameCount'] as num?)?.toInt(),
+      lastActivity: _$JsonConverterFromJson<Object, DateTime>(
+          json['lastActivity'], const TimestampConverter().fromJson),
     );
 
 Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
@@ -39,10 +54,35 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'createdBy': instance.createdBy,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'memberIds': instance.memberIds,
+      'memberJoinDates':
+          const TimestampMapConverter().toJson(instance.memberJoinDates),
       'settings': instance.settings,
       'roles': instance.roles,
-      'location': const GeoPointConverter().toJson(instance.location),
+      'location': const NullableGeoPointConverter().toJson(instance.location),
       'geohash': instance.geohash,
       'radius': instance.radius,
       'venueIds': instance.venueIds,
+      'profileImageUrl': instance.profileImageUrl,
+      'mainVenueId': instance.mainVenueId,
+      'primaryVenueId': instance.primaryVenueId,
+      'primaryVenueLocation': const NullableGeoPointConverter()
+          .toJson(instance.primaryVenueLocation),
+      'logoUrl': instance.logoUrl,
+      'hubRules': instance.hubRules,
+      'region': instance.region,
+      'gameCount': instance.gameCount,
+      'lastActivity': _$JsonConverterToJson<Object, DateTime>(
+          instance.lastActivity, const TimestampConverter().toJson),
     };
+
+Value? _$JsonConverterFromJson<Json, Value>(
+  Object? json,
+  Value? Function(Json json) fromJson,
+) =>
+    json == null ? null : fromJson(json as Json);
+
+Json? _$JsonConverterToJson<Json, Value>(
+  Value? value,
+  Json? Function(Value value) toJson,
+) =>
+    value == null ? null : toJson(value);

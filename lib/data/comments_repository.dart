@@ -63,7 +63,7 @@ class CommentsRepository {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Update comments count on post
+      // Update comments count on post (Cloud Function also updates this, but we update it here for immediate UI feedback)
       await _firestore
           .collection('hubs')
           .doc(hubId)
@@ -72,7 +72,8 @@ class CommentsRepository {
           .collection('items')
           .doc(postId)
           .update({
-        'commentsCount': FieldValue.increment(1),
+        'commentCount': FieldValue.increment(1),
+        'commentsCount': FieldValue.increment(1), // Also update for backward compatibility
       });
 
       // Notification will be handled by the caller using push integration service
@@ -172,7 +173,8 @@ class CommentsRepository {
           .collection('items')
           .doc(postId)
           .update({
-        'commentsCount': FieldValue.increment(-1),
+        'commentCount': FieldValue.increment(-1),
+        'commentsCount': FieldValue.increment(-1), // Also update for backward compatibility
       });
     } catch (e) {
       throw Exception('Failed to delete comment: $e');

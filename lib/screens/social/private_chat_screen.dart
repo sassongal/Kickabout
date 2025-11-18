@@ -9,6 +9,7 @@ import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Private chat screen - one-on-one conversation
 class PrivateChatScreen extends ConsumerStatefulWidget {
@@ -79,7 +80,10 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   return FuturisticEmptyState(
                     icon: Icons.error_outline,
                     title: 'שגיאה בטעינת הודעות',
-                    message: snapshot.error.toString(),
+                    message: ErrorHandlerService().handleException(
+                      snapshot.error,
+                      context: 'Private chat screen',
+                    ),
                     action: ElevatedButton.icon(
                       onPressed: () {
                 // Retry by rebuilding - trigger rebuild via key change
@@ -108,7 +112,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   padding: const EdgeInsets.all(8),
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isMe = message.authorId == currentUserId;
+                    final isMe = message.senderId == currentUserId;
                     return _PrivateMessageBubble(
                       message: message,
                       isMe: isMe,
@@ -163,7 +167,7 @@ class _PrivateMessageBubble extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userStream = usersRepo.watchUser(message.authorId);
+    final userStream = usersRepo.watchUser(message.senderId);
 
     return StreamBuilder<User?>(
       stream: userStream,

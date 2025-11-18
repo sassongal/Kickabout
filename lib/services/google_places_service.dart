@@ -323,6 +323,104 @@ class GooglePlacesService {
     return results;
   }
 
+  /// Search for football venues using Text Search API
+  /// 
+  /// This function performs a flexible text search focused on football fields in Israel.
+  /// It searches for terms like "מגרש כדורגל", "מגרש קט רגל", "מגרשי ספורט", etc.
+  /// 
+  /// Returns a list of PlaceResult objects with place_id, name, formatted_address, and geometry.
+  Future<List<PlaceResult>> searchForFootballVenues({
+    double? latitude,
+    double? longitude,
+    int radius = 50000, // Default 50km radius
+  }) async {
+    if (apiKey.isEmpty) {
+      throw Exception('Google Maps API key not configured');
+    }
+
+    try {
+      final results = <PlaceResult>[];
+      
+      // List of search queries in Hebrew focused on football fields in Israel
+      final queries = [
+        'מגרש כדורגל בישראל',
+        'מגרש קט רגל',
+        'מגרשי ספורט',
+        'מגרש כדורגל',
+        'football field Israel',
+        'soccer field Israel',
+      ];
+
+      // Perform text search for each query
+      for (final query in queries) {
+        try {
+          final url = Uri.parse(
+            'https://maps.googleapis.com/maps/api/place/textsearch/json'
+            '?query=${Uri.encodeComponent(query)}'
+            '${latitude != null && longitude != null ? '&location=$latitude,$longitude&radius=$radius' : ''}'
+            '&key=$apiKey'
+            '&language=he',
+          );
+
+          final response = await _httpClient.get(url);
+          if (response.statusCode != 200) {
+            continue; // Skip this query if it fails
+          }
+
+          final data = json.decode(response.body);
+          if (data['status'] != 'OK' && data['status'] != 'ZERO_RESULTS') {
+            continue; // Skip if API returns error
+          }
+
+          // Parse results
+          for (final place in data['results'] ?? []) {
+            final geometry = place['geometry'];
+            final location = geometry?['location'];
+            
+            if (location != null && 
+                location['lat'] != null && 
+                location['lng'] != null) {
+              final placeId = place['place_id'] as String?;
+              final name = place['name'] as String?;
+              final formattedAddress = place['formatted_address'] as String?;
+              
+              if (placeId != null && name != null) {
+                // Check if we already have this place (avoid duplicates)
+                if (!results.any((r) => r.placeId == placeId)) {
+                  results.add(PlaceResult(
+                    placeId: placeId,
+                    name: name,
+                    address: formattedAddress,
+                    latitude: (location['lat'] as num).toDouble(),
+                    longitude: (location['lng'] as num).toDouble(),
+                    types: List<String>.from(place['types'] ?? []),
+                    isPublic: true,
+                  ));
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Continue with next query if one fails
+          continue;
+        }
+      }
+
+      // If location is provided, sort by distance
+      if (latitude != null && longitude != null) {
+        results.sort((a, b) {
+          final distA = _calculateDistance(latitude, longitude, a.latitude, a.longitude);
+          final distB = _calculateDistance(latitude, longitude, b.latitude, b.longitude);
+          return distA.compareTo(distB);
+        });
+      }
+
+      return results;
+    } catch (e) {
+      throw Exception('Failed to search for football venues: $e');
+    }
+  }
+
   /// Get place details by place ID
   Future<PlaceResult?> getPlaceDetails(String placeId) async {
     if (apiKey.isEmpty) {

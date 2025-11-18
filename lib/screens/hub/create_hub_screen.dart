@@ -26,6 +26,30 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
   GeoPoint? _selectedLocation;
   String? _locationAddress;
   bool _isLoadingLocation = false;
+  String? _selectedRegion;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRegion();
+  }
+
+  Future<void> _loadUserRegion() async {
+    try {
+      final currentUserId = ref.read(currentUserIdProvider);
+      if (currentUserId != null) {
+        final usersRepo = ref.read(usersRepositoryProvider);
+        final user = await usersRepo.getUser(currentUserId);
+        if (user != null && mounted) {
+          setState(() {
+            _selectedRegion = user.region;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to load user region: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -79,10 +103,26 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final currentUserId = ref.read(currentUserIdProvider);
+    final isAnonymous = ref.read(isAnonymousUserProvider);
+    
     if (currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('נא להתחבר')),
       );
+      return;
+    }
+    
+    if (isAnonymous) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('אורחים לא יכולים ליצור הובים. נא להתחבר או להירשם.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      // Navigate to login
+      if (mounted) {
+        context.push('/login');
+      }
       return;
     }
 
@@ -112,6 +152,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         memberIds: [currentUserId], // Creator is automatically a member
         location: _selectedLocation,
         geohash: geohash,
+        region: _selectedRegion,
       );
 
       await hubsRepo.createHub(hub);
@@ -197,6 +238,42 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                 ),
                 maxLines: 3,
                 textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 16),
+
+              // Region field
+              DropdownButtonFormField<String>(
+                value: _selectedRegion,
+                decoration: const InputDecoration(
+                  labelText: 'אזור',
+                  hintText: 'בחר אזור',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.map),
+                  helperText: 'משפיע על הפיד האזורי',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'צפון',
+                    child: Text('צפון'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'מרכז',
+                    child: Text('מרכז'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'דרום',
+                    child: Text('דרום'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ירושלים',
+                    child: Text('ירושלים'),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedRegion = value;
+                  });
+                },
               ),
               const SizedBox(height: 16),
 

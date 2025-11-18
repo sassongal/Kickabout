@@ -66,67 +66,80 @@ class _StatsRingState extends State<StatsRing>
   @override
   Widget build(BuildContext context) {
     final radius = widget.size * 0.35; // Adaptive radius based on size
+    // Reduce circle size to leave space for label (80px total - 12px for label = 68px max for circle)
+    final circleSize = 68.0;
+    final labelHeight = 12.0;
     
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        return Column(
-          children: [
-            SizedBox(
-              width: widget.size,
-              height: widget.size,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Background circle
-                  Transform.rotate(
-                    angle: -math.pi / 2,
-                    child: CustomPaint(
-                      size: Size(widget.size, widget.size),
-                      painter: _CirclePainter(
-                        progress: 1.0,
-                        strokeWidth: 8,
-                        color: const Color(0xFFE0E0E0), // Surface variant
-                        radius: radius,
+        return SizedBox(
+          height: 80, // Fixed height to match parent constraint
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: circleSize,
+                height: circleSize,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Background circle
+                    Transform.rotate(
+                      angle: -math.pi / 2,
+                      child: CustomPaint(
+                        size: Size(circleSize, circleSize),
+                        painter: _CirclePainter(
+                          progress: 1.0,
+                          strokeWidth: 7,
+                          color: const Color(0xFFE0E0E0), // Surface variant
+                          radius: radius * (circleSize / widget.size),
+                        ),
                       ),
                     ),
-                  ),
-                  // Progress circle
-                  Transform.rotate(
-                    angle: -math.pi / 2,
-                    child: CustomPaint(
-                      size: Size(widget.size, widget.size),
-                      painter: _CirclePainter(
-                        progress: _animation.value,
-                        strokeWidth: 8,
-                        color: widget.color,
-                        radius: radius,
+                    // Progress circle
+                    Transform.rotate(
+                      angle: -math.pi / 2,
+                      child: CustomPaint(
+                        size: Size(circleSize, circleSize),
+                        painter: _CirclePainter(
+                          progress: _animation.value,
+                          strokeWidth: 7,
+                          color: widget.color,
+                          radius: radius * (circleSize / widget.size),
+                        ),
                       ),
                     ),
-                  ),
-                  // Center value
-                  Text(
-                    '${widget.value}',
-                    style: GoogleFonts.montserrat(
-                      fontSize: widget.size * 0.25, // Adaptive font size
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF212121),
+                    // Center value
+                    Text(
+                      '${widget.value}',
+                      style: GoogleFonts.montserrat(
+                        fontSize: circleSize * 0.25, // Adaptive font size
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF212121),
+                      ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 2),
+              // Label with fixed height
+              SizedBox(
+                height: labelHeight,
+                child: Text(
+                  widget.label,
+                  style: GoogleFonts.inter(
+                    fontSize: 9, // Further reduced
+                    color: const Color(0xFF757575),
                   ),
-                ],
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            // Label
-            Text(
-              widget.label,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: const Color(0xFF757575),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

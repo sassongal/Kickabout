@@ -8,6 +8,7 @@ import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Selected hub provider (for filtering games)
 final selectedHubProvider = StateProvider<String?>((ref) => null);
@@ -34,10 +35,10 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
         ? hubsRepo.watchHubsByMember(currentUserId)
         : Stream.value(<Hub>[]);
 
-    // Get games stream
+    // Get games stream - show completed games from all hubs when no hub selected
     final gamesStream = selectedHubId != null
         ? gamesRepo.watchGamesByHub(selectedHubId)
-        : Stream.value(<Game>[]);
+        : gamesRepo.watchCompletedGames(limit: 100);
 
     return AppScaffold(
       title: 'משחקים',
@@ -69,18 +70,15 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
               if (hubs.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(16),
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'אין הובס. צור הוב כדי ליצור משחקים.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
+                  child: FuturisticEmptyState(
+                    icon: Icons.group_outlined,
+                    title: 'אין הובס',
+                    message: 'צור הוב כדי ליצור משחקים',
+                    action: ElevatedButton.icon(
+                      onPressed: () => context.push('/hubs/create'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('צור הוב'),
+                    ),
                   ),
                 );
               }
@@ -130,7 +128,10 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
                   return FuturisticEmptyState(
                     icon: Icons.error_outline,
                     title: 'שגיאה בטעינת משחקים',
-                    message: snapshot.error.toString(),
+                    message: ErrorHandlerService().handleException(
+                      snapshot.error,
+                      context: 'Game list screen',
+                    ),
                     action: ElevatedButton.icon(
                       onPressed: () {
                         // Retry by rebuilding - trigger rebuild via key change
@@ -164,52 +165,12 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
                   itemCount: games.length,
                   itemBuilder: (context, index) {
                     final game = games[index];
-                    final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
+                    final dateFormat = DateFormat('dd/MM/yyyy', 'he');
                     
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: _getStatusColor(game.status, context).withValues(alpha: 0.2),
-                          child: Icon(
-                            Icons.sports_soccer,
-                            color: _getStatusColor(game.status, context),
-                          ),
-                        ),
-                        title: Text(
-                          dateFormat.format(game.gameDate),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (game.location != null && game.location!.isNotEmpty)
-                              Text(game.location!),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Chip(
-                                  label: Text(
-                                    _getStatusText(game.status),
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  backgroundColor: _getStatusColor(game.status, context)
-                                      .withValues(alpha: 0.1),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${game.teamCount} קבוצות',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        trailing: const Icon(Icons.chevron_left),
-                        onTap: () => context.push('/games/${game.gameId}'),
-                      ),
+                    return _GameCard(
+                      game: game,
+                      dateFormat: dateFormat,
+                      onTap: () => context.push('/games/${game.gameId}'),
                     );
                   },
                 );
@@ -249,5 +210,221 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
       case GameStatus.statsInput:
         return 'הזנת סטטיסטיקות';
     }
+  }
+}
+
+/// Game card widget - displays game as bulletin board item
+class _GameCard extends ConsumerWidget {
+  final Game game;
+  final DateFormat dateFormat;
+  final VoidCallback onTap;
+
+  const _GameCard({
+    required this.game,
+    required this.dateFormat,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
+    final eventsRepo = ref.read(hubEventsRepositoryProvider);
+    final venuesRepo = ref.read(venuesRepositoryProvider);
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Score row (prominent)
+              if (game.teamAScore != null && game.teamBScore != null)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${game.teamAScore}',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        '-',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${game.teamBScore}',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              if (game.teamAScore != null && game.teamBScore != null)
+                const SizedBox(height: 12),
+              
+              // Date
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    dateFormat.format(game.gameDate),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              // Location (from event, venue, or hub)
+              FutureBuilder<Hub?>(
+                future: hubsRepo.getHub(game.hubId),
+                builder: (context, hubSnapshot) {
+                  return FutureBuilder<List<HubEvent>>(
+                    future: game.eventId != null
+                        ? eventsRepo.getHubEvents(game.hubId)
+                        : Future.value([]),
+                    builder: (context, eventSnapshot) {
+                      return FutureBuilder<Venue?>(
+                        future: game.venueId != null
+                            ? venuesRepo.getVenue(game.venueId!)
+                            : Future.value(null),
+                        builder: (context, venueSnapshot) {
+                          final hub = hubSnapshot.data;
+                          final events = eventSnapshot.data ?? [];
+                          HubEvent? event;
+                          if (game.eventId != null) {
+                            try {
+                              event = events.firstWhere(
+                                (e) => e.eventId == game.eventId,
+                              );
+                            } catch (e) {
+                              event = events.isNotEmpty ? events.first : null;
+                            }
+                          }
+                          final venue = venueSnapshot.data;
+                          
+                          // Get location: from event, or venue name, or game location, or hub name
+                          String? location;
+                          if (event?.location != null && event!.location!.isNotEmpty) {
+                            location = event.location;
+                          } else if (venue != null) {
+                            location = venue.name;
+                          } else if (game.location != null && game.location!.isNotEmpty) {
+                            location = game.location;
+                          } else if (hub?.name != null) {
+                            location = hub!.name;
+                          }
+                          
+                          if (location != null && location.isNotEmpty) {
+                            return Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on,
+                                      size: 16,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        location,
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+              
+              // Hub name
+              FutureBuilder<Hub?>(
+                future: hubsRepo.getHub(game.hubId),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    return Row(
+                      children: [
+                        Icon(
+                          Icons.group,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          snapshot.data!.name,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+              const SizedBox(height: 12),
+              
+              // Created by (who logged the game)
+              FutureBuilder<User?>(
+                future: usersRepo.getUser(game.createdBy),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    return Row(
+                      children: [
+                        Icon(
+                          Icons.person,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'תועד על ידי: ${snapshot.data!.name}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

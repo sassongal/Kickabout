@@ -11,7 +11,7 @@ _$VenueImpl _$$VenueImplFromJson(Map<String, dynamic> json) => _$VenueImpl(
       hubId: json['hubId'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
-      location: _geoPointFromJson(json['location']),
+      location: const GeoPointConverter().fromJson(json['location']),
       address: json['address'] as String?,
       googlePlaceId: json['googlePlaceId'] as String?,
       amenities: (json['amenities'] as List<dynamic>?)
@@ -26,6 +26,9 @@ _$VenueImpl _$$VenueImplFromJson(Map<String, dynamic> json) => _$VenueImpl(
           const TimestampConverter().fromJson(json['updatedAt'] as Object),
       createdBy: json['createdBy'] as String?,
       isActive: json['isActive'] as bool? ?? true,
+      isMain: json['isMain'] as bool? ?? false,
+      hubCount: (json['hubCount'] as num?)?.toInt() ?? 0,
+      isPublic: json['isPublic'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$$VenueImplToJson(_$VenueImpl instance) =>
@@ -34,7 +37,7 @@ Map<String, dynamic> _$$VenueImplToJson(_$VenueImpl instance) =>
       'hubId': instance.hubId,
       'name': instance.name,
       'description': instance.description,
-      'location': _geoPointToJson(instance.location),
+      'location': const GeoPointConverter().toJson(instance.location),
       'address': instance.address,
       'googlePlaceId': instance.googlePlaceId,
       'amenities': instance.amenities,
@@ -44,4 +47,7 @@ Map<String, dynamic> _$$VenueImplToJson(_$VenueImpl instance) =>
       'updatedAt': const TimestampConverter().toJson(instance.updatedAt),
       'createdBy': instance.createdBy,
       'isActive': instance.isActive,
+      'isMain': instance.isMain,
+      'hubCount': instance.hubCount,
+      'isPublic': instance.isPublic,
     };

@@ -36,9 +36,18 @@ mixin _$HubEvent {
   String get status =>
       throw _privateConstructorUsedError; // upcoming, ongoing, completed, cancelled
   String? get location => throw _privateConstructorUsedError;
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get locationPoint => throw _privateConstructorUsedError;
   String? get geohash => throw _privateConstructorUsedError;
+  int get teamCount =>
+      throw _privateConstructorUsedError; // Number of teams (default: 3)
+  String? get gameType =>
+      throw _privateConstructorUsedError; // 3v3, 4v4, 5v5, 6v6, 7v7, 8v8, 9v9, 10v10, 11v11
+  int? get durationMinutes =>
+      throw _privateConstructorUsedError; // Game duration in minutes (default: 12)
+  int get maxParticipants =>
+      throw _privateConstructorUsedError; // Maximum number of participants (default: 15, required)
+  bool get notifyMembers => throw _privateConstructorUsedError;
 
   /// Serializes this HubEvent to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -67,8 +76,13 @@ abstract class $HubEventCopyWith<$Res> {
       List<String> registeredPlayerIds,
       String status,
       String? location,
-      @GeoPointConverter() GeoPoint? locationPoint,
-      String? geohash});
+      @NullableGeoPointConverter() GeoPoint? locationPoint,
+      String? geohash,
+      int teamCount,
+      String? gameType,
+      int? durationMinutes,
+      int maxParticipants,
+      bool notifyMembers});
 }
 
 /// @nodoc
@@ -99,6 +113,11 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
     Object? location = freezed,
     Object? locationPoint = freezed,
     Object? geohash = freezed,
+    Object? teamCount = null,
+    Object? gameType = freezed,
+    Object? durationMinutes = freezed,
+    Object? maxParticipants = null,
+    Object? notifyMembers = null,
   }) {
     return _then(_value.copyWith(
       eventId: null == eventId
@@ -153,6 +172,26 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
           ? _value.geohash
           : geohash // ignore: cast_nullable_to_non_nullable
               as String?,
+      teamCount: null == teamCount
+          ? _value.teamCount
+          : teamCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      gameType: freezed == gameType
+          ? _value.gameType
+          : gameType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      durationMinutes: freezed == durationMinutes
+          ? _value.durationMinutes
+          : durationMinutes // ignore: cast_nullable_to_non_nullable
+              as int?,
+      maxParticipants: null == maxParticipants
+          ? _value.maxParticipants
+          : maxParticipants // ignore: cast_nullable_to_non_nullable
+              as int,
+      notifyMembers: null == notifyMembers
+          ? _value.notifyMembers
+          : notifyMembers // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -177,8 +216,13 @@ abstract class _$$HubEventImplCopyWith<$Res>
       List<String> registeredPlayerIds,
       String status,
       String? location,
-      @GeoPointConverter() GeoPoint? locationPoint,
-      String? geohash});
+      @NullableGeoPointConverter() GeoPoint? locationPoint,
+      String? geohash,
+      int teamCount,
+      String? gameType,
+      int? durationMinutes,
+      int maxParticipants,
+      bool notifyMembers});
 }
 
 /// @nodoc
@@ -207,6 +251,11 @@ class __$$HubEventImplCopyWithImpl<$Res>
     Object? location = freezed,
     Object? locationPoint = freezed,
     Object? geohash = freezed,
+    Object? teamCount = null,
+    Object? gameType = freezed,
+    Object? durationMinutes = freezed,
+    Object? maxParticipants = null,
+    Object? notifyMembers = null,
   }) {
     return _then(_$HubEventImpl(
       eventId: null == eventId
@@ -261,6 +310,26 @@ class __$$HubEventImplCopyWithImpl<$Res>
           ? _value.geohash
           : geohash // ignore: cast_nullable_to_non_nullable
               as String?,
+      teamCount: null == teamCount
+          ? _value.teamCount
+          : teamCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      gameType: freezed == gameType
+          ? _value.gameType
+          : gameType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      durationMinutes: freezed == durationMinutes
+          ? _value.durationMinutes
+          : durationMinutes // ignore: cast_nullable_to_non_nullable
+              as int?,
+      maxParticipants: null == maxParticipants
+          ? _value.maxParticipants
+          : maxParticipants // ignore: cast_nullable_to_non_nullable
+              as int,
+      notifyMembers: null == notifyMembers
+          ? _value.notifyMembers
+          : notifyMembers // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -280,8 +349,13 @@ class _$HubEventImpl implements _HubEvent {
       final List<String> registeredPlayerIds = const [],
       this.status = 'upcoming',
       this.location,
-      @GeoPointConverter() this.locationPoint,
-      this.geohash})
+      @NullableGeoPointConverter() this.locationPoint,
+      this.geohash,
+      this.teamCount = 3,
+      this.gameType,
+      this.durationMinutes,
+      this.maxParticipants = 15,
+      this.notifyMembers = false})
       : _registeredPlayerIds = registeredPlayerIds;
 
   factory _$HubEventImpl.fromJson(Map<String, dynamic> json) =>
@@ -324,14 +398,31 @@ class _$HubEventImpl implements _HubEvent {
   @override
   final String? location;
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   final GeoPoint? locationPoint;
   @override
   final String? geohash;
+  @override
+  @JsonKey()
+  final int teamCount;
+// Number of teams (default: 3)
+  @override
+  final String? gameType;
+// 3v3, 4v4, 5v5, 6v6, 7v7, 8v8, 9v9, 10v10, 11v11
+  @override
+  final int? durationMinutes;
+// Game duration in minutes (default: 12)
+  @override
+  @JsonKey()
+  final int maxParticipants;
+// Maximum number of participants (default: 15, required)
+  @override
+  @JsonKey()
+  final bool notifyMembers;
 
   @override
   String toString() {
-    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash)';
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers)';
   }
 
   @override
@@ -359,7 +450,17 @@ class _$HubEventImpl implements _HubEvent {
                 other.location == location) &&
             (identical(other.locationPoint, locationPoint) ||
                 other.locationPoint == locationPoint) &&
-            (identical(other.geohash, geohash) || other.geohash == geohash));
+            (identical(other.geohash, geohash) || other.geohash == geohash) &&
+            (identical(other.teamCount, teamCount) ||
+                other.teamCount == teamCount) &&
+            (identical(other.gameType, gameType) ||
+                other.gameType == gameType) &&
+            (identical(other.durationMinutes, durationMinutes) ||
+                other.durationMinutes == durationMinutes) &&
+            (identical(other.maxParticipants, maxParticipants) ||
+                other.maxParticipants == maxParticipants) &&
+            (identical(other.notifyMembers, notifyMembers) ||
+                other.notifyMembers == notifyMembers));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -378,7 +479,12 @@ class _$HubEventImpl implements _HubEvent {
       status,
       location,
       locationPoint,
-      geohash);
+      geohash,
+      teamCount,
+      gameType,
+      durationMinutes,
+      maxParticipants,
+      notifyMembers);
 
   /// Create a copy of HubEvent
   /// with the given fields replaced by the non-null parameter values.
@@ -409,8 +515,13 @@ abstract class _HubEvent implements HubEvent {
       final List<String> registeredPlayerIds,
       final String status,
       final String? location,
-      @GeoPointConverter() final GeoPoint? locationPoint,
-      final String? geohash}) = _$HubEventImpl;
+      @NullableGeoPointConverter() final GeoPoint? locationPoint,
+      final String? geohash,
+      final int teamCount,
+      final String? gameType,
+      final int? durationMinutes,
+      final int maxParticipants,
+      final bool notifyMembers}) = _$HubEventImpl;
 
   factory _HubEvent.fromJson(Map<String, dynamic> json) =
       _$HubEventImpl.fromJson;
@@ -441,10 +552,20 @@ abstract class _HubEvent implements HubEvent {
   @override
   String? get location;
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get locationPoint;
   @override
   String? get geohash;
+  @override
+  int get teamCount; // Number of teams (default: 3)
+  @override
+  String? get gameType; // 3v3, 4v4, 5v5, 6v6, 7v7, 8v8, 9v9, 10v10, 11v11
+  @override
+  int? get durationMinutes; // Game duration in minutes (default: 12)
+  @override
+  int get maxParticipants; // Maximum number of participants (default: 15, required)
+  @override
+  bool get notifyMembers;
 
   /// Create a copy of HubEvent
   /// with the given fields replaced by the non-null parameter values.

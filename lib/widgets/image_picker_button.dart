@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Image picker button widget
 class ImagePickerButton extends StatelessWidget {
@@ -18,6 +19,43 @@ class ImagePickerButton extends StatelessWidget {
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     try {
+      // Request permission Just-in-Time based on source
+      if (source == ImageSource.camera) {
+        final cameraStatus = await Permission.camera.request();
+        if (cameraStatus.isDenied || cameraStatus.isPermanentlyDenied) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('נדרשת הרשאת מצלמה כדי לצלם תמונה'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+      } else if (source == ImageSource.gallery) {
+        // For gallery, check photos permission (iOS) or storage (Android)
+        Permission permission;
+        if (Theme.of(context).platform == TargetPlatform.iOS) {
+          permission = Permission.photos;
+        } else {
+          permission = Permission.storage;
+        }
+        
+        final status = await permission.request();
+        if (status.isDenied || status.isPermanentlyDenied) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('נדרשת הרשאת גלריה כדי לבחור תמונה'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: source,

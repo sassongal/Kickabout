@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
+import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {
@@ -107,6 +112,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final markers = <Marker>{};
 
     try {
+      // Load Google Places venues (football fields in Israel)
+      if (_selectedFilter == 'all' || _selectedFilter == 'venues') {
+        await _loadGooglePlacesVenues(markers);
+      }
+
       // Load hubs and their venues
       if (_selectedFilter == 'all' || _selectedFilter == 'hubs') {
         final hubsRepo = ref.read(hubsRepositoryProvider);
@@ -126,14 +136,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
 
         for (final hub in hubs) {
-          // Add hub marker (if has primary location)
-          if (hub.location != null) {
+          // Add hub marker - use mainVenueId location if available, otherwise use hub.location
+          GeoPoint? hubLocation = hub.location;
+          
+          // If hub has mainVenueId but no location, get location from main venue
+          if (hubLocation == null && hub.mainVenueId != null && hub.mainVenueId!.isNotEmpty) {
+            try {
+              final mainVenue = await venuesRepo.getVenue(hub.mainVenueId!);
+              if (mainVenue != null) {
+                hubLocation = mainVenue.location;
+              }
+            } catch (e) {
+              debugPrint('Error loading main venue for hub ${hub.hubId}: $e');
+            }
+          }
+          
+          if (hubLocation != null) {
             markers.add(
               Marker(
                 markerId: MarkerId('hub_${hub.hubId}'),
                 position: LatLng(
-                  hub.location!.latitude,
-                  hub.location!.longitude,
+                  hubLocation.latitude,
+                  hubLocation.longitude,
                 ),
                 infoWindow: InfoWindow(
                   title: hub.name,
@@ -177,7 +201,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
       }
 
-      // Load venues only
+      // Load internal venues (from our database)
       if (_selectedFilter == 'venues') {
         final venuesRepo = ref.read(venuesRepositoryProvider);
         final List<Venue> venues;
@@ -317,25 +341,35 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ],
       body: _isLoading
           ? const FuturisticLoadingState(message: 'טוען מפה...')
-          : Stack(
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                return Stack(
                   children: [
-                    GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: LatLng(
-                          _currentPosition!.latitude,
-                          _currentPosition!.longitude,
-                        ),
-                        zoom: 13.0,
-                      ),
-                      markers: _markers,
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: true,
-                      mapType: MapType.normal,
-                      onMapCreated: (controller) {
-                        setState(() {
-                          _mapController = controller;
-                        });
-                      },
+                    SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: _currentPosition != null
+                          ? GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: LatLng(
+                                  _currentPosition!.latitude,
+                                  _currentPosition!.longitude,
+                                ),
+                                zoom: 13.0,
+                              ),
+                              markers: _markers,
+                              myLocationEnabled: true,
+                              myLocationButtonEnabled: true,
+                              mapType: MapType.normal,
+                              onMapCreated: (controller) {
+                                setState(() {
+                                  _mapController = controller;
+                                });
+                              },
+                            )
+                          : const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                     ),
                     // Filter buttons
                     Positioned(
@@ -361,7 +395,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       ),
                     ),
                   ],
-                ),
+                );
+              },
+            ),
     );
   }
 
@@ -381,9 +417,308 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  /// Load Google Places venues (football fields)
+  Future<void> _loadGooglePlacesVenues(Set<Marker> markers) async {
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+      
+      // Build query based on location
+      String query = 'מגרש כדורגל בישראל';
+      Map<String, dynamic> callData = {'query': query};
+      
+      if (_currentPosition != null) {
+        callData['lat'] = _currentPosition!.latitude;
+        callData['lng'] = _currentPosition!.longitude;
+      }
+
+      final result = await functions.httpsCallable('searchVenues').call(callData);
+      final data = result.data as Map<String, dynamic>;
+      final results = data['results'] as List<dynamic>?;
+
+      if (results != null) {
+        for (final place in results) {
+          final placeId = place['place_id'] as String?;
+          final name = place['name'] as String?;
+          final geometry = place['geometry'] as Map<String, dynamic>?;
+          final location = geometry?['location'] as Map<String, dynamic>?;
+
+          if (placeId != null && name != null && location != null) {
+            markers.add(
+              Marker(
+                markerId: MarkerId('google_place_$placeId'),
+                position: LatLng(
+                  (location['lat'] as num).toDouble(),
+                  (location['lng'] as num).toDouble(),
+                ),
+                infoWindow: InfoWindow(
+                  title: name,
+                  snippet: 'לחץ לפרטים',
+                ),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen, // Green for Google Places venues
+                ),
+                onTap: () => _onVenueMarkerTapped(placeId),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading Google Places venues: $e');
+      // Don't show error to user - just log it
+    }
+  }
+
+  /// Handle venue marker tap - load details and hubs
+  Future<void> _onVenueMarkerTapped(String placeId) async {
+    // Show loading indicator
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+      
+      // Call both functions in parallel
+      final detailsCall = functions.httpsCallable('getPlaceDetails').call({
+        'placeId': placeId,
+      });
+      final hubsCall = functions.httpsCallable('getHubsForPlace').call({
+        'placeId': placeId,
+      });
+
+      final results = await Future.wait([detailsCall, hubsCall]);
+
+      final detailsData = results[0].data as Map<String, dynamic>;
+      final hubsData = results[1].data;
+      
+      final Map<String, dynamic> placeDetails = Map<String, dynamic>.from(
+        detailsData['result'] as Map<String, dynamic>,
+      );
+      final List<dynamic> hubs = hubsData is List<dynamic>
+          ? List<dynamic>.from(hubsData)
+          : <dynamic>[];
+
+      // Close loading indicator
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      // Show venue details sheet
+      _showVenueDetailsSheet(context, placeDetails, hubs);
+    } catch (e) {
+      // Handle error
+      if (!mounted) return;
+      Navigator.pop(context);
+      SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי המגרש: $e');
+    }
+  }
+
+  /// Show venue details in a bottom sheet
+  void _showVenueDetailsSheet(
+    BuildContext context,
+    Map<String, dynamic> placeDetails,
+    List<dynamic> hubs,
+  ) {
+    final name = placeDetails['name'] as String? ?? 'מגרש';
+    final address = placeDetails['formatted_address'] as String?;
+    final phone = placeDetails['formatted_phone_number'] as String?;
+    
+    // Note: Google Places Photo API requires API key and photo_reference
+    // For now, we'll skip displaying photos directly (would need backend endpoint)
+    // In production, you could create a Cloud Function that returns photo URLs
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: FuturisticColors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: FuturisticColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Photo placeholder (Google Places photos require API key)
+                      FuturisticCard(
+                        padding: const EdgeInsets.all(40),
+                        margin: EdgeInsets.zero,
+                        child: Icon(
+                          Icons.sports_soccer,
+                          size: 80,
+                          color: FuturisticColors.textSecondary,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Name
+                      Text(
+                        name,
+                        style: FuturisticTypography.heading2,
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Address
+                      if (address != null && address.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 20,
+                              color: FuturisticColors.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                address,
+                                style: FuturisticTypography.bodyMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      
+                      // Phone
+                      if (phone != null && phone.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.phone,
+                              size: 20,
+                              color: FuturisticColors.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              phone,
+                              style: FuturisticTypography.bodyMedium,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      
+                      // Hubs section
+                      if (hubs.isNotEmpty) ...[
+                        Divider(color: FuturisticColors.surfaceVariant),
+                        const SizedBox(height: 12),
+                        Text(
+                          'האבים שמשחקים כאן',
+                          style: FuturisticTypography.techHeadline,
+                        ),
+                        const SizedBox(height: 12),
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: hubs.length,
+                          itemBuilder: (context, index) {
+                            final hub = hubs[index] as Map<String, dynamic>;
+                            final hubId = hub['hubId'] as String;
+                            final hubName = hub['name'] as String? ?? 'האב';
+                            final logoUrl = hub['logoUrl'] as String?;
+                            
+                            return FuturisticCard(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              onTap: () {
+                                Navigator.pop(context);
+                                context.go('/hubs/$hubId');
+                              },
+                              child: ListTile(
+                                leading: logoUrl != null
+                                    ? CircleAvatar(
+                                        backgroundImage: NetworkImage(logoUrl),
+                                        radius: 24,
+                                      )
+                                    : CircleAvatar(
+                                        backgroundColor: FuturisticColors.primary,
+                                        radius: 24,
+                                        child: Text(
+                                          hubName[0].toUpperCase(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                title: Text(
+                                  hubName,
+                                  style: FuturisticTypography.labelLarge,
+                                ),
+                                trailing: Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: FuturisticColors.textSecondary,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ] else ...[
+                        Divider(color: FuturisticColors.surfaceVariant),
+                        const SizedBox(height: 12),
+                        Text(
+                          'אין האבים שמשחקים במגרש זה',
+                          style: FuturisticTypography.bodyMedium.copyWith(
+                            color: FuturisticColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _mapController?.dispose();
+    // Safely dispose map controller - handle web platform issue
+    // On Web, the map might not be fully initialized when dispose is called
+    if (_mapController != null) {
+      try {
+        // Check if controller is still valid before disposing
+        // On Web, the controller might already be disposed by the map widget
+        _mapController!.dispose();
+      } catch (e) {
+        // Ignore errors during dispose (web platform may throw if map not fully initialized)
+        // This is expected behavior on Web when the map is disposed before controller is ready
+        debugPrint('Error disposing map controller (expected on Web): $e');
+      }
+    }
     super.dispose();
   }
 }

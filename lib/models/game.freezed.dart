@@ -23,11 +23,13 @@ mixin _$Game {
   String get gameId => throw _privateConstructorUsedError;
   String get createdBy => throw _privateConstructorUsedError;
   String get hubId => throw _privateConstructorUsedError;
+  String? get eventId =>
+      throw _privateConstructorUsedError; // ID of the event this game belongs to (if part of an event)
   @TimestampConverter()
   DateTime get gameDate => throw _privateConstructorUsedError;
   String? get location =>
       throw _privateConstructorUsedError; // Legacy text location (kept for backward compatibility)
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get locationPoint =>
       throw _privateConstructorUsedError; // New geographic location
   String? get geohash => throw _privateConstructorUsedError;
@@ -57,7 +59,21 @@ mixin _$Game {
       throw _privateConstructorUsedError; // Denormalized from users/{createdBy}.name
   String? get createdByPhotoUrl =>
       throw _privateConstructorUsedError; // Denormalized from users/{createdBy}.photoUrl
-  String? get hubName => throw _privateConstructorUsedError;
+  String? get hubName =>
+      throw _privateConstructorUsedError; // Denormalized from hubs/{hubId}.name (optional, for feed posts)
+// Teams and scores
+  List<Team> get teams =>
+      throw _privateConstructorUsedError; // List of teams created in TeamMaker
+  int? get teamAScore =>
+      throw _privateConstructorUsedError; // Score for team A (first team)
+  int? get teamBScore =>
+      throw _privateConstructorUsedError; // Score for team B (second team)
+// Game rules
+  int? get durationInMinutes =>
+      throw _privateConstructorUsedError; // Duration of the game in minutes
+  String? get gameEndCondition =>
+      throw _privateConstructorUsedError; // Condition for game end (e.g., "first to 5 goals", "time limit")
+  String? get region => throw _privateConstructorUsedError;
 
   /// Serializes this Game to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -77,9 +93,10 @@ abstract class $GameCopyWith<$Res> {
       {String gameId,
       String createdBy,
       String hubId,
+      String? eventId,
       @TimestampConverter() DateTime gameDate,
       String? location,
-      @GeoPointConverter() GeoPoint? locationPoint,
+      @NullableGeoPointConverter() GeoPoint? locationPoint,
       String? geohash,
       String? venueId,
       int teamCount,
@@ -93,7 +110,13 @@ abstract class $GameCopyWith<$Res> {
       @TimestampConverter() DateTime? recurrenceEndDate,
       String? createdByName,
       String? createdByPhotoUrl,
-      String? hubName});
+      String? hubName,
+      List<Team> teams,
+      int? teamAScore,
+      int? teamBScore,
+      int? durationInMinutes,
+      String? gameEndCondition,
+      String? region});
 }
 
 /// @nodoc
@@ -114,6 +137,7 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? gameId = null,
     Object? createdBy = null,
     Object? hubId = null,
+    Object? eventId = freezed,
     Object? gameDate = null,
     Object? location = freezed,
     Object? locationPoint = freezed,
@@ -131,6 +155,12 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? createdByName = freezed,
     Object? createdByPhotoUrl = freezed,
     Object? hubName = freezed,
+    Object? teams = null,
+    Object? teamAScore = freezed,
+    Object? teamBScore = freezed,
+    Object? durationInMinutes = freezed,
+    Object? gameEndCondition = freezed,
+    Object? region = freezed,
   }) {
     return _then(_value.copyWith(
       gameId: null == gameId
@@ -145,6 +175,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.hubId
           : hubId // ignore: cast_nullable_to_non_nullable
               as String,
+      eventId: freezed == eventId
+          ? _value.eventId
+          : eventId // ignore: cast_nullable_to_non_nullable
+              as String?,
       gameDate: null == gameDate
           ? _value.gameDate
           : gameDate // ignore: cast_nullable_to_non_nullable
@@ -213,6 +247,30 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.hubName
           : hubName // ignore: cast_nullable_to_non_nullable
               as String?,
+      teams: null == teams
+          ? _value.teams
+          : teams // ignore: cast_nullable_to_non_nullable
+              as List<Team>,
+      teamAScore: freezed == teamAScore
+          ? _value.teamAScore
+          : teamAScore // ignore: cast_nullable_to_non_nullable
+              as int?,
+      teamBScore: freezed == teamBScore
+          ? _value.teamBScore
+          : teamBScore // ignore: cast_nullable_to_non_nullable
+              as int?,
+      durationInMinutes: freezed == durationInMinutes
+          ? _value.durationInMinutes
+          : durationInMinutes // ignore: cast_nullable_to_non_nullable
+              as int?,
+      gameEndCondition: freezed == gameEndCondition
+          ? _value.gameEndCondition
+          : gameEndCondition // ignore: cast_nullable_to_non_nullable
+              as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -228,9 +286,10 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       {String gameId,
       String createdBy,
       String hubId,
+      String? eventId,
       @TimestampConverter() DateTime gameDate,
       String? location,
-      @GeoPointConverter() GeoPoint? locationPoint,
+      @NullableGeoPointConverter() GeoPoint? locationPoint,
       String? geohash,
       String? venueId,
       int teamCount,
@@ -244,7 +303,13 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       @TimestampConverter() DateTime? recurrenceEndDate,
       String? createdByName,
       String? createdByPhotoUrl,
-      String? hubName});
+      String? hubName,
+      List<Team> teams,
+      int? teamAScore,
+      int? teamBScore,
+      int? durationInMinutes,
+      String? gameEndCondition,
+      String? region});
 }
 
 /// @nodoc
@@ -262,6 +327,7 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? gameId = null,
     Object? createdBy = null,
     Object? hubId = null,
+    Object? eventId = freezed,
     Object? gameDate = null,
     Object? location = freezed,
     Object? locationPoint = freezed,
@@ -279,6 +345,12 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? createdByName = freezed,
     Object? createdByPhotoUrl = freezed,
     Object? hubName = freezed,
+    Object? teams = null,
+    Object? teamAScore = freezed,
+    Object? teamBScore = freezed,
+    Object? durationInMinutes = freezed,
+    Object? gameEndCondition = freezed,
+    Object? region = freezed,
   }) {
     return _then(_$GameImpl(
       gameId: null == gameId
@@ -293,6 +365,10 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.hubId
           : hubId // ignore: cast_nullable_to_non_nullable
               as String,
+      eventId: freezed == eventId
+          ? _value.eventId
+          : eventId // ignore: cast_nullable_to_non_nullable
+              as String?,
       gameDate: null == gameDate
           ? _value.gameDate
           : gameDate // ignore: cast_nullable_to_non_nullable
@@ -361,6 +437,30 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.hubName
           : hubName // ignore: cast_nullable_to_non_nullable
               as String?,
+      teams: null == teams
+          ? _value._teams
+          : teams // ignore: cast_nullable_to_non_nullable
+              as List<Team>,
+      teamAScore: freezed == teamAScore
+          ? _value.teamAScore
+          : teamAScore // ignore: cast_nullable_to_non_nullable
+              as int?,
+      teamBScore: freezed == teamBScore
+          ? _value.teamBScore
+          : teamBScore // ignore: cast_nullable_to_non_nullable
+              as int?,
+      durationInMinutes: freezed == durationInMinutes
+          ? _value.durationInMinutes
+          : durationInMinutes // ignore: cast_nullable_to_non_nullable
+              as int?,
+      gameEndCondition: freezed == gameEndCondition
+          ? _value.gameEndCondition
+          : gameEndCondition // ignore: cast_nullable_to_non_nullable
+              as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -372,9 +472,10 @@ class _$GameImpl implements _Game {
       {required this.gameId,
       required this.createdBy,
       required this.hubId,
+      this.eventId,
       @TimestampConverter() required this.gameDate,
       this.location,
-      @GeoPointConverter() this.locationPoint,
+      @NullableGeoPointConverter() this.locationPoint,
       this.geohash,
       this.venueId,
       this.teamCount = 2,
@@ -388,8 +489,15 @@ class _$GameImpl implements _Game {
       @TimestampConverter() this.recurrenceEndDate,
       this.createdByName,
       this.createdByPhotoUrl,
-      this.hubName})
-      : _photoUrls = photoUrls;
+      this.hubName,
+      final List<Team> teams = const [],
+      this.teamAScore,
+      this.teamBScore,
+      this.durationInMinutes,
+      this.gameEndCondition,
+      this.region})
+      : _photoUrls = photoUrls,
+        _teams = teams;
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameImplFromJson(json);
@@ -401,13 +509,16 @@ class _$GameImpl implements _Game {
   @override
   final String hubId;
   @override
+  final String? eventId;
+// ID of the event this game belongs to (if part of an event)
+  @override
   @TimestampConverter()
   final DateTime gameDate;
   @override
   final String? location;
 // Legacy text location (kept for backward compatibility)
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   final GeoPoint? locationPoint;
 // New geographic location
   @override
@@ -463,10 +574,39 @@ class _$GameImpl implements _Game {
 // Denormalized from users/{createdBy}.photoUrl
   @override
   final String? hubName;
+// Denormalized from hubs/{hubId}.name (optional, for feed posts)
+// Teams and scores
+  final List<Team> _teams;
+// Denormalized from hubs/{hubId}.name (optional, for feed posts)
+// Teams and scores
+  @override
+  @JsonKey()
+  List<Team> get teams {
+    if (_teams is EqualUnmodifiableListView) return _teams;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_teams);
+  }
+
+// List of teams created in TeamMaker
+  @override
+  final int? teamAScore;
+// Score for team A (first team)
+  @override
+  final int? teamBScore;
+// Score for team B (second team)
+// Game rules
+  @override
+  final int? durationInMinutes;
+// Duration of the game in minutes
+  @override
+  final String? gameEndCondition;
+// Condition for game end (e.g., "first to 5 goals", "time limit")
+  @override
+  final String? region;
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region)';
   }
 
   @override
@@ -478,6 +618,7 @@ class _$GameImpl implements _Game {
             (identical(other.createdBy, createdBy) ||
                 other.createdBy == createdBy) &&
             (identical(other.hubId, hubId) || other.hubId == hubId) &&
+            (identical(other.eventId, eventId) || other.eventId == eventId) &&
             (identical(other.gameDate, gameDate) ||
                 other.gameDate == gameDate) &&
             (identical(other.location, location) ||
@@ -507,7 +648,17 @@ class _$GameImpl implements _Game {
                 other.createdByName == createdByName) &&
             (identical(other.createdByPhotoUrl, createdByPhotoUrl) ||
                 other.createdByPhotoUrl == createdByPhotoUrl) &&
-            (identical(other.hubName, hubName) || other.hubName == hubName));
+            (identical(other.hubName, hubName) || other.hubName == hubName) &&
+            const DeepCollectionEquality().equals(other._teams, _teams) &&
+            (identical(other.teamAScore, teamAScore) ||
+                other.teamAScore == teamAScore) &&
+            (identical(other.teamBScore, teamBScore) ||
+                other.teamBScore == teamBScore) &&
+            (identical(other.durationInMinutes, durationInMinutes) ||
+                other.durationInMinutes == durationInMinutes) &&
+            (identical(other.gameEndCondition, gameEndCondition) ||
+                other.gameEndCondition == gameEndCondition) &&
+            (identical(other.region, region) || other.region == region));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -517,6 +668,7 @@ class _$GameImpl implements _Game {
         gameId,
         createdBy,
         hubId,
+        eventId,
         gameDate,
         location,
         locationPoint,
@@ -533,7 +685,13 @@ class _$GameImpl implements _Game {
         recurrenceEndDate,
         createdByName,
         createdByPhotoUrl,
-        hubName
+        hubName,
+        const DeepCollectionEquality().hash(_teams),
+        teamAScore,
+        teamBScore,
+        durationInMinutes,
+        gameEndCondition,
+        region
       ]);
 
   /// Create a copy of Game
@@ -557,9 +715,10 @@ abstract class _Game implements Game {
       {required final String gameId,
       required final String createdBy,
       required final String hubId,
+      final String? eventId,
       @TimestampConverter() required final DateTime gameDate,
       final String? location,
-      @GeoPointConverter() final GeoPoint? locationPoint,
+      @NullableGeoPointConverter() final GeoPoint? locationPoint,
       final String? geohash,
       final String? venueId,
       final int teamCount,
@@ -573,7 +732,13 @@ abstract class _Game implements Game {
       @TimestampConverter() final DateTime? recurrenceEndDate,
       final String? createdByName,
       final String? createdByPhotoUrl,
-      final String? hubName}) = _$GameImpl;
+      final String? hubName,
+      final List<Team> teams,
+      final int? teamAScore,
+      final int? teamBScore,
+      final int? durationInMinutes,
+      final String? gameEndCondition,
+      final String? region}) = _$GameImpl;
 
   factory _Game.fromJson(Map<String, dynamic> json) = _$GameImpl.fromJson;
 
@@ -584,13 +749,16 @@ abstract class _Game implements Game {
   @override
   String get hubId;
   @override
+  String?
+      get eventId; // ID of the event this game belongs to (if part of an event)
+  @override
   @TimestampConverter()
   DateTime get gameDate;
   @override
   String?
       get location; // Legacy text location (kept for backward compatibility)
   @override
-  @GeoPointConverter()
+  @NullableGeoPointConverter()
   GeoPoint? get locationPoint; // New geographic location
   @override
   String? get geohash;
@@ -626,7 +794,23 @@ abstract class _Game implements Game {
   @override
   String? get createdByPhotoUrl; // Denormalized from users/{createdBy}.photoUrl
   @override
-  String? get hubName;
+  String?
+      get hubName; // Denormalized from hubs/{hubId}.name (optional, for feed posts)
+// Teams and scores
+  @override
+  List<Team> get teams; // List of teams created in TeamMaker
+  @override
+  int? get teamAScore; // Score for team A (first team)
+  @override
+  int? get teamBScore; // Score for team B (second team)
+// Game rules
+  @override
+  int? get durationInMinutes; // Duration of the game in minutes
+  @override
+  String?
+      get gameEndCondition; // Condition for game end (e.g., "first to 5 goals", "time limit")
+  @override
+  String? get region;
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.

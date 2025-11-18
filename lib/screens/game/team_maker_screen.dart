@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/ui/team_builder/team_builder_page.dart';
+import 'package:kickadoor/ui/team_builder/team_builder_page_with_tabs.dart';
 
 /// Team maker screen
 class TeamMakerScreen extends ConsumerWidget {
@@ -46,6 +48,36 @@ class TeamMakerScreen extends ConsumerWidget {
           if (game == null) {
             return const Center(child: Text('משחק לא נמצא'));
           }
+
+          // Check admin permissions
+          final roleAsync = ref.watch(hubRoleProvider(game.hubId));
+          return roleAsync.when(
+            data: (role) {
+              if (role != UserRole.admin) {
+                return Scaffold(
+                  appBar: AppBar(
+                    title: const Text('יצירת קבוצות'),
+                  ),
+                  body: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock, size: 64, color: Colors.orange),
+                        SizedBox(height: 16),
+                        Text(
+                          'אין לך הרשאת ניהול למסך זה',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'רק מנהלי Hub יכולים ליצור קבוצות',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
           return StreamBuilder<List<GameSignup>>(
             stream: signupsStream,
@@ -91,12 +123,27 @@ class TeamMakerScreen extends ConsumerWidget {
                 );
               }
 
-              return TeamBuilderPage(
+              return TeamBuilderPageWithTabs(
                 gameId: gameId,
+                game: game,
                 teamCount: game.teamCount,
                 playerIds: confirmedPlayerIds,
+                signups: signups,
               );
             },
+          );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('שגיאה בבדיקת הרשאות: $error'),
+                ],
+              ),
+            ),
           );
         },
       ),

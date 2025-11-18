@@ -130,6 +130,37 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
     }
   }
 
+  Future<void> _generateComprehensiveData() async {
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'מתחיל ליצור נתונים מקיפים (20 שחקנים, 3 הובים, 15 משחקי עבר)...';
+    });
+
+    try {
+      final generator = DummyDataGenerator();
+      await generator.generateComprehensiveData();
+
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '✅ נתונים מקיפים נוצרו בהצלחה!\n• 20 שחקנים עם תמונות וסגנונות משחק\n• 3 הובים עם מנהלים\n• 15 משחקי עבר עם תוצאות וסטטיסטיקות';
+        });
+        SnackbarHelper.showSuccess(
+          context,
+          'נוצרו 20 שחקנים, 3 הובים, ו-15 משחקי עבר עם סטטיסטיקות!',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '❌ שגיאה: $e';
+        });
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FuturisticScaffold(
@@ -171,10 +202,56 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 32),
+            // Comprehensive data generation button (NEW - recommended)
+            Card(
+              color: Colors.blue.withValues(alpha: 0.1),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.blue[700]),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'מומלץ: נתונים מקיפים',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'יוצר 20 שחקנים, 3 הובים, 15 משחקי עבר עם תוצאות וסטטיסטיקות',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    GradientButton(
+                      label: 'צור נתונים מקיפים',
+                      icon: Icons.auto_awesome,
+                      onPressed: _isGenerating ? null : _generateComprehensiveData,
+                      isLoading: _isGenerating,
+                      width: double.infinity,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text(
+              'אפשרויות נוספות:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
             // Generate button
             GradientButton(
-              label: 'צור נתוני דמה',
-              icon: Icons.auto_awesome,
+              label: 'צור נתוני דמה (מותאם אישית)',
+              icon: Icons.tune,
               onPressed: _isGenerating ? null : _generateData,
               isLoading: _isGenerating,
             ),

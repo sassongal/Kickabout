@@ -22,7 +22,8 @@ PrivateMessage _$PrivateMessageFromJson(Map<String, dynamic> json) {
 mixin _$PrivateMessage {
   String get messageId => throw _privateConstructorUsedError;
   String get conversationId => throw _privateConstructorUsedError;
-  String get authorId => throw _privateConstructorUsedError;
+  String get senderId =>
+      throw _privateConstructorUsedError; // Note: Firestore uses 'senderId', not 'authorId'
   String get text => throw _privateConstructorUsedError;
   bool get read => throw _privateConstructorUsedError;
   @TimestampConverter()
@@ -47,7 +48,7 @@ abstract class $PrivateMessageCopyWith<$Res> {
   $Res call(
       {String messageId,
       String conversationId,
-      String authorId,
+      String senderId,
       String text,
       bool read,
       @TimestampConverter() DateTime createdAt});
@@ -70,7 +71,7 @@ class _$PrivateMessageCopyWithImpl<$Res, $Val extends PrivateMessage>
   $Res call({
     Object? messageId = null,
     Object? conversationId = null,
-    Object? authorId = null,
+    Object? senderId = null,
     Object? text = null,
     Object? read = null,
     Object? createdAt = null,
@@ -84,9 +85,9 @@ class _$PrivateMessageCopyWithImpl<$Res, $Val extends PrivateMessage>
           ? _value.conversationId
           : conversationId // ignore: cast_nullable_to_non_nullable
               as String,
-      authorId: null == authorId
-          ? _value.authorId
-          : authorId // ignore: cast_nullable_to_non_nullable
+      senderId: null == senderId
+          ? _value.senderId
+          : senderId // ignore: cast_nullable_to_non_nullable
               as String,
       text: null == text
           ? _value.text
@@ -115,7 +116,7 @@ abstract class _$$PrivateMessageImplCopyWith<$Res>
   $Res call(
       {String messageId,
       String conversationId,
-      String authorId,
+      String senderId,
       String text,
       bool read,
       @TimestampConverter() DateTime createdAt});
@@ -136,7 +137,7 @@ class __$$PrivateMessageImplCopyWithImpl<$Res>
   $Res call({
     Object? messageId = null,
     Object? conversationId = null,
-    Object? authorId = null,
+    Object? senderId = null,
     Object? text = null,
     Object? read = null,
     Object? createdAt = null,
@@ -150,9 +151,9 @@ class __$$PrivateMessageImplCopyWithImpl<$Res>
           ? _value.conversationId
           : conversationId // ignore: cast_nullable_to_non_nullable
               as String,
-      authorId: null == authorId
-          ? _value.authorId
-          : authorId // ignore: cast_nullable_to_non_nullable
+      senderId: null == senderId
+          ? _value.senderId
+          : senderId // ignore: cast_nullable_to_non_nullable
               as String,
       text: null == text
           ? _value.text
@@ -176,7 +177,7 @@ class _$PrivateMessageImpl implements _PrivateMessage {
   const _$PrivateMessageImpl(
       {required this.messageId,
       required this.conversationId,
-      required this.authorId,
+      required this.senderId,
       required this.text,
       this.read = false,
       @TimestampConverter() required this.createdAt});
@@ -189,7 +190,8 @@ class _$PrivateMessageImpl implements _PrivateMessage {
   @override
   final String conversationId;
   @override
-  final String authorId;
+  final String senderId;
+// Note: Firestore uses 'senderId', not 'authorId'
   @override
   final String text;
   @override
@@ -201,7 +203,7 @@ class _$PrivateMessageImpl implements _PrivateMessage {
 
   @override
   String toString() {
-    return 'PrivateMessage(messageId: $messageId, conversationId: $conversationId, authorId: $authorId, text: $text, read: $read, createdAt: $createdAt)';
+    return 'PrivateMessage(messageId: $messageId, conversationId: $conversationId, senderId: $senderId, text: $text, read: $read, createdAt: $createdAt)';
   }
 
   @override
@@ -213,8 +215,8 @@ class _$PrivateMessageImpl implements _PrivateMessage {
                 other.messageId == messageId) &&
             (identical(other.conversationId, conversationId) ||
                 other.conversationId == conversationId) &&
-            (identical(other.authorId, authorId) ||
-                other.authorId == authorId) &&
+            (identical(other.senderId, senderId) ||
+                other.senderId == senderId) &&
             (identical(other.text, text) || other.text == text) &&
             (identical(other.read, read) || other.read == read) &&
             (identical(other.createdAt, createdAt) ||
@@ -224,7 +226,7 @@ class _$PrivateMessageImpl implements _PrivateMessage {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
-      runtimeType, messageId, conversationId, authorId, text, read, createdAt);
+      runtimeType, messageId, conversationId, senderId, text, read, createdAt);
 
   /// Create a copy of PrivateMessage
   /// with the given fields replaced by the non-null parameter values.
@@ -247,7 +249,7 @@ abstract class _PrivateMessage implements PrivateMessage {
   const factory _PrivateMessage(
           {required final String messageId,
           required final String conversationId,
-          required final String authorId,
+          required final String senderId,
           required final String text,
           final bool read,
           @TimestampConverter() required final DateTime createdAt}) =
@@ -261,7 +263,7 @@ abstract class _PrivateMessage implements PrivateMessage {
   @override
   String get conversationId;
   @override
-  String get authorId;
+  String get senderId; // Note: Firestore uses 'senderId', not 'authorId'
   @override
   String get text;
   @override
@@ -285,7 +287,8 @@ Conversation _$ConversationFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$Conversation {
   String get conversationId => throw _privateConstructorUsedError;
-  List<String> get participants => throw _privateConstructorUsedError;
+  List<String> get participantIds =>
+      throw _privateConstructorUsedError; // Note: Firestore uses 'participantIds', not 'participants'
   String? get lastMessage => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime? get lastMessageAt => throw _privateConstructorUsedError;
@@ -309,7 +312,7 @@ abstract class $ConversationCopyWith<$Res> {
   @useResult
   $Res call(
       {String conversationId,
-      List<String> participants,
+      List<String> participantIds,
       String? lastMessage,
       @TimestampConverter() DateTime? lastMessageAt,
       Map<String, int> unreadCount});
@@ -331,7 +334,7 @@ class _$ConversationCopyWithImpl<$Res, $Val extends Conversation>
   @override
   $Res call({
     Object? conversationId = null,
-    Object? participants = null,
+    Object? participantIds = null,
     Object? lastMessage = freezed,
     Object? lastMessageAt = freezed,
     Object? unreadCount = null,
@@ -341,9 +344,9 @@ class _$ConversationCopyWithImpl<$Res, $Val extends Conversation>
           ? _value.conversationId
           : conversationId // ignore: cast_nullable_to_non_nullable
               as String,
-      participants: null == participants
-          ? _value.participants
-          : participants // ignore: cast_nullable_to_non_nullable
+      participantIds: null == participantIds
+          ? _value.participantIds
+          : participantIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
       lastMessage: freezed == lastMessage
           ? _value.lastMessage
@@ -371,7 +374,7 @@ abstract class _$$ConversationImplCopyWith<$Res>
   @useResult
   $Res call(
       {String conversationId,
-      List<String> participants,
+      List<String> participantIds,
       String? lastMessage,
       @TimestampConverter() DateTime? lastMessageAt,
       Map<String, int> unreadCount});
@@ -391,7 +394,7 @@ class __$$ConversationImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? conversationId = null,
-    Object? participants = null,
+    Object? participantIds = null,
     Object? lastMessage = freezed,
     Object? lastMessageAt = freezed,
     Object? unreadCount = null,
@@ -401,9 +404,9 @@ class __$$ConversationImplCopyWithImpl<$Res>
           ? _value.conversationId
           : conversationId // ignore: cast_nullable_to_non_nullable
               as String,
-      participants: null == participants
-          ? _value._participants
-          : participants // ignore: cast_nullable_to_non_nullable
+      participantIds: null == participantIds
+          ? _value._participantIds
+          : participantIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
       lastMessage: freezed == lastMessage
           ? _value.lastMessage
@@ -426,11 +429,11 @@ class __$$ConversationImplCopyWithImpl<$Res>
 class _$ConversationImpl implements _Conversation {
   const _$ConversationImpl(
       {required this.conversationId,
-      required final List<String> participants,
+      required final List<String> participantIds,
       this.lastMessage,
       @TimestampConverter() this.lastMessageAt,
       final Map<String, int> unreadCount = const {}})
-      : _participants = participants,
+      : _participantIds = participantIds,
         _unreadCount = unreadCount;
 
   factory _$ConversationImpl.fromJson(Map<String, dynamic> json) =>
@@ -438,14 +441,15 @@ class _$ConversationImpl implements _Conversation {
 
   @override
   final String conversationId;
-  final List<String> _participants;
+  final List<String> _participantIds;
   @override
-  List<String> get participants {
-    if (_participants is EqualUnmodifiableListView) return _participants;
+  List<String> get participantIds {
+    if (_participantIds is EqualUnmodifiableListView) return _participantIds;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_participants);
+    return EqualUnmodifiableListView(_participantIds);
   }
 
+// Note: Firestore uses 'participantIds', not 'participants'
   @override
   final String? lastMessage;
   @override
@@ -462,7 +466,7 @@ class _$ConversationImpl implements _Conversation {
 
   @override
   String toString() {
-    return 'Conversation(conversationId: $conversationId, participants: $participants, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, unreadCount: $unreadCount)';
+    return 'Conversation(conversationId: $conversationId, participantIds: $participantIds, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, unreadCount: $unreadCount)';
   }
 
   @override
@@ -473,7 +477,7 @@ class _$ConversationImpl implements _Conversation {
             (identical(other.conversationId, conversationId) ||
                 other.conversationId == conversationId) &&
             const DeepCollectionEquality()
-                .equals(other._participants, _participants) &&
+                .equals(other._participantIds, _participantIds) &&
             (identical(other.lastMessage, lastMessage) ||
                 other.lastMessage == lastMessage) &&
             (identical(other.lastMessageAt, lastMessageAt) ||
@@ -487,7 +491,7 @@ class _$ConversationImpl implements _Conversation {
   int get hashCode => Object.hash(
       runtimeType,
       conversationId,
-      const DeepCollectionEquality().hash(_participants),
+      const DeepCollectionEquality().hash(_participantIds),
       lastMessage,
       lastMessageAt,
       const DeepCollectionEquality().hash(_unreadCount));
@@ -511,7 +515,7 @@ class _$ConversationImpl implements _Conversation {
 abstract class _Conversation implements Conversation {
   const factory _Conversation(
       {required final String conversationId,
-      required final List<String> participants,
+      required final List<String> participantIds,
       final String? lastMessage,
       @TimestampConverter() final DateTime? lastMessageAt,
       final Map<String, int> unreadCount}) = _$ConversationImpl;
@@ -522,7 +526,8 @@ abstract class _Conversation implements Conversation {
   @override
   String get conversationId;
   @override
-  List<String> get participants;
+  List<String>
+      get participantIds; // Note: Firestore uses 'participantIds', not 'participants'
   @override
   String? get lastMessage;
   @override

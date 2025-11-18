@@ -17,6 +17,8 @@ _$NotificationImpl _$$NotificationImplFromJson(Map<String, dynamic> json) =>
       read: json['read'] as bool? ?? false,
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
+      entityId: json['entityId'] as String?,
+      hubId: json['hubId'] as String?,
     );
 
 Map<String, dynamic> _$$NotificationImplToJson(_$NotificationImpl instance) =>
@@ -29,4 +31,6 @@ Map<String, dynamic> _$$NotificationImplToJson(_$NotificationImpl instance) =>
       'data': instance.data,
       'read': instance.read,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
+      'entityId': instance.entityId,
+      'hubId': instance.hubId,
     };

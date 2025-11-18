@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Futuristic Bottom Navigation Bar
@@ -16,66 +15,62 @@ class FuturisticBottomNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUserId = ref.watch(currentUserIdProvider);
-
+    // Figma design: White bottom nav with border-top, icons with labels
     return Container(
       decoration: BoxDecoration(
         color: FuturisticColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+        border: Border(
+          top: BorderSide(
+            color: FuturisticColors.surfaceVariant,
+            width: 1,
           ),
-        ],
+        ),
       ),
       child: SafeArea(
-        child: Container(
+        child: SizedBox(
           height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                label: 'בית',
-                route: '/',
-                currentRoute: currentRoute,
-                onTap: () => context.go('/'),
-              ),
-              _NavItem(
-                icon: Icons.sports_soccer_rounded,
-                label: 'משחקים',
-                route: '/games',
-                currentRoute: currentRoute,
-                onTap: () => context.go('/games'),
-              ),
-              _NavItem(
-                icon: Icons.location_on_rounded,
-                label: 'מפה',
-                route: '/map',
-                currentRoute: currentRoute,
-                onTap: () => context.go('/map'),
-              ),
-              _NavItem(
-                icon: Icons.group_rounded,
-                label: 'קהילות',
-                route: '/hubs-board',
-                currentRoute: currentRoute,
-                onTap: () => context.go('/hubs-board'),
-              ),
-              _NavItem(
-                icon: Icons.person_rounded,
-                label: 'פרופיל',
-                route: '/profile',
-                currentRoute: currentRoute,
-                onTap: () {
-                  if (currentUserId != null) {
-                    context.go('/profile/$currentUserId');
-                  }
-                },
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _NavItem(
+                  icon: Icons.home_rounded,
+                  label: 'בית',
+                  route: '/',
+                  currentRoute: currentRoute,
+                  onTap: () => context.go('/'),
+                ),
+                _NavItem(
+                  icon: Icons.calendar_today_rounded,
+                  label: 'משחקים',
+                  route: '/games',
+                  currentRoute: currentRoute,
+                  onTap: () => context.go('/games'),
+                ),
+                _NavItem(
+                  icon: Icons.message_rounded,
+                  label: 'פיד',
+                  route: '/feed',
+                  currentRoute: currentRoute,
+                  onTap: () => context.go('/feed'),
+                ),
+                _NavItem(
+                  icon: Icons.group_rounded,
+                  label: 'HUBS',
+                  route: '/hubs-board',
+                  currentRoute: currentRoute,
+                  onTap: () => context.go('/hubs-board'),
+                ),
+                _NavItem(
+                  icon: Icons.map_rounded,
+                  label: 'מפה',
+                  route: '/map',
+                  currentRoute: currentRoute,
+                  onTap: () => context.go('/map'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -121,9 +116,10 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
@@ -136,12 +132,14 @@ class _NavItem extends StatelessWidget {
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
                   color: isActive
                       ? FuturisticColors.primary
                       : FuturisticColors.textSecondary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

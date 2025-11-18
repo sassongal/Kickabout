@@ -13,28 +13,43 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    // פונקציית עזר לבדיקת הרשאת מנהל בהאב
+    // בודק אם המשתמש הוא admin (roles[uid] == 'admin') או manager או היוצר
+    function isHubAdmin(hubId) {
+      return isAuthenticated() && 
+        (
+          // For reads, check resource.data
+          (resource != null && resource.data.createdBy == request.auth.uid) ||
+          (resource != null && resource.data.roles[request.auth.uid] in ['admin', 'manager']) ||
+          // For writes, check request.resource.data
+          (request.resource != null && request.resource.data.createdBy == request.auth.uid) ||
+          (request.resource != null && request.resource.data.roles[request.auth.uid] in ['admin', 'manager']) ||
+          // Fallback: check hub document directly
+          (exists(/databases/$(database)/documents/hubs/$(hubId)) &&
+           (get(/databases/$(database)/documents/hubs/$(hubId)).data.createdBy == request.auth.uid ||
+            get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] in ['admin', 'manager']))
+        );
+    }
+    
+    // פונקציה לבדיקת חברות בהאב
     function isHubMember(hubId) {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/hubs/$(hubId)) &&
         request.auth.uid in get(/databases/$(database)/documents/hubs/$(hubId)).data.memberIds;
     }
     
+    // Helper to check if user is hub manager (kept for backward compatibility)
     function isHubManager(hubId) {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/hubs/$(hubId)) &&
-        (
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.createdBy == request.auth.uid ||
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] == 'manager'
-        );
+      return isHubAdmin(hubId);
     }
     
+    // פונקציה לבדיקת הרשאת "מנהל" (יוצר, מנהל, או מודרטור)
     function isHubModerator(hubId) {
+      let hubData = get(/databases/$(database)/documents/hubs/$(hubId)).data;
       return isAuthenticated() && 
-        exists(/databases/$(database)/documents/hubs/$(hubId)) &&
         (
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.createdBy == request.auth.uid ||
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] == 'manager' ||
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] == 'moderator'
+          hubData.createdBy == request.auth.uid ||
+          (hubData.roles != null && hubData.roles[request.auth.uid] in ['manager', 'moderator', 'admin'])
         );
     }
     
@@ -78,8 +93,10 @@ service cloud.firestore {
       
       // Gamification: /users/{userId}/gamification/{doc}
       match /gamification/{doc} {
+        // Anyone authenticated can read gamification data
         allow read: if isAuthenticated();
-        allow write: if false; // Only server-side updates (Cloud Functions)
+        // Only server-side updates (Cloud Functions)
+        allow write: if false;
       }
     }
 
@@ -87,35 +104,25 @@ service cloud.firestore {
     // Hubs Collection: /hubs/{hubId}
     // ============================================
     match /hubs/{hubId} {
-      // Anyone authenticated can read hubs
-      allow read: if isAuthenticated();
+      // כל אחד יכול לקרוא נתוני האב (כדי לראות במפה/רשימות)
+      allow read: if true;
       
-      // Anyone authenticated can create a hub
-      allow create: if isAuthenticated() &&
+      // כל משתמש מחובר יכול ליצור האב חדש
+      allow create: if request.auth != null &&
         // Validate required fields
         request.resource.data.keys().hasAll(['hubId', 'name', 'createdBy', 'createdAt']) &&
         request.resource.data.hubId == hubId &&
         request.resource.data.createdBy == request.auth.uid &&
         request.resource.data.createdAt is timestamp &&
-        // Validate memberIds array
+        // Validate memberIds array (creator must be in memberIds)
         request.resource.data.memberIds is list &&
         request.auth.uid in request.resource.data.memberIds;
       
-      // Only managers can update hub details
-      // Moderators can only update memberIds and roles
-      allow update: if isAuthenticated() && (
-        isHubManager(hubId) ||
-        (
-          isHubModerator(hubId) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'roles'])
-        )
-      ) &&
+      // רק מנהל (כולל מודרטור) יכול לעדכן או למחוק
+      allow update, delete: if isHubModerator(hubId) &&
         // Prevent changing hubId or createdBy
         request.resource.data.hubId == resource.data.hubId &&
         request.resource.data.createdBy == resource.data.createdBy;
-      
-      // Only managers can delete hubs
-      allow delete: if isAuthenticated() && isHubManager(hubId);
       
       // Feed Posts: /hubs/{hubId}/feed/posts/items/{postId}
       match /feed/posts/items/{postId} {
@@ -132,7 +139,17 @@ service cloud.firestore {
           request.resource.data.createdAt is timestamp;
         
         // Only post author or moderators can update/delete
-        allow update, delete: if isAuthenticated() && isHubMember(hubId) && (
+        allow update: if isAuthenticated() && isHubMember(hubId) && (
+          resource.data.authorId == request.auth.uid ||
+          isHubModerator(hubId)
+        ) &&
+        // Prevent changing immutable fields
+        request.resource.data.postId == resource.data.postId &&
+        request.resource.data.hubId == resource.data.hubId &&
+        request.resource.data.authorId == resource.data.authorId &&
+        request.resource.data.createdAt == resource.data.createdAt;
+        
+        allow delete: if isAuthenticated() && isHubMember(hubId) && (
           resource.data.authorId == request.auth.uid ||
           isHubModerator(hubId)
         );
@@ -150,29 +167,93 @@ service cloud.firestore {
             request.resource.data.authorId == request.auth.uid &&
             request.resource.data.createdAt is timestamp;
           
-          allow update, delete: if isAuthenticated() && isHubMember(hubId) && (
+          allow update: if isAuthenticated() && isHubMember(hubId) && (
+            resource.data.authorId == request.auth.uid ||
+            isHubModerator(hubId)
+          ) &&
+          // Prevent changing immutable fields
+          request.resource.data.commentId == resource.data.commentId &&
+          request.resource.data.postId == resource.data.postId &&
+          request.resource.data.hubId == resource.data.hubId &&
+          request.resource.data.authorId == resource.data.authorId &&
+          request.resource.data.createdAt == resource.data.createdAt;
+          
+          allow delete: if isAuthenticated() && isHubMember(hubId) && (
             resource.data.authorId == request.auth.uid ||
             isHubModerator(hubId)
           );
         }
       }
       
-      // Chat Messages: /hubs/{hubId}/chat/messages/{messageId}
-      match /chat/messages/{messageId} {
+      // Chat Messages: /hubs/{hubId}/chat/{messageId} (legacy path)
+      match /chat/{messageId} {
         allow read: if isAuthenticated() && isHubMember(hubId);
         
         allow create: if isAuthenticated() && isHubMember(hubId) &&
           // Validate required fields
-          request.resource.data.keys().hasAll(['messageId', 'hubId', 'authorId', 'text', 'createdAt']) &&
-          request.resource.data.messageId == messageId &&
+          request.resource.data.keys().hasAll(['hubId', 'authorId', 'text', 'createdAt']) &&
           request.resource.data.hubId == hubId &&
           request.resource.data.authorId == request.auth.uid &&
           request.resource.data.createdAt is timestamp;
         
         allow update, delete: if isAuthenticated() && isHubMember(hubId) && (
           resource.data.authorId == request.auth.uid ||
+          isHubAdmin(hubId)
+        );
+      }
+      
+      // Hub Chat Messages: /hubs/{hubId}/chatMessages/{messageId}
+      match /chatMessages/{messageId} {
+        // רק חברי ההאב יכולים לקרוא
+        allow read: if isHubMember(hubId);
+        
+        // רק חברי ההאב יכולים לכתוב (ורק בשם עצמם)
+        allow create: if isHubMember(hubId) && 
+          request.resource.data.authorId == request.auth.uid &&
+          // Validate required fields
+          request.resource.data.keys().hasAll(['hubId', 'authorId', 'text', 'createdAt']) &&
+          request.resource.data.hubId == hubId &&
+          request.resource.data.createdAt is timestamp;
+        
+        // Only sender or moderator can update/delete
+        allow update: if isHubMember(hubId) && (
+          resource.data.authorId == request.auth.uid ||
+          isHubModerator(hubId)
+        ) &&
+        // Prevent changing immutable fields
+        request.resource.data.messageId == resource.data.messageId &&
+        request.resource.data.hubId == resource.data.hubId &&
+        request.resource.data.authorId == resource.data.authorId &&
+        request.resource.data.createdAt == resource.data.createdAt;
+        
+        allow delete: if isHubMember(hubId) && (
+          resource.data.authorId == request.auth.uid ||
           isHubModerator(hubId)
         );
+      }
+      
+      // Hub Events: /hubs/{hubId}/events/{eventId}
+      match /events/{eventId} {
+        // Only hub members can read events
+        allow read: if isAuthenticated() && isHubMember(hubId);
+        
+        // Only hub managers can create events
+        allow create: if isAuthenticated() && isHubManager(hubId) &&
+          // Validate required fields
+          request.resource.data.keys().hasAll(['eventId', 'hubId', 'createdBy', 'title', 'eventDate', 'createdAt', 'updatedAt']) &&
+          request.resource.data.eventId == eventId &&
+          request.resource.data.hubId == hubId &&
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.eventDate is timestamp &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.updatedAt is timestamp;
+        
+        // Only hub managers can update/delete events
+        allow update, delete: if isAuthenticated() && isHubManager(hubId) &&
+          // Prevent changing eventId, hubId, or createdBy
+          request.resource.data.eventId == resource.data.eventId &&
+          request.resource.data.hubId == resource.data.hubId &&
+          request.resource.data.createdBy == resource.data.createdBy;
       }
     }
 
@@ -180,26 +261,21 @@ service cloud.firestore {
     // Games Collection: /games/{gameId}
     // ============================================
     match /games/{gameId} {
-      // Anyone authenticated can read games
-      allow read: if isAuthenticated();
+      // כל אחד יכול לקרוא פרטי משחק (כדי להירשם)
+      allow read: if true;
       
-      // Only hub members can create games
-      allow create: if isAuthenticated() &&
+      // רק מנהל (מודרטור ומעלה) יכול ליצור משחק
+      allow create: if isHubModerator(request.resource.data.hubId) &&
         // Validate required fields
         request.resource.data.keys().hasAll(['gameId', 'createdBy', 'hubId', 'gameDate', 'createdAt', 'updatedAt']) &&
         request.resource.data.gameId == gameId &&
         request.resource.data.createdBy == request.auth.uid &&
         request.resource.data.gameDate is timestamp &&
         request.resource.data.createdAt is timestamp &&
-        request.resource.data.updatedAt is timestamp &&
-        // Must be a member of the hub
-        isHubMember(request.resource.data.hubId);
+        request.resource.data.updatedAt is timestamp;
       
-      // Only game creator or hub manager can update
-      allow update: if isAuthenticated() && (
-        resource.data.createdBy == request.auth.uid ||
-        isHubManager(resource.data.hubId)
-      ) &&
+      // רק מנהל יכול לעדכן (תוצאה, סטטוס) או למחוק
+      allow update, delete: if isHubModerator(resource.data.hubId) &&
         // Prevent changing gameId, createdBy, or hubId
         request.resource.data.gameId == resource.data.gameId &&
         request.resource.data.createdBy == resource.data.createdBy &&
@@ -207,31 +283,47 @@ service cloud.firestore {
         // updatedAt must be updated
         request.resource.data.updatedAt is timestamp;
       
-      // Only game creator or hub manager can delete
-      allow delete: if isAuthenticated() && (
-        resource.data.createdBy == request.auth.uid ||
-        isHubManager(resource.data.hubId)
-      );
-      
       // Signups: /games/{gameId}/signups/{userId}
       match /signups/{userId} {
         allow read: if isAuthenticated();
         
-        // Users can only create/update their own signup
-        allow create: if isAuthenticated() && isOwner(userId) &&
+        // כל משתמש יכול לרשום/למחוק רק את עצמו
+        allow create, delete: if isOwner(userId) &&
+          // Validate required fields for create
+          (request.method == 'delete' || (
+            request.resource.data.keys().hasAll(['playerId', 'signedUpAt']) &&
+            request.resource.data.playerId == userId &&
+            request.resource.data.signedUpAt is timestamp
+          ));
+        
+        // מנהל יכול לעדכן הרשמה (למשל לאשר)
+        allow update: if isOwner(userId) || isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId);
+      }
+      
+      // Game Chat Messages: /games/{gameId}/chatMessages/{messageId}
+      match /chatMessages/{messageId} {
+        // רק מי שרשום למשחק יכול לקרוא
+        // Also verify game exists
+        allow read: if isAuthenticated() &&
+          exists(/databases/$(database)/documents/games/$(gameId)) &&
+          exists(/databases/$(database)/documents/games/$(gameId)/signups/$(request.auth.uid));
+        
+        // רק מי שרשום למשחק יכול לכתוב
+        allow create: if isAuthenticated() &&
+          exists(/databases/$(database)/documents/games/$(gameId)) &&
+          exists(/databases/$(database)/documents/games/$(gameId)/signups/$(request.auth.uid)) &&
+          request.resource.data.senderId == request.auth.uid &&
           // Validate required fields
-          request.resource.data.keys().hasAll(['playerId', 'signedUpAt']) &&
-          request.resource.data.playerId == userId &&
-          request.resource.data.signedUpAt is timestamp;
+          request.resource.data.keys().hasAll(['gameId', 'senderId', 'text', 'createdAt']) &&
+          request.resource.data.gameId == gameId &&
+          request.resource.data.createdAt is timestamp;
         
-        allow update: if isAuthenticated() && (
-          isOwner(userId) ||
-          isHubManager(resource.data.hubId)
-        );
-        
+        // Only sender or moderator can update/delete
+        // Messages are effectively immutable (only delete allowed)
+        allow update: if false; // Messages should not be updated
         allow delete: if isAuthenticated() && (
-          isOwner(userId) ||
-          isHubManager(resource.data.hubId)
+          resource.data.senderId == request.auth.uid ||
+          isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
         );
       }
       
@@ -239,23 +331,16 @@ service cloud.firestore {
       match /teams/{teamId} {
         allow read: if isAuthenticated();
         
-        // Only game creator or hub manager can manage teams
-        allow write: if isAuthenticated() && (
-          get(/databases/$(database)/documents/games/$(gameId)).data.createdBy == request.auth.uid ||
-          isHubManager(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
-        );
+        // רק מנהל יכול לכתוב/למחוק קבוצות
+        allow write: if isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId);
       }
       
-      // Events: /games/{gameId}/events/{eventId}
+      // Game Events: /games/{gameId}/events/{eventId} (סטטיסטיקות - שערים, בישולים)
       match /events/{eventId} {
         allow read: if isAuthenticated();
         
-        allow create: if isAuthenticated();
-        
-        allow update, delete: if isAuthenticated() && (
-          resource.data.playerId == request.auth.uid ||
-          isHubManager(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
-        );
+        // רק מנהל יכול לתעד אירועי משחק
+        allow create, update, delete: if isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId);
       }
     }
 
@@ -280,17 +365,30 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Notifications Collection: /notifications/{notificationId}
+    // Notifications Collection: /notifications/{userId}/items/{notificationId}
     // ============================================
-    match /notifications/{notificationId} {
+    match /notifications/{userId}/items/{notificationId} {
       // Users can only read their own notifications
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && userId == request.auth.uid;
       
-      // Only server can create notifications
-      allow create: if false;
+      // Allow clients to create notifications for themselves (Cloud Functions also create them)
+      // This is needed because push_notification_integration_service creates notifications
+      allow create: if isAuthenticated() && 
+        userId == request.auth.uid &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['userId', 'type', 'title', 'body', 'read', 'createdAt']) &&
+        request.resource.data.userId == userId &&
+        request.resource.data.read == false &&
+        request.resource.data.createdAt is timestamp;
       
       // Users can only update/delete their own notifications
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && userId == request.auth.uid &&
+        // Prevent changing userId, type, createdAt
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.type == resource.data.type &&
+        request.resource.data.createdAt == resource.data.createdAt;
+      
+      allow delete: if isAuthenticated() && userId == request.auth.uid;
     }
 
     // ============================================
@@ -340,29 +438,37 @@ service cloud.firestore {
     // Venues Collection: /venues/{venueId}
     // ============================================
     match /venues/{venueId} {
-      // Anyone authenticated can read venues
       allow read: if isAuthenticated();
       
-      // Only hub managers can create venues
+      // מאפשר לכל משתמש מחובר ליצור מגרש (עבור "יצירה ידנית")
+      // ומוודא שרק מנהל יכול לקשר מגרש ישירות להאב שלו
       allow create: if isAuthenticated() &&
         // Validate required fields
-        request.resource.data.keys().hasAll(['venueId', 'hubId', 'name', 'location', 'createdAt', 'updatedAt']) &&
-        request.resource.data.venueId == venueId &&
-        request.resource.data.location is geopoint &&
+        request.resource.data.name != null &&
+        request.resource.data.location is latlng &&
         request.resource.data.createdAt is timestamp &&
         request.resource.data.updatedAt is timestamp &&
-        // Must be manager of the hub
-        isHubManager(request.resource.data.hubId);
+        // If hubId is provided, user must be hub moderator
+        (request.resource.data.hubId == null || isHubModerator(request.resource.data.hubId));
       
-      // Only hub managers can update/delete venues
-      allow update: if isAuthenticated() && isHubManager(resource.data.hubId) &&
+      // רק מנהל יכול לעדכן/למחוק מגרש
+      allow update: if isHubModerator(resource.data.hubId) &&
         // Prevent changing venueId or hubId
         request.resource.data.venueId == resource.data.venueId &&
-        request.resource.data.hubId == resource.data.hubId &&
-        // updatedAt must be updated
-        request.resource.data.updatedAt is timestamp;
+        (resource.data.hubId == null || request.resource.data.hubId == resource.data.hubId);
       
-      allow delete: if isAuthenticated() && isHubManager(resource.data.hubId);
+      allow delete: if resource.data.hubId == null || isHubModerator(resource.data.hubId);
+    }
+    
+    // ============================================
+    // Feed Posts (פיד אזורי אוטומטי)
+    // ============================================
+    match /feedPosts/{postId} {
+      // כל משתמש מחובר יכול לקרוא את הפיד
+      allow read: if isAuthenticated();
+      
+      // רק השרת (פונקציות ענן) יכול ליצור פוסטים אוטומטיים
+      allow write: if false;
     }
   }
 }

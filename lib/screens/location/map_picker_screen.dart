@@ -137,105 +137,125 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen> {
 
     return AppScaffold(
       title: 'בחר מיקום',
-      body: Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: initialCameraPosition,
-            onMapCreated: _onMapCreated,
-            onTap: _onMapTap,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            markers: _selectedLocation != null
-                ? {
-                    Marker(
-                      markerId: const MarkerId('selected'),
-                      position: _selectedLocation!,
-                      draggable: true,
-                      onDragEnd: (newPosition) {
-                        setState(() {
-                          _selectedLocation = newPosition;
-                        });
-                        _updateAddress();
-                      },
-                    ),
-                  }
-                : {},
-          ),
-          // Address display
-          Positioned(
-            bottom: 16,
-            left: 16,
-            right: 16,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'מיקום נבחר:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_isLoadingAddress)
-                      const Row(
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: GoogleMap(
+                  initialCameraPosition: initialCameraPosition,
+                  onMapCreated: _onMapCreated,
+                  onTap: _onMapTap,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  markers: _selectedLocation != null
+                      ? {
+                          Marker(
+                            markerId: const MarkerId('selected'),
+                            position: _selectedLocation!,
+                            draggable: true,
+                            onDragEnd: (newPosition) {
+                              setState(() {
+                                _selectedLocation = newPosition;
+                              });
+                              _updateAddress();
+                            },
                           ),
-                          SizedBox(width: 8),
-                          Text('טוען כתובת...'),
-                        ],
-                      )
-                    else
-                      Text(
-                        _selectedAddress ?? 
-                        (_selectedLocation != null
-                            ? '${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}'
-                            : 'לא נבחר מיקום'),
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    Row(
+                        }
+                      : {},
+                ),
+              ),
+              // Address display
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('ביטול'),
+                        const Text(
+                          'מיקום נבחר:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _selectedLocation != null
-                                ? _confirmSelection
-                                : null,
-                            child: const Text('אישור'),
+                        const SizedBox(height: 8),
+                        if (_isLoadingAddress)
+                          const Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 8),
+                              Text('טוען כתובת...'),
+                            ],
+                          )
+                        else
+                          Text(
+                            _selectedAddress ?? 
+                            (_selectedLocation != null
+                                ? '${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}'
+                                : 'לא נבחר מיקום'),
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                            ),
                           ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('ביטול'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _selectedLocation != null
+                                    ? _confirmSelection
+                                    : null,
+                                child: const Text('אישור'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 
   @override
   void dispose() {
-    _mapController?.dispose();
+    // Safely dispose map controller - handle web platform issue
+    // On Web, the map might not be fully initialized when dispose is called
+    if (_mapController != null) {
+      try {
+        // Check if controller is still valid before disposing
+        // On Web, the controller might already be disposed by the map widget
+        _mapController!.dispose();
+      } catch (e) {
+        // Ignore errors during dispose (web platform may throw if map not fully initialized)
+        // This is expected behavior on Web when the map is disposed before controller is ready
+        debugPrint('Error disposing map controller (expected on Web): $e');
+      }
+    }
     super.dispose();
   }
 }

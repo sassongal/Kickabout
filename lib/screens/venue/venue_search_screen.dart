@@ -210,6 +210,35 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
     return FuturisticScaffold(
       title: widget.selectMode ? 'בחר מגרש' : 'חיפוש מגרשים',
       showBackButton: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add_location_alt),
+          tooltip: 'מגרש לא מופיע? הוסף ידנית',
+          onPressed: () async {
+            final result = await context.push('/venues/create');
+            // If a venue was created and we're in select mode, return it
+            if (result != null && widget.selectMode && widget.hubId != null) {
+              try {
+                final venuesRepo = ref.read(venuesRepositoryProvider);
+                final hubsRepo = ref.read(hubsRepositoryProvider);
+                final hub = await hubsRepo.getHub(widget.hubId!);
+                if (hub != null) {
+                  final updatedVenueIds = [...hub.venueIds, (result as dynamic).venueId];
+                  await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
+                }
+                if (context.mounted) {
+                  SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
+                  context.pop(true);
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
+                }
+              }
+            }
+          },
+        ),
+      ],
       body: Column(
         children: [
           // Search bar

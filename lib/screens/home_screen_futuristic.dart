@@ -20,6 +20,7 @@ import 'package:kickadoor/widgets/availability_toggle.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Futuristic Home Dashboard - Next-gen mobile experience
 class HomeScreenFuturistic extends ConsumerStatefulWidget {
@@ -124,8 +125,9 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                 return Stack(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.notifications_outlined),
-                      onPressed: () => context.push('/notifications'),
+                      icon: const Icon(Icons.inbox_outlined),
+                      onPressed: () => context.push('/messages'),
+                      tooltip: 'הודעות',
                     ),
                     if (count > 0)
                       Positioned(
@@ -260,24 +262,24 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                               ],
                             ),
                             const Divider(height: 24),
-                            // Availability toggle
+                            // Active status toggle
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'זמין למשחקים',
+                                  user.isActive ? 'פעיל - פתוח להאבים והזמנות' : 'לא פעיל - לא פתוח להאבים והזמנות',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     color: const Color(0xFF757575),
                                   ),
                                 ),
                                 Switch(
-                                  value: user.availabilityStatus == 'available',
+                                  value: user.isActive,
                                   onChanged: (value) {
-                                    // Update availability
+                                    // Update active status
                                     ref.read(usersRepositoryProvider).updateUser(
                                       currentUserId,
-                                      {'availabilityStatus': value ? 'available' : 'notAvailable'},
+                                      {'isActive': value},
                                     );
                                   },
                                 ),
@@ -466,7 +468,7 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                             title: 'אין שחקנים מומלצים כרגע',
                             message: 'נסה שוב מאוחר יותר או בדוק הובים קרובים',
                             action: ElevatedButton.icon(
-                              onPressed: () => context.push('/discover'),
+                              onPressed: () => context.push('/players'),
                               icon: const Icon(Icons.explore),
                               label: const Text('גלה שחקנים'),
                             ),
@@ -595,10 +597,16 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Upcoming Games
-                    _UpcomingGamesSection(
+                    // My Upcoming Games Section
+                    _MyUpcomingGamesSection(
                       currentUserId: currentUserId,
                       gamesRepo: gamesRepo,
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // My Hubs Section
+                    _MyHubsSection(
+                      currentUserId: currentUserId,
                       hubsRepo: hubsRepo,
                     ),
                     const SizedBox(height: 24),
@@ -714,21 +722,25 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
               )
             else
               Flexible(
-                child: ListView.builder(
-                  itemCount: hubs.length,
-                  itemBuilder: (context, index) {
-                    final hub = hubs[index];
-                    return ListTile(
-                      leading: const Icon(Icons.group),
-                      title: Text(hub.name),
-                      subtitle: Text('${hub.memberIds.length} חברים'),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/hubs/${hub.hubId}');
-                      },
-                    );
-                  },
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: hubs.length,
+                    itemBuilder: (context, index) {
+                      final hub = hubs[index];
+                      return ListTile(
+                        leading: const Icon(Icons.group),
+                        title: Text(hub.name),
+                        subtitle: Text('${hub.memberIds.length} חברים'),
+                        trailing: const Icon(Icons.chevron_left),
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/hubs/${hub.hubId}');
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
           ],
@@ -757,21 +769,25 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
               )
             else
               Flexible(
-                child: ListView.builder(
-                  itemCount: hubs.length,
-                  itemBuilder: (context, index) {
-                    final hub = hubs[index];
-                    return ListTile(
-                      leading: const Icon(Icons.people),
-                      title: Text(hub.name),
-                      subtitle: Text('${hub.memberIds.length} חברים'),
-                      trailing: const Icon(Icons.chevron_left),
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/hubs/${hub.hubId}');
-                      },
-                    );
-                  },
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: hubs.length,
+                    itemBuilder: (context, index) {
+                      final hub = hubs[index];
+                      return ListTile(
+                        leading: const Icon(Icons.people),
+                        title: Text(hub.name),
+                        subtitle: Text('${hub.memberIds.length} חברים'),
+                        trailing: const Icon(Icons.chevron_left),
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/hubs/${hub.hubId}');
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
           ],
@@ -781,14 +797,197 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
   }
 }
 
-class _UpcomingGamesSection extends ConsumerWidget {
+/// My Upcoming Games Section - shows games user is signed up for
+class _MyUpcomingGamesSection extends ConsumerWidget {
   final String currentUserId;
   final GamesRepository gamesRepo;
-  final HubsRepository hubsRepo;
 
-  const _UpcomingGamesSection({
+  const _MyUpcomingGamesSection({
     required this.currentUserId,
     required this.gamesRepo,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upcomingGamesStream = gamesRepo.streamMyUpcomingGames(currentUserId);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'המשחקים הבאים שלי',
+          style: FuturisticTypography.techHeadline,
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<Game>>(
+          stream: upcomingGamesStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 3,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: SkeletonLoader(height: 180, width: 280),
+                  ),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return FuturisticEmptyState(
+                icon: Icons.error_outline,
+                title: 'שגיאה בטעינת משחקים',
+                message: ErrorHandlerService().handleException(
+                  snapshot.error,
+                  context: 'Home screen - games loading',
+                ),
+              );
+            }
+
+            final games = snapshot.data ?? [];
+            if (games.isEmpty) {
+              return FuturisticEmptyState(
+                icon: Icons.sports_soccer_outlined,
+                title: 'אין משחקים קרובים',
+                message: 'כשיהיו משחקים, הם יופיעו כאן',
+                action: ElevatedButton.icon(
+                  onPressed: () => context.push('/games/create'),
+                  icon: const Icon(Icons.add),
+                  label: const Text('צור משחק'),
+                ),
+              );
+            }
+
+            return SizedBox(
+              height: 200,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: games.length,
+                itemBuilder: (context, index) {
+                  final game = games[index];
+                  return Container(
+                    width: 280,
+                    margin: const EdgeInsets.only(right: 12),
+                    child: FuturisticCard(
+                      onTap: () => context.push('/games/${game.gameId}'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  gradient: FuturisticColors.primaryGradient,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.sports_soccer,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      DateFormat('dd/MM/yyyy').format(game.gameDate),
+                                      style: FuturisticTypography.heading3,
+                                    ),
+                                    Text(
+                                      DateFormat('HH:mm').format(game.gameDate),
+                                      style: FuturisticTypography.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (game.location != null && game.location!.isNotEmpty)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: FuturisticColors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    game.location!,
+                                    style: FuturisticTypography.bodyMedium,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          const Spacer(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Chip(
+                                label: Text(_getStatusText(game.status)),
+                                backgroundColor: _getStatusColor(game.status).withValues(alpha: 0.1),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: FuturisticColors.textSecondary,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _getStatusText(GameStatus status) {
+    switch (status) {
+      case GameStatus.teamSelection:
+        return 'בחירת קבוצות';
+      case GameStatus.teamsFormed:
+        return 'מוכן';
+      default:
+        return status.name;
+    }
+  }
+
+  Color _getStatusColor(GameStatus status) {
+    switch (status) {
+      case GameStatus.teamSelection:
+        return Colors.orange;
+      case GameStatus.teamsFormed:
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+}
+
+/// My Hubs Section - shows hubs user is a member of
+class _MyHubsSection extends ConsumerWidget {
+  final String currentUserId;
+  final HubsRepository hubsRepo;
+
+  const _MyHubsSection({
+    required this.currentUserId,
     required this.hubsRepo,
   });
 
@@ -796,127 +995,123 @@ class _UpcomingGamesSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hubsStream = hubsRepo.watchHubsByMember(currentUserId);
 
-    return StreamBuilder<List<Hub>>(
-      stream: hubsStream,
-      builder: (context, hubsSnapshot) {
-        if (hubsSnapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(message: 'טוען הובים...');
-        }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ההאבים שלי',
+          style: FuturisticTypography.techHeadline,
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<Hub>>(
+          stream: hubsStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const FuturisticLoadingState(message: 'טוען הובים...');
+            }
 
-        final hubs = hubsSnapshot.data ?? [];
-        if (hubs.isEmpty) {
-          return const SizedBox.shrink();
-        }
+            if (snapshot.hasError) {
+              return FuturisticEmptyState(
+                icon: Icons.error_outline,
+                title: 'שגיאה בטעינת הובים',
+                message: ErrorHandlerService().handleException(
+                  snapshot.error,
+                  context: 'Home screen - hubs loading',
+                ),
+              );
+            }
 
-        final hubIds = hubs.map((h) => h.hubId).toList();
-        final now = DateTime.now();
-        final nextWeek = now.add(const Duration(days: 7));
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'משחקים קרובים',
-              style: FuturisticTypography.techHeadline,
-            ),
-            const SizedBox(height: 12),
-            FutureBuilder<List<Game>>(
-              future: _getUpcomingGames(hubIds, now, nextWeek),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: 3,
-                    itemBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: SkeletonLoader(height: 100),
+            final hubs = snapshot.data ?? [];
+            if (hubs.isEmpty) {
+              return FuturisticEmptyState(
+                icon: Icons.group_outlined,
+                title: 'אין הובים',
+                message: 'הצטרף להוב או צור הוב חדש',
+                action: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/hubs-board'),
+                      icon: const Icon(Icons.explore),
+                      label: const Text('גלה הובים'),
                     ),
-                  );
-                }
-
-                final games = snapshot.data ?? [];
-                if (games.isEmpty) {
-                  return FuturisticCard(
-                    child: Center(
-                      child: Text(
-                        'אין משחקים קרובים',
-                        style: FuturisticTypography.bodyMedium,
-                      ),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/hubs/create'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('צור הוב'),
                     ),
-                  );
-                }
+                  ],
+                ),
+              );
+            }
 
-                return Column(
-                  children: games.take(3).map((game) {
-                    return FuturisticCard(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      onTap: () => context.push('/games/${game.gameId}'),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              gradient: FuturisticColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.sports_soccer,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  DateFormat('dd/MM/yyyy HH:mm').format(game.gameDate),
-                                  style: FuturisticTypography.heading3,
+            return Column(
+              children: hubs.take(5).map((hub) {
+                return FuturisticCard(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  onTap: () => context.push('/hubs/${hub.hubId}'),
+                  child: Row(
+                    children: [
+                      // Hub logo or icon
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: FuturisticColors.accentGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: hub.logoUrl != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  hub.logoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.group,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  game.location ?? 'Location TBD',
-                                  style: FuturisticTypography.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: FuturisticColors.textSecondary,
-                          ),
-                        ],
+                              )
+                            : const Icon(
+                                Icons.group,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                       ),
-                    );
-                  }).toList(),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              hub.name,
+                              style: FuturisticTypography.heading3,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${hub.memberIds.length} חברים',
+                              style: FuturisticTypography.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: FuturisticColors.textSecondary,
+                      ),
+                    ],
+                  ),
                 );
-              },
-            ),
-          ],
-        );
-      },
+              }).toList(),
+            );
+          },
+        ),
+      ],
     );
-  }
-
-  Future<List<Game>> _getUpcomingGames(
-    List<String> hubIds,
-    DateTime start,
-    DateTime end,
-  ) async {
-    final allGames = <Game>[];
-    for (final hubId in hubIds) {
-      final games = await gamesRepo.getGamesByHub(hubId);
-      allGames.addAll(games);
-    }
-
-    return allGames
-        .where((game) =>
-            game.gameDate.isAfter(start) && game.gameDate.isBefore(end))
-        .toList()
-      ..sort((a, b) => a.gameDate.compareTo(b.gameDate));
   }
 }
 

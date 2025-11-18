@@ -70,12 +70,11 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                       leading: PlayerAvatar(user: user, radius: 24),
                       title: Text(user.name),
                       subtitle: Text(user.email),
-                      trailing: isCreator
-                          ? Chip(
-                              label: const Text('יוצר'),
-                              backgroundColor: Colors.blue,
-                            )
-                          : DropdownButton<HubRole>(
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!isCreator)
+                            DropdownButton<HubRole>(
                               value: currentRole,
                               items: HubRole.values.map((role) {
                                 return DropdownMenuItem(
@@ -103,7 +102,58 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                                   SnackbarHelper.showErrorFromException(context, e);
                                 }
                               },
+                            )
+                          else
+                            Chip(
+                              label: const Text('יוצר'),
+                              backgroundColor: Colors.blue,
                             ),
+                          if (!isCreator) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('מחיקת משתמש'),
+                                    content: Text('האם אתה בטוח שברצונך להסיר את ${user.name} מההאב?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: const Text('ביטול'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        child: const Text('הסר'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                
+                                if (confirmed == true) {
+                                  try {
+                                    await hubsRepo.removeMember(widget.hubId, user.uid);
+                                    if (!context.mounted) return;
+                                    SnackbarHelper.showSuccess(
+                                      context,
+                                      'משתמש הוסר בהצלחה',
+                                    );
+                                  } catch (e) {
+                                    if (!context.mounted) return;
+                                    SnackbarHelper.showErrorFromException(context, e);
+                                  }
+                                }
+                              },
+                              tooltip: 'הסר משתמש מההאב',
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   );
                 },

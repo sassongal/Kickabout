@@ -11,6 +11,7 @@ import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/services/location_service.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:geolocator/geolocator.dart';
 
 /// Players List Screen - לוח שחקנים
@@ -144,7 +145,10 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                   return FuturisticEmptyState(
                     icon: Icons.error_outline,
                     title: 'שגיאה בטעינת שחקנים',
-                    message: snapshot.error.toString(),
+                    message: ErrorHandlerService().handleException(
+                      snapshot.error,
+                      context: 'Players list screen',
+                    ),
                   );
                 }
 
@@ -210,6 +214,19 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [
+                                        if (player.city != null && player.city!.isNotEmpty) ...[
+                                          Icon(
+                                            Icons.location_city,
+                                            size: 14,
+                                            color: FuturisticColors.textTertiary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            player.city!,
+                                            style: FuturisticTypography.bodySmall,
+                                          ),
+                                          const SizedBox(width: 12),
+                                        ],
                                         if (player.preferredPosition.isNotEmpty) ...[
                                           Icon(
                                             Icons.sports_soccer,
@@ -223,18 +240,29 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                           ),
                                           const SizedBox(width: 12),
                                         ],
-                                        if (player.city != null && player.city!.isNotEmpty) ...[
+                                        if (player.favoriteTeamId != null) ...[
                                           Icon(
-                                            Icons.location_city,
+                                            Icons.favorite,
                                             size: 14,
-                                            color: FuturisticColors.textTertiary,
+                                            color: FuturisticColors.error,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            player.city!,
+                                            'קבוצה אהודה',
                                             style: FuturisticTypography.bodySmall,
                                           ),
+                                          const SizedBox(width: 12),
                                         ],
+                                        Icon(
+                                          Icons.group,
+                                          size: 14,
+                                          color: FuturisticColors.textTertiary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${player.hubIds.length} הובים',
+                                          style: FuturisticTypography.bodySmall,
+                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),

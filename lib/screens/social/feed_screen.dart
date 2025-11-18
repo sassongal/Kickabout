@@ -11,6 +11,7 @@ import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Feed screen - shows activity feed for a hub
 class FeedScreen extends ConsumerStatefulWidget {
@@ -23,83 +24,225 @@ class FeedScreen extends ConsumerStatefulWidget {
 }
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.extentAfter < 300) {
+      final feedState = ref.read(feedNotifierProvider(widget.hubId));
+      if (!feedState.isLoading && feedState.hasMore) {
+        ref.read(feedNotifierProvider(widget.hubId).notifier).fetchNextPage();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Use ref.read for repositories - they don't change, so no need to watch
-    final feedRepo = ref.read(feedRepositoryProvider);
-    final usersRepo = ref.read(usersRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
-    final feedStream = feedRepo.watchFeed(widget.hubId);
-
-    return AppScaffold(
-      title: 'פיד פעילות',
-        floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
-        icon: const Icon(Icons.add),
-        label: const Text('צור פוסט'),
-      ),
-      body: StreamBuilder<List<FeedPost>>(
-        stream: feedStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 5,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: SkeletonLoader(height: 120),
-              ),
-            );
-          }
-
-          if (snapshot.hasError) {
-            return FuturisticEmptyState(
+    final usersRepo = ref.read(usersRepositoryProvider);
+    
+    if (currentUserId == null) {
+      return AppScaffold(
+        title: 'פיד פעילות',
+        body: const Center(child: Text('נא להתחבר')),
+      );
+    }
+    
+    return FutureBuilder<User?>(
+      future: usersRepo.getUser(currentUserId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return AppScaffold(
+            title: 'פיד פעילות',
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return AppScaffold(
+            title: 'פיד פעילות',
+            body: FuturisticEmptyState(
               icon: Icons.error_outline,
-              title: 'שגיאה בטעינת הפיד',
-              message: snapshot.error.toString(),
-              action: ElevatedButton.icon(
-                onPressed: () {
-                // Retry by rebuilding - trigger rebuild via key change
-                // For ConsumerWidget, we can't use setState, so we'll just show the error
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('נסה שוב'),
+              title: 'שגיאה בטעינת המשתמש',
+              message: ErrorHandlerService().handleException(
+                snapshot.error,
+                context: 'Feed screen - user loading',
               ),
-            );
-          }
-
-          final posts = snapshot.data ?? [];
-
-          if (posts.isEmpty) {
-            return FuturisticEmptyState(
-              icon: Icons.feed,
-              title: 'אין פעילות עדיין',
-              message: 'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
-              action: ElevatedButton.icon(
-                onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
-                icon: const Icon(Icons.add),
-                label: const Text('צור פוסט'),
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              // Force refresh by rebuilding
-            },
-            child: ListView.builder(
-              itemCount: posts.length,
-              padding: const EdgeInsets.all(8),
-              itemBuilder: (context, index) {
-                final post = posts[index];
-                return _PostCard(
-                  post: post,
-                  currentUserId: currentUserId,
-                  feedRepo: feedRepo,
-                  usersRepo: usersRepo,
-                );
-              },
             ),
+          );
+        }
+        
+        final user = snapshot.data;
+        final userRegion = user?.region;
+        final feedRepo = ref.read(feedRepositoryProvider);
+        
+        // If user has region, use regional feed; otherwise use hub feed
+        final feedStream = userRegion != null && userRegion.isNotEmpty
+            ? feedRepo.streamRegionalFeed(region: userRegion)
+            : feedRepo.watchFeed(widget.hubId);
+        
+        return AppScaffold(
+          title: userRegion != null ? 'פיד אזורי ($userRegion)' : 'פיד פעילות',
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
+            icon: const Icon(Icons.add),
+            label: const Text('צור פוסט'),
+          ),
+          body: StreamBuilder<List<FeedPost>>(
+            stream: feedStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: 5,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SkeletonLoader(height: 120),
+                  ),
+                );
+              }
+              
+              if (snapshot.hasError) {
+                return FuturisticEmptyState(
+                  icon: Icons.error_outline,
+                  title: 'שגיאה בטעינת הפיד',
+                  message: ErrorHandlerService().handleException(
+                    snapshot.error,
+                    context: 'Feed screen',
+                  ),
+                  action: ElevatedButton.icon(
+                    onPressed: () => setState(() {}),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('נסה שוב'),
+                  ),
+                );
+              }
+              
+              final posts = snapshot.data ?? [];
+              
+              if (posts.isEmpty) {
+                return FuturisticEmptyState(
+                  icon: Icons.feed,
+                  title: 'אין פעילות עדיין',
+                  message: userRegion != null 
+                      ? 'כשיהיו משחקים חדשים באזור שלך, הם יופיעו כאן'
+                      : 'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
+                  action: ElevatedButton.icon(
+                    onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('צור פוסט'),
+                  ),
+                );
+              }
+              
+              return ListView.builder(
+                itemCount: posts.length,
+                padding: const EdgeInsets.all(8),
+                itemBuilder: (context, index) {
+                  final post = posts[index];
+                  return _PostCard(
+                    post: post,
+                    currentUserId: currentUserId,
+                    feedRepo: feedRepo,
+                    usersRepo: ref.read(usersRepositoryProvider),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(
+    FeedState feedState,
+    FeedRepository feedRepo,
+    UsersRepository usersRepo,
+    String? currentUserId,
+  ) {
+    // Initial loading
+    if (feedState.posts.isEmpty && feedState.isLoading) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 5,
+        itemBuilder: (context, index) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SkeletonLoader(height: 120),
+        ),
+      );
+    }
+
+    // Error state
+    if (feedState.error != null && feedState.posts.isEmpty) {
+      return FuturisticEmptyState(
+        icon: Icons.error_outline,
+        title: 'שגיאה בטעינת הפיד',
+        message: ErrorHandlerService().handleException(
+          feedState.error!,
+          context: 'Feed screen - feed state error',
+        ),
+        action: ElevatedButton.icon(
+          onPressed: () {
+            ref.read(feedNotifierProvider(widget.hubId).notifier).refresh();
+          },
+          icon: const Icon(Icons.refresh),
+          label: const Text('נסה שוב'),
+        ),
+      );
+    }
+
+    // Empty state
+    if (feedState.posts.isEmpty) {
+      return FuturisticEmptyState(
+        icon: Icons.feed,
+        title: 'אין פעילות עדיין',
+        message: 'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
+        action: ElevatedButton.icon(
+          onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
+          icon: const Icon(Icons.add),
+          label: const Text('צור פוסט'),
+        ),
+      );
+    }
+
+    // Posts list with pagination
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.read(feedNotifierProvider(widget.hubId).notifier).refresh();
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        itemCount: feedState.posts.length + (feedState.hasMore ? 1 : 0),
+        padding: const EdgeInsets.all(8),
+        itemBuilder: (context, index) {
+          // Show loading indicator at the bottom
+          if (index == feedState.posts.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final post = feedState.posts[index];
+          return _PostCard(
+            post: post,
+            currentUserId: currentUserId,
+            feedRepo: feedRepo,
+            usersRepo: usersRepo,
           );
         },
       ),
@@ -141,7 +284,12 @@ class _PostCard extends ConsumerWidget {
           return ListTile(
             leading: const Icon(Icons.error_outline, color: Colors.red),
             title: const Text('שגיאה בטעינת המשתמש'),
-            subtitle: Text(userSnapshot.error.toString()),
+            subtitle: Text(
+              ErrorHandlerService().handleException(
+                userSnapshot.error,
+                context: 'Feed post - user loading',
+              ),
+            ),
           );
         }
 
@@ -199,7 +347,7 @@ class _PostCard extends ConsumerWidget {
                 const SizedBox(height: 12),
                 // Content
                 if (post.content != null) ...[
-                  Text(post.content!),
+                  Text(post.content ?? post.text ?? ''),
                   const SizedBox(height: 8),
                 ],
                 // Photos
@@ -247,10 +395,13 @@ class _PostCard extends ConsumerWidget {
                       ),
                       onPressed: currentUserId != null
                           ? () {
-                              if (isLiked) {
-                                feedRepo.unlikePost(post.hubId, post.postId, currentUserId!);
-                              } else {
-                                feedRepo.likePost(post.hubId, post.postId, currentUserId!);
+                              final userId = currentUserId;
+                              if (userId != null) {
+                                if (isLiked) {
+                                  feedRepo.unlikePost(post.hubId, post.postId, userId);
+                                } else {
+                                  feedRepo.likePost(post.hubId, post.postId, userId);
+                                }
                               }
                             }
                           : null,

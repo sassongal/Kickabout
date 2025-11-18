@@ -5,6 +5,7 @@ import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/screens/hub/hub_invitations_screen.dart';
 import 'package:go_router/go_router.dart';
@@ -28,41 +29,70 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
     final hubsRepo = ref.watch(hubsRepositoryProvider);
     final hubStream = hubsRepo.watchHub(widget.hubId);
 
-    return StreamBuilder<Hub?>(
-      stream: hubStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return FuturisticScaffold(
-            title: 'הגדרות Hub',
-            body: const FuturisticLoadingState(message: 'טוען הגדרות...'),
-          );
-        }
+    // Check admin permissions
+    final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
 
-        if (snapshot.hasError || snapshot.data == null) {
+    return roleAsync.when(
+      data: (role) {
+        if (role != UserRole.admin) {
           return FuturisticScaffold(
             title: 'הגדרות Hub',
-            body: FuturisticEmptyState(
-              icon: Icons.error_outline,
-              title: 'שגיאה',
-              message: snapshot.error?.toString() ?? 'Hub לא נמצא',
-              action: ElevatedButton.icon(
-                onPressed: () {
-                  // Retry by rebuilding
-                  setState(() {});
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('נסה שוב'),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock, size: 64, color: Colors.orange),
+                  SizedBox(height: 16),
+                  Text(
+                    'אין לך הרשאת ניהול למסך זה',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'רק מנהלי Hub יכולים לשנות הגדרות',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
               ),
             ),
           );
         }
 
-        final hub = snapshot.data!;
-        final settings = hub.settings;
+        return StreamBuilder<Hub?>(
+          stream: hubStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return FuturisticScaffold(
+                title: 'הגדרות Hub',
+                body: const FuturisticLoadingState(message: 'טוען הגדרות...'),
+              );
+            }
 
-        return FuturisticScaffold(
-          title: 'הגדרות Hub',
-          body: ListView(
+            if (snapshot.hasError || snapshot.data == null) {
+              return FuturisticScaffold(
+                title: 'הגדרות Hub',
+                body: FuturisticEmptyState(
+                  icon: Icons.error_outline,
+                  title: 'שגיאה',
+                  message: snapshot.error?.toString() ?? 'Hub לא נמצא',
+                  action: ElevatedButton.icon(
+                    onPressed: () {
+                      // Retry by rebuilding
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('נסה שוב'),
+                  ),
+                ),
+              );
+            }
+
+            final hub = snapshot.data!;
+            final settings = hub.settings;
+
+            return FuturisticScaffold(
+              title: 'הגדרות Hub',
+              body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               // Rating Mode
@@ -248,6 +278,27 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+              // Hub Rules
+              Card(
+                child: ExpansionTile(
+                  title: const Text('חוקי האב'),
+                  subtitle: Text(
+                    hub.hubRules != null && hub.hubRules!.isNotEmpty
+                        ? '${hub.hubRules!.length} תווים'
+                        : 'אין חוקים מוגדרים',
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: _HubRulesEditor(
+                        hubId: widget.hubId,
+                        initialRules: hub.hubRules ?? '',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
               // Invitations
               Card(
                 child: ListTile(
@@ -265,7 +316,21 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
             ],
           ),
         );
+          },
+        );
       },
+      loading: () => FuturisticScaffold(
+        title: 'הגדרות Hub',
+        body: const FuturisticLoadingState(message: 'בודק הרשאות...'),
+      ),
+      error: (error, stack) => FuturisticScaffold(
+        title: 'הגדרות Hub',
+        body: FuturisticEmptyState(
+          icon: Icons.error_outline,
+          title: 'שגיאה בבדיקת הרשאות',
+          message: error.toString(),
+        ),
+      ),
     );
   }
 
@@ -292,6 +357,94 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
       if (!context.mounted) return;
       SnackbarHelper.showError(context, 'שגיאה בעדכון הגדרה: $e');
     }
+  }
+}
+
+/// Widget for editing hub rules
+class _HubRulesEditor extends ConsumerStatefulWidget {
+  final String hubId;
+  final String initialRules;
+
+  const _HubRulesEditor({
+    required this.hubId,
+    required this.initialRules,
+  });
+
+  @override
+  ConsumerState<_HubRulesEditor> createState() => _HubRulesEditorState();
+}
+
+class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
+  late TextEditingController _rulesController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rulesController = TextEditingController(text: widget.initialRules);
+  }
+
+  @override
+  void dispose() {
+    _rulesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveRules() async {
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      await hubsRepo.updateHub(widget.hubId, {
+        'hubRules': _rulesController.text.trim(),
+      });
+
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, 'חוקי האב נשמרו בהצלחה');
+    } catch (e) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, 'שגיאה בשמירת חוקים: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextFormField(
+          controller: _rulesController,
+          decoration: const InputDecoration(
+            labelText: 'חוקי האב',
+            hintText: 'הזן את חוקי האב כאן...',
+            border: OutlineInputBorder(),
+            helperText: 'השתמש בשורות נפרדות לכל חוק',
+          ),
+          maxLines: 10,
+          minLines: 5,
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: _isSaving ? null : _saveRules,
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save),
+          label: Text(_isSaving ? 'שומר...' : 'שמור חוקים'),
+        ),
+      ],
+    );
   }
 }
 

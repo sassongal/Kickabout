@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
@@ -9,6 +10,7 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 /// Create game screen
 class CreateGameScreen extends ConsumerStatefulWidget {
@@ -36,6 +38,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   bool _isRecurring = false;
   String? _recurrencePattern; // 'weekly', 'biweekly', 'monthly'
   DateTime? _recurrenceEndDate;
+  // Game rules fields
+  final _durationController = TextEditingController();
+  final _gameEndConditionController = TextEditingController();
 
   @override
   void initState() {
@@ -47,6 +52,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   @override
   void dispose() {
     _locationController.dispose();
+    _durationController.dispose();
+    _gameEndConditionController.dispose();
     super.dispose();
   }
 
@@ -67,12 +74,6 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
-      builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       setState(() => _selectedTime = picked);
@@ -132,12 +133,30 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final currentUserId = ref.read(currentUserIdProvider);
+    final isAnonymous = ref.read(isAnonymousUserProvider);
+    
     if (currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('נא להתחבר')),
       );
       return;
     }
+    
+    if (isAnonymous) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('אורחים לא יכולים ליצור משחקים. נא להתחבר או להירשם.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      if (mounted) {
+        context.push('/login');
+      }
+      return;
+    }
+
+    // Store selectedHubId in local variable after null check
+    final selectedHubId = _selectedHubId!;
 
     setState(() => _isLoading = true);
 
@@ -162,10 +181,15 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         );
       }
 
+      // Get hub to copy region
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(selectedHubId);
+      final hubRegion = hub?.region;
+
       final game = Game(
         gameId: '',
         createdBy: currentUserId,
-        hubId: _selectedHubId!,
+        hubId: selectedHubId,
         gameDate: gameDate,
         location: _locationController.text.trim().isEmpty
             ? null
@@ -179,6 +203,13 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         isRecurring: _isRecurring,
         recurrencePattern: _recurrencePattern,
         recurrenceEndDate: _recurrenceEndDate,
+        durationInMinutes: _durationController.text.trim().isNotEmpty
+            ? int.tryParse(_durationController.text.trim())
+            : null,
+        gameEndCondition: _gameEndConditionController.text.trim().isNotEmpty
+            ? _gameEndConditionController.text.trim()
+            : null,
+        region: hubRegion, // Copy region from hub
       );
 
       final gameId = await gamesRepo.createGame(game);
@@ -188,9 +219,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         await _scheduleRecurringGames(gameId, gameDate, _recurrencePattern!, _recurrenceEndDate!);
       }
 
-      // Get hub for notifications and reminders
-      final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(_selectedHubId!);
+      // Get hub for notifications and reminders (already fetched above)
 
       // Schedule game reminders
       try {
@@ -209,7 +238,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         final feedRepo = ref.read(feedRepositoryProvider);
         final feedPost = FeedPost(
           postId: '',
-          hubId: _selectedHubId!,
+          hubId: selectedHubId,
           authorId: currentUserId,
           type: 'game',
           gameId: gameId,
@@ -230,7 +259,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         if (hub != null) {
           await pushIntegration.notifyNewGame(
             gameId: gameId,
-            hubId: _selectedHubId!,
+            hubId: selectedHubId,
             creatorName: currentUser?.name ?? 'מישהו',
             hubName: hub.name,
             memberIds: hub.memberIds,
@@ -242,10 +271,38 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         debugPrint('Failed to create notifications: $e');
       }
 
+      // Call Cloud Function to notify hub members
+      try {
+        final functions = FirebaseFunctions.instance;
+        final notifyFunction = functions.httpsCallable('notifyHubOnNewGame');
+        
+        final gameDate = DateTime(
+          _selectedDate.year,
+          _selectedDate.month,
+          _selectedDate.day,
+          _selectedTime.hour,
+          _selectedTime.minute,
+        );
+        
+        final gameTime = DateFormat('dd MMMM yyyy, HH:mm', 'he').format(gameDate);
+        
+        await notifyFunction.call({
+          'hubId': selectedHubId,
+          'gameId': gameId,
+          'gameTitle': 'משחק חדש',
+          'gameTime': gameTime,
+        });
+        
+        debugPrint('✅ Notified hub members via Cloud Function');
+      } catch (e) {
+        // Log error but don't fail game creation
+        debugPrint('⚠️ Failed to call notifyHubOnNewGame: $e');
+      }
+
       // Log analytics
       try {
         final analytics = AnalyticsService();
-        await analytics.logGameCreated(hubId: _selectedHubId!);
+        await analytics.logGameCreated(hubId: selectedHubId);
       } catch (e) {
         debugPrint('Failed to log analytics: $e');
       }
@@ -529,6 +586,50 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                           },
                         ),
                       ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Game rules section (optional)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'חוקי משחק (אופציונלי)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _durationController,
+                        decoration: const InputDecoration(
+                          labelText: 'משך המשחק (דקות)',
+                          hintText: 'למשל: 90',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.timer),
+                          helperText: 'השאר ריק אם אין הגבלת זמן',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _gameEndConditionController,
+                        decoration: const InputDecoration(
+                          labelText: 'תנאי סיום',
+                          hintText: 'למשל: "ראשון ל-5 שערים" או "הגבלת זמן"',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.flag),
+                          helperText: 'תיאור תנאי סיום המשחק',
+                        ),
+                        maxLines: 2,
+                      ),
                     ],
                   ),
                 ),

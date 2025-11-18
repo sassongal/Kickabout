@@ -85,10 +85,27 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
       
       // Run heavy computation in isolate to prevent UI blocking
       final teams = await compute(_computeBalanceTeams, params);
+      
+      // Preserve existing colors when rebalancing
+      final existingColors = <String, String>{};
+      for (final existingTeam in _teams) {
+        if (existingTeam.color != null) {
+          existingColors[existingTeam.teamId] = existingTeam.color!;
+        }
+      }
+      
+      // Apply existing colors to new teams (by index)
+      final updatedTeams = teams.asMap().entries.map((entry) {
+        final index = entry.key;
+        final team = entry.value;
+        final teamId = 'team_$index';
+        final color = existingColors[teamId] ?? _getDefaultColor(index);
+        return team.copyWith(color: color);
+      }).toList();
 
       if (mounted) {
         setState(() {
-          _teams = teams;
+          _teams = updatedTeams;
           _isLoading = false;
         });
       }
@@ -113,11 +130,16 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
     setState(() => _isSaving = true);
 
     try {
+      final gamesRepo = ref.read(gamesRepositoryProvider);
+      
+      // Save teams to game document
+      await gamesRepo.saveTeamsForGame(widget.gameId, _teams);
+
+      // Also save to teams subcollection (for backward compatibility)
       final teamsRepo = ref.read(teamsRepositoryProvider);
       await teamsRepo.setTeams(widget.gameId, _teams);
 
       // Update game status to teamsFormed
-      final gamesRepo = ref.read(gamesRepositoryProvider);
       await gamesRepo.updateGameStatus(widget.gameId, GameStatus.teamsFormed);
 
       if (mounted) {
@@ -262,20 +284,40 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
     );
   }
 
+  String _getDefaultColor(int index) {
+    const colors = ['red', 'green', 'black', 'yellow', 'blue', 'white'];
+    return colors[index % colors.length];
+  }
+
+  Color _getColorFromString(String? colorName) {
+    switch (colorName) {
+      case 'red':
+        return Colors.red;
+      case 'green':
+        return Colors.green;
+      case 'black':
+        return Colors.black;
+      case 'yellow':
+        return Colors.yellow;
+      case 'blue':
+        return Colors.blue;
+      case 'white':
+        return Colors.white;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Widget _buildTeamColumn(BuildContext context, int index, Team? team) {
     final teamNames = ['קבוצה א', 'קבוצה ב', 'קבוצה ג', 'קבוצה ד'];
-    final teamColors = [
-      Colors.blue,
-      Colors.red,
-      Colors.green,
-      Colors.orange,
-    ];
+    final currentColor = team?.color ?? _getDefaultColor(index);
+    final colorValue = _getColorFromString(currentColor);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         border: Border.all(
-          color: teamColors[index % teamColors.length].withValues(alpha: 0.3),
+          color: colorValue.withValues(alpha: 0.3),
           width: 2,
         ),
         borderRadius: BorderRadius.circular(8),
@@ -285,26 +327,62 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: teamColors[index % teamColors.length].withValues(alpha: 0.1),
+              color: colorValue.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(6),
                 topRight: Radius.circular(6),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
               children: [
-                Text(
-                  team?.name ?? teamNames[index],
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      team?.name ?? teamNames[index],
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (team != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '(${team.playerIds.length})',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
                 ),
                 if (team != null) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    '(${team.playerIds.length})',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
+                    alignment: WrapAlignment.center,
+                    children: ['red', 'green', 'black', 'yellow', 'blue', 'white']
+                        .map((colorName) {
+                      final isSelected = currentColor == colorName;
+                      final color = _getColorFromString(colorName);
+                      return ChoiceChip(
+                        label: Text(
+                          _getColorLabel(colorName),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isSelected ? Colors.white : color,
+                          ),
+                        ),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _teams[index] = team.copyWith(color: colorName);
+                            });
+                          }
+                        },
+                        backgroundColor: color.withValues(alpha: 0.2),
+                        selectedColor: color,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      );
+                    }).toList(),
                   ),
                 ],
               ],
@@ -340,8 +418,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                               dense: true,
                               leading: CircleAvatar(
                                 radius: 16,
-                                backgroundColor: teamColors[index % teamColors.length]
-                                    .withValues(alpha: 0.2),
+                                backgroundColor: colorValue.withValues(alpha: 0.2),
                                 child: user.photoUrl != null
                                     ? ClipOval(
                                         child: Image.network(
@@ -350,14 +427,14 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                                           errorBuilder: (_, __, ___) => Icon(
                                             Icons.person,
                                             size: 16,
-                                            color: teamColors[index % teamColors.length],
+                                            color: colorValue,
                                           ),
                                         ),
                                       )
                                     : Icon(
                                         Icons.person,
                                         size: 16,
-                                        color: teamColors[index % teamColors.length],
+                                        color: colorValue,
                                       ),
                               ),
                               title: Text(
@@ -381,7 +458,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: teamColors[index % teamColors.length].withValues(alpha: 0.05),
+                color: colorValue.withValues(alpha: 0.05),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(6),
                   bottomRight: Radius.circular(6),
@@ -396,6 +473,25 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
         ],
       ),
     );
+  }
+
+  String _getColorLabel(String colorName) {
+    switch (colorName) {
+      case 'red':
+        return 'אדום';
+      case 'green':
+        return 'ירוק';
+      case 'black':
+        return 'שחור';
+      case 'yellow':
+        return 'צהוב';
+      case 'blue':
+        return 'כחול';
+      case 'white':
+        return 'לבן';
+      default:
+        return colorName;
+    }
   }
 }
 

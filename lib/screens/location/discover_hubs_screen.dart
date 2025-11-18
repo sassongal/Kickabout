@@ -7,7 +7,6 @@ import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/hub_venue_matcher_service.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Discover hubs screen - find hubs nearby
@@ -74,17 +73,35 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
     });
 
     try {
-      // Use HubVenueMatcherService for smarter matching
-      final matcherService = ref.read(hubVenueMatcherServiceProvider);
-      final results = await matcherService.findRelevantHubs(
-        latitude: _currentPosition!.latitude,
-        longitude: _currentPosition!.longitude,
-        radiusKm: _radiusKm,
-        maxResults: 50,
-      );
-
-      // Extract hubs from results
-      final hubs = results.map((r) => r.hub).toList();
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      
+      // Get all hubs and sort by distance from user location
+      final allHubs = await hubsRepo.getAllHubs(limit: 1000);
+      
+      // Calculate distances and filter by radius
+      final hubsWithDistance = allHubs.map((hub) {
+        double? distance;
+        if (hub.location != null) {
+          distance = Geolocator.distanceBetween(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            hub.location!.latitude,
+            hub.location!.longitude,
+          ) / 1000; // Convert to km
+        } else if (hub.mainVenueId != null) {
+          // If hub has main venue, we'll need to fetch it
+          // For now, we'll use a large distance
+          distance = 999999;
+        } else {
+          distance = 999999;
+        }
+        return MapEntry(hub, distance);
+      }).where((entry) => entry.value <= _radiusKm).toList();
+      
+      // Sort by distance (closest first)
+      hubsWithDistance.sort((a, b) => a.value.compareTo(b.value));
+      
+      final hubs = hubsWithDistance.map((entry) => entry.key).toList();
 
       setState(() {
         _nearbyHubs = hubs;
@@ -184,12 +201,15 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                                   itemCount: _nearbyHubs.length,
                                   itemBuilder: (context, index) {
                                     final hub = _nearbyHubs[index];
-                                    final distance = Geolocator.distanceBetween(
-                                      _currentPosition!.latitude,
-                                      _currentPosition!.longitude,
-                                      hub.location?.latitude ?? 0,
-                                      hub.location?.longitude ?? 0,
-                                    ) / 1000;
+                                    double distance = 0;
+                                    if (hub.location != null) {
+                                      distance = Geolocator.distanceBetween(
+                                        _currentPosition!.latitude,
+                                        _currentPosition!.longitude,
+                                        hub.location!.latitude,
+                                        hub.location!.longitude,
+                                      ) / 1000;
+                                    }
 
                                     return Card(
                                       margin: const EdgeInsets.symmetric(

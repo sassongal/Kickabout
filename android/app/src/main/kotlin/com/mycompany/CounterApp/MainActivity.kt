@@ -1,4 +1,4 @@
-package com.kickadoor.app
+package com.mycompany.CounterApp
 
 import io.flutter.embedding.android.FlutterActivity
 

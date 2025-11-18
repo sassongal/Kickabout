@@ -6,6 +6,9 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/users_repository.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
+import 'package:kickadoor/widgets/futuristic/empty_state.dart';
+import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 
 /// Game chat screen - real-time chat for a game
 class GameChatScreen extends ConsumerStatefulWidget {
@@ -44,12 +47,32 @@ class _GameChatScreenState extends ConsumerState<GameChatScreen> {
               stream: messagesStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SkeletonLoader(height: 60),
+                    ),
+                  );
                 }
 
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text('שגיאה: ${snapshot.error}'),
+                  return FuturisticEmptyState(
+                    icon: Icons.error_outline,
+                    title: 'שגיאה בטעינת הודעות',
+                    message: ErrorHandlerService().handleException(
+                      snapshot.error,
+                      context: 'Game chat screen',
+                    ),
+                    action: ElevatedButton.icon(
+                      onPressed: () {
+                        // Retry by rebuilding
+                        setState(() {});
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('נסה שוב'),
+                    ),
                   );
                 }
 
@@ -81,7 +104,9 @@ class _GameChatScreenState extends ConsumerState<GameChatScreen> {
                   padding: const EdgeInsets.all(8),
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isMe = message.authorId == currentUserId;
+                    // Game chat messages may have senderId instead of authorId
+                    final messageAuthorId = message.senderId ?? message.authorId;
+                    final isMe = messageAuthorId == currentUserId;
                     return _ChatMessageBubble(
                       message: message,
                       isMe: isMe,
@@ -124,7 +149,9 @@ class _ChatMessageBubble extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userStream = usersRepo.watchUser(message.authorId);
+    // Game chat messages may have senderId instead of authorId
+    final messageAuthorId = message.senderId ?? message.authorId;
+    final userStream = usersRepo.watchUser(messageAuthorId);
 
     return StreamBuilder<User?>(
       stream: userStream,

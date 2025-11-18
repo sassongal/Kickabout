@@ -53,6 +53,7 @@ class DefaultFirebaseOptions {
     projectId: 'kickabout-ddc06',
     authDomain: 'kickabout-ddc06.firebaseapp.com',
     storageBucket: 'kickabout-ddc06.firebasestorage.app',
+    measurementId: 'G-BKSMX7BJ59',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -69,6 +70,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '731836758075',
     projectId: 'kickabout-ddc06',
     storageBucket: 'kickabout-ddc06.firebasestorage.app',
-    iosBundleId: 'com.kickadoor.app',
+    iosClientId: '731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com',
+    iosBundleId: 'com.mycompany.CounterApp',
   );
+
 }

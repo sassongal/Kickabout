@@ -33,7 +33,13 @@ mixin _$FeedPost {
   List<String> get likes => throw _privateConstructorUsedError;
   int get likeCount =>
       throw _privateConstructorUsedError; // Denormalized count for sorting
-  int get commentsCount => throw _privateConstructorUsedError;
+  int get commentCount =>
+      throw _privateConstructorUsedError; // Denormalized: Count of comments (Cloud Function writes this)
+// Note: commentsCount is kept for backward compatibility. Prefer using commentCount.
+  int get commentsCount =>
+      throw _privateConstructorUsedError; // Legacy alias - maps to commentCount in Firestore
+  List<String> get comments =>
+      throw _privateConstructorUsedError; // Legacy: Array of comment IDs (deprecated, use subcollection)
   List<String> get photoUrls =>
       throw _privateConstructorUsedError; // URLs of photos/videos in the post
   @TimestampConverter()
@@ -47,7 +53,9 @@ mixin _$FeedPost {
       throw _privateConstructorUsedError; // Denormalized from users/{authorId}.name
   String? get authorPhotoUrl =>
       throw _privateConstructorUsedError; // Denormalized from users/{authorId}.photoUrl
-  String? get entityId => throw _privateConstructorUsedError;
+  String? get entityId =>
+      throw _privateConstructorUsedError; // ID of related entity (gameId, etc.)
+  String? get region => throw _privateConstructorUsedError;
 
   /// Serializes this FeedPost to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -75,14 +83,17 @@ abstract class $FeedPostCopyWith<$Res> {
       String? achievementId,
       List<String> likes,
       int likeCount,
+      int commentCount,
       int commentsCount,
+      List<String> comments,
       List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       String? hubName,
       String? hubLogoUrl,
       String? authorName,
       String? authorPhotoUrl,
-      String? entityId});
+      String? entityId,
+      String? region});
 }
 
 /// @nodoc
@@ -110,7 +121,9 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
     Object? achievementId = freezed,
     Object? likes = null,
     Object? likeCount = null,
+    Object? commentCount = null,
     Object? commentsCount = null,
+    Object? comments = null,
     Object? photoUrls = null,
     Object? createdAt = null,
     Object? hubName = freezed,
@@ -118,6 +131,7 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
     Object? authorName = freezed,
     Object? authorPhotoUrl = freezed,
     Object? entityId = freezed,
+    Object? region = freezed,
   }) {
     return _then(_value.copyWith(
       postId: null == postId
@@ -160,10 +174,18 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
           ? _value.likeCount
           : likeCount // ignore: cast_nullable_to_non_nullable
               as int,
+      commentCount: null == commentCount
+          ? _value.commentCount
+          : commentCount // ignore: cast_nullable_to_non_nullable
+              as int,
       commentsCount: null == commentsCount
           ? _value.commentsCount
           : commentsCount // ignore: cast_nullable_to_non_nullable
               as int,
+      comments: null == comments
+          ? _value.comments
+          : comments // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       photoUrls: null == photoUrls
           ? _value.photoUrls
           : photoUrls // ignore: cast_nullable_to_non_nullable
@@ -192,6 +214,10 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
           ? _value.entityId
           : entityId // ignore: cast_nullable_to_non_nullable
               as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -215,14 +241,17 @@ abstract class _$$FeedPostImplCopyWith<$Res>
       String? achievementId,
       List<String> likes,
       int likeCount,
+      int commentCount,
       int commentsCount,
+      List<String> comments,
       List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       String? hubName,
       String? hubLogoUrl,
       String? authorName,
       String? authorPhotoUrl,
-      String? entityId});
+      String? entityId,
+      String? region});
 }
 
 /// @nodoc
@@ -248,7 +277,9 @@ class __$$FeedPostImplCopyWithImpl<$Res>
     Object? achievementId = freezed,
     Object? likes = null,
     Object? likeCount = null,
+    Object? commentCount = null,
     Object? commentsCount = null,
+    Object? comments = null,
     Object? photoUrls = null,
     Object? createdAt = null,
     Object? hubName = freezed,
@@ -256,6 +287,7 @@ class __$$FeedPostImplCopyWithImpl<$Res>
     Object? authorName = freezed,
     Object? authorPhotoUrl = freezed,
     Object? entityId = freezed,
+    Object? region = freezed,
   }) {
     return _then(_$FeedPostImpl(
       postId: null == postId
@@ -298,10 +330,18 @@ class __$$FeedPostImplCopyWithImpl<$Res>
           ? _value.likeCount
           : likeCount // ignore: cast_nullable_to_non_nullable
               as int,
+      commentCount: null == commentCount
+          ? _value.commentCount
+          : commentCount // ignore: cast_nullable_to_non_nullable
+              as int,
       commentsCount: null == commentsCount
           ? _value.commentsCount
           : commentsCount // ignore: cast_nullable_to_non_nullable
               as int,
+      comments: null == comments
+          ? _value._comments
+          : comments // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       photoUrls: null == photoUrls
           ? _value._photoUrls
           : photoUrls // ignore: cast_nullable_to_non_nullable
@@ -330,6 +370,10 @@ class __$$FeedPostImplCopyWithImpl<$Res>
           ? _value.entityId
           : entityId // ignore: cast_nullable_to_non_nullable
               as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -348,15 +392,19 @@ class _$FeedPostImpl implements _FeedPost {
       this.achievementId,
       final List<String> likes = const [],
       this.likeCount = 0,
+      this.commentCount = 0,
       this.commentsCount = 0,
+      final List<String> comments = const [],
       final List<String> photoUrls = const [],
       @TimestampConverter() required this.createdAt,
       this.hubName,
       this.hubLogoUrl,
       this.authorName,
       this.authorPhotoUrl,
-      this.entityId})
+      this.entityId,
+      this.region})
       : _likes = likes,
+        _comments = comments,
         _photoUrls = photoUrls;
 
   factory _$FeedPostImpl.fromJson(Map<String, dynamic> json) =>
@@ -395,8 +443,26 @@ class _$FeedPostImpl implements _FeedPost {
 // Denormalized count for sorting
   @override
   @JsonKey()
+  final int commentCount;
+// Denormalized: Count of comments (Cloud Function writes this)
+// Note: commentsCount is kept for backward compatibility. Prefer using commentCount.
+  @override
+  @JsonKey()
   final int commentsCount;
+// Legacy alias - maps to commentCount in Firestore
+  final List<String> _comments;
+// Legacy alias - maps to commentCount in Firestore
+  @override
+  @JsonKey()
+  List<String> get comments {
+    if (_comments is EqualUnmodifiableListView) return _comments;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_comments);
+  }
+
+// Legacy: Array of comment IDs (deprecated, use subcollection)
   final List<String> _photoUrls;
+// Legacy: Array of comment IDs (deprecated, use subcollection)
   @override
   @JsonKey()
   List<String> get photoUrls {
@@ -424,10 +490,13 @@ class _$FeedPostImpl implements _FeedPost {
 // Denormalized from users/{authorId}.photoUrl
   @override
   final String? entityId;
+// ID of related entity (gameId, etc.)
+  @override
+  final String? region;
 
   @override
   String toString() {
-    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, text: $text, gameId: $gameId, achievementId: $achievementId, likes: $likes, likeCount: $likeCount, commentsCount: $commentsCount, photoUrls: $photoUrls, createdAt: $createdAt, hubName: $hubName, hubLogoUrl: $hubLogoUrl, authorName: $authorName, authorPhotoUrl: $authorPhotoUrl, entityId: $entityId)';
+    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, text: $text, gameId: $gameId, achievementId: $achievementId, likes: $likes, likeCount: $likeCount, commentCount: $commentCount, commentsCount: $commentsCount, comments: $comments, photoUrls: $photoUrls, createdAt: $createdAt, hubName: $hubName, hubLogoUrl: $hubLogoUrl, authorName: $authorName, authorPhotoUrl: $authorPhotoUrl, entityId: $entityId, region: $region)';
   }
 
   @override
@@ -448,8 +517,11 @@ class _$FeedPostImpl implements _FeedPost {
             const DeepCollectionEquality().equals(other._likes, _likes) &&
             (identical(other.likeCount, likeCount) ||
                 other.likeCount == likeCount) &&
+            (identical(other.commentCount, commentCount) ||
+                other.commentCount == commentCount) &&
             (identical(other.commentsCount, commentsCount) ||
                 other.commentsCount == commentsCount) &&
+            const DeepCollectionEquality().equals(other._comments, _comments) &&
             const DeepCollectionEquality()
                 .equals(other._photoUrls, _photoUrls) &&
             (identical(other.createdAt, createdAt) ||
@@ -462,31 +534,36 @@ class _$FeedPostImpl implements _FeedPost {
             (identical(other.authorPhotoUrl, authorPhotoUrl) ||
                 other.authorPhotoUrl == authorPhotoUrl) &&
             (identical(other.entityId, entityId) ||
-                other.entityId == entityId));
+                other.entityId == entityId) &&
+            (identical(other.region, region) || other.region == region));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      postId,
-      hubId,
-      authorId,
-      type,
-      content,
-      text,
-      gameId,
-      achievementId,
-      const DeepCollectionEquality().hash(_likes),
-      likeCount,
-      commentsCount,
-      const DeepCollectionEquality().hash(_photoUrls),
-      createdAt,
-      hubName,
-      hubLogoUrl,
-      authorName,
-      authorPhotoUrl,
-      entityId);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        postId,
+        hubId,
+        authorId,
+        type,
+        content,
+        text,
+        gameId,
+        achievementId,
+        const DeepCollectionEquality().hash(_likes),
+        likeCount,
+        commentCount,
+        commentsCount,
+        const DeepCollectionEquality().hash(_comments),
+        const DeepCollectionEquality().hash(_photoUrls),
+        createdAt,
+        hubName,
+        hubLogoUrl,
+        authorName,
+        authorPhotoUrl,
+        entityId,
+        region
+      ]);
 
   /// Create a copy of FeedPost
   /// with the given fields replaced by the non-null parameter values.
@@ -516,14 +593,17 @@ abstract class _FeedPost implements FeedPost {
       final String? achievementId,
       final List<String> likes,
       final int likeCount,
+      final int commentCount,
       final int commentsCount,
+      final List<String> comments,
       final List<String> photoUrls,
       @TimestampConverter() required final DateTime createdAt,
       final String? hubName,
       final String? hubLogoUrl,
       final String? authorName,
       final String? authorPhotoUrl,
-      final String? entityId}) = _$FeedPostImpl;
+      final String? entityId,
+      final String? region}) = _$FeedPostImpl;
 
   factory _FeedPost.fromJson(Map<String, dynamic> json) =
       _$FeedPostImpl.fromJson;
@@ -550,7 +630,13 @@ abstract class _FeedPost implements FeedPost {
   @override
   int get likeCount; // Denormalized count for sorting
   @override
-  int get commentsCount;
+  int get commentCount; // Denormalized: Count of comments (Cloud Function writes this)
+// Note: commentsCount is kept for backward compatibility. Prefer using commentCount.
+  @override
+  int get commentsCount; // Legacy alias - maps to commentCount in Firestore
+  @override
+  List<String>
+      get comments; // Legacy: Array of comment IDs (deprecated, use subcollection)
   @override
   List<String> get photoUrls; // URLs of photos/videos in the post
   @override
@@ -566,7 +652,9 @@ abstract class _FeedPost implements FeedPost {
   @override
   String? get authorPhotoUrl; // Denormalized from users/{authorId}.photoUrl
   @override
-  String? get entityId;
+  String? get entityId; // ID of related entity (gameId, etc.)
+  @override
+  String? get region;
 
   /// Create a copy of FeedPost
   /// with the given fields replaced by the non-null parameter values.

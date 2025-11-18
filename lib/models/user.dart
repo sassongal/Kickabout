@@ -16,17 +16,49 @@ class User with _$User {
     String? photoUrl,
     String? phoneNumber,
     String? city, // עיר מגורים
-    @Default('available') String availabilityStatus, // available, busy, notAvailable
+    // New profile fields
+    String? firstName,
+    String? lastName,
+    @TimestampConverter() DateTime? birthDate,
+    String? favoriteTeamId, // ID of favorite team from Firestore
+    String? facebookProfileUrl,
+    String? instagramProfileUrl,
+    @Default('available') String availabilityStatus, // available, busy, notAvailable (deprecated, use isActive)
+    @Default(true) bool isActive, // true = פתוח להאבים והזמנות, false = לא פתוח
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> hubIds,
     @Default(5.0) double currentRankScore,
     @Default('Midfielder') String preferredPosition,
+    String? playingStyle, // goalkeeper, defensive, offensive
     @Default(0) int totalParticipations,
-    @GeoPointConverter() GeoPoint? location,
+    @NullableGeoPointConverter() GeoPoint? location,
     String? geohash,
+    String? region, // אזור: צפון, מרכז, דרום, ירושלים
+    // Denormalized fields (updated by Cloud Functions, not written by client)
+    @Default(0) int followerCount, // Denormalized: Count of followers (updated by onFollowCreated)
+    // Privacy settings - control what data is visible in search and profile
+    @Default({
+      'hideFromSearch': false,
+      'hideEmail': false,
+      'hidePhone': false,
+      'hideCity': false,
+      'hideStats': false,
+      'hideRatings': false,
+    }) Map<String, bool> privacySettings,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
+}
+
+/// Extension to add displayName getter to User
+extension UserDisplayName on User {
+  /// Get display name - prefers firstName + lastName, falls back to name
+  String get displayName {
+    if (firstName != null && lastName != null) {
+      return '$firstName $lastName';
+    }
+    return name;
+  }
 }
 
 /// Firestore converter for User

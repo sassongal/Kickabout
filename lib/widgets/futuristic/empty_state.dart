@@ -19,49 +19,52 @@ class FuturisticEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    FuturisticColors.primary.withValues(alpha: 0.2),
-                    FuturisticColors.secondary.withValues(alpha: 0.1),
-                  ],
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      FuturisticColors.primary.withValues(alpha: 0.2),
+                      FuturisticColors.secondary.withValues(alpha: 0.1),
+                    ],
+                  ),
                 ),
-              ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: FuturisticColors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: FuturisticTypography.heading3,
-              textAlign: TextAlign.center,
-            ),
-            if (message != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                message!,
-                style: FuturisticTypography.bodyMedium.copyWith(
+                child: Icon(
+                  icon,
+                  size: 64,
                   color: FuturisticColors.textTertiary,
                 ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                title,
+                style: FuturisticTypography.heading3,
                 textAlign: TextAlign.center,
               ),
+              if (message != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  message!,
+                  style: FuturisticTypography.bodyMedium.copyWith(
+                    color: FuturisticColors.textTertiary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              if (action != null) ...[
+                const SizedBox(height: 24),
+                action!,
+              ],
             ],
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
-            ],
-          ],
+          ),
         ),
       ),
     );

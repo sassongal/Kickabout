@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/models/enums/game_status.dart';
 import 'package:kickadoor/models/converters/timestamp_converter.dart';
 import 'package:kickadoor/models/converters/geopoint_converter.dart';
+import 'package:kickadoor/models/team.dart';
 
 part 'game.freezed.dart';
 part 'game.g.dart';
@@ -15,9 +16,10 @@ class Game with _$Game {
     required String gameId,
     required String createdBy,
     required String hubId,
+    String? eventId, // ID of the event this game belongs to (if part of an event)
     @TimestampConverter() required DateTime gameDate,
     String? location, // Legacy text location (kept for backward compatibility)
-    @GeoPointConverter() GeoPoint? locationPoint, // New geographic location
+    @NullableGeoPointConverter() GeoPoint? locationPoint, // New geographic location
     String? geohash,
     String? venueId, // Reference to venue (not denormalized - use venueId to fetch)
     @Default(2) int teamCount, // 2, 3, or 4
@@ -34,6 +36,14 @@ class Game with _$Game {
     String? createdByName, // Denormalized from users/{createdBy}.name
     String? createdByPhotoUrl, // Denormalized from users/{createdBy}.photoUrl
     String? hubName, // Denormalized from hubs/{hubId}.name (optional, for feed posts)
+    // Teams and scores
+    @Default([]) List<Team> teams, // List of teams created in TeamMaker
+    int? teamAScore, // Score for team A (first team)
+    int? teamBScore, // Score for team B (second team)
+    // Game rules
+    int? durationInMinutes, // Duration of the game in minutes
+    String? gameEndCondition, // Condition for game end (e.g., "first to 5 goals", "time limit")
+    String? region, // אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
   }) = _Game;
 
   factory Game.fromJson(Map<String, dynamic> json) => _$GameFromJson(json);

@@ -8,7 +8,7 @@ class RecapGenerator {
     String gameId,
     EventsRepository eventsRepo,
     UsersRepository usersRepo,
-    TeamsRepository teamsRepo,
+    GameTeamsRepository teamsRepo,
     GamesRepository gamesRepo,
   ) async {
     final events = await eventsRepo.getEvents(gameId);

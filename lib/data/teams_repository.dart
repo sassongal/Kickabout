@@ -1,144 +1,56 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/firestore_paths.dart';
+import 'package:kickadoor/models/team_data.dart';
 
-/// Repository for Team operations
-class TeamsRepository {
+/// Repository for managing favorite teams data
+/// This repository reads from a closed collection 'teams' in Firestore
+class FavoriteTeamsRepository {
   final FirebaseFirestore _firestore;
 
-  TeamsRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  FavoriteTeamsRepository(this._firestore);
 
-  /// Get team by game ID and team ID
-  Future<Team?> getTeam(String gameId, String teamId) async {
-    if (!Env.isFirebaseAvailable) return null;
-
-    try {
-      final doc = await _firestore
-          .doc(FirestorePaths.gameTeam(gameId, teamId))
-          .get();
-      if (!doc.exists) return null;
-      return Team.fromJson({...doc.data()!, 'teamId': teamId});
-    } catch (e) {
-      throw Exception('Failed to get team: $e');
-    }
-  }
-
-  /// Stream team by game ID and team ID
-  Stream<Team?> watchTeam(String gameId, String teamId) {
+  /// Get all teams from the closed repository
+  /// Teams are stored in Firestore collection 'teams'
+  Future<List<TeamData>> getAllTeams() async {
     if (!Env.isFirebaseAvailable) {
-      return Stream.value(null);
+      return [];
     }
-
-    return _firestore
-        .doc(FirestorePaths.gameTeam(gameId, teamId))
-        .snapshots()
-        .map((doc) => doc.exists
-            ? Team.fromJson({...doc.data()!, 'teamId': teamId})
-            : null);
-  }
-
-  /// Set teams for a game (replaces all teams)
-  Future<void> setTeams(String gameId, List<Team> teams) async {
-    if (!Env.isFirebaseAvailable) {
-      throw Exception('Firebase not available');
-    }
-
-    try {
-      final batch = _firestore.batch();
-      
-      // Delete existing teams
-      final existingTeams = await _firestore
-          .collection(FirestorePaths.gameTeams(gameId))
-          .get();
-      
-      for (var doc in existingTeams.docs) {
-        batch.delete(doc.reference);
-      }
-      
-      // Add new teams
-      for (var team in teams) {
-        final teamId = team.teamId.isNotEmpty
-            ? team.teamId
-            : _firestore.collection(FirestorePaths.gameTeams(gameId)).doc().id;
-        
-        final data = team.toJson();
-        data.remove('teamId'); // Remove teamId from data (it's the document ID)
-        
-        batch.set(
-          _firestore.doc(FirestorePaths.gameTeam(gameId, teamId)),
-          data,
-        );
-      }
-      
-      await batch.commit();
-    } catch (e) {
-      throw Exception('Failed to set teams: $e');
-    }
-  }
-
-  /// Stream all teams for a game
-  Stream<List<Team>> watchTeams(String gameId) {
-    if (!Env.isFirebaseAvailable) {
-      return Stream.value([]);
-    }
-
-    return _firestore
-        .collection(FirestorePaths.gameTeams(gameId))
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Team.fromJson({...doc.data(), 'teamId': doc.id}))
-            .toList());
-  }
-
-  /// Get all teams for a game (non-streaming)
-  Future<List<Team>> getTeams(String gameId) async {
-    if (!Env.isFirebaseAvailable) return [];
 
     try {
       final snapshot = await _firestore
-          .collection(FirestorePaths.gameTeams(gameId))
+          .collection('teams')
+          .orderBy('league') // Sort by league first
+          .orderBy('name') // Then by name
           .get();
-      
+
       return snapshot.docs
-          .map((doc) => Team.fromJson({...doc.data(), 'teamId': doc.id}))
+          .map((doc) {
+            final data = doc.data();
+            return TeamData.fromJson(data).copyWith(id: doc.id);
+          })
           .toList();
     } catch (e) {
-      throw Exception('Failed to get teams: $e');
+      debugPrint('Error fetching teams: $e');
+      return [];
     }
   }
 
-  /// Update team
-  Future<void> updateTeam(
-    String gameId,
-    String teamId,
-    Map<String, dynamic> data,
-  ) async {
+  /// Get a single team by ID
+  Future<TeamData?> getTeamById(String teamId) async {
     if (!Env.isFirebaseAvailable) {
-      throw Exception('Firebase not available');
+      return null;
     }
 
     try {
-      await _firestore
-          .doc(FirestorePaths.gameTeam(gameId, teamId))
-          .update(data);
+      final doc = await _firestore.collection('teams').doc(teamId).get();
+      if (!doc.exists) return null;
+      
+      final data = doc.data()!;
+      return TeamData.fromJson(data).copyWith(id: doc.id);
     } catch (e) {
-      throw Exception('Failed to update team: $e');
-    }
-  }
-
-  /// Delete team
-  Future<void> deleteTeam(String gameId, String teamId) async {
-    if (!Env.isFirebaseAvailable) {
-      throw Exception('Firebase not available');
-    }
-
-    try {
-      await _firestore.doc(FirestorePaths.gameTeam(gameId, teamId)).delete();
-    } catch (e) {
-      throw Exception('Failed to delete team: $e');
+      debugPrint('Error fetching team by ID: $e');
+      return null;
     }
   }
 }
-

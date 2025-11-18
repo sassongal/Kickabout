@@ -54,11 +54,15 @@ class HubEventsRepository {
     }
 
     try {
+      final data = event.toJson();
+      // Remove eventId from data (it's the document ID)
+      data.remove('eventId');
+      
       final docRef = await _firestore
           .collection(FirestorePaths.hubs())
           .doc(event.hubId)
           .collection('events')
-          .add(event.toJson());
+          .add(data);
 
       return docRef.id;
     } catch (e) {
@@ -106,12 +110,40 @@ class HubEventsRepository {
   }
 
   /// Register a player to an event
-  Future<void> registerToEvent(String hubId, String eventId, String playerId) async {
+  /// Returns the new registration count after registration
+  Future<int> registerToEvent(String hubId, String eventId, String playerId) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
+      // First, get the current event to check max participants
+      final eventDoc = await _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId)
+          .get();
+      
+      if (!eventDoc.exists) {
+        throw Exception('Event not found');
+      }
+      
+      final eventData = eventDoc.data()!;
+      final currentRegistered = List<String>.from(eventData['registeredPlayerIds'] ?? []);
+      final maxParticipants = eventData['maxParticipants'] as int? ?? 15;
+      
+      // Check if already registered
+      if (currentRegistered.contains(playerId)) {
+        throw Exception('Already registered to this event');
+      }
+      
+      // Check if event is full
+      if (currentRegistered.length >= maxParticipants) {
+        throw Exception('Event is full');
+      }
+      
+      // Register the player
       await _firestore
           .collection(FirestorePaths.hubs())
           .doc(hubId)
@@ -121,6 +153,9 @@ class HubEventsRepository {
         'registeredPlayerIds': FieldValue.arrayUnion([playerId]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      
+      // Return the new count (current + 1)
+      return currentRegistered.length + 1;
     } catch (e) {
       throw Exception('Failed to register to event: $e');
     }

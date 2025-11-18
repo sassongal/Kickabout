@@ -17,7 +17,7 @@ class PrivateMessagesRepository {
 
     return _firestore
         .collection('private_messages')
-        .where('participants', arrayContains: userId)
+        .where('participantIds', arrayContains: userId)
         .orderBy('lastMessageAt', descending: true)
         .limit(50)
         .snapshots()
@@ -65,7 +65,7 @@ class PrivateMessagesRepository {
             .collection('private_messages')
             .doc(conversationId)
             .set({
-          'participants': participants,
+          'participantIds': participants,
           'unreadCount': {
             userId1: 0,
             userId2: 0,
@@ -83,7 +83,7 @@ class PrivateMessagesRepository {
   /// Send a private message
   Future<String> sendMessage(
     String conversationId,
-    String authorId,
+    String senderId,
     String text,
   ) async {
     if (!Env.isFirebaseAvailable) {
@@ -98,8 +98,9 @@ class PrivateMessagesRepository {
           .doc();
 
       await docRef.set({
+        'messageId': docRef.id,
         'conversationId': conversationId,
-        'authorId': authorId,
+        'senderId': senderId,
         'text': text.trim(),
         'read': false,
         'createdAt': FieldValue.serverTimestamp(),
@@ -112,10 +113,10 @@ class PrivateMessagesRepository {
           .get();
 
       if (conversation.exists) {
-        final participants = (conversation.data()!['participants'] as List)
+        final participantIds = (conversation.data()!['participantIds'] as List)
             .map((e) => e.toString())
             .toList();
-        final otherUserId = participants.firstWhere((id) => id != authorId);
+        final otherUserId = participantIds.firstWhere((id) => id != senderId);
 
         await _firestore
             .collection('private_messages')
@@ -146,7 +147,7 @@ class PrivateMessagesRepository {
           .doc(conversationId)
           .collection('messages')
           .where('read', isEqualTo: false)
-          .where('authorId', isNotEqualTo: userId)
+          .where('senderId', isNotEqualTo: userId)
           .get();
 
       final batch = _firestore.batch();

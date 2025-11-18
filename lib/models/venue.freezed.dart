@@ -26,7 +26,7 @@ mixin _$Venue {
   String get name =>
       throw _privateConstructorUsedError; // e.g., "גן דניאל - מגרש 1"
   String? get description => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
+  @GeoPointConverter()
   GeoPoint get location =>
       throw _privateConstructorUsedError; // Exact location from Google Maps
   String? get address =>
@@ -45,7 +45,13 @@ mixin _$Venue {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String? get createdBy =>
       throw _privateConstructorUsedError; // User who added this venue
-  bool get isActive => throw _privateConstructorUsedError;
+  bool get isActive =>
+      throw _privateConstructorUsedError; // Can be deactivated without deleting
+  bool get isMain =>
+      throw _privateConstructorUsedError; // Is this the main/home venue for the hub
+  int get hubCount =>
+      throw _privateConstructorUsedError; // Number of hubs using this venue
+  bool get isPublic => throw _privateConstructorUsedError;
 
   /// Serializes this Venue to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -66,8 +72,7 @@ abstract class $VenueCopyWith<$Res> {
       String hubId,
       String name,
       String? description,
-      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
-      GeoPoint location,
+      @GeoPointConverter() GeoPoint location,
       String? address,
       String? googlePlaceId,
       List<String> amenities,
@@ -76,7 +81,10 @@ abstract class $VenueCopyWith<$Res> {
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
       String? createdBy,
-      bool isActive});
+      bool isActive,
+      bool isMain,
+      int hubCount,
+      bool isPublic});
 }
 
 /// @nodoc
@@ -108,6 +116,9 @@ class _$VenueCopyWithImpl<$Res, $Val extends Venue>
     Object? updatedAt = null,
     Object? createdBy = freezed,
     Object? isActive = null,
+    Object? isMain = null,
+    Object? hubCount = null,
+    Object? isPublic = null,
   }) {
     return _then(_value.copyWith(
       venueId: null == venueId
@@ -166,6 +177,18 @@ class _$VenueCopyWithImpl<$Res, $Val extends Venue>
           ? _value.isActive
           : isActive // ignore: cast_nullable_to_non_nullable
               as bool,
+      isMain: null == isMain
+          ? _value.isMain
+          : isMain // ignore: cast_nullable_to_non_nullable
+              as bool,
+      hubCount: null == hubCount
+          ? _value.hubCount
+          : hubCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      isPublic: null == isPublic
+          ? _value.isPublic
+          : isPublic // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -182,8 +205,7 @@ abstract class _$$VenueImplCopyWith<$Res> implements $VenueCopyWith<$Res> {
       String hubId,
       String name,
       String? description,
-      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
-      GeoPoint location,
+      @GeoPointConverter() GeoPoint location,
       String? address,
       String? googlePlaceId,
       List<String> amenities,
@@ -192,7 +214,10 @@ abstract class _$$VenueImplCopyWith<$Res> implements $VenueCopyWith<$Res> {
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
       String? createdBy,
-      bool isActive});
+      bool isActive,
+      bool isMain,
+      int hubCount,
+      bool isPublic});
 }
 
 /// @nodoc
@@ -222,6 +247,9 @@ class __$$VenueImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? createdBy = freezed,
     Object? isActive = null,
+    Object? isMain = null,
+    Object? hubCount = null,
+    Object? isPublic = null,
   }) {
     return _then(_$VenueImpl(
       venueId: null == venueId
@@ -280,6 +308,18 @@ class __$$VenueImplCopyWithImpl<$Res>
           ? _value.isActive
           : isActive // ignore: cast_nullable_to_non_nullable
               as bool,
+      isMain: null == isMain
+          ? _value.isMain
+          : isMain // ignore: cast_nullable_to_non_nullable
+              as bool,
+      hubCount: null == hubCount
+          ? _value.hubCount
+          : hubCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      isPublic: null == isPublic
+          ? _value.isPublic
+          : isPublic // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -292,8 +332,7 @@ class _$VenueImpl implements _Venue {
       required this.hubId,
       required this.name,
       this.description,
-      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
-      required this.location,
+      @GeoPointConverter() required this.location,
       this.address,
       this.googlePlaceId,
       final List<String> amenities = const [],
@@ -302,7 +341,10 @@ class _$VenueImpl implements _Venue {
       @TimestampConverter() required this.createdAt,
       @TimestampConverter() required this.updatedAt,
       this.createdBy,
-      this.isActive = true})
+      this.isActive = true,
+      this.isMain = false,
+      this.hubCount = 0,
+      this.isPublic = true})
       : _amenities = amenities;
 
   factory _$VenueImpl.fromJson(Map<String, dynamic> json) =>
@@ -319,7 +361,7 @@ class _$VenueImpl implements _Venue {
   @override
   final String? description;
   @override
-  @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
+  @GeoPointConverter()
   final GeoPoint location;
 // Exact location from Google Maps
   @override
@@ -359,10 +401,22 @@ class _$VenueImpl implements _Venue {
   @override
   @JsonKey()
   final bool isActive;
+// Can be deactivated without deleting
+  @override
+  @JsonKey()
+  final bool isMain;
+// Is this the main/home venue for the hub
+  @override
+  @JsonKey()
+  final int hubCount;
+// Number of hubs using this venue
+  @override
+  @JsonKey()
+  final bool isPublic;
 
   @override
   String toString() {
-    return 'Venue(venueId: $venueId, hubId: $hubId, name: $name, description: $description, location: $location, address: $address, googlePlaceId: $googlePlaceId, amenities: $amenities, surfaceType: $surfaceType, maxPlayers: $maxPlayers, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, isActive: $isActive)';
+    return 'Venue(venueId: $venueId, hubId: $hubId, name: $name, description: $description, location: $location, address: $address, googlePlaceId: $googlePlaceId, amenities: $amenities, surfaceType: $surfaceType, maxPlayers: $maxPlayers, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, isActive: $isActive, isMain: $isMain, hubCount: $hubCount, isPublic: $isPublic)';
   }
 
   @override
@@ -393,7 +447,12 @@ class _$VenueImpl implements _Venue {
             (identical(other.createdBy, createdBy) ||
                 other.createdBy == createdBy) &&
             (identical(other.isActive, isActive) ||
-                other.isActive == isActive));
+                other.isActive == isActive) &&
+            (identical(other.isMain, isMain) || other.isMain == isMain) &&
+            (identical(other.hubCount, hubCount) ||
+                other.hubCount == hubCount) &&
+            (identical(other.isPublic, isPublic) ||
+                other.isPublic == isPublic));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -413,7 +472,10 @@ class _$VenueImpl implements _Venue {
       createdAt,
       updatedAt,
       createdBy,
-      isActive);
+      isActive,
+      isMain,
+      hubCount,
+      isPublic);
 
   /// Create a copy of Venue
   /// with the given fields replaced by the non-null parameter values.
@@ -437,8 +499,7 @@ abstract class _Venue implements Venue {
       required final String hubId,
       required final String name,
       final String? description,
-      @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
-      required final GeoPoint location,
+      @GeoPointConverter() required final GeoPoint location,
       final String? address,
       final String? googlePlaceId,
       final List<String> amenities,
@@ -447,7 +508,10 @@ abstract class _Venue implements Venue {
       @TimestampConverter() required final DateTime createdAt,
       @TimestampConverter() required final DateTime updatedAt,
       final String? createdBy,
-      final bool isActive}) = _$VenueImpl;
+      final bool isActive,
+      final bool isMain,
+      final int hubCount,
+      final bool isPublic}) = _$VenueImpl;
 
   factory _Venue.fromJson(Map<String, dynamic> json) = _$VenueImpl.fromJson;
 
@@ -460,7 +524,7 @@ abstract class _Venue implements Venue {
   @override
   String? get description;
   @override
-  @JsonKey(fromJson: _geoPointFromJson, toJson: _geoPointToJson)
+  @GeoPointConverter()
   GeoPoint get location; // Exact location from Google Maps
   @override
   String? get address; // Human-readable address
@@ -481,7 +545,13 @@ abstract class _Venue implements Venue {
   @override
   String? get createdBy; // User who added this venue
   @override
-  bool get isActive;
+  bool get isActive; // Can be deactivated without deleting
+  @override
+  bool get isMain; // Is this the main/home venue for the hub
+  @override
+  int get hubCount; // Number of hubs using this venue
+  @override
+  bool get isPublic;
 
   /// Create a copy of Venue
   /// with the given fields replaced by the non-null parameter values.
