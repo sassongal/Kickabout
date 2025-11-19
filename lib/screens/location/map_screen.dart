@@ -39,6 +39,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void initState() {
     super.initState();
+    // Set default location immediately so map can be displayed
+    _currentPosition = Position(
+      latitude: 31.7683, // Jerusalem, Israel
+      longitude: 35.2137,
+      timestamp: DateTime.now(),
+      accuracy: 0,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
     _loadCustomIcons();
     _loadCurrentLocation();
   }
@@ -88,53 +101,52 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _loadCurrentLocation() async {
     try {
       final locationService = ref.read(locationServiceProvider);
-      final position = await locationService.getCurrentLocation();
+      
+      // Load location in background to avoid blocking UI
+      final position = await locationService.getCurrentLocation()
+          .timeout(const Duration(seconds: 10));
 
       if (position != null) {
-        setState(() {
-          _currentPosition = position;
-        });
-        _updateMapCamera();
+        if (mounted) {
+          setState(() {
+            _currentPosition = position;
+          });
+          // Update camera after state is set (non-blocking)
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _mapController != null && _currentPosition != null) {
+              _updateMapCamera();
+            }
+          });
+        }
       } else {
         // If no location, set default to Israel center (Jerusalem)
-        setState(() {
-          _currentPosition = Position(
-            latitude: 31.7683,
-            longitude: 35.2137,
-            timestamp: DateTime.now(),
-            accuracy: 0,
-            altitude: 0,
-            altitudeAccuracy: 0,
-            heading: 0,
-            headingAccuracy: 0,
-            speed: 0,
-            speedAccuracy: 0,
-          );
-        });
-        _updateMapCamera();
-      }
-      
-      // Load markers regardless of location (wait for icons to load first, with timeout)
-      if (_iconsLoaded) {
-        await _loadMarkers();
-      } else {
-        // Wait for icons to load, but with timeout
-        try {
-          await Future.delayed(const Duration(milliseconds: 500))
-              .timeout(const Duration(seconds: 3));
-          if (_iconsLoaded) {
-            await _loadMarkers();
-          } else {
-            // Icons still not loaded, proceed anyway with default markers
-            debugPrint('⚠️ Icons not loaded after timeout, proceeding with default markers');
-            await _loadMarkers();
-          }
-        } catch (e) {
-          debugPrint('⚠️ Timeout waiting for icons: $e');
-          // Proceed anyway
-          await _loadMarkers();
+        if (mounted) {
+          setState(() {
+            _currentPosition = Position(
+              latitude: 31.7683,
+              longitude: 35.2137,
+              timestamp: DateTime.now(),
+              accuracy: 0,
+              altitude: 0,
+              altitudeAccuracy: 0,
+              heading: 0,
+              headingAccuracy: 0,
+              speed: 0,
+              speedAccuracy: 0,
+            );
+          });
+          // Update camera after state is set (non-blocking)
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _mapController != null && _currentPosition != null) {
+              _updateMapCamera();
+            }
+          });
         }
       }
+      
+      // Load markers in background - don't block UI
+      // Use unawaited to allow UI to continue rendering
+      _loadMarkersInBackground();
     } catch (e) {
       // If location fails, still try to load hubs with default location
       setState(() {
@@ -151,13 +163,43 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           speedAccuracy: 0,
         );
       });
-      _updateMapCamera();
-      await _loadMarkers();
+      // Update camera after state is set
+      if (_mapController != null) {
+        _updateMapCamera();
+      } else {
+        // If controller not ready, wait for it
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_mapController != null && _currentPosition != null) {
+            _updateMapCamera();
+          }
+        });
+      }
+      try {
+        await _loadMarkers().timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            debugPrint('⚠️ Overall timeout loading markers - showing map anyway');
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          },
+        );
+      } catch (markerError) {
+        debugPrint('❌ Error loading markers: $markerError');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
       
       if (mounted) {
         SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
       }
     } finally {
+      // Always clear loading state, even if something failed
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -177,13 +219,59 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  /// Load markers in background without blocking UI
+  Future<void> _loadMarkersInBackground() async {
+    // Wait for icons to load, but with timeout
+    if (!_iconsLoaded) {
+      try {
+        await Future.delayed(const Duration(milliseconds: 500))
+            .timeout(const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint('⚠️ Timeout waiting for icons: $e');
+      }
+    }
+    
+    // Load markers with timeout - don't block UI
+    try {
+      await _loadMarkers().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          debugPrint('⚠️ Overall timeout loading markers - showing map anyway');
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ Error loading markers in background: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _loadMarkers() async {
     final markers = <Marker>{};
 
     try {
       // Load Google Places venues (football fields in Israel)
       if (_selectedFilter == 'all' || _selectedFilter == 'venues') {
-        await _loadGooglePlacesVenues(markers);
+        try {
+          await _loadGooglePlacesVenues(markers).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint('⚠️ Timeout loading Google Places venues - continuing without them');
+              // Continue loading other markers even if Google Places fails
+            },
+          );
+        } catch (e) {
+          debugPrint('❌ Error loading Google Places venues: $e');
+          // Continue loading other markers even if Google Places fails
+        }
       }
 
       // Load hubs and their venues
@@ -192,16 +280,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final venuesRepo = ref.read(venuesRepositoryProvider);
         
         // Get all hubs (or nearby if we have location)
-        final List<Hub> hubs;
-        if (_currentPosition != null) {
-          hubs = await hubsRepo.findHubsNearby(
-            latitude: _currentPosition!.latitude,
-            longitude: _currentPosition!.longitude,
-            radiusKm: 50.0, // 50km radius
-          );
-        } else {
-          // Load all hubs if no location available
-          hubs = await hubsRepo.getAllHubs(limit: 200);
+        List<Hub> hubs = <Hub>[];
+        try {
+          if (_currentPosition != null) {
+            hubs = await hubsRepo.findHubsNearby(
+              latitude: _currentPosition!.latitude,
+              longitude: _currentPosition!.longitude,
+              radiusKm: 50.0, // 50km radius
+            ).timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                debugPrint('⚠️ Timeout finding nearby hubs');
+                return <Hub>[];
+              },
+            );
+          } else {
+            // Load all hubs if no location available
+            hubs = await hubsRepo.getAllHubs(limit: 200).timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                debugPrint('⚠️ Timeout loading all hubs');
+                return <Hub>[];
+              },
+            );
+          }
+        } catch (e) {
+          debugPrint('❌ Error loading hubs: $e');
+          hubs = <Hub>[];
         }
 
         for (final hub in hubs) {
@@ -386,11 +491,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
       }
 
-      setState(() {
-        _markers = markers;
-      });
-    } catch (e) {
       if (mounted) {
+        setState(() {
+          _markers = markers;
+          _isLoading = false; // Ensure loading state is cleared
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error in _loadMarkers: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Always clear loading state, even on error
+        });
         SnackbarHelper.showError(context, 'שגיאה בטעינת מגרשים: $e');
       }
     }
@@ -417,28 +529,34 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     SizedBox(
                       width: constraints.maxWidth,
                       height: constraints.maxHeight,
-                      child: _currentPosition != null
-                          ? GoogleMap(
-                              initialCameraPosition: CameraPosition(
-                                target: LatLng(
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: _currentPosition != null
+                              ? LatLng(
                                   _currentPosition!.latitude,
                                   _currentPosition!.longitude,
-                                ),
-                                zoom: 13.0,
-                              ),
-                              markers: _markers,
-                              myLocationEnabled: true,
-                              myLocationButtonEnabled: true,
-                              mapType: MapType.normal,
-                              onMapCreated: (controller) {
-                                setState(() {
-                                  _mapController = controller;
-                                });
-                              },
-                            )
-                          : const Center(
-                              child: CircularProgressIndicator(),
-                            ),
+                                )
+                              : const LatLng(31.7683, 35.2137), // Default to Jerusalem
+                          zoom: 13.0,
+                        ),
+                        markers: _markers,
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: true,
+                        mapType: MapType.normal,
+                        onMapCreated: (controller) {
+                          setState(() {
+                            _mapController = controller;
+                          });
+                          // Update camera to current position after controller is ready
+                          if (_currentPosition != null) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (_mapController != null && _currentPosition != null) {
+                                _updateMapCamera();
+                              }
+                            });
+                          }
+                        },
+                      ),
                     ),
                     // Filter buttons
                     Positioned(
@@ -448,17 +566,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       child: Card(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildFilterChip('all', 'הכל'),
-                              const SizedBox(width: 8),
-                              _buildFilterChip('hubs', 'הובים'),
-                              const SizedBox(width: 8),
-                              _buildFilterChip('games', 'משחקים'),
-                              const SizedBox(width: 8),
-                              _buildFilterChip('venues', 'מגרשים'),
-                            ],
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildFilterChip('all', 'הכל'),
+                                const SizedBox(width: 8),
+                                _buildFilterChip('hubs', 'הובים'),
+                                const SizedBox(width: 8),
+                                _buildFilterChip('games', 'משחקים'),
+                                const SizedBox(width: 8),
+                                _buildFilterChip('venues', 'מגרשים'),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -489,6 +610,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Load Google Places venues (football fields)
   Future<void> _loadGooglePlacesVenues(Set<Marker> markers) async {
     try {
+      debugPrint('🗺️ Starting to load Google Places venues...');
       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
       
       // Build query based on location
@@ -498,13 +620,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (_currentPosition != null) {
         callData['lat'] = _currentPosition!.latitude;
         callData['lng'] = _currentPosition!.longitude;
+        debugPrint('📍 Searching venues near: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}');
       }
 
+      debugPrint('📞 Calling searchVenues Cloud Function...');
       final result = await functions.httpsCallable('searchVenues').call(callData);
+      debugPrint('✅ searchVenues returned successfully');
+      
       final data = result.data as Map<String, dynamic>;
       final results = data['results'] as List<dynamic>?;
 
       if (results != null) {
+        debugPrint('📍 Found ${results.length} venues from Google Places');
         for (final place in results) {
           final placeId = place['place_id'] as String?;
           final name = place['name'] as String?;
@@ -550,9 +677,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             );
           }
         }
+      } else {
+        debugPrint('⚠️ No results from Google Places');
       }
-    } catch (e) {
-      debugPrint('Error loading Google Places venues: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error loading Google Places venues: $e');
+      debugPrint('Stack trace: $stackTrace');
       // Don't show error to user - just log it
     }
   }

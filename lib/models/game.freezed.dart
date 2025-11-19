@@ -73,7 +73,21 @@ mixin _$Game {
       throw _privateConstructorUsedError; // Duration of the game in minutes
   String? get gameEndCondition =>
       throw _privateConstructorUsedError; // Condition for game end (e.g., "first to 5 goals", "time limit")
-  String? get region => throw _privateConstructorUsedError;
+  String? get region =>
+      throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
+// Community feed
+  bool get showInCommunityFeed =>
+      throw _privateConstructorUsedError; // Show this game in the community activity feed
+// Denormalized fields for community feed (optimization)
+  List<String> get goalScorerIds =>
+      throw _privateConstructorUsedError; // IDs of players who scored (denormalized from events)
+  List<String> get goalScorerNames =>
+      throw _privateConstructorUsedError; // Names of goal scorers (denormalized for quick display)
+  String? get mvpPlayerId =>
+      throw _privateConstructorUsedError; // MVP player ID (denormalized from events)
+  String? get mvpPlayerName =>
+      throw _privateConstructorUsedError; // MVP player name (denormalized for quick display)
+  String? get venueName => throw _privateConstructorUsedError;
 
   /// Serializes this Game to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -116,7 +130,13 @@ abstract class $GameCopyWith<$Res> {
       int? teamBScore,
       int? durationInMinutes,
       String? gameEndCondition,
-      String? region});
+      String? region,
+      bool showInCommunityFeed,
+      List<String> goalScorerIds,
+      List<String> goalScorerNames,
+      String? mvpPlayerId,
+      String? mvpPlayerName,
+      String? venueName});
 }
 
 /// @nodoc
@@ -161,6 +181,12 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
+    Object? showInCommunityFeed = null,
+    Object? goalScorerIds = null,
+    Object? goalScorerNames = null,
+    Object? mvpPlayerId = freezed,
+    Object? mvpPlayerName = freezed,
+    Object? venueName = freezed,
   }) {
     return _then(_value.copyWith(
       gameId: null == gameId
@@ -271,6 +297,30 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      showInCommunityFeed: null == showInCommunityFeed
+          ? _value.showInCommunityFeed
+          : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      goalScorerIds: null == goalScorerIds
+          ? _value.goalScorerIds
+          : goalScorerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      goalScorerNames: null == goalScorerNames
+          ? _value.goalScorerNames
+          : goalScorerNames // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      mvpPlayerId: freezed == mvpPlayerId
+          ? _value.mvpPlayerId
+          : mvpPlayerId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mvpPlayerName: freezed == mvpPlayerName
+          ? _value.mvpPlayerName
+          : mvpPlayerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueName: freezed == venueName
+          ? _value.venueName
+          : venueName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -309,7 +359,13 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       int? teamBScore,
       int? durationInMinutes,
       String? gameEndCondition,
-      String? region});
+      String? region,
+      bool showInCommunityFeed,
+      List<String> goalScorerIds,
+      List<String> goalScorerNames,
+      String? mvpPlayerId,
+      String? mvpPlayerName,
+      String? venueName});
 }
 
 /// @nodoc
@@ -351,6 +407,12 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
+    Object? showInCommunityFeed = null,
+    Object? goalScorerIds = null,
+    Object? goalScorerNames = null,
+    Object? mvpPlayerId = freezed,
+    Object? mvpPlayerName = freezed,
+    Object? venueName = freezed,
   }) {
     return _then(_$GameImpl(
       gameId: null == gameId
@@ -461,6 +523,30 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      showInCommunityFeed: null == showInCommunityFeed
+          ? _value.showInCommunityFeed
+          : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      goalScorerIds: null == goalScorerIds
+          ? _value._goalScorerIds
+          : goalScorerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      goalScorerNames: null == goalScorerNames
+          ? _value._goalScorerNames
+          : goalScorerNames // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      mvpPlayerId: freezed == mvpPlayerId
+          ? _value.mvpPlayerId
+          : mvpPlayerId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mvpPlayerName: freezed == mvpPlayerName
+          ? _value.mvpPlayerName
+          : mvpPlayerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueName: freezed == venueName
+          ? _value.venueName
+          : venueName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -495,9 +581,17 @@ class _$GameImpl implements _Game {
       this.teamBScore,
       this.durationInMinutes,
       this.gameEndCondition,
-      this.region})
+      this.region,
+      this.showInCommunityFeed = false,
+      final List<String> goalScorerIds = const [],
+      final List<String> goalScorerNames = const [],
+      this.mvpPlayerId,
+      this.mvpPlayerName,
+      this.venueName})
       : _photoUrls = photoUrls,
-        _teams = teams;
+        _teams = teams,
+        _goalScorerIds = goalScorerIds,
+        _goalScorerNames = goalScorerNames;
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameImplFromJson(json);
@@ -603,10 +697,48 @@ class _$GameImpl implements _Game {
 // Condition for game end (e.g., "first to 5 goals", "time limit")
   @override
   final String? region;
+// אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
+// Community feed
+  @override
+  @JsonKey()
+  final bool showInCommunityFeed;
+// Show this game in the community activity feed
+// Denormalized fields for community feed (optimization)
+  final List<String> _goalScorerIds;
+// Show this game in the community activity feed
+// Denormalized fields for community feed (optimization)
+  @override
+  @JsonKey()
+  List<String> get goalScorerIds {
+    if (_goalScorerIds is EqualUnmodifiableListView) return _goalScorerIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_goalScorerIds);
+  }
+
+// IDs of players who scored (denormalized from events)
+  final List<String> _goalScorerNames;
+// IDs of players who scored (denormalized from events)
+  @override
+  @JsonKey()
+  List<String> get goalScorerNames {
+    if (_goalScorerNames is EqualUnmodifiableListView) return _goalScorerNames;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_goalScorerNames);
+  }
+
+// Names of goal scorers (denormalized for quick display)
+  @override
+  final String? mvpPlayerId;
+// MVP player ID (denormalized from events)
+  @override
+  final String? mvpPlayerName;
+// MVP player name (denormalized for quick display)
+  @override
+  final String? venueName;
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName)';
   }
 
   @override
@@ -658,7 +790,19 @@ class _$GameImpl implements _Game {
                 other.durationInMinutes == durationInMinutes) &&
             (identical(other.gameEndCondition, gameEndCondition) ||
                 other.gameEndCondition == gameEndCondition) &&
-            (identical(other.region, region) || other.region == region));
+            (identical(other.region, region) || other.region == region) &&
+            (identical(other.showInCommunityFeed, showInCommunityFeed) ||
+                other.showInCommunityFeed == showInCommunityFeed) &&
+            const DeepCollectionEquality()
+                .equals(other._goalScorerIds, _goalScorerIds) &&
+            const DeepCollectionEquality()
+                .equals(other._goalScorerNames, _goalScorerNames) &&
+            (identical(other.mvpPlayerId, mvpPlayerId) ||
+                other.mvpPlayerId == mvpPlayerId) &&
+            (identical(other.mvpPlayerName, mvpPlayerName) ||
+                other.mvpPlayerName == mvpPlayerName) &&
+            (identical(other.venueName, venueName) ||
+                other.venueName == venueName));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -691,7 +835,13 @@ class _$GameImpl implements _Game {
         teamBScore,
         durationInMinutes,
         gameEndCondition,
-        region
+        region,
+        showInCommunityFeed,
+        const DeepCollectionEquality().hash(_goalScorerIds),
+        const DeepCollectionEquality().hash(_goalScorerNames),
+        mvpPlayerId,
+        mvpPlayerName,
+        venueName
       ]);
 
   /// Create a copy of Game
@@ -738,7 +888,13 @@ abstract class _Game implements Game {
       final int? teamBScore,
       final int? durationInMinutes,
       final String? gameEndCondition,
-      final String? region}) = _$GameImpl;
+      final String? region,
+      final bool showInCommunityFeed,
+      final List<String> goalScorerIds,
+      final List<String> goalScorerNames,
+      final String? mvpPlayerId,
+      final String? mvpPlayerName,
+      final String? venueName}) = _$GameImpl;
 
   factory _Game.fromJson(Map<String, dynamic> json) = _$GameImpl.fromJson;
 
@@ -810,7 +966,23 @@ abstract class _Game implements Game {
   String?
       get gameEndCondition; // Condition for game end (e.g., "first to 5 goals", "time limit")
   @override
-  String? get region;
+  String? get region; // אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
+// Community feed
+  @override
+  bool get showInCommunityFeed; // Show this game in the community activity feed
+// Denormalized fields for community feed (optimization)
+  @override
+  List<String>
+      get goalScorerIds; // IDs of players who scored (denormalized from events)
+  @override
+  List<String>
+      get goalScorerNames; // Names of goal scorers (denormalized for quick display)
+  @override
+  String? get mvpPlayerId; // MVP player ID (denormalized from events)
+  @override
+  String? get mvpPlayerName; // MVP player name (denormalized for quick display)
+  @override
+  String? get venueName;
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.

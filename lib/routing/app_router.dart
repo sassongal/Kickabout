@@ -10,6 +10,7 @@ import 'package:kickadoor/screens/hub/hub_list_screen.dart';
 import 'package:kickadoor/screens/hub/create_hub_screen.dart';
 import 'package:kickadoor/screens/hub/hub_detail_screen.dart';
 import 'package:kickadoor/screens/hub/create_hub_event_screen.dart';
+import 'package:kickadoor/screens/hub/edit_hub_event_screen.dart';
 import 'package:kickadoor/screens/game/game_list_screen.dart';
 import 'package:kickadoor/screens/game/create_game_screen.dart';
 import 'package:kickadoor/screens/game/game_detail_screen.dart';
@@ -50,6 +51,8 @@ import 'package:kickadoor/screens/venue/create_manual_venue_screen.dart';
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
 import 'package:kickadoor/screens/onboarding/onboarding_screen.dart';
 import 'package:kickadoor/screens/game/log_past_game_screen.dart';
+import 'package:kickadoor/screens/weather/weather_detail_screen.dart';
+import 'package:kickadoor/screens/activity/community_activity_feed_screen.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -87,6 +90,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     restorationScopeId: 'app_router',
     redirect: (context, state) {
       try {
+        // Check if auth state is still loading - if so, don't redirect yet
+        if (authState.isLoading) {
+          // Allow current navigation to proceed while auth state loads
+          return null;
+        }
+        
         // Wait for auth state to be available
         final authValue = authState.valueOrNull;
         final isAuthenticated = authValue != null;
@@ -101,20 +110,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         // Check if user is anonymous - if so, redirect to auth immediately
-        // (Sign out already happened in main.dart, but check here as fallback)
-        // This check MUST happen before other checks to prevent anonymous users from accessing the app
         if (isAuthenticated) {
           final authService = ref.read(authServiceProvider);
           if (authService.isAnonymous) {
-            // Sign out anonymous user (async, but redirect happens immediately)
-            // This is a fallback in case main.dart didn't catch it
             authService.signOut().then((_) {
-              debugPrint('🔓 Router: Signed out anonymous user');
+              debugPrint('�� Router: Signed out anonymous user');
             }).catchError((e) {
               debugPrint('⚠️ Router: Error signing out anonymous user: $e');
             });
-            // Redirect to auth immediately - don't wait for sign out
-            // This prevents anonymous users from seeing the home screen
             return '/auth';
           }
         }
@@ -125,11 +128,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         // Check onboarding status (only for authenticated non-anonymous users)
-        // Use cached provider value - this is now synchronous
         if (isAuthenticated && !isGoingToOnboarding && !isGoingToSplash) {
           final onboardingStatus = ref.read(onboardingStatusProvider);
-          // Handle async loading state - if still loading, allow navigation to proceed
-          // The provider will update once SharedPreferences loads
+          
+          // If still loading, don't redirect (allow navigation to proceed)
+          if (onboardingStatus.isLoading) {
+            return null;
+          }
+          
+          // Handle async loading state
           if (onboardingStatus.hasValue) {
             final onboardingCompleted = onboardingStatus.value ?? false;
             
@@ -137,7 +144,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               return '/onboarding';
             }
           }
-          // If still loading, don't redirect (allow navigation to proceed)
         }
 
         // If authenticated (non-anonymous) and going to auth, redirect to home
@@ -197,6 +203,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'map',
         builder: (context, state) => const MapScreen(),
       ),
+      GoRoute(
+        path: '/weather',
+        name: 'weatherDetail',
+        builder: (context, state) => const WeatherDetailScreen(),
+      ),
 
       // Players Board
       GoRoute(
@@ -236,6 +247,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      // Community Activity Feed
+      GoRoute(
+        path: '/activity',
+        name: 'activityFeed',
+        builder: (context, state) => const CommunityActivityFeedScreen(),
+      ),
+
       // Game Calendar
       GoRoute(
         path: '/calendar',
@@ -252,7 +270,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'venueSearch',
         builder: (context, state) {
           final hubId = state.uri.queryParameters['hubId'];
-          final selectMode = state.uri.queryParameters['select'] == 'true';
+          final selectMode = state.uri.queryParameters['selectMode'] == 'true' || 
+                            state.uri.queryParameters['select'] == 'true'; // Support both for backward compatibility
           return VenueSearchScreen(
             hubId: hubId,
             selectMode: selectMode,
@@ -397,6 +416,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                       createdAt: DateTime.now(),
                     ), // Temporary - will be loaded in screen
                   );
+                },
+              ),
+              GoRoute(
+                path: 'events/:eventId/edit',
+                name: 'editHubEvent',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  final eventId = state.pathParameters['eventId']!;
+                  return EditHubEventScreen(hubId: hubId, eventId: eventId);
                 },
               ),
               GoRoute(

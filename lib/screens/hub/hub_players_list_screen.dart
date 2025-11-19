@@ -27,11 +27,70 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
   String _searchQuery = '';
   String _sortBy = 'rating'; // rating, name, position
   final TextEditingController _searchController = TextEditingController();
+  
+  // Pagination state
+  final ScrollController _scrollController = ScrollController();
+  List<User> _displayedUsers = [];
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  static const int _pageSize = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      _loadMoreUsers();
+    }
+  }
+
+  Future<void> _loadMoreUsers() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Get current filtered users
+    final hub = await ref.read(hubsRepositoryProvider).getHub(widget.hubId);
+    if (hub == null) {
+      setState(() {
+        _isLoadingMore = false;
+      });
+      return;
+    }
+
+    final allUsers = await ref.read(usersRepositoryProvider).getUsers(hub.memberIds);
+    final filteredUsers = _filterAndSort(allUsers);
+    
+    final nextIndex = _displayedUsers.length;
+    final endIndex = (nextIndex + _pageSize).clamp(0, filteredUsers.length);
+    
+    if (nextIndex < filteredUsers.length) {
+      setState(() {
+        _displayedUsers.addAll(filteredUsers.sublist(nextIndex, endIndex));
+        _hasMore = endIndex < filteredUsers.length;
+        _isLoadingMore = false;
+      });
+    } else {
+      setState(() {
+        _hasMore = false;
+        _isLoadingMore = false;
+      });
+    }
   }
 
   List<User> _filterAndSort(List<User> users) {
@@ -179,6 +238,28 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
               final allUsers = snapshot.data ?? [];
               final filteredUsers = _filterAndSort(allUsers);
+              
+              // Initialize displayed users on first load or when data changes
+              if (_displayedUsers.isEmpty || 
+                  _displayedUsers.length != filteredUsers.length ||
+                  (_displayedUsers.isNotEmpty && _displayedUsers.first.uid != filteredUsers.first.uid)) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _displayedUsers = filteredUsers.take(_pageSize).toList();
+                      _hasMore = filteredUsers.length > _pageSize;
+                    });
+                  }
+                });
+              }
+              
+              // Use displayed users if available, otherwise use first page
+              final usersToShow = _displayedUsers.isNotEmpty 
+                  ? _displayedUsers 
+                  : filteredUsers.take(_pageSize).toList();
+              final hasMoreToShow = _displayedUsers.isNotEmpty 
+                  ? _hasMore 
+                  : filteredUsers.length > _pageSize;
 
               return Column(
                 children: [
@@ -302,10 +383,18 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                             ),
                           )
                         : ListView.builder(
+                            controller: _scrollController,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: filteredUsers.length,
+                            itemCount: usersToShow.length + (hasMoreToShow ? 1 : 0),
                             itemBuilder: (context, index) {
-                              final user = filteredUsers[index];
+                              // Show loading indicator at the bottom
+                              if (index == usersToShow.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(child: CircularProgressIndicator()),
+                                );
+                              }
+                              final user = usersToShow[index];
                               final isManualPlayer = user.email.startsWith('manual_');
                               final isCreator = user.uid == hub.createdBy;
 

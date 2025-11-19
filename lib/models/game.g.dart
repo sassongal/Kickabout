@@ -46,6 +46,18 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       durationInMinutes: (json['durationInMinutes'] as num?)?.toInt(),
       gameEndCondition: json['gameEndCondition'] as String?,
       region: json['region'] as String?,
+      showInCommunityFeed: json['showInCommunityFeed'] as bool? ?? false,
+      goalScorerIds: (json['goalScorerIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      goalScorerNames: (json['goalScorerNames'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      mvpPlayerId: json['mvpPlayerId'] as String?,
+      mvpPlayerName: json['mvpPlayerName'] as String?,
+      venueName: json['venueName'] as String?,
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -79,6 +91,12 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'durationInMinutes': instance.durationInMinutes,
       'gameEndCondition': instance.gameEndCondition,
       'region': instance.region,
+      'showInCommunityFeed': instance.showInCommunityFeed,
+      'goalScorerIds': instance.goalScorerIds,
+      'goalScorerNames': instance.goalScorerNames,
+      'mvpPlayerId': instance.mvpPlayerId,
+      'mvpPlayerName': instance.mvpPlayerName,
+      'venueName': instance.venueName,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

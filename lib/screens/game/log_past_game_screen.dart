@@ -36,6 +36,7 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
   // Step 3: Teams
   List<Team> _teams = [];
   
+  bool _showInCommunityFeed = false;
   bool _isLoading = false;
   Hub? _hub;
   List<Venue> _venues = [];
@@ -182,6 +183,7 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
         teamBScore: teamBScore,
         playerIds: _selectedPlayerIds.toList(),
         teams: _teams,
+        showInCommunityFeed: _showInCommunityFeed,
       );
       
       await gamesRepo.logPastGame(details, currentUserId);
@@ -412,6 +414,20 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 24),
+          
+          // Show in Community Feed
+          CheckboxListTile(
+            title: const Text('להעלות ללוח אירועים הקהילתי?'),
+            subtitle: const Text('המשחק יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
+            value: _showInCommunityFeed,
+            onChanged: (value) {
+              setState(() {
+                _showInCommunityFeed = value ?? false;
+              });
+            },
+            controlAffinity: ListTileControlAffinity.leading,
           ),
         ],
       ),

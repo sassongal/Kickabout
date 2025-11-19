@@ -9,6 +9,7 @@ import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/services/google_places_service.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 
@@ -144,6 +145,14 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
 
       final venueId = await venuesRepo.createVenue(venue);
 
+      // Get the created venue with its ID
+      final createdVenue = await venuesRepo.getVenue(venueId);
+      if (createdVenue == null) {
+        if (!mounted) return;
+        SnackbarHelper.showError(context, 'שגיאה בטעינת המגרש שנוצר');
+        return;
+      }
+
       // Update hub with new venue
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(widget.hubId!);
@@ -152,11 +161,14 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
         await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
       }
 
-      if (!context.mounted) return;
+      if (!mounted) return;
       SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
-      context.pop(true);
+      // Return the created venue object
+      if (mounted) {
+        context.pop(createdVenue);
+      }
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
     }
   }
@@ -215,23 +227,25 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
           icon: const Icon(Icons.add_location_alt),
           tooltip: 'מגרש לא מופיע? הוסף ידנית',
           onPressed: () async {
-            final result = await context.push('/venues/create');
+            final result = await context.push<Venue?>('/venues/create');
             // If a venue was created and we're in select mode, return it
             if (result != null && widget.selectMode && widget.hubId != null) {
               try {
-                final venuesRepo = ref.read(venuesRepositoryProvider);
                 final hubsRepo = ref.read(hubsRepositoryProvider);
                 final hub = await hubsRepo.getHub(widget.hubId!);
                 if (hub != null) {
-                  final updatedVenueIds = [...hub.venueIds, (result as dynamic).venueId];
+                  final updatedVenueIds = [...hub.venueIds, result.venueId];
                   await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
                 }
-                if (context.mounted) {
+                if (mounted) {
                   SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
-                  context.pop(true);
+                  // Return the created venue object
+                  if (mounted) {
+                    context.pop(result);
+                  }
                 }
               } catch (e) {
-                if (context.mounted) {
+                if (mounted) {
                   SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
                 }
               }

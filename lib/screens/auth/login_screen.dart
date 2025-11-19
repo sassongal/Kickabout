@@ -65,6 +65,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Future<void> _autoLogin() async {
     if (!Env.isFirebaseAvailable || !Env.isAutoLoginEnabled) return;
     
+    // Check if widget is still mounted before starting
+    if (!mounted) return;
+    
     try {
       final authService = ref.read(authServiceProvider);
       
@@ -75,6 +78,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         if (authService.isAnonymous) {
           debugPrint('🔓 Signing out anonymous user before auto-login...');
           await authService.signOut();
+          // Check mounted after async operation
+          if (!mounted) return;
         } else {
           debugPrint('✅ Already logged in as: ${currentUser.email ?? currentUser.uid}');
           return;
@@ -90,12 +95,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           Env.autoLoginPassword!,
         );
         
+        // Check mounted before navigation
+        if (!mounted || !context.mounted) {
+          debugPrint('⚠️ Widget unmounted before navigation');
+          return;
+        }
+        
         debugPrint('✅ Auto-login successful!');
         
         // Navigate to home (router will handle onboarding if needed)
-        if (mounted) {
-          context.go('/');
-        }
+        context.go('/');
       } on FirebaseAuthException catch (e) {
         if (e.code == 'user-not-found' || e.code == 'wrong-password') {
           debugPrint('⚠️ Auto-login failed: Invalid credentials. Please check Env.autoLoginEmail and Env.autoLoginPassword');
@@ -106,7 +115,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         debugPrint('⚠️ Auto-login failed: $e');
       }
     } catch (e) {
-      debugPrint('⚠️ Auto-login error: $e');
+      // Only log error if widget is still mounted
+      if (mounted) {
+        debugPrint('⚠️ Auto-login error: $e');
+      }
     }
   }
 

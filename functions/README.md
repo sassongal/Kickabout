@@ -15,14 +15,27 @@ npm install
 
 ### 2. Configure API Keys
 
+**Important:** Cloud Functions use Firebase Secrets (v2) for secure API key storage.
+
 ```bash
-# Google Places API
-firebase functions:config:set googleplaces.apikey="YOUR_API_KEY"
+# Google Maps/Places API Key (used for searchVenues, getPlaceDetails, getHomeDashboardData)
+# Set as Firebase Secret (recommended for production)
+echo "AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU" | firebase functions:secrets:set GOOGLE_APIS_KEY
 
 # Custom API (optional)
 firebase functions:config:set customapi.baseurl="https://your-api.com"
 firebase functions:config:set customapi.apikey="YOUR_API_KEY"
 ```
+
+**Note:** The Google Maps API key is also configured in:
+- `lib/config/env.dart` (for client-side use)
+- `android/app/src/main/AndroidManifest.xml` (for Android)
+- `ios/Runner/AppDelegate.swift` (for iOS)
+- `web/index.html` (for Web)
+
+**Security:** Make sure the API key has proper restrictions in Google Cloud Console:
+- Application restrictions: Android package name, iOS bundle ID, Web domain
+- API restrictions: Maps SDK for Android, Maps SDK for iOS, Maps JavaScript API, Places API
 
 ### 3. Deploy
 

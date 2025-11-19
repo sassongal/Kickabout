@@ -890,6 +890,74 @@ exports.onGameCompleted = onDocumentUpdated(
         await batch.commit();
         info(`Updated statistics for ${Object.keys(playerStats).length} players after game ${gameId} completion.`);
 
+        // Update denormalized data in game document
+        try {
+          // Get goal scorers
+          const goalScorerIds = [];
+          const goalScorerNames = [];
+          for (const [playerId, stats] of Object.entries(playerStats)) {
+            if (stats.goals > 0) {
+              goalScorerIds.push(playerId);
+              // Get player name
+              const userDoc = await db.collection('users').doc(playerId).get();
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                goalScorerNames.push(userData?.name || playerId);
+              }
+            }
+          }
+
+          // Get MVP (player with most MVP votes)
+          let mvpPlayerId = null;
+          let mvpPlayerName = null;
+          let maxMvpVotes = 0;
+          for (const [playerId, stats] of Object.entries(playerStats)) {
+            if (stats.mvpVotes > maxMvpVotes) {
+              maxMvpVotes = stats.mvpVotes;
+              mvpPlayerId = playerId;
+            }
+          }
+          if (mvpPlayerId) {
+            const mvpDoc = await db.collection('users').doc(mvpPlayerId).get();
+            if (mvpDoc.exists) {
+              const mvpData = mvpDoc.data();
+              mvpPlayerName = mvpData?.name || mvpPlayerId;
+            }
+          }
+
+          // Get venue name
+          let venueName = null;
+          if (gameData.venueId) {
+            const venueDoc = await db.collection('venues').doc(gameData.venueId).get();
+            if (venueDoc.exists) {
+              const venueData = venueDoc.data();
+              venueName = venueData?.name || null;
+            }
+          } else if (gameData.eventId) {
+            // Try to get venue from event
+            const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
+            if (hubDoc.exists) {
+              const eventDoc = await hubDoc.ref.collection('events').doc(gameData.eventId).get();
+              if (eventDoc.exists) {
+                const eventData = eventDoc.data();
+                venueName = eventData?.location || null;
+              }
+            }
+          }
+
+          // Update game with denormalized data
+          await db.collection('games').doc(gameId).update({
+            goalScorerIds: goalScorerIds,
+            goalScorerNames: goalScorerNames,
+            mvpPlayerId: mvpPlayerId,
+            mvpPlayerName: mvpPlayerName,
+            venueName: venueName,
+          });
+          info(`Updated denormalized data for game ${gameId}.`);
+        } catch (denormError) {
+          info(`Failed to update denormalized data for game ${gameId}:`, denormError);
+        }
+
         // Create regional feed post in feedPosts collection (root level)
         const gameRegion = gameData.region;
         if (gameRegion) {
@@ -928,6 +996,107 @@ exports.onGameCompleted = onDocumentUpdated(
     },
 );
 
+// --- Game Events Denormalization Handler ---
+// When a game event is created/updated/deleted, update denormalized data in game document
+exports.onGameEventChanged = onDocumentWritten(
+    'games/{gameId}/events/{eventId}',
+    async (event) => {
+      const gameId = event.params.gameId;
+      const eventId = event.params.eventId;
+      const eventData = event.data?.after?.data();
+      const beforeData = event.data?.before?.data();
+
+      // Only process if event was created or deleted (not just updated)
+      const isCreated = !beforeData && eventData;
+      const isDeleted = beforeData && !eventData;
+      
+      if (!isCreated && !isDeleted) {
+        // Event was just updated, skip
+        return;
+      }
+
+      info(`Game event ${eventId} ${isCreated ? 'created' : 'deleted'} for game ${gameId}. Updating denormalized data.`);
+
+      try {
+        // Get all events for this game
+        const eventsSnapshot = await db
+            .collection('games')
+            .doc(gameId)
+            .collection('events')
+            .get();
+
+        if (eventsSnapshot.empty) {
+          // No events, clear denormalized data
+          await db.collection('games').doc(gameId).update({
+            goalScorerIds: [],
+            goalScorerNames: [],
+            mvpPlayerId: null,
+            mvpPlayerName: null,
+          });
+          return;
+        }
+
+        // Process events
+        const goalScorerIds = [];
+        const goalScorerIdsSet = new Set();
+        let mvpPlayerId = null;
+
+        eventsSnapshot.forEach((eventDoc) => {
+          const event = eventDoc.data();
+          const eventType = event.type;
+          const playerId = event.playerId;
+
+          if (eventType === 'goal' && !goalScorerIdsSet.has(playerId)) {
+            goalScorerIds.push(playerId);
+            goalScorerIdsSet.add(playerId);
+          } else if (eventType === 'mvpVote') {
+            mvpPlayerId = playerId;
+          }
+        });
+
+        // Get player names for goal scorers
+        const goalScorerNames = [];
+        for (const playerId of goalScorerIds) {
+          try {
+            const userDoc = await db.collection('users').doc(playerId).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              goalScorerNames.push(userData?.name || playerId);
+            }
+          } catch (e) {
+            info(`Failed to get name for player ${playerId}:`, e);
+          }
+        }
+
+        // Get MVP name
+        let mvpPlayerName = null;
+        if (mvpPlayerId) {
+          try {
+            const mvpDoc = await db.collection('users').doc(mvpPlayerId).get();
+            if (mvpDoc.exists) {
+              const mvpData = mvpDoc.data();
+              mvpPlayerName = mvpData?.name || mvpPlayerId;
+            }
+          } catch (e) {
+            info(`Failed to get MVP name for player ${mvpPlayerId}:`, e);
+          }
+        }
+
+        // Update game with denormalized data
+        await db.collection('games').doc(gameId).update({
+          goalScorerIds: goalScorerIds,
+          goalScorerNames: goalScorerNames,
+          mvpPlayerId: mvpPlayerId,
+          mvpPlayerName: mvpPlayerName,
+        });
+
+        info(`Updated denormalized data for game ${gameId} after event change.`);
+      } catch (error) {
+        info(`Error in onGameEventChanged for game ${gameId}, event ${eventId}:`, error);
+      }
+    },
+);
+
 // --- Notify Hub on New Game ---
 /**
  * Notify all hub members when a new game is created
@@ -938,6 +1107,10 @@ exports.onGameCompleted = onDocumentUpdated(
  * @return {Object} Result with success status and notification count
  */
 exports.notifyHubOnNewGame = onCall(
+    {
+      // Allow unauthenticated calls (can be restricted later if needed)
+      invoker: 'public',
+    },
     async (request) => {
       const {hubId, gameId, gameTitle, gameTime} = request.data;
 
@@ -1103,7 +1276,10 @@ function determineVenueType(place) {
 }
 
 exports.searchVenues = onCall(
-    {secrets: [googleApisKey]},
+    {
+      secrets: [googleApisKey],
+      invoker: 'public', // Allow unauthenticated calls
+    },
     async (request) => {
       const {query, lat, lng} = request.data;
       if (!query) {
@@ -1148,7 +1324,10 @@ exports.searchVenues = onCall(
 );
 
 exports.getPlaceDetails = onCall(
-    {secrets: [googleApisKey]},
+    {
+      secrets: [googleApisKey],
+      invoker: 'public', // Allow unauthenticated calls
+    },
     async (request) => {
       const {placeId} = request.data;
       if (!placeId) {
@@ -1181,7 +1360,10 @@ exports.getPlaceDetails = onCall(
  * @return {Array} Array of hub objects with hubId, name, and logoUrl
  */
 exports.getHubsForPlace = onCall(
-    {secrets: [googleApisKey]},
+    {
+      secrets: [googleApisKey],
+      invoker: 'public', // Allow unauthenticated calls
+    },
     async (request) => {
       const {placeId} = request.data;
       if (!placeId) {
@@ -1295,7 +1477,10 @@ function getVibeMessage(temp, condition, aqi) {
 // Home Dashboard Data Function
 // Returns weather and vibe data for the home screen
 exports.getHomeDashboardData = onCall(
-    {secrets: [googleApisKey]},
+    {
+      secrets: [googleApisKey],
+      invoker: 'public', // Allow unauthenticated calls
+    },
     async (request) => {
       const {lat, lon} = request.data;
 

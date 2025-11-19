@@ -42,11 +42,11 @@ class FuturisticBottomNavBar extends ConsumerWidget {
                   onTap: () => context.go('/'),
                 ),
                 _NavItem(
-                  icon: Icons.calendar_today_rounded,
-                  label: 'משחקים',
-                  route: '/games',
+                  icon: Icons.favorite, // Heartbeat/vital signs icon
+                  label: 'פעילות',
+                  route: '/activity',
                   currentRoute: currentRoute,
-                  onTap: () => context.go('/games'),
+                  onTap: () => context.go('/activity'),
                 ),
                 _NavItem(
                   icon: Icons.message_rounded,
@@ -102,6 +102,10 @@ class _NavItem extends StatelessWidget {
     // For profile, check if route starts with /profile/
     if (route == '/profile') {
       return currentRoute.startsWith('/profile/');
+    }
+    // For activity feed
+    if (route == '/activity') {
+      return currentRoute == '/activity' || currentRoute.startsWith('/activity');
     }
     // For other routes, check if it starts with the route
     return currentRoute.startsWith(route);

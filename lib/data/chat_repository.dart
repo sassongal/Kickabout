@@ -24,7 +24,7 @@ class ChatRepository {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
+              final data = doc.data();
               return ChatMessage.fromJson({...data, 'messageId': doc.id});
             })
             .toList());
@@ -47,7 +47,16 @@ class ChatRepository {
     }
 
     try {
+      final docRef = _firestore
+          .collection('hubs')
+          .doc(hubId)
+          .collection('chatMessages')
+          .doc();
+
+      final messageId = docRef.id;
+      
       final data = {
+        'messageId': messageId, // Include messageId in data (required by Firestore rules)
         'hubId': hubId,
         'authorId': authorId,
         'text': text.trim(),
@@ -55,18 +64,12 @@ class ChatRepository {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      final docRef = _firestore
-          .collection('hubs')
-          .doc(hubId)
-          .collection('chatMessages')
-          .doc();
-
       await docRef.set(data);
 
       // Send notification to other members
       // This will be handled by the caller using push integration service
 
-      return docRef.id;
+      return messageId;
     } catch (e) {
       throw Exception('Failed to send message: $e');
     }

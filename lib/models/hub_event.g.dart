@@ -33,6 +33,7 @@ _$HubEventImpl _$$HubEventImplFromJson(Map<String, dynamic> json) =>
       durationMinutes: (json['durationMinutes'] as num?)?.toInt(),
       maxParticipants: (json['maxParticipants'] as num?)?.toInt() ?? 15,
       notifyMembers: json['notifyMembers'] as bool? ?? false,
+      showInCommunityFeed: json['showInCommunityFeed'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
@@ -56,4 +57,5 @@ Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
       'durationMinutes': instance.durationMinutes,
       'maxParticipants': instance.maxParticipants,
       'notifyMembers': instance.notifyMembers,
+      'showInCommunityFeed': instance.showInCommunityFeed,
     };

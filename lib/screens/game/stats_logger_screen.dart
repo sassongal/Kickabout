@@ -152,24 +152,70 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
       final teamAScore = int.tryParse(_teamAScoreController.text.trim()) ?? 0;
       final teamBScore = int.tryParse(_teamBScoreController.text.trim()) ?? 0;
       
-      // Update game with scores and status
+      _pauseTimer();
+      
+      // Load recap first to get events
+      await _loadRecap();
+      
+      // Get game, teams, and events for denormalized data
+      final game = await gamesRepo.getGame(widget.gameId);
+      final teams = game != null ? await teamsRepo.getTeams(widget.gameId) : [];
+      final events = await eventsRepo.getEvents(widget.gameId);
+      
+      // Calculate denormalized data
+      final goalScorerIds = events
+          .where((e) => e.type == EventType.goal)
+          .map((e) => e.playerId)
+          .toSet()
+          .toList();
+      
+      final goalScorers = await usersRepo.getUsers(goalScorerIds);
+      final goalScorerNames = goalScorers.map((u) => u.name).toList();
+      
+      // Get MVP
+      String? mvpPlayerId;
+      String? mvpPlayerName;
+      try {
+        final mvpEvent = events.firstWhere((e) => e.type == EventType.mvpVote);
+        mvpPlayerId = mvpEvent.playerId;
+        final mvp = await usersRepo.getUser(mvpPlayerId);
+        mvpPlayerName = mvp?.name;
+      } catch (e) {
+        // No MVP found
+      }
+      
+      // Get venue name
+      String? venueName;
+      if (game?.venueId != null) {
+        final venuesRepo = ref.read(venuesRepositoryProvider);
+        final venue = await venuesRepo.getVenue(game!.venueId!);
+        venueName = venue?.name;
+      } else if (game?.eventId != null && game?.hubId != null) {
+        final eventsRepo2 = ref.read(hubEventsRepositoryProvider);
+        final hubEvents = await eventsRepo2.getHubEvents(game!.hubId);
+        try {
+          final hubEvent = hubEvents.firstWhere((e) => e.eventId == game.eventId);
+          venueName = hubEvent.location;
+        } catch (e) {
+          // Event not found
+        }
+      }
+      
+      // Update game with scores, status, and denormalized data
       await gamesRepo.updateGame(widget.gameId, {
         'teamAScore': teamAScore,
         'teamBScore': teamBScore,
         'status': GameStatus.completed.toFirestore(),
+        'goalScorerIds': goalScorerIds,
+        'goalScorerNames': goalScorerNames,
+        'mvpPlayerId': mvpPlayerId,
+        'mvpPlayerName': mvpPlayerName,
+        'venueName': venueName,
       });
-      
-      _pauseTimer();
-      
-      // Load recap first
-      await _loadRecap();
       
       // Update gamification for all players
       try {
-        final game = await gamesRepo.getGame(widget.gameId);
         if (game != null) {
-          final teams = await teamsRepo.getTeams(widget.gameId);
-          final events = await eventsRepo.getEvents(widget.gameId);
           
           // Determine winning team (simplified - team with most goals)
           final teamGoals = <String, int>{};

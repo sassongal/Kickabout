@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
+import 'package:flutter/foundation.dart';
 
 /// Repository for User operations
 class UsersRepository {
@@ -130,11 +131,26 @@ class UsersRepository {
             .where(FieldPath.documentId, whereIn: batch)
             .get();
         
-        for (var doc in docs.docs) {
-          users.add(User.fromJson({...doc.data(), 'uid': doc.id}));
-        }
+      for (var doc in docs.docs) {
+        users.add(User.fromJson({...doc.data(), 'uid': doc.id}));
       }
-      return users;
+      
+      // For users not found in Firestore, create placeholder users
+      // so they still appear in the list (they might be manual players or users without profiles)
+      final foundIds = docs.docs.map((d) => d.id).toSet();
+      final missingIds = batch.where((id) => !foundIds.contains(id)).toList();
+      
+      for (final missingId in missingIds) {
+        // Create a placeholder user so it shows in the list
+        users.add(User(
+          uid: missingId,
+          name: 'משתמש לא ידוע',
+          email: 'unknown@example.com',
+          createdAt: DateTime.now(),
+        ));
+      }
+    }
+    return users;
     } catch (e) {
       throw Exception('Failed to get users: $e');
     }
@@ -157,7 +173,7 @@ class UsersRepository {
 
   /// Get all users (with limit for pagination)
   Future<List<User>> getAllUsers({int limit = 100}) async {
-    if (!Env.isFirebaseAvailable) return [];
+    if (!Env.isFirebaseAvailable) return <User>[];
 
     try {
       final snapshot = await _firestore
@@ -169,7 +185,7 @@ class UsersRepository {
           .map((doc) => User.fromJson({...doc.data(), 'uid': doc.id}))
           .toList();
     } catch (e) {
-      return [];
+      return <User>[];
     }
   }
 

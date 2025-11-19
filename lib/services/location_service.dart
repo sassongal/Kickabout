@@ -35,9 +35,11 @@ class LocationService {
         return null;
       }
 
-      // Get current position
+      // Get current position with timeout (10 seconds)
+      // This prevents the app from hanging if location services are slow
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: accuracy,
+        timeLimit: const Duration(seconds: 10),
       );
     } catch (e) {
       return null;

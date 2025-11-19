@@ -44,6 +44,14 @@ class Game with _$Game {
     int? durationInMinutes, // Duration of the game in minutes
     String? gameEndCondition, // Condition for game end (e.g., "first to 5 goals", "time limit")
     String? region, // אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
+    // Community feed
+    @Default(false) bool showInCommunityFeed, // Show this game in the community activity feed
+    // Denormalized fields for community feed (optimization)
+    @Default([]) List<String> goalScorerIds, // IDs of players who scored (denormalized from events)
+    @Default([]) List<String> goalScorerNames, // Names of goal scorers (denormalized for quick display)
+    String? mvpPlayerId, // MVP player ID (denormalized from events)
+    String? mvpPlayerName, // MVP player name (denormalized for quick display)
+    String? venueName, // Venue name (denormalized from venue or event.location)
   }) = _Game;
 
   factory Game.fromJson(Map<String, dynamic> json) => _$GameFromJson(json);

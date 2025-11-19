@@ -4,6 +4,10 @@ import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/log_past_game_details.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
+import 'package:kickadoor/services/cache_service.dart';
+import 'package:kickadoor/services/retry_service.dart';
+import 'package:kickadoor/services/monitoring_service.dart';
+import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Repository for Game operations
 class GamesRepository {
@@ -12,17 +16,28 @@ class GamesRepository {
   GamesRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Get game by ID
-  Future<Game?> getGame(String gameId) async {
+  /// Get game by ID with caching and retry
+  Future<Game?> getGame(String gameId, {bool forceRefresh = false}) async {
     if (!Env.isFirebaseAvailable) return null;
 
-    try {
-      final doc = await _firestore.doc(FirestorePaths.game(gameId)).get();
-      if (!doc.exists) return null;
-      return Game.fromJson({...doc.data()!, 'gameId': gameId});
-    } catch (e) {
-      throw Exception('Failed to get game: $e');
-    }
+    return MonitoringService().trackOperation(
+      'getGame',
+      () => CacheService().getOrFetch<Game?>(
+        CacheKeys.game(gameId),
+        () => RetryService().execute(
+          () async {
+            final doc = await _firestore.doc(FirestorePaths.game(gameId)).get();
+            if (!doc.exists) return null;
+            return Game.fromJson({...doc.data()!, 'gameId': gameId});
+          },
+          config: RetryConfig.network,
+          operationName: 'getGame',
+        ),
+        ttl: CacheService.gamesTtl,
+        forceRefresh: forceRefresh,
+      ),
+      metadata: {'gameId': gameId},
+    );
   }
 
   /// Stream game by ID
@@ -63,18 +78,29 @@ class GamesRepository {
     }
   }
 
-  /// Update game
+  /// Update game with retry and cache invalidation
   Future<void> updateGame(String gameId, Map<String, dynamic> data) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
-    try {
-      data['updatedAt'] = FieldValue.serverTimestamp();
-      await _firestore.doc(FirestorePaths.game(gameId)).update(data);
-    } catch (e) {
-      throw Exception('Failed to update game: $e');
-    }
+    return MonitoringService().trackOperation(
+      'updateGame',
+      () => RetryService().execute(
+        () async {
+          data['updatedAt'] = FieldValue.serverTimestamp();
+          await _firestore.doc(FirestorePaths.game(gameId)).update(data);
+          
+          // Invalidate cache
+          CacheService().clear(CacheKeys.game(gameId));
+          CacheService().clear(CacheKeys.gamesByHub(data['hubId'] as String? ?? ''));
+          CacheService().clear(CacheKeys.publicGames());
+        },
+        config: RetryConfig.network,
+        operationName: 'updateGame',
+      ),
+      metadata: {'gameId': gameId},
+    );
   }
 
   /// Update game status
@@ -147,6 +173,97 @@ class GamesRepository {
               .where((game) => game.teamAScore != null && game.teamBScore != null)
               .toList();
         });
+  }
+
+  /// Stream all public completed games for community feed
+  /// Shows games with showInCommunityFeed = true
+  /// Note: We filter by showInCommunityFeed in query, then filter by status/scores in memory
+  /// to allow newly created games to appear immediately
+  Stream<List<Game>> watchPublicCompletedGames({
+    int limit = 100,
+    String? hubId,
+    String? region,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
+    try {
+      // Start with showInCommunityFeed filter (this is the main filter)
+      Query query = _firestore
+          .collection(FirestorePaths.games())
+          .where('showInCommunityFeed', isEqualTo: true);
+
+      // Apply additional filters (only one more where clause allowed with orderBy)
+      // Priority: hubId > region > date filters
+      if (hubId != null) {
+        query = query.where('hubId', isEqualTo: hubId);
+      } else if (region != null) {
+        query = query.where('region', isEqualTo: region);
+      }
+
+      // Date filters will be applied in memory if both hubId and region are null
+      // Otherwise, we'll filter in memory after fetching
+
+      return query
+          .orderBy('gameDate', descending: true)
+          .limit(limit * 2) // Fetch more to account for in-memory filtering
+          .snapshots()
+          .map((snapshot) {
+            return MonitoringService().trackSyncOperation<List<Game>>(
+              'watchPublicCompletedGames',
+              () {
+                var games = snapshot.docs
+                    .map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return Game.fromJson({...data, 'gameId': doc.id});
+                    })
+                    .toList();
+
+                // Filter in memory:
+                // 1. Only games with scores (completed games) OR status = completed
+                games = games.where((game) => 
+                    (game.teamAScore != null && game.teamBScore != null) ||
+                    game.status == GameStatus.completed
+                ).toList();
+
+                // 2. Apply date filters in memory if not already in query
+                if (startDate != null) {
+                  games = games.where((g) => g.gameDate.isAfter(startDate) || g.gameDate.isAtSameMomentAs(startDate)).toList();
+                }
+                if (endDate != null) {
+                  games = games.where((g) => g.gameDate.isBefore(endDate) || g.gameDate.isAtSameMomentAs(endDate)).toList();
+                }
+                if (region != null && hubId == null) {
+                  games = games.where((g) => g.region == region).toList();
+                }
+
+                // Sort again after filtering
+                games.sort((a, b) => b.gameDate.compareTo(a.gameDate));
+
+                // Limit to requested amount
+                games = games.take(limit).toList();
+                
+                // Cache the result
+                final cacheKey = CacheKeys.publicGames(region: region);
+                CacheService().set(cacheKey, games, ttl: CacheService.gamesTtl);
+                
+                return games;
+              },
+              metadata: {
+                'count': snapshot.docs.length,
+                'region': region,
+                'hubId': hubId,
+              },
+            );
+          });
+    } catch (e) {
+      debugPrint('Error in watchPublicCompletedGames: $e');
+      ErrorHandlerService().logError(e, reason: 'watchPublicCompletedGames failed');
+      return Stream.value([]);
+    }
   }
 
   /// List games by hub (non-streaming)
@@ -316,7 +433,7 @@ class GamesRepository {
 
       final now = FieldValue.serverTimestamp();
       
-      // Create game document
+      // Create game document with denormalized data
       final gameData = {
         'createdBy': currentUserId,
         'hubId': details.hubId,
@@ -327,6 +444,12 @@ class GamesRepository {
         'status': GameStatus.completed.toFirestore(),
         'teamAScore': details.teamAScore,
         'teamBScore': details.teamBScore,
+        'showInCommunityFeed': details.showInCommunityFeed,
+        'goalScorerIds': details.goalScorerIds,
+        'goalScorerNames': details.goalScorerNames,
+        'mvpPlayerId': details.mvpPlayerId,
+        'mvpPlayerName': details.mvpPlayerName,
+        'venueName': details.venueName,
         'teams': details.teams.map((team) => team.toJson()).toList(),
         'createdAt': now,
         'updatedAt': now,

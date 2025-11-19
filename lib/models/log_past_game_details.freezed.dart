@@ -29,7 +29,19 @@ mixin _$LogPastGameDetails {
   int get teamBScore => throw _privateConstructorUsedError;
   List<String> get playerIds =>
       throw _privateConstructorUsedError; // Players who participated
-  List<Team> get teams => throw _privateConstructorUsedError;
+  List<Team> get teams =>
+      throw _privateConstructorUsedError; // Teams with player assignments
+  bool get showInCommunityFeed =>
+      throw _privateConstructorUsedError; // Show this game in the community activity feed
+  List<String> get goalScorerIds =>
+      throw _privateConstructorUsedError; // IDs of players who scored (optional)
+  List<String> get goalScorerNames =>
+      throw _privateConstructorUsedError; // Names of goal scorers (optional, denormalized)
+  String? get mvpPlayerId =>
+      throw _privateConstructorUsedError; // MVP player ID (optional)
+  String? get mvpPlayerName =>
+      throw _privateConstructorUsedError; // MVP player name (optional, denormalized)
+  String? get venueName => throw _privateConstructorUsedError;
 
   /// Serializes this LogPastGameDetails to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -55,7 +67,13 @@ abstract class $LogPastGameDetailsCopyWith<$Res> {
       int teamAScore,
       int teamBScore,
       List<String> playerIds,
-      List<Team> teams});
+      List<Team> teams,
+      bool showInCommunityFeed,
+      List<String> goalScorerIds,
+      List<String> goalScorerNames,
+      String? mvpPlayerId,
+      String? mvpPlayerName,
+      String? venueName});
 }
 
 /// @nodoc
@@ -81,6 +99,12 @@ class _$LogPastGameDetailsCopyWithImpl<$Res, $Val extends LogPastGameDetails>
     Object? teamBScore = null,
     Object? playerIds = null,
     Object? teams = null,
+    Object? showInCommunityFeed = null,
+    Object? goalScorerIds = null,
+    Object? goalScorerNames = null,
+    Object? mvpPlayerId = freezed,
+    Object? mvpPlayerName = freezed,
+    Object? venueName = freezed,
   }) {
     return _then(_value.copyWith(
       hubId: null == hubId
@@ -115,6 +139,30 @@ class _$LogPastGameDetailsCopyWithImpl<$Res, $Val extends LogPastGameDetails>
           ? _value.teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
+      showInCommunityFeed: null == showInCommunityFeed
+          ? _value.showInCommunityFeed
+          : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      goalScorerIds: null == goalScorerIds
+          ? _value.goalScorerIds
+          : goalScorerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      goalScorerNames: null == goalScorerNames
+          ? _value.goalScorerNames
+          : goalScorerNames // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      mvpPlayerId: freezed == mvpPlayerId
+          ? _value.mvpPlayerId
+          : mvpPlayerId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mvpPlayerName: freezed == mvpPlayerName
+          ? _value.mvpPlayerName
+          : mvpPlayerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueName: freezed == venueName
+          ? _value.venueName
+          : venueName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -135,7 +183,13 @@ abstract class _$$LogPastGameDetailsImplCopyWith<$Res>
       int teamAScore,
       int teamBScore,
       List<String> playerIds,
-      List<Team> teams});
+      List<Team> teams,
+      bool showInCommunityFeed,
+      List<String> goalScorerIds,
+      List<String> goalScorerNames,
+      String? mvpPlayerId,
+      String? mvpPlayerName,
+      String? venueName});
 }
 
 /// @nodoc
@@ -159,6 +213,12 @@ class __$$LogPastGameDetailsImplCopyWithImpl<$Res>
     Object? teamBScore = null,
     Object? playerIds = null,
     Object? teams = null,
+    Object? showInCommunityFeed = null,
+    Object? goalScorerIds = null,
+    Object? goalScorerNames = null,
+    Object? mvpPlayerId = freezed,
+    Object? mvpPlayerName = freezed,
+    Object? venueName = freezed,
   }) {
     return _then(_$LogPastGameDetailsImpl(
       hubId: null == hubId
@@ -193,6 +253,30 @@ class __$$LogPastGameDetailsImplCopyWithImpl<$Res>
           ? _value._teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
+      showInCommunityFeed: null == showInCommunityFeed
+          ? _value.showInCommunityFeed
+          : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      goalScorerIds: null == goalScorerIds
+          ? _value._goalScorerIds
+          : goalScorerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      goalScorerNames: null == goalScorerNames
+          ? _value._goalScorerNames
+          : goalScorerNames // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      mvpPlayerId: freezed == mvpPlayerId
+          ? _value.mvpPlayerId
+          : mvpPlayerId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mvpPlayerName: freezed == mvpPlayerName
+          ? _value.mvpPlayerName
+          : mvpPlayerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueName: freezed == venueName
+          ? _value.venueName
+          : venueName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -208,9 +292,17 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
       required this.teamAScore,
       required this.teamBScore,
       required final List<String> playerIds,
-      required final List<Team> teams})
+      required final List<Team> teams,
+      this.showInCommunityFeed = false,
+      final List<String> goalScorerIds = const [],
+      final List<String> goalScorerNames = const [],
+      this.mvpPlayerId,
+      this.mvpPlayerName,
+      this.venueName})
       : _playerIds = playerIds,
-        _teams = teams;
+        _teams = teams,
+        _goalScorerIds = goalScorerIds,
+        _goalScorerNames = goalScorerNames;
 
   factory _$LogPastGameDetailsImpl.fromJson(Map<String, dynamic> json) =>
       _$$LogPastGameDetailsImplFromJson(json);
@@ -246,9 +338,45 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
     return EqualUnmodifiableListView(_teams);
   }
 
+// Teams with player assignments
+  @override
+  @JsonKey()
+  final bool showInCommunityFeed;
+// Show this game in the community activity feed
+  final List<String> _goalScorerIds;
+// Show this game in the community activity feed
+  @override
+  @JsonKey()
+  List<String> get goalScorerIds {
+    if (_goalScorerIds is EqualUnmodifiableListView) return _goalScorerIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_goalScorerIds);
+  }
+
+// IDs of players who scored (optional)
+  final List<String> _goalScorerNames;
+// IDs of players who scored (optional)
+  @override
+  @JsonKey()
+  List<String> get goalScorerNames {
+    if (_goalScorerNames is EqualUnmodifiableListView) return _goalScorerNames;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_goalScorerNames);
+  }
+
+// Names of goal scorers (optional, denormalized)
+  @override
+  final String? mvpPlayerId;
+// MVP player ID (optional)
+  @override
+  final String? mvpPlayerName;
+// MVP player name (optional, denormalized)
+  @override
+  final String? venueName;
+
   @override
   String toString() {
-    return 'LogPastGameDetails(hubId: $hubId, gameDate: $gameDate, venueId: $venueId, eventId: $eventId, teamAScore: $teamAScore, teamBScore: $teamBScore, playerIds: $playerIds, teams: $teams)';
+    return 'LogPastGameDetails(hubId: $hubId, gameDate: $gameDate, venueId: $venueId, eventId: $eventId, teamAScore: $teamAScore, teamBScore: $teamBScore, playerIds: $playerIds, teams: $teams, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName)';
   }
 
   @override
@@ -267,7 +395,19 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
                 other.teamBScore == teamBScore) &&
             const DeepCollectionEquality()
                 .equals(other._playerIds, _playerIds) &&
-            const DeepCollectionEquality().equals(other._teams, _teams));
+            const DeepCollectionEquality().equals(other._teams, _teams) &&
+            (identical(other.showInCommunityFeed, showInCommunityFeed) ||
+                other.showInCommunityFeed == showInCommunityFeed) &&
+            const DeepCollectionEquality()
+                .equals(other._goalScorerIds, _goalScorerIds) &&
+            const DeepCollectionEquality()
+                .equals(other._goalScorerNames, _goalScorerNames) &&
+            (identical(other.mvpPlayerId, mvpPlayerId) ||
+                other.mvpPlayerId == mvpPlayerId) &&
+            (identical(other.mvpPlayerName, mvpPlayerName) ||
+                other.mvpPlayerName == mvpPlayerName) &&
+            (identical(other.venueName, venueName) ||
+                other.venueName == venueName));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -281,7 +421,13 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
       teamAScore,
       teamBScore,
       const DeepCollectionEquality().hash(_playerIds),
-      const DeepCollectionEquality().hash(_teams));
+      const DeepCollectionEquality().hash(_teams),
+      showInCommunityFeed,
+      const DeepCollectionEquality().hash(_goalScorerIds),
+      const DeepCollectionEquality().hash(_goalScorerNames),
+      mvpPlayerId,
+      mvpPlayerName,
+      venueName);
 
   /// Create a copy of LogPastGameDetails
   /// with the given fields replaced by the non-null parameter values.
@@ -309,7 +455,13 @@ abstract class _LogPastGameDetails implements LogPastGameDetails {
       required final int teamAScore,
       required final int teamBScore,
       required final List<String> playerIds,
-      required final List<Team> teams}) = _$LogPastGameDetailsImpl;
+      required final List<Team> teams,
+      final bool showInCommunityFeed,
+      final List<String> goalScorerIds,
+      final List<String> goalScorerNames,
+      final String? mvpPlayerId,
+      final String? mvpPlayerName,
+      final String? venueName}) = _$LogPastGameDetailsImpl;
 
   factory _LogPastGameDetails.fromJson(Map<String, dynamic> json) =
       _$LogPastGameDetailsImpl.fromJson;
@@ -329,7 +481,20 @@ abstract class _LogPastGameDetails implements LogPastGameDetails {
   @override
   List<String> get playerIds; // Players who participated
   @override
-  List<Team> get teams;
+  List<Team> get teams; // Teams with player assignments
+  @override
+  bool get showInCommunityFeed; // Show this game in the community activity feed
+  @override
+  List<String> get goalScorerIds; // IDs of players who scored (optional)
+  @override
+  List<String>
+      get goalScorerNames; // Names of goal scorers (optional, denormalized)
+  @override
+  String? get mvpPlayerId; // MVP player ID (optional)
+  @override
+  String? get mvpPlayerName; // MVP player name (optional, denormalized)
+  @override
+  String? get venueName;
 
   /// Create a copy of LogPastGameDetails
   /// with the given fields replaced by the non-null parameter values.

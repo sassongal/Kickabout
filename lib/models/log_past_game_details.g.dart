@@ -20,6 +20,18 @@ _$LogPastGameDetailsImpl _$$LogPastGameDetailsImplFromJson(
       teams: (json['teams'] as List<dynamic>)
           .map((e) => Team.fromJson(e as Map<String, dynamic>))
           .toList(),
+      showInCommunityFeed: json['showInCommunityFeed'] as bool? ?? false,
+      goalScorerIds: (json['goalScorerIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      goalScorerNames: (json['goalScorerNames'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      mvpPlayerId: json['mvpPlayerId'] as String?,
+      mvpPlayerName: json['mvpPlayerName'] as String?,
+      venueName: json['venueName'] as String?,
     );
 
 Map<String, dynamic> _$$LogPastGameDetailsImplToJson(
@@ -33,4 +45,10 @@ Map<String, dynamic> _$$LogPastGameDetailsImplToJson(
       'teamBScore': instance.teamBScore,
       'playerIds': instance.playerIds,
       'teams': instance.teams,
+      'showInCommunityFeed': instance.showInCommunityFeed,
+      'goalScorerIds': instance.goalScorerIds,
+      'goalScorerNames': instance.goalScorerNames,
+      'mvpPlayerId': instance.mvpPlayerId,
+      'mvpPlayerName': instance.mvpPlayerName,
+      'venueName': instance.venueName,
     };

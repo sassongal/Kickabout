@@ -28,6 +28,7 @@ class HubEvent with _$HubEvent {
     int? durationMinutes, // Game duration in minutes (default: 12)
     @Default(15) int maxParticipants, // Maximum number of participants (default: 15, required)
     @Default(false) bool notifyMembers, // Send notification to all hub members when event is created
+    @Default(false) bool showInCommunityFeed, // Show this event in the community activity feed
   }) = _HubEvent;
 
   factory HubEvent.fromJson(Map<String, dynamic> json) => _$HubEventFromJson(json);

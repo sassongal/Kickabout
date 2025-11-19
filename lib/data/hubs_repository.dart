@@ -66,14 +66,13 @@ class HubsRepository {
         data['memberIds'] = [...hub.memberIds, hub.createdBy];
       }
       
-      // Initialize memberJoinDates with creator's join date
-      if (hub.memberIds.contains(hub.createdBy)) {
+      // Initialize memberJoinDates with creator's join date (always set for creator)
         final memberJoinDates = Map<String, dynamic>.from(data['memberJoinDates'] ?? {});
         memberJoinDates[hub.createdBy] = FieldValue.serverTimestamp();
         data['memberJoinDates'] = memberJoinDates;
-      }
       
-      // Ensure creator is set as manager in roles (required for permissions)
+      // CRITICAL: Ensure creator is ALWAYS set as manager in roles (required for permissions)
+      // This guarantees the creator can perform all manager actions (create events, manage members, etc.)
       final roles = Map<String, String>.from(data['roles'] ?? {});
       roles[hub.createdBy] = 'manager';
       data['roles'] = roles;

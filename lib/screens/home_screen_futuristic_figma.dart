@@ -1158,6 +1158,7 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
 
         return FuturisticCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          onTap: () => context.push('/weather'),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,

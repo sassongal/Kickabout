@@ -47,7 +47,9 @@ mixin _$HubEvent {
       throw _privateConstructorUsedError; // Game duration in minutes (default: 12)
   int get maxParticipants =>
       throw _privateConstructorUsedError; // Maximum number of participants (default: 15, required)
-  bool get notifyMembers => throw _privateConstructorUsedError;
+  bool get notifyMembers =>
+      throw _privateConstructorUsedError; // Send notification to all hub members when event is created
+  bool get showInCommunityFeed => throw _privateConstructorUsedError;
 
   /// Serializes this HubEvent to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -82,7 +84,8 @@ abstract class $HubEventCopyWith<$Res> {
       String? gameType,
       int? durationMinutes,
       int maxParticipants,
-      bool notifyMembers});
+      bool notifyMembers,
+      bool showInCommunityFeed});
 }
 
 /// @nodoc
@@ -118,6 +121,7 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
     Object? durationMinutes = freezed,
     Object? maxParticipants = null,
     Object? notifyMembers = null,
+    Object? showInCommunityFeed = null,
   }) {
     return _then(_value.copyWith(
       eventId: null == eventId
@@ -192,6 +196,10 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
           ? _value.notifyMembers
           : notifyMembers // ignore: cast_nullable_to_non_nullable
               as bool,
+      showInCommunityFeed: null == showInCommunityFeed
+          ? _value.showInCommunityFeed
+          : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -222,7 +230,8 @@ abstract class _$$HubEventImplCopyWith<$Res>
       String? gameType,
       int? durationMinutes,
       int maxParticipants,
-      bool notifyMembers});
+      bool notifyMembers,
+      bool showInCommunityFeed});
 }
 
 /// @nodoc
@@ -256,6 +265,7 @@ class __$$HubEventImplCopyWithImpl<$Res>
     Object? durationMinutes = freezed,
     Object? maxParticipants = null,
     Object? notifyMembers = null,
+    Object? showInCommunityFeed = null,
   }) {
     return _then(_$HubEventImpl(
       eventId: null == eventId
@@ -330,6 +340,10 @@ class __$$HubEventImplCopyWithImpl<$Res>
           ? _value.notifyMembers
           : notifyMembers // ignore: cast_nullable_to_non_nullable
               as bool,
+      showInCommunityFeed: null == showInCommunityFeed
+          ? _value.showInCommunityFeed
+          : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -355,7 +369,8 @@ class _$HubEventImpl implements _HubEvent {
       this.gameType,
       this.durationMinutes,
       this.maxParticipants = 15,
-      this.notifyMembers = false})
+      this.notifyMembers = false,
+      this.showInCommunityFeed = false})
       : _registeredPlayerIds = registeredPlayerIds;
 
   factory _$HubEventImpl.fromJson(Map<String, dynamic> json) =>
@@ -419,10 +434,14 @@ class _$HubEventImpl implements _HubEvent {
   @override
   @JsonKey()
   final bool notifyMembers;
+// Send notification to all hub members when event is created
+  @override
+  @JsonKey()
+  final bool showInCommunityFeed;
 
   @override
   String toString() {
-    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers)';
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed)';
   }
 
   @override
@@ -460,31 +479,35 @@ class _$HubEventImpl implements _HubEvent {
             (identical(other.maxParticipants, maxParticipants) ||
                 other.maxParticipants == maxParticipants) &&
             (identical(other.notifyMembers, notifyMembers) ||
-                other.notifyMembers == notifyMembers));
+                other.notifyMembers == notifyMembers) &&
+            (identical(other.showInCommunityFeed, showInCommunityFeed) ||
+                other.showInCommunityFeed == showInCommunityFeed));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      eventId,
-      hubId,
-      createdBy,
-      title,
-      description,
-      eventDate,
-      createdAt,
-      updatedAt,
-      const DeepCollectionEquality().hash(_registeredPlayerIds),
-      status,
-      location,
-      locationPoint,
-      geohash,
-      teamCount,
-      gameType,
-      durationMinutes,
-      maxParticipants,
-      notifyMembers);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        eventId,
+        hubId,
+        createdBy,
+        title,
+        description,
+        eventDate,
+        createdAt,
+        updatedAt,
+        const DeepCollectionEquality().hash(_registeredPlayerIds),
+        status,
+        location,
+        locationPoint,
+        geohash,
+        teamCount,
+        gameType,
+        durationMinutes,
+        maxParticipants,
+        notifyMembers,
+        showInCommunityFeed
+      ]);
 
   /// Create a copy of HubEvent
   /// with the given fields replaced by the non-null parameter values.
@@ -521,7 +544,8 @@ abstract class _HubEvent implements HubEvent {
       final String? gameType,
       final int? durationMinutes,
       final int maxParticipants,
-      final bool notifyMembers}) = _$HubEventImpl;
+      final bool notifyMembers,
+      final bool showInCommunityFeed}) = _$HubEventImpl;
 
   factory _HubEvent.fromJson(Map<String, dynamic> json) =
       _$HubEventImpl.fromJson;
@@ -565,7 +589,10 @@ abstract class _HubEvent implements HubEvent {
   @override
   int get maxParticipants; // Maximum number of participants (default: 15, required)
   @override
-  bool get notifyMembers;
+  bool
+      get notifyMembers; // Send notification to all hub members when event is created
+  @override
+  bool get showInCommunityFeed;
 
   /// Create a copy of HubEvent
   /// with the given fields replaced by the non-null parameter values.

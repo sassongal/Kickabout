@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,16 +31,25 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
   String _searchQuery = '';
   GoogleMapController? _mapController;
   Position? _currentPosition;
+  
+  // Pagination state for list view
+  final ScrollController _scrollController = ScrollController();
+  List<Hub> _displayedHubs = [];
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  static const int _pageSize = 20;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _scrollController.addListener(_onScroll);
     _loadCurrentLocation();
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _tabController.dispose();
     // Safely dispose map controller - handle web platform issue
     // On Web, the map might not be fully initialized when dispose is called
@@ -55,6 +65,44 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
       }
     }
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      _loadMoreHubs();
+    }
+  }
+
+  Future<void> _loadMoreHubs() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Get all hubs again (in a real app, you'd use cursor-based pagination)
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final locationService = ref.read(locationServiceProvider);
+    final allHubs = await _getHubs(hubsRepo, locationService);
+    
+    final nextIndex = _displayedHubs.length;
+    final endIndex = (nextIndex + _pageSize).clamp(0, allHubs.length);
+    
+    if (nextIndex < allHubs.length) {
+      setState(() {
+        _displayedHubs.addAll(allHubs.sublist(nextIndex, endIndex));
+        _hasMore = endIndex < allHubs.length;
+        _isLoadingMore = false;
+      });
+    } else {
+      setState(() {
+        _hasMore = false;
+        _isLoadingMore = false;
+      });
+    }
   }
 
   Future<void> _loadCurrentLocation() async {
@@ -179,8 +227,31 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
           );
         }
 
-        final hubs = snapshot.data ?? [];
-        if (hubs.isEmpty) {
+        final allHubs = snapshot.data ?? [];
+        
+        // Initialize displayed hubs on first load or when data changes
+        if (_displayedHubs.isEmpty || 
+            _displayedHubs.length != allHubs.length ||
+            (_displayedHubs.isNotEmpty && _displayedHubs.first.hubId != allHubs.first.hubId)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _displayedHubs = allHubs.take(_pageSize).toList();
+                _hasMore = allHubs.length > _pageSize;
+              });
+            }
+          });
+        }
+        
+        // Use displayed hubs if available, otherwise use first page
+        final hubsToShow = _displayedHubs.isNotEmpty 
+            ? _displayedHubs 
+            : allHubs.take(_pageSize).toList();
+        final hasMoreToShow = _displayedHubs.isNotEmpty 
+            ? _hasMore 
+            : allHubs.length > _pageSize;
+        
+        if (hubsToShow.isEmpty && allHubs.isEmpty) {
           return FuturisticEmptyState(
             icon: Icons.group_outlined,
             title: 'אין הובים',
@@ -194,10 +265,18 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
         }
 
         return ListView.builder(
+          controller: _scrollController,
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: hubs.length,
+          itemCount: hubsToShow.length + (hasMoreToShow ? 1 : 0),
           itemBuilder: (context, index) {
-            final hub = hubs[index];
+            // Show loading indicator at the bottom
+            if (index == hubsToShow.length) {
+              return const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final hub = hubsToShow[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: FuturisticCard(
@@ -299,8 +378,32 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
 
   Widget _buildHubsMap(HubsRepository hubsRepo, LocationService locationService) {
     return FutureBuilder<List<Hub>>(
-      future: _getHubs(hubsRepo, locationService),
+      future: _getHubs(hubsRepo, locationService).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          debugPrint('⚠️ Timeout loading hubs for map');
+          return <Hub>[]; // Return empty list on timeout
+        },
+      ),
       builder: (context, snapshot) {
+        // Handle error state
+        if (snapshot.hasError) {
+          debugPrint('❌ Error loading hubs for map: ${snapshot.error}');
+          return FuturisticEmptyState(
+            icon: Icons.error_outline,
+            title: 'שגיאה בטעינת המפה',
+            message: 'לא ניתן לטעון את הנתונים. נסה שוב מאוחר יותר.',
+            action: ElevatedButton.icon(
+              onPressed: () {
+                // Force rebuild by invalidating
+                setState(() {});
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('נסה שוב'),
+            ),
+          );
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const FuturisticLoadingState(
             message: 'טוען מפה...',
@@ -361,16 +464,38 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     LocationService locationService,
   ) async {
     try {
-      final position = await locationService.getCurrentLocation();
+      // Add timeout to location service call
+      final position = await locationService.getCurrentLocation()
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint('⚠️ Timeout getting current location');
+              return null;
+            },
+          );
+      
       if (position == null) {
         // Fallback: get all hubs (limited)
-        return await hubsRepo.getAllHubs(limit: 100);
+        return await hubsRepo.getAllHubs(limit: 100)
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                debugPrint('⚠️ Timeout loading all hubs');
+                return <Hub>[];
+              },
+            );
       }
 
       final hubs = await hubsRepo.findHubsNearby(
         latitude: position.latitude,
         longitude: position.longitude,
         radiusKm: 50.0, // 50km radius
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('⚠️ Timeout finding nearby hubs');
+          return <Hub>[];
+        },
       );
 
       // Filter by search query
@@ -384,7 +509,9 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
 
       return hubs;
     } catch (e) {
-      return [];
+      debugPrint('❌ Error in _getHubs: $e');
+      // Return empty list instead of throwing
+      return <Hub>[];
     }
   }
 

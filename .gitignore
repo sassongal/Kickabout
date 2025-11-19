@@ -81,6 +81,8 @@ firebase-adminsdk*.json
 *api*key*.json
 *secrets*.txt
 *secrets*.json
+# Note: Google Maps API key is in source files (env.dart, AndroidManifest.xml, etc.)
+# but should be restricted in Google Cloud Console for security
 
 # Node.js (if any)
 node_modules/

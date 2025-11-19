@@ -16,6 +16,12 @@ class LogPastGameDetails with _$LogPastGameDetails {
     required int teamBScore,
     required List<String> playerIds, // Players who participated
     required List<Team> teams, // Teams with player assignments
+    @Default(false) bool showInCommunityFeed, // Show this game in the community activity feed
+    @Default([]) List<String> goalScorerIds, // IDs of players who scored (optional)
+    @Default([]) List<String> goalScorerNames, // Names of goal scorers (optional, denormalized)
+    String? mvpPlayerId, // MVP player ID (optional)
+    String? mvpPlayerName, // MVP player name (optional, denormalized)
+    String? venueName, // Venue name (optional, denormalized)
   }) = _LogPastGameDetails;
 
   factory LogPastGameDetails.fromJson(Map<String, dynamic> json) =>

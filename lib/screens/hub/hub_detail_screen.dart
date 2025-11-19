@@ -14,7 +14,6 @@ import 'package:kickadoor/screens/social/hub_chat_screen.dart';
 import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/hub_events_tab.dart';
-import 'package:kickadoor/screens/hub/hub_analytics_screen.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:kickadoor/models/hub_role.dart';
@@ -106,11 +105,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         }
 
         final isMember = currentUserId != null && hub.memberIds.contains(currentUserId);
-        final hubPermissions = currentUserId != null
-            ? HubPermissions(hub: hub, userId: currentUserId)
-            : null;
-        final isHubManager = hubPermissions?.isManager() ?? (currentUserId == hub.createdBy);
-        
         // Check if join requests are enabled
         final joinRequestsEnabled = hub.settings['joinRequestsEnabled'] as bool? ?? true;
 
@@ -130,8 +124,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
 
         // Check user role for admin permissions
         final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
-        final isAdmin = roleAsync.valueOrNull == UserRole.admin;
-        // isHubManager is already defined above (line 107)
 
         return roleAsync.when(
           data: (role) {
@@ -247,6 +239,15 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                         ],
                       ),
                       const SizedBox(height: 8),
+                      // Home Venue Selection (for managers)
+                      if (isAdminRole) ...[
+                        _HomeVenueSelector(
+                          hubId: widget.hubId,
+                          hub: hub,
+                          venuesRepo: venuesRepo,
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       // Venues list
                       _VenuesList(hubId: widget.hubId, venuesRepo: venuesRepo),
                       const SizedBox(height: 8),
@@ -307,7 +308,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                                   minimumSize: const Size(0, 40),
                                 ),
                                 child: const Text(
-                                  'גיוס שחקנים (AI)',
+                                  'סקאוטינג',
                                   style: TextStyle(fontSize: 12),
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
@@ -625,7 +626,7 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
 }
 
 /// Members tab widget
-class _MembersTab extends ConsumerWidget {
+class _MembersTab extends ConsumerStatefulWidget {
   final String hubId;
   final Hub hub;
   final UsersRepository usersRepo;
@@ -639,10 +640,69 @@ class _MembersTab extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MembersTab> createState() => _MembersTabState();
+}
+
+class _MembersTabState extends ConsumerState<_MembersTab> {
+  // Pagination state
+  final ScrollController _scrollController = ScrollController();
+  List<User> _displayedUsers = [];
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  static const int _pageSize = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      _loadMoreUsers();
+    }
+  }
+
+  Future<void> _loadMoreUsers() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final allUsers = await widget.usersRepo.getUsers(widget.hub.memberIds);
+    
+    final nextIndex = _displayedUsers.length;
+    final endIndex = (nextIndex + _pageSize).clamp(0, allUsers.length);
+    
+    if (nextIndex < allUsers.length) {
+      setState(() {
+        _displayedUsers.addAll(allUsers.sublist(nextIndex, endIndex));
+        _hasMore = endIndex < allUsers.length;
+        _isLoadingMore = false;
+      });
+    } else {
+      setState(() {
+        _hasMore = false;
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final isHubManager = currentUserId == hub.createdBy;
-    final roleAsync = ref.watch(hubRoleProvider(hubId));
+    final isHubManager = currentUserId == widget.hub.createdBy;
+    final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
     final isAdmin = roleAsync.valueOrNull == UserRole.admin;
     
     // Check if user is manager/admin (creator or has admin role)
@@ -651,18 +711,18 @@ class _MembersTab extends ConsumerWidget {
     return Column(
       children: [
         // Header with view all button
-        if (hub.memberIds.isNotEmpty && onViewAll != null)
+        if (widget.hub.memberIds.isNotEmpty && widget.onViewAll != null)
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${hub.memberIds.length} שחקנים',
+                  '${widget.hub.memberIds.length} שחקנים',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton.icon(
-                  onPressed: onViewAll,
+                  onPressed: widget.onViewAll,
                   icon: const Icon(Icons.arrow_forward),
                   label: const Text('צפה בכולם'),
                 ),
@@ -677,7 +737,7 @@ class _MembersTab extends ConsumerWidget {
               onPressed: () async {
                 final result = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AddManualPlayerDialog(hubId: hubId),
+                  builder: (context) => AddManualPlayerDialog(hubId: widget.hubId),
                 );
                 if (result == true && context.mounted) {
                   // Refresh will happen automatically via StreamBuilder
@@ -693,7 +753,7 @@ class _MembersTab extends ConsumerWidget {
           ),
         // Members list (limited to 10 in tab view)
         Expanded(
-          child: hub.memberIds.isEmpty
+          child: widget.hub.memberIds.isEmpty
               ? FuturisticEmptyState(
                   icon: Icons.people_outline,
                   title: 'אין חברים',
@@ -707,17 +767,17 @@ class _MembersTab extends ConsumerWidget {
 
   Widget _buildMembersList(BuildContext context, WidgetRef ref, {int? limit}) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final isHubManager = currentUserId == hub.createdBy;
-    final roleAsync = ref.watch(hubRoleProvider(hubId));
+    final isHubManager = currentUserId == widget.hub.createdBy;
+    final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
     final isAdmin = roleAsync.valueOrNull == UserRole.admin;
     final isManagerOrAdmin = isHubManager || isAdmin;
 
     // Debug: Log memberIds to help diagnose issues
-    debugPrint('🔍 Members Tab - hub.memberIds: ${hub.memberIds}');
-    debugPrint('🔍 Members Tab - memberIds.length: ${hub.memberIds.length}');
+    debugPrint('🔍 Members Tab - hub.memberIds: ${widget.hub.memberIds}');
+    debugPrint('🔍 Members Tab - memberIds.length: ${widget.hub.memberIds.length}');
 
     return FutureBuilder<List<User>>(
-      future: usersRepo.getUsers(hub.memberIds),
+      future: widget.usersRepo.getUsers(widget.hub.memberIds),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ListView.builder(
@@ -749,21 +809,43 @@ class _MembersTab extends ConsumerWidget {
           );
         }
 
-        final users = snapshot.data ?? [];
+        final allUsers = snapshot.data ?? [];
+        
+        // Initialize displayed users on first load or when data changes
+        if (_displayedUsers.isEmpty || 
+            _displayedUsers.length != allUsers.length ||
+            (_displayedUsers.isNotEmpty && _displayedUsers.first.uid != allUsers.first.uid)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _displayedUsers = allUsers.take(_pageSize).toList();
+                _hasMore = allUsers.length > _pageSize;
+              });
+            }
+          });
+        }
+        
+        // Use displayed users if available, otherwise use first page
+        final usersToShow = _displayedUsers.isNotEmpty 
+            ? _displayedUsers 
+            : allUsers.take(_pageSize).toList();
+        final hasMoreToShow = _displayedUsers.isNotEmpty 
+            ? _hasMore 
+            : allUsers.length > _pageSize;
         
         // Debug: Log users found
-        debugPrint('🔍 Members Tab - users found: ${users.length}');
-        if (users.isEmpty && hub.memberIds.isNotEmpty) {
+        debugPrint('🔍 Members Tab - users found: ${allUsers.length}');
+        if (usersToShow.isEmpty && allUsers.isEmpty && widget.hub.memberIds.isNotEmpty) {
           // If memberIds exist but no users found, show error with more info
-          debugPrint('⚠️ Members Tab - memberIds exist but no users found. memberIds: ${hub.memberIds}');
+          debugPrint('⚠️ Members Tab - memberIds exist but no users found. memberIds: ${widget.hub.memberIds}');
           return FuturisticEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת חברים',
-            message: 'נמצאו ${hub.memberIds.length} חברים ברשימה, אך לא ניתן לטעון את הפרטים שלהם',
+            message: 'נמצאו ${widget.hub.memberIds.length} חברים ברשימה, אך לא ניתן לטעון את הפרטים שלהם',
             action: ElevatedButton.icon(
               onPressed: () {
                 // Force rebuild by invalidating provider
-                ref.invalidate(hubRoleProvider(hubId));
+                ref.invalidate(hubRoleProvider(widget.hubId));
               },
               icon: const Icon(Icons.refresh),
               label: const Text('נסה שוב'),
@@ -771,7 +853,7 @@ class _MembersTab extends ConsumerWidget {
           );
         }
         
-        if (users.isEmpty) {
+        if (usersToShow.isEmpty && allUsers.isEmpty) {
           return FuturisticEmptyState(
             icon: Icons.people_outline,
             title: 'אין חברים',
@@ -779,33 +861,99 @@ class _MembersTab extends ConsumerWidget {
           );
         }
 
-        final displayUsers = limit != null && users.length > limit
-            ? users.take(limit).toList()
-            : users;
+        // Apply limit if specified (for preview mode)
+        final displayUsers = limit != null && usersToShow.length > limit
+            ? usersToShow.take(limit).toList()
+            : usersToShow;
 
         return ListView.builder(
-          itemCount: displayUsers.length + (limit != null && users.length > limit ? 1 : 0),
+          controller: _scrollController,
+          itemCount: displayUsers.length + (limit != null && usersToShow.length > limit ? 1 : 0) + (hasMoreToShow && limit == null ? 1 : 0),
           padding: const EdgeInsets.all(8),
           itemBuilder: (context, index) {
-            if (limit != null && users.length > limit && index == displayUsers.length) {
+            // Show "view all" button if limit is set
+            if (limit != null && usersToShow.length > limit && index == displayUsers.length) {
               return Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Center(
                   child: TextButton.icon(
-                    onPressed: onViewAll,
+                    onPressed: widget.onViewAll,
                     icon: const Icon(Icons.arrow_forward),
-                    label: Text('צפה ב-${users.length - limit} נוספים'),
+                    label: Text('צפה ב-${usersToShow.length - limit} נוספים'),
                   ),
                 ),
               );
             }
+            
+            // Show loading indicator at the bottom if pagination is active
+            if (limit == null && hasMoreToShow && index == displayUsers.length) {
+              return const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            
             final user = displayUsers[index];
             final isManualPlayer = user.email.startsWith('manual_');
             
-            // Split name into first and last name
-            final nameParts = user.name.split(' ');
-            final firstName = nameParts.isNotEmpty ? nameParts.first : user.name;
-            final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+            // Get first and last name - prefer firstName/lastName if available, otherwise split name
+            String firstName;
+            String lastName = '';
+            
+            if (user.firstName != null && user.firstName!.isNotEmpty) {
+              firstName = user.firstName!;
+            } else if (user.name.isNotEmpty && user.name.contains(' ')) {
+              final nameParts = user.name.split(' ');
+              firstName = nameParts.first;
+              if (nameParts.length > 1) {
+                lastName = nameParts.sublist(1).join(' ');
+              }
+            } else {
+              firstName = user.name.isNotEmpty ? user.name : 'משתמש לא ידוע';
+              lastName = '';
+            }
+            
+            if (user.lastName != null && user.lastName!.isNotEmpty) {
+              lastName = user.lastName!;
+            }
+            
+            // Get user role in hub
+            final hubPermissions = HubPermissions(hub: widget.hub, userId: user.uid);
+            String roleDisplayName;
+            IconData roleIcon;
+            Color? roleColor;
+            
+            try {
+              final role = hubPermissions.userRole;
+              roleDisplayName = role.displayName;
+              
+              // Determine if user is "שחקן משפיע" (influential player)
+              // Based on: high rank score (>= 7.0) or many participations (>= 10)
+              final isInfluential = user.currentRankScore >= 7.0 || user.totalParticipations >= 10;
+              
+              if (role == HubRole.manager) {
+                roleIcon = Icons.admin_panel_settings;
+                roleColor = Colors.blue;
+                roleDisplayName = 'מנהל';
+              } else if (role == HubRole.moderator) {
+                roleIcon = Icons.shield;
+                roleColor = Colors.purple;
+                roleDisplayName = 'מנחה';
+              } else if (isInfluential) {
+                roleIcon = Icons.star;
+                roleColor = Colors.amber;
+                roleDisplayName = 'שחקן משפיע';
+              } else {
+                roleIcon = Icons.person;
+                roleColor = Colors.grey;
+                roleDisplayName = 'שחקן רגיל';
+              }
+            } catch (e) {
+              // User is not a member, show as regular player
+              roleIcon = Icons.person;
+              roleColor = Colors.grey;
+              roleDisplayName = 'שחקן רגיל';
+            }
             
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -813,13 +961,24 @@ class _MembersTab extends ConsumerWidget {
                 leading: CircleAvatar(
                   radius: 28,
                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  backgroundImage: user.photoUrl != null
+                  backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
                       ? NetworkImage(user.photoUrl!)
                       : null,
-                  child: user.photoUrl == null
-                      ? Icon(
-                              Icons.person,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  child: user.photoUrl == null || user.photoUrl!.isEmpty
+                      ? Text(
+                          // Use initials from firstName/lastName or name
+                          (user.firstName != null && user.lastName != null)
+                              ? '${user.firstName![0]}${user.lastName![0]}'
+                              : (firstName.isNotEmpty && lastName.isNotEmpty)
+                                  ? '${firstName[0]}${lastName[0]}'
+                                  : firstName.isNotEmpty
+                                      ? firstName[0]
+                                      : '?',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
                         )
                       : null,
                 ),
@@ -857,7 +1016,7 @@ class _MembersTab extends ConsumerWidget {
                             context: context,
                             builder: (context) => EditManualPlayerDialog(
                               player: user,
-                              hubId: hubId,
+                              hubId: widget.hubId,
                             ),
                           );
                           if (result == true && context.mounted) {
@@ -866,27 +1025,28 @@ class _MembersTab extends ConsumerWidget {
                         },
                         tooltip: 'ערוך שחקן',
                       ),
-                    // Show role badge - prioritize admin/manager, then creator
-                    if (hub.roles[user.uid] == 'admin' || hub.roles[user.uid] == 'manager' || user.uid == hub.createdBy)
-                      Chip(
-                        label: const Text('מנהל'),
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        avatar: Icon(
-                          Icons.admin_panel_settings,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        ),
+                    // Show role badge with proper display name
+                    Chip(
+                      label: Text(roleDisplayName),
+                      backgroundColor: roleColor != null 
+                          ? roleColor!.withValues(alpha: 0.2)
+                          : Theme.of(context).colorScheme.primaryContainer,
+                      avatar: Icon(
+                        roleIcon,
+                        size: 16,
+                        color: roleColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
+                    ),
                   ],
                 ),
                 onTap: isManualPlayer
-                    ? (isHubManager
+                    ? (isManagerOrAdmin
                         ? () async {
                             final result = await showDialog<bool>(
                               context: context,
                               builder: (context) => EditManualPlayerDialog(
                                 player: user,
-                                hubId: hubId,
+                                hubId: widget.hubId,
                               ),
                             );
                             if (result == true && context.mounted) {
@@ -905,6 +1065,97 @@ class _MembersTab extends ConsumerWidget {
 }
 
 /// Venues list widget
+/// Home Venue Selector - allows managers to select the hub's home field
+class _HomeVenueSelector extends ConsumerStatefulWidget {
+  final String hubId;
+  final Hub hub;
+  final VenuesRepository venuesRepo;
+
+  const _HomeVenueSelector({
+    required this.hubId,
+    required this.hub,
+    required this.venuesRepo,
+  });
+
+  @override
+  ConsumerState<_HomeVenueSelector> createState() => _HomeVenueSelectorState();
+}
+
+class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
+  bool _isLoading = false;
+
+  Future<void> _selectHomeVenue() async {
+    // Navigate to venue search/selection screen
+    final selectedVenue = await context.push<Venue?>('/venue-search?hubId=${widget.hubId}&selectMode=true');
+    
+    if (selectedVenue != null && mounted) {
+      setState(() => _isLoading = true);
+      
+      try {
+        final hubsRepo = ref.read(hubsRepositoryProvider);
+        await hubsRepo.updateHub(widget.hubId, {
+          'mainVenueId': selectedVenue.venueId,
+          'primaryVenueId': selectedVenue.venueId,
+          'primaryVenueLocation': selectedVenue.location,
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('מגרש הבית עודכן בהצלחה!')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('שגיאה בעדכון מגרש הבית: $e')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Venue?>(
+      future: widget.hub.mainVenueId != null
+          ? widget.venuesRepo.getVenue(widget.hub.mainVenueId!)
+          : Future.value(null),
+      builder: (context, snapshot) {
+        final homeVenue = snapshot.data;
+        
+        return Card(
+          child: ListTile(
+            leading: Icon(
+              Icons.sports_soccer,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: const Text('מגרש בית'),
+            subtitle: homeVenue != null
+                ? Text(homeVenue.name)
+                : const Text('לא נבחר מגרש בית'),
+            trailing: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: _selectHomeVenue,
+                    tooltip: 'בחר מגרש בית',
+                  ),
+            onTap: _selectHomeVenue,
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _VenuesList extends ConsumerWidget {
   final String hubId;
   final VenuesRepository venuesRepo;

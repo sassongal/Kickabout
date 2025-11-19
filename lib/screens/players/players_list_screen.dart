@@ -32,6 +32,60 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
   
   // Store distances for each player (in meters)
   final Map<String, double> _playerDistances = {};
+  
+  // Pagination state
+  final ScrollController _scrollController = ScrollController();
+  List<User> _allPlayers = [];
+  List<User> _displayedPlayers = [];
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  static const int _pageSize = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      _loadMorePlayers();
+    }
+  }
+
+  Future<void> _loadMorePlayers() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    // Simulate loading delay
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final nextIndex = _displayedPlayers.length;
+    final endIndex = (nextIndex + _pageSize).clamp(0, _allPlayers.length);
+    
+    if (nextIndex < _allPlayers.length) {
+      setState(() {
+        _displayedPlayers.addAll(_allPlayers.sublist(nextIndex, endIndex));
+        _hasMore = endIndex < _allPlayers.length;
+        _isLoadingMore = false;
+      });
+    } else {
+      setState(() {
+        _hasMore = false;
+        _isLoadingMore = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +191,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: 5,
-                    itemBuilder: (context, index) => SkeletonPlayerCard(),
+                    itemBuilder: (context, index) => const SkeletonPlayerCard(),
                   );
                 }
 
@@ -152,8 +206,27 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                   );
                 }
 
-                final players = snapshot.data ?? [];
-                if (players.isEmpty) {
+                final allPlayers = snapshot.data ?? [];
+                
+                // Initialize displayed players on first load or when data changes
+                if (_allPlayers.length != allPlayers.length || 
+                    (_allPlayers.isNotEmpty && _allPlayers.first.uid != allPlayers.first.uid)) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _allPlayers = allPlayers;
+                        _displayedPlayers = allPlayers.take(_pageSize).toList();
+                        _hasMore = allPlayers.length > _pageSize;
+                      });
+                    }
+                  });
+                }
+                
+                // Use displayed players if available, otherwise use all players (first load)
+                final playersToShow = _displayedPlayers.isNotEmpty ? _displayedPlayers : allPlayers.take(_pageSize).toList();
+                final hasMoreToShow = _displayedPlayers.isNotEmpty ? _hasMore : allPlayers.length > _pageSize;
+                
+                if (playersToShow.isEmpty && allPlayers.isEmpty) {
                   return FuturisticEmptyState(
                     icon: Icons.people_outline,
                     title: 'אין שחקנים',
@@ -162,10 +235,18 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                 }
 
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: players.length,
+                  itemCount: playersToShow.length + (hasMoreToShow ? 1 : 0),
                   itemBuilder: (context, index) {
-                    final player = players[index];
+                    // Show loading indicator at the bottom
+                    if (index == playersToShow.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    final player = playersToShow[index];
                     final distance = _playerDistances[player.uid];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),

@@ -17,7 +17,6 @@ import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/kicka_ball_logo.dart';
 import 'package:kickadoor/widgets/availability_toggle.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 
@@ -403,41 +402,10 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: FutureBuilder<List<Hub>>(
-                              future: _getAssociatedHubs(hubsRepo, currentUserId),
-                              builder: (context, snapshot) {
-                                final associatedHubs = snapshot.data ?? [];
-                                return FuturisticCard(
-                                  onTap: () => _showAssociatedHubs(context, associatedHubs),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          gradient: FuturisticColors.accentGradient,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Icon(
-                                          Icons.people,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Hub אליו אני משוייך',
-                                        style: FuturisticTypography.labelMedium,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      Text(
-                                        '${associatedHubs.length}',
-                                        style: FuturisticTypography.bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
+                            child: _AssociatedHubsCard(
+                              hubsRepo: hubsRepo,
+                              userId: currentUserId,
+                              onTap: (hubs) => _showAssociatedHubs(context, hubs),
                             ),
                           ),
                         ],
@@ -575,25 +543,7 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
   }
 
 
-  Future<List<Hub>> _getAssociatedHubs(HubsRepository hubsRepo, String userId) async {
-    try {
-      final position = await ref.read(locationServiceProvider).getCurrentLocation();
-      if (position == null) return [];
-      
-      final nearbyHubs = await hubsRepo.findHubsNearby(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        radiusKm: 50.0,
-      );
-      
-      return nearbyHubs.where((hub) => 
-        hub.memberIds.contains(userId) && 
-        hub.createdBy != userId
-      ).toList();
-    } catch (e) {
-      return [];
-    }
-  }
+  // Removed _getAssociatedHubs - moved to _AssociatedHubsCard widget for optimization
 
   void _showMyHubs(BuildContext context, List<Hub> hubs) {
     showModalBottomSheet(
@@ -1008,7 +958,7 @@ class _MyHubsSection extends ConsumerWidget {
   }
 }
 
-class _NearbyHubsSection extends ConsumerWidget {
+class _NearbyHubsSection extends ConsumerStatefulWidget {
   final LocationService locationService;
   final HubsRepository hubsRepo;
 
@@ -1018,23 +968,55 @@ class _NearbyHubsSection extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_NearbyHubsSection> createState() => _NearbyHubsSectionState();
+}
+
+class _NearbyHubsSectionState extends ConsumerState<_NearbyHubsSection> {
+  Future<List<Hub>>? _nearbyHubsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load nearby hubs once when widget is created
+    _loadNearbyHubs();
+  }
+
+  void _loadNearbyHubs() {
+    _nearbyHubsFuture = _getNearbyHubs();
+  }
+
+  Future<List<Hub>> _getNearbyHubs() async {
+    try {
+      final position = await widget.locationService.getCurrentLocation();
+      if (position == null) return [];
+      return await widget.hubsRepo.findHubsNearby(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        radiusKm: 10.0,
+      );
+    } catch (e) {
+      return [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'הובים קרובים',
+          'HUBS קרובים',
           style: FuturisticTypography.techHeadline,
         ),
         const SizedBox(height: 12),
         FutureBuilder<List<Hub>>(
-                  future: _getNearbyHubs(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const FuturisticLoadingState(
-                        message: 'מחפש הובים קרובים...',
-                      );
-                    }
+          future: _nearbyHubsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const FuturisticLoadingState(
+                message: 'מחפש הובים קרובים...',
+              );
+            }
 
             final hubs = snapshot.data ?? [];
             if (hubs.isEmpty) {
@@ -1048,25 +1030,53 @@ class _NearbyHubsSection extends ConsumerWidget {
               );
             }
 
-            return Column(
-              children: hubs.take(3).map((hub) {
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: hubs.length,
+              itemBuilder: (context, index) {
+                final hub = hubs[index];
                 return FuturisticCard(
                   margin: const EdgeInsets.only(bottom: 12),
                   onTap: () => context.push('/hubs/${hub.hubId}'),
                   child: Row(
                     children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: FuturisticColors.accentGradient,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.group,
-                          color: Colors.white,
-                          size: 24,
-                        ),
+                      // Hub profile image or icon
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: hub.profileImageUrl != null && hub.profileImageUrl!.isNotEmpty
+                            ? Image.network(
+                                hub.profileImageUrl!,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    gradient: FuturisticColors.accentGradient,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.group,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  gradient: FuturisticColors.accentGradient,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.group,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                              ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -1074,13 +1084,23 @@ class _NearbyHubsSection extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              hub.name.toUpperCase(),
+                              hub.name,
                               style: FuturisticTypography.heading3,
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              '${hub.memberIds.length} MEMBERS',
-                              style: FuturisticTypography.bodyMedium,
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.group,
+                                  size: 16,
+                                  color: FuturisticColors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${hub.memberIds.length} חברים',
+                                  style: FuturisticTypography.bodyMedium,
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1093,26 +1113,102 @@ class _NearbyHubsSection extends ConsumerWidget {
                     ],
                   ),
                 );
-              }).toList(),
+              },
             );
           },
         ),
       ],
     );
   }
+}
 
-  Future<List<Hub>> _getNearbyHubs() async {
+/// Associated Hubs Card - optimized to load once
+class _AssociatedHubsCard extends ConsumerStatefulWidget {
+  final HubsRepository hubsRepo;
+  final String userId;
+  final void Function(List<Hub>) onTap;
+
+  const _AssociatedHubsCard({
+    required this.hubsRepo,
+    required this.userId,
+    required this.onTap,
+  });
+
+  @override
+  ConsumerState<_AssociatedHubsCard> createState() => _AssociatedHubsCardState();
+}
+
+class _AssociatedHubsCardState extends ConsumerState<_AssociatedHubsCard> {
+  Future<List<Hub>>? _associatedHubsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssociatedHubs();
+  }
+
+  void _loadAssociatedHubs() {
+    _associatedHubsFuture = _getAssociatedHubs();
+  }
+
+  Future<List<Hub>> _getAssociatedHubs() async {
     try {
-      final position = await locationService.getCurrentLocation();
+      final position = await ref.read(locationServiceProvider).getCurrentLocation();
       if (position == null) return [];
-      return await hubsRepo.findHubsNearby(
+      
+      final nearbyHubs = await widget.hubsRepo.findHubsNearby(
         latitude: position.latitude,
         longitude: position.longitude,
-        radiusKm: 10.0,
+        radiusKm: 50.0,
       );
+      
+      return nearbyHubs.where((hub) => 
+        hub.memberIds.contains(widget.userId) && 
+        hub.createdBy != widget.userId
+      ).toList();
     } catch (e) {
       return [];
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Hub>>(
+      future: _associatedHubsFuture,
+      builder: (context, snapshot) {
+        final associatedHubs = snapshot.data ?? [];
+        return FuturisticCard(
+          onTap: () => widget.onTap(associatedHubs),
+          child: Column(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: FuturisticColors.accentGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.people,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Hub אליו אני משוייך',
+                style: FuturisticTypography.labelMedium,
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                '${associatedHubs.length}',
+                style: FuturisticTypography.bodySmall,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -1180,6 +1276,7 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
 
         return FuturisticCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          onTap: () => context.push('/weather'),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,

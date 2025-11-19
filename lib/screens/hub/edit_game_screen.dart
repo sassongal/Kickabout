@@ -41,6 +41,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
   final Set<String> _goalScorers = {};
   final Set<String> _assistProviders = {};
   String? _mvpPlayerId;
+  bool _showInCommunityFeed = false;
 
   @override
   void initState() {
@@ -122,6 +123,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
           _goalScorers.addAll(goalScorers);
           _assistProviders.addAll(assistProviders);
           _mvpPlayerId = mvpPlayerId;
+          _showInCommunityFeed = game.showInCommunityFeed;
           _isLoadingData = false;
         });
       }
@@ -159,12 +161,54 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       final teamAScore = int.tryParse(_teamAScoreController.text.trim()) ?? 0;
       final teamBScore = int.tryParse(_teamBScoreController.text.trim()) ?? 0;
 
-      // Update game
+      // Get denormalized data for optimization
+      final usersRepo = ref.read(usersRepositoryProvider);
+      final venuesRepo = ref.read(venuesRepositoryProvider);
+      final eventsRepo2 = ref.read(hubEventsRepositoryProvider);
+      
+      // Get goal scorer names
+      final goalScorerIds = _goalScorers.where((id) => _selectedPlayerIds.contains(id)).toList();
+      final goalScorers = await usersRepo.getUsers(goalScorerIds);
+      final goalScorerNames = goalScorers.map((u) => u.name).toList();
+      
+      // Get MVP name
+      String? mvpPlayerName;
+      if (_mvpPlayerId != null && _selectedPlayerIds.contains(_mvpPlayerId)) {
+        final mvp = await usersRepo.getUser(_mvpPlayerId!);
+        mvpPlayerName = mvp?.name;
+      }
+      
+      // Get venue name
+      String? venueName;
+      if (_selectedEventId != null) {
+        HubEvent? event;
+        try {
+          event = _events.firstWhere(
+            (e) => e.eventId == _selectedEventId,
+          );
+        } catch (e) {
+          event = _events.isNotEmpty ? _events.first : null;
+        }
+        if (event?.location != null && event!.location!.isNotEmpty) {
+          venueName = event.location;
+        }
+      } else if (_game?.venueId != null) {
+        final venue = await venuesRepo.getVenue(_game!.venueId!);
+        venueName = venue?.name;
+      }
+
+      // Update game with denormalized data
       await gamesRepo.updateGame(widget.gameId, {
         'eventId': _selectedEventId,
         'teamAScore': teamAScore,
         'teamBScore': teamBScore,
         'status': 'completed',
+        'showInCommunityFeed': _showInCommunityFeed,
+        'goalScorerIds': goalScorerIds,
+        'goalScorerNames': goalScorerNames,
+        'mvpPlayerId': _mvpPlayerId,
+        'mvpPlayerName': mvpPlayerName,
+        'venueName': venueName,
       });
 
       // Delete existing events and create new ones
@@ -540,6 +584,20 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Show in Community Feed
+            CheckboxListTile(
+              title: const Text('להעלות ללוח אירועים הקהילתי?'),
+              subtitle: const Text('המשחק יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
+              value: _showInCommunityFeed,
+              onChanged: (value) {
+                setState(() {
+                  _showInCommunityFeed = value ?? false;
+                });
+              },
+              controlAffinity: ListTileControlAffinity.leading,
             ),
             const SizedBox(height: 24),
             

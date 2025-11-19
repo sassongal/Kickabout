@@ -66,8 +66,20 @@ class PlayerAvatar extends StatelessWidget {
     }
   }
 
-  // Get user initials
+  // Get user initials - prefer firstName/lastName if available
   String _getInitials() {
+    // Use firstName and lastName if available
+    if (user.firstName != null && user.lastName != null) {
+      final first = user.firstName!.isNotEmpty ? user.firstName![0] : '';
+      final last = user.lastName!.isNotEmpty ? user.lastName![0] : '';
+      if (first.isNotEmpty && last.isNotEmpty) {
+        return (first + last).toUpperCase();
+      }
+      if (first.isNotEmpty) return first.toUpperCase();
+      if (last.isNotEmpty) return last.toUpperCase();
+    }
+    
+    // Fallback to splitting name
     final parts = user.name.split(' ');
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
@@ -136,15 +148,19 @@ class PlayerAvatar extends StatelessWidget {
       );
     }
 
-    // Add name if needed
+    // Add name if needed - prefer firstName/lastName if available
     if (showName) {
+      final displayName = (user.firstName != null && user.lastName != null)
+          ? '${user.firstName} ${user.lastName}'
+          : user.name;
+      
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           avatarWidget,
           const SizedBox(height: 4),
           Text(
-            user.name,
+            displayName,
             style: Theme.of(context).textTheme.bodySmall,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

@@ -3,43 +3,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/hub_event.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/services/push_notification_integration_service.dart';
 
-/// Create hub event screen
-class CreateHubEventScreen extends ConsumerStatefulWidget {
+/// Edit hub event screen
+class EditHubEventScreen extends ConsumerStatefulWidget {
   final String hubId;
-  final Hub hub;
+  final String eventId;
 
-  const CreateHubEventScreen({
+  const EditHubEventScreen({
     super.key,
     required this.hubId,
-    required this.hub,
+    required this.eventId,
   });
 
   @override
-  ConsumerState<CreateHubEventScreen> createState() => _CreateHubEventScreenState();
+  ConsumerState<EditHubEventScreen> createState() => _EditHubEventScreenState();
 }
 
-class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
+class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  TimeOfDay _selectedTime = TimeOfDay.now();
-  int _teamCount = 3; // Default: 3 teams
-  String? _gameType; // 3v3, 4v4, etc.
-  int _durationMinutes = 12; // Default: 12 minutes
-  int _maxParticipants = 15; // Default: 15, required
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  int? _teamCount;
+  String? _gameType;
+  int? _durationMinutes;
+  int? _maxParticipants;
   bool _notifyMembers = false;
   bool _showInCommunityFeed = false;
   bool _isLoading = false;
+  bool _isLoadingData = true;
+  HubEvent? _event;
   Hub? _hub;
 
   final List<String> _gameTypes = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
@@ -47,20 +47,47 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   @override
   void initState() {
     super.initState();
-    _loadHub();
+    _loadEvent();
   }
 
-  Future<void> _loadHub() async {
+  Future<void> _loadEvent() async {
     try {
+      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       final hubsRepo = ref.read(hubsRepositoryProvider);
+      
+      final event = await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
       final hub = await hubsRepo.getHub(widget.hubId);
+      
       if (mounted) {
         setState(() {
+          _event = event;
           _hub = hub;
+          
+          if (event != null) {
+            _titleController.text = event.title;
+            _descriptionController.text = event.description ?? '';
+            _locationController.text = event.location ?? '';
+            _selectedDate = event.eventDate;
+            _selectedTime = TimeOfDay.fromDateTime(event.eventDate);
+            _teamCount = event.teamCount;
+            _gameType = event.gameType;
+            _durationMinutes = event.durationMinutes;
+            _maxParticipants = event.maxParticipants;
+            _notifyMembers = event.notifyMembers;
+            _showInCommunityFeed = event.showInCommunityFeed;
+          }
+          
+          _isLoadingData = false;
         });
       }
     } catch (e) {
-      debugPrint('Failed to load hub: $e');
+      debugPrint('Failed to load event: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingData = false;
+        });
+        SnackbarHelper.showError(context, 'שגיאה בטעינת האירוע');
+      }
     }
   }
 
@@ -75,8 +102,8 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
+      initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(), // Can't select past dates
       lastDate: DateTime.now().add(const Duration(days: 365)),
       locale: const Locale('he'),
     );
@@ -90,7 +117,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: _selectedTime,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
     );
     if (picked != null) {
       setState(() {
@@ -102,7 +129,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   Future<void> _showDurationPicker() async {
     final result = await showDialog<int>(
       context: context,
-      builder: (context) => _DurationPickerDialog(initialValue: _durationMinutes),
+      builder: (context) => _DurationPickerDialog(initialValue: _durationMinutes ?? 12),
     );
     if (result != null) {
       setState(() {
@@ -114,7 +141,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   Future<void> _showParticipantsPicker() async {
     final result = await showDialog<int>(
       context: context,
-      builder: (context) => _ParticipantsPickerDialog(initialValue: _maxParticipants),
+      builder: (context) => _ParticipantsPickerDialog(initialValue: _maxParticipants ?? 15),
     );
     if (result != null) {
       setState(() {
@@ -123,16 +150,16 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
     }
   }
 
-  Future<void> _createEvent() async {
+  Future<void> _updateEvent() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedDate == null || _selectedTime == null) {
+      SnackbarHelper.showError(context, 'נא לבחור תאריך ושעה');
+      return;
+    }
 
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) return;
 
-    // Load hub if not loaded
-    if (_hub == null) {
-      await _loadHub();
-    }
     if (_hub == null) {
       SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי ההאב');
       return;
@@ -141,11 +168,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
     // Check permissions
     final hubPermissions = HubPermissions(hub: _hub!, userId: currentUserId);
     if (!hubPermissions.canCreateEvents()) {
-      // Get manager names
-      final managers = await _getManagerNames();
-      if (mounted) {
-        _showPermissionDeniedDialog(managers);
-      }
+      SnackbarHelper.showError(context, 'אין לך הרשאה לערוך אירועים בהאב זה');
       return;
     }
 
@@ -153,63 +176,47 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
 
     try {
       final eventDate = DateTime(
-        _selectedDate.year,
-        _selectedDate.month,
-        _selectedDate.day,
-        _selectedTime.hour,
-        _selectedTime.minute,
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        _selectedTime!.hour,
+        _selectedTime!.minute,
       );
 
-      final event = HubEvent(
-        eventId: '',
-        hubId: widget.hubId,
-        createdBy: currentUserId,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
-        eventDate: eventDate,
-        location: _locationController.text.trim().isEmpty
-            ? null
-            : _locationController.text.trim(),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        teamCount: _teamCount,
-        gameType: _gameType,
-        durationMinutes: _durationMinutes,
-        maxParticipants: _maxParticipants,
-        notifyMembers: _notifyMembers,
-        showInCommunityFeed: _showInCommunityFeed,
-      );
-
-      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-      final eventId = await hubEventsRepo.createHubEvent(event);
-
-      // Send notifications if requested
-      if (_notifyMembers) {
-        try {
-          final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
-          final usersRepo = ref.read(usersRepositoryProvider);
-          final currentUser = await usersRepo.getUser(currentUserId);
-          
-          await pushIntegration.notifyNewEvent(
-            eventId: eventId,
-            hubId: widget.hubId,
-            creatorName: currentUser?.name ?? 'מישהו',
-            hubName: _hub?.name ?? 'האב',
-            memberIds: _hub?.memberIds ?? [],
-            excludeUserId: currentUserId,
-            eventTitle: event.title,
-            eventDate: eventDate,
-          );
-        } catch (e) {
-          debugPrint('Failed to send event notifications: $e');
-          // Don't fail event creation if notification fails
-        }
+      // Check if date is in the past
+      if (eventDate.isBefore(DateTime.now())) {
+        SnackbarHelper.showError(context, 'לא ניתן לבחור תאריך שכבר עבר');
+        setState(() => _isLoading = false);
+        return;
       }
 
+      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+      
+      await hubEventsRepo.updateHubEvent(
+        widget.hubId,
+        widget.eventId,
+        {
+          'title': _titleController.text.trim(),
+          'description': _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+          'location': _locationController.text.trim().isEmpty
+              ? null
+              : _locationController.text.trim(),
+          'eventDate': eventDate,
+          'teamCount': _teamCount,
+          'gameType': _gameType,
+          'durationMinutes': _durationMinutes,
+          'maxParticipants': _maxParticipants,
+          'notifyMembers': _notifyMembers,
+          'showInCommunityFeed': _showInCommunityFeed,
+          'updatedAt': DateTime.now(),
+        },
+      );
+
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, 'אירוע עודכן בהצלחה!');
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'אירוע נוצר בהצלחה!');
         context.pop();
       }
     } catch (e) {
@@ -223,85 +230,92 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
     }
   }
 
-  Future<List<String>> _getManagerNames() async {
-    final managers = <String>[];
-    final usersRepo = ref.read(usersRepositoryProvider);
-    
-    if (_hub == null) return managers;
-    
-    // Add creator
-    try {
-      final creator = await usersRepo.getUser(_hub!.createdBy);
-      if (creator != null) {
-        managers.add(creator.name);
-      }
-    } catch (e) {
-      debugPrint('Failed to get creator name: $e');
-    }
-
-    // Add managers from roles (max 2 more to total 3)
-    final managerIds = _hub!.roles.entries
-        .where((e) => e.value == 'manager' && e.key != _hub!.createdBy)
-        .take(2)
-        .map((e) => e.key)
-        .toList();
-
-    for (final managerId in managerIds) {
-      try {
-        final manager = await usersRepo.getUser(managerId);
-        if (manager != null) {
-          managers.add(manager.name);
-        }
-      } catch (e) {
-        debugPrint('Failed to get manager name: $e');
-      }
-    }
-
-    return managers;
-  }
-
-  void _showPermissionDeniedDialog(List<String> managerNames) {
-    showDialog(
+  Future<void> _deleteEvent() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('אין הרשאה'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('רק מנהל ההאב מוגדר כיכול לבצע פעולה זו.'),
-            if (managerNames.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text('מנהלי ההאב:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              ...managerNames.map((name) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('• $name'),
-              )),
-            ],
-          ],
-        ),
+        title: const Text('מחיקת אירוע'),
+        content: const Text('האם אתה בטוח שברצונך למחוק את האירוע? פעולה זו לא ניתנת לביטול.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('אישור'),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('מחק'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
+
+    if (_hub == null) {
+      SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי ההאב');
+      return;
+    }
+
+    // Check permissions
+    final hubPermissions = HubPermissions(hub: _hub!, userId: currentUserId);
+    if (!hubPermissions.canCreateEvents()) {
+      SnackbarHelper.showError(context, 'אין לך הרשאה למחוק אירועים בהאב זה');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+      await hubEventsRepo.deleteHubEvent(widget.hubId, widget.eventId);
+
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, 'אירוע נמחק בהצלחה!');
+      if (mounted) {
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_hub == null) {
+    if (_isLoadingData) {
       return AppScaffold(
-        title: 'צור אירוע',
+        title: 'ערוך אירוע',
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
+    if (_event == null) {
+      return AppScaffold(
+        title: 'ערוך אירוע',
+        body: const Center(child: Text('אירוע לא נמצא')),
+      );
+    }
+
     return AppScaffold(
-      title: 'צור אירוע',
+      title: 'ערוך אירוע',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.delete),
+          onPressed: _isLoading ? null : _deleteEvent,
+          tooltip: 'מחק אירוע',
+        ),
+      ],
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -349,7 +363,9 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               // Date
               ListTile(
                 title: const Text('תאריך *'),
-                subtitle: Text(DateFormat('dd/MM/yyyy', 'he').format(_selectedDate)),
+                subtitle: Text(_selectedDate != null
+                    ? DateFormat('dd/MM/yyyy', 'he').format(_selectedDate!)
+                    : 'לא נבחר'),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: _selectDate,
                 shape: RoundedRectangleBorder(
@@ -362,7 +378,9 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               // Time
               ListTile(
                 title: const Text('שעה *'),
-                subtitle: Text(_selectedTime.format(context)),
+                subtitle: Text(_selectedTime != null
+                    ? _selectedTime!.format(context)
+                    : 'לא נבחר'),
                 trailing: const Icon(Icons.access_time),
                 onTap: _selectTime,
                 shape: RoundedRectangleBorder(
@@ -374,7 +392,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
 
               // Team Count
               DropdownButtonFormField<int>(
-                value: _teamCount,
+                initialValue: _teamCount,
                 decoration: const InputDecoration(
                   labelText: 'מספר קבוצות *',
                   border: OutlineInputBorder(),
@@ -397,17 +415,20 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
 
               // Game Type
               DropdownButtonFormField<String>(
-                value: _gameType,
+                initialValue: _gameType,
                 decoration: const InputDecoration(
                   labelText: 'סוג משחק (אופציונלי)',
                   border: OutlineInputBorder(),
                 ),
-                items: _gameTypes.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('ללא')),
+                  ..._gameTypes.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(type),
+                    );
+                  }),
+                ],
                 onChanged: (value) {
                   setState(() {
                     _gameType = value;
@@ -416,10 +437,10 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Duration (minutes) - Vertical picker
+              // Duration (minutes)
               ListTile(
                 title: const Text('משך דקות המשחק *'),
-                subtitle: Text('$_durationMinutes דקות'),
+                subtitle: Text('${_durationMinutes ?? 12} דקות'),
                 trailing: const Icon(Icons.timer),
                 onTap: _showDurationPicker,
                 shape: RoundedRectangleBorder(
@@ -429,10 +450,10 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Max Participants - Vertical picker
+              // Max Participants
               ListTile(
                 title: const Text('מספר משתתפים *'),
-                subtitle: Text('$_maxParticipants משתתפים'),
+                subtitle: Text('${_maxParticipants ?? 15} משתתפים'),
                 trailing: const Icon(Icons.people),
                 onTap: _showParticipantsPicker,
                 shape: RoundedRectangleBorder(
@@ -445,7 +466,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               // Notify Members
               CheckboxListTile(
                 title: const Text('שלח הודעה אוטומטית לכל חברי ההאב'),
-                subtitle: const Text('חברי ההאב יקבלו התראה על האירוע החדש'),
+                subtitle: const Text('חברי ההאב יקבלו התראה על עדכון האירוע'),
                 value: _notifyMembers,
                 onChanged: (value) {
                   setState(() {
@@ -470,9 +491,9 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Create Button
+              // Update Button
               ElevatedButton(
-                onPressed: _isLoading ? null : _createEvent,
+                onPressed: _isLoading ? null : _updateEvent,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -482,7 +503,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('צור אירוע'),
+                    : const Text('עדכן אירוע'),
               ),
             ],
           ),
@@ -510,7 +531,6 @@ class _DurationPickerDialogState extends State<_DurationPickerDialog> {
   void initState() {
     super.initState();
     _selectedValue = widget.initialValue;
-    // Start from 12 minutes (index 0)
     final initialIndex = _selectedValue >= 12 ? _selectedValue - 12 : 0;
     _scrollController = FixedExtentScrollController(initialItem: initialIndex);
   }
@@ -590,7 +610,6 @@ class _ParticipantsPickerDialogState extends State<_ParticipantsPickerDialog> {
   void initState() {
     super.initState();
     _selectedValue = widget.initialValue;
-    // Start from 15 (index 0)
     final initialIndex = _selectedValue >= 6 ? _selectedValue - 6 : 0;
     _scrollController = FixedExtentScrollController(initialItem: initialIndex);
   }

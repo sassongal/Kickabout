@@ -8,7 +8,8 @@
     <application
         android:label="dreamflow"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -39,7 +40,7 @@
         <!-- Google Maps API Key (Client-side SDK key for displaying maps) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyC5c1N3OL-MH7XavrOKjH5EbSdieyi7Dd0" />
+            android:value="AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

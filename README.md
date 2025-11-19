@@ -138,11 +138,16 @@ flutterfire configure
 
 ### 4. הגדרת Google Maps
 
-הוסף את ה-API key שלך ל-`lib/config/env.dart`:
+המפתח מוגדר בכל המקומות הבאים (כבר מוגדר למפתח: `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`):
+- `lib/config/env.dart` - למפתח: `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`
+- `android/app/src/main/AndroidManifest.xml` - למפתח: `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`
+- `ios/Runner/AppDelegate.swift` - למפתח: `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`
+- `web/index.html` - למפתח: `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`
+- Firebase Functions Secret: `echo "AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU" | firebase functions:secrets:set GOOGLE_APIS_KEY`
 
-```dart
-static const String googleMapsApiKey = 'YOUR_API_KEY';
-```
+**אבטחה:** ודא שהמפתח מוגבל ב-Google Cloud Console:
+- Application restrictions: Android package name (`com.mycompany.CounterApp`), iOS bundle ID, Web domain
+- API restrictions: Maps SDK for Android, Maps SDK for iOS, Maps JavaScript API, Places API
 
 ### 5. הרצת האפליקציה
 

@@ -268,7 +268,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                               ] else if (widget.isManager) ...[
                                 IconButton(
                                   icon: const Icon(Icons.edit),
-                                  onPressed: () => _editEvent(context, event),
+                                  onPressed: () => context.push('/hubs/${widget.hubId}/events/${event.eventId}/edit'),
                                   tooltip: 'ערוך',
                                   color: FuturisticColors.primary,
                                 ),
