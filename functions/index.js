@@ -164,6 +164,9 @@ exports.sendGameReminder = onSchedule(
 
 // --- Super Admin Auto-Assignment ---
 // Automatically adds Super Admin to every newly created hub
+// Note: Super Admin email should be set as a Firebase Secret (SUPER_ADMIN_EMAIL)
+// Set it using: echo "your-email@example.com" | firebase functions:secrets:set SUPER_ADMIN_EMAIL
+// For now, using environment variable or default (can be overridden via Secret)
 exports.addSuperAdminToHub = onDocumentCreated('hubs/{hubId}', async (event) => {
   const hubId = event.params.hubId;
   const hubData = event.data.data();
@@ -171,8 +174,16 @@ exports.addSuperAdminToHub = onDocumentCreated('hubs/{hubId}', async (event) => 
   info(`New hub created: ${hubId}. Adding Super Admin...`);
 
   try {
-    // Super Admin email
-    const superAdminEmail = 'gal@joya-tech.net';
+    // Super Admin email - should be set as Firebase Secret in production
+    // For development, you can set it here or via environment variable
+    // TODO: Move to Firebase Secret: SUPER_ADMIN_EMAIL
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || null;
+
+    // Skip if no super admin email configured
+    if (!superAdminEmail) {
+      info('Super Admin email not configured. Skipping auto-assignment.');
+      return;
+    }
 
     // Get Super Admin user by email
     let superAdminUid;
@@ -1315,7 +1326,7 @@ exports.searchVenues = onCall(
             };
           });
         }
-        
+
         return data;
       } catch (error) {
         throw new HttpsError('internal', 'Failed to call Google Places API.', error);
