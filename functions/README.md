@@ -20,7 +20,11 @@ npm install
 ```bash
 # Google Maps/Places API Key (used for searchVenues, getPlaceDetails, getHomeDashboardData)
 # Set as Firebase Secret (recommended for production)
-echo "AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU" | firebase functions:secrets:set GOOGLE_APIS_KEY
+echo "YOUR_GOOGLE_APIS_KEY" | firebase functions:secrets:set GOOGLE_APIS_KEY
+
+# Super Admin Email (optional - for auto-assigning admin to new hubs)
+# Set as environment variable or Firebase Secret
+echo "your-admin-email@example.com" | firebase functions:secrets:set SUPER_ADMIN_EMAIL
 
 # Custom API (optional)
 firebase functions:config:set customapi.baseurl="https://your-api.com"
