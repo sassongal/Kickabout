@@ -3,6 +3,7 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/utils/geohash_utils.dart';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 /// Script to generate dummy data for Haifa area
 /// Run this from a Flutter app or Firebase console
@@ -821,6 +822,272 @@ class DummyDataGenerator {
     print('   - $hubCount hubs');
     print('   - Multiple games per hub');
     print('   - Feed posts');
+  }
+
+  /// Generate Haifa Scenario: 30 Users, 6 Hubs in specific Haifa locations
+  /// Each Hub has 5 distinct users (1 Manager, 4 Players)
+  Future<void> generateHaifaScenario() async {
+    debugPrint('🏗️ Starting Haifa Scenario generation...');
+
+    // Haifa hub locations (specific coordinates)
+    final haifaHubs = [
+      {
+        'name': 'טכניון FC',
+        'lat': 32.7788,
+        'lng': 35.0224,
+        'description': 'קבוצת כדורגל של סטודנטים וסגל הטכניון',
+      },
+      {
+        'name': 'חוף כרמל',
+        'lat': 32.7900,
+        'lng': 34.9600,
+        'description': 'משחקים שבועיים בחוף כרמל',
+      },
+      {
+        'name': 'מרכז הכרמל',
+        'lat': 32.8000,
+        'lng': 34.9800,
+        'description': 'קבוצה פעילה במרכז הכרמל',
+      },
+      {
+        'name': 'נווה שאנן',
+        'lat': 32.7800,
+        'lng': 35.0000,
+        'description': 'כדורגל שכונתי בנווה שאנן',
+      },
+      {
+        'name': 'קריית חיים',
+        'lat': 32.8200,
+        'lng': 35.0500,
+        'description': 'קבוצה מקומית בקריית חיים',
+      },
+      {
+        'name': 'סטלה מאריס',
+        'lat': 32.8100,
+        'lng': 34.9700,
+        'description': 'משחקים בסטלה מאריס',
+      },
+    ];
+
+    // Generate 30 users with Israeli names
+    final israeliFirstNames = [
+      'אידן', 'עומר', 'רונן', 'יואב', 'דני', 'אור', 'עמית', 'אלון', 'תומר', 'ניר',
+      'רועי', 'איתי', 'שרון', 'מיכל', 'יעל', 'נועה', 'תמר', 'רותם', 'ליאור', 'מור',
+      'עדי', 'טל', 'אורן', 'אליאור', 'אריאל', 'דור', 'גיל', 'יונתן', 'מתן', 'נדב',
+    ];
+
+    final israeliLastNames = [
+      'כהן', 'לוי', 'מזרחי', 'דהן', 'אברהם', 'ישראל', 'דוד', 'יוסף', 'משה', 'יעקב',
+      'בן דוד', 'עזרא', 'שלום', 'חיים', 'אליהו', 'שמעון', 'רחמים', 'יצחק', 'אהרון', 'שלמה',
+    ];
+
+    final allUserIds = <String>[];
+    
+    // Generate 30 users
+    for (int i = 0; i < 30; i++) {
+      final firstName = israeliFirstNames[i % israeliFirstNames.length];
+      final lastName = israeliLastNames[random.nextInt(israeliLastNames.length)];
+      final fullName = '$firstName $lastName';
+      
+      final userId = firestore.collection('users').doc().id;
+      final location = GeoPoint(
+        haifaLat + (random.nextDouble() - 0.5) * 0.1, // ±0.05 degrees (~5km)
+        haifaLng + (random.nextDouble() - 0.5) * 0.1,
+      );
+      final geohash = GeohashUtils.encode(location.latitude, location.longitude);
+
+      final user = User(
+        uid: userId,
+        name: fullName,
+        firstName: firstName,
+        lastName: lastName,
+        email: '${firstName.toLowerCase()}.${lastName.toLowerCase()}@haifa.local',
+        phoneNumber: '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
+        city: 'חיפה',
+        preferredPosition: positions[random.nextInt(positions.length)],
+        availabilityStatus: 'available',
+        isActive: true,
+        createdAt: DateTime.now().subtract(Duration(days: random.nextInt(365))),
+        currentRankScore: 4.0 + random.nextDouble() * 3.0, // 4.0-7.0
+        totalParticipations: random.nextInt(50),
+        location: location,
+        geohash: geohash,
+        region: 'צפון',
+        playingStyle: playingStyles[random.nextInt(playingStyles.length)],
+      );
+
+      await firestore.doc(FirestorePaths.user(userId)).set({
+        ...user.toJson(),
+        'isDummy': true, // Flag for cleanup
+      });
+      
+      allUserIds.add(userId);
+      debugPrint('✅ Created user: $fullName ($userId)');
+    }
+
+    // Create 6 hubs, assign 5 users to each (1 Manager, 4 Players)
+    final hubIds = <String>[];
+    int userIndex = 0;
+
+    for (int i = 0; i < haifaHubs.length; i++) {
+      final hubData = haifaHubs[i];
+      final hubId = firestore.collection('hubs').doc().id;
+      
+      // Assign 5 users to this hub
+      final hubMemberIds = <String>[];
+      final hubRoles = <String, String>{};
+      
+      for (int j = 0; j < 5 && userIndex < allUserIds.length; j++) {
+        final userId = allUserIds[userIndex];
+        hubMemberIds.add(userId);
+        
+        // First user is Manager, rest are Players
+        if (j == 0) {
+          hubRoles[userId] = 'manager';
+        } else {
+          hubRoles[userId] = 'player';
+        }
+        
+        userIndex++;
+      }
+
+      final hubLocation = GeoPoint(
+        (hubData['lat'] as num).toDouble(),
+        (hubData['lng'] as num).toDouble(),
+      );
+      final geohash = GeohashUtils.encode(hubLocation.latitude, hubLocation.longitude);
+
+      final hub = Hub(
+        hubId: hubId,
+        name: hubData['name'] as String,
+        description: hubData['description'] as String?,
+        createdBy: hubMemberIds.isNotEmpty ? hubMemberIds[0] : allUserIds[0],
+        memberIds: hubMemberIds,
+        region: 'צפון',
+        createdAt: DateTime.now().subtract(Duration(days: random.nextInt(180))),
+        location: hubLocation,
+        geohash: geohash,
+        settings: {
+          'ratingMode': 'basic',
+        },
+        roles: hubRoles,
+      );
+
+      await firestore.doc(FirestorePaths.hub(hubId)).set({
+        ...hub.toJson(),
+        'isDummy': true, // Flag for cleanup
+      });
+
+      // Update users' hubIds
+      for (final userId in hubMemberIds) {
+        await firestore.doc(FirestorePaths.user(userId)).update({
+          'hubIds': FieldValue.arrayUnion([hubId]),
+        });
+      }
+
+      hubIds.add(hubId);
+      debugPrint('✅ Created hub: ${hubData['name']} ($hubId) with ${hubMemberIds.length} members');
+    }
+
+    debugPrint('🎉 Haifa Scenario completed!');
+    debugPrint('   • 30 Users created');
+    debugPrint('   • 6 Hubs created');
+    debugPrint('   • All flagged with isDummy: true');
+  }
+
+  /// Delete all dummy data (Users, Hubs, Games with isDummy: true)
+  Future<void> deleteAllDummyData() async {
+    debugPrint('🗑️ Starting dummy data cleanup...');
+
+    int deletedCount = 0;
+    const int batchSize = 500; // Firestore batch limit
+
+    // Delete dummy users (in batches)
+    var usersQuery = firestore
+        .collection('users')
+        .where('isDummy', isEqualTo: true)
+        .limit(batchSize);
+    
+    var usersSnapshot = await usersQuery.get();
+    while (usersSnapshot.docs.isNotEmpty) {
+      final batch = firestore.batch();
+      for (final doc in usersSnapshot.docs) {
+        batch.delete(doc.reference);
+        deletedCount++;
+      }
+      await batch.commit();
+      
+      if (usersSnapshot.docs.length == batchSize) {
+        // Get next batch
+        final lastDoc = usersSnapshot.docs.last;
+        usersQuery = firestore
+            .collection('users')
+            .where('isDummy', isEqualTo: true)
+            .startAfterDocument(lastDoc)
+            .limit(batchSize);
+        usersSnapshot = await usersQuery.get();
+      } else {
+        break;
+      }
+    }
+
+    // Delete dummy hubs (in batches)
+    var hubsQuery = firestore
+        .collection('hubs')
+        .where('isDummy', isEqualTo: true)
+        .limit(batchSize);
+    
+    var hubsSnapshot = await hubsQuery.get();
+    while (hubsSnapshot.docs.isNotEmpty) {
+      final batch = firestore.batch();
+      for (final doc in hubsSnapshot.docs) {
+        batch.delete(doc.reference);
+        deletedCount++;
+      }
+      await batch.commit();
+      
+      if (hubsSnapshot.docs.length == batchSize) {
+        final lastDoc = hubsSnapshot.docs.last;
+        hubsQuery = firestore
+            .collection('hubs')
+            .where('isDummy', isEqualTo: true)
+            .startAfterDocument(lastDoc)
+            .limit(batchSize);
+        hubsSnapshot = await hubsQuery.get();
+      } else {
+        break;
+      }
+    }
+
+    // Delete dummy games (in batches)
+    var gamesQuery = firestore
+        .collection('games')
+        .where('isDummy', isEqualTo: true)
+        .limit(batchSize);
+    
+    var gamesSnapshot = await gamesQuery.get();
+    while (gamesSnapshot.docs.isNotEmpty) {
+      final batch = firestore.batch();
+      for (final doc in gamesSnapshot.docs) {
+        batch.delete(doc.reference);
+        deletedCount++;
+      }
+      await batch.commit();
+      
+      if (gamesSnapshot.docs.length == batchSize) {
+        final lastDoc = gamesSnapshot.docs.last;
+        gamesQuery = firestore
+            .collection('games')
+            .where('isDummy', isEqualTo: true)
+            .startAfterDocument(lastDoc)
+            .limit(batchSize);
+        gamesSnapshot = await gamesQuery.get();
+      } else {
+        break;
+      }
+    }
+
+    debugPrint('✅ Deleted $deletedCount dummy documents');
   }
 }
 

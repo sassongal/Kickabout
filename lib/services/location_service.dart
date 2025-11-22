@@ -73,6 +73,30 @@ class LocationService {
     }
   }
 
+  /// Get location from address string (alias for addressToCoordinates)
+  /// Returns Position if geocoding succeeds, null otherwise
+  Future<Position?> getLocationFromAddress(String address) async {
+    return addressToCoordinates(address);
+  }
+
+  /// Get current location with fallback to manual entry
+  /// Returns null if both GPS and manual entry fail
+  Future<Position?> getCurrentLocationWithFallback({
+    LocationAccuracy accuracy = LocationAccuracy.medium,
+    String? manualCity,
+  }) async {
+    // Try GPS first
+    final gpsLocation = await getCurrentLocation(accuracy: accuracy);
+    if (gpsLocation != null) return gpsLocation;
+
+    // If GPS fails and manual city provided, try geocoding
+    if (manualCity != null && manualCity.isNotEmpty) {
+      return await getLocationFromAddress(manualCity);
+    }
+
+    return null;
+  }
+
   /// Convert coordinates to address (Reverse Geocoding)
   Future<String?> coordinatesToAddress(double lat, double lng) async {
     if (Env.limitedMode) {

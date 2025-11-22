@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -14,6 +13,8 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {
@@ -162,28 +163,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           });
         }
       } else {
-        // If no location, set default to Israel center (Jerusalem)
-        if (mounted) {
-          setState(() {
-            _currentPosition = Position(
-              latitude: 31.7683,
-              longitude: 35.2137,
-              timestamp: DateTime.now(),
-              accuracy: 0,
-              altitude: 0,
-              altitudeAccuracy: 0,
-              heading: 0,
-              headingAccuracy: 0,
-              speed: 0,
-              speedAccuracy: 0,
-            );
-          });
-          // Update camera after state is set (non-blocking)
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _mapController != null && _currentPosition != null) {
-              _updateMapCamera();
-            }
-          });
+        // If no location, check if we have manual location saved
+        final prefs = await SharedPreferences.getInstance();
+        final manualCity = prefs.getString('manual_location_city');
+        
+        if (manualCity != null && manualCity.isNotEmpty) {
+          // Try to get location from saved manual city
+          final manualPosition = await locationService.getLocationFromAddress(manualCity);
+          if (manualPosition != null && mounted) {
+            setState(() {
+              _currentPosition = manualPosition;
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _mapController != null && _currentPosition != null) {
+                _updateMapCamera();
+              }
+            });
+          } else {
+            // Fallback to default location
+            _setDefaultLocation();
+          }
+        } else {
+          // Show dialog for manual location entry
+          if (mounted) {
+            _showManualLocationDialog();
+          } else {
+            _setDefaultLocation();
+          }
         }
       }
       
@@ -247,6 +253,159 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  void _setDefaultLocation() {
+    if (mounted) {
+      setState(() {
+        _currentPosition = Position(
+          latitude: 31.7683,
+          longitude: 35.2137,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          heading: 0,
+          headingAccuracy: 0,
+          speed: 0,
+          speedAccuracy: 0,
+        );
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _mapController != null && _currentPosition != null) {
+          _updateMapCamera();
+        }
+      });
+    }
+  }
+
+  /// Show dialog for manual location entry
+  Future<void> _showManualLocationDialog() async {
+    final cityController = TextEditingController();
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('מיקום לא זמין'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'המיקום מושבת. אנא הזן את העיר שלך ידנית (למשל: חיפה) כדי לראות משחקים רלוונטיים.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: cityController,
+              decoration: const InputDecoration(
+                labelText: 'עיר',
+                hintText: 'חיפה',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('דלג'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (cityController.text.isNotEmpty) {
+                Navigator.of(context).pop(true);
+              }
+            },
+            child: const Text('שמור'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && cityController.text.isNotEmpty) {
+      await _saveManualLocation(cityController.text);
+    } else {
+      _setDefaultLocation();
+    }
+  }
+
+  /// Save manual location to user profile and preferences
+  Future<void> _saveManualLocation(String city) async {
+    try {
+      final locationService = ref.read(locationServiceProvider);
+      final position = await locationService.getLocationFromAddress(city);
+      
+      if (position != null) {
+        // Save to preferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('manual_location_city', city);
+        await prefs.setBool('location_permission_skipped', true);
+        
+        // Save to user profile in Firestore
+        final auth = firebase_auth.FirebaseAuth.instance;
+        final user = auth.currentUser;
+        
+        if (user != null) {
+          final firestore = FirebaseFirestore.instance;
+          final userRef = firestore.collection('users').doc(user.uid);
+          
+          final geohash = locationService.generateGeohash(
+            position.latitude,
+            position.longitude,
+          );
+          
+          // Determine region from city
+          String? region;
+          if (city.contains('חיפה') || 
+              city.contains('קריית') || 
+              city.contains('נשר') ||
+              city.contains('טירת')) {
+            region = 'צפון';
+          } else if (city.contains('תל אביב') || 
+                     city.contains('רמת גן') ||
+                     city.contains('גבעתיים')) {
+            region = 'מרכז';
+          } else if (city.contains('באר שבע') ||
+                     city.contains('אשדוד') ||
+                     city.contains('אשקלון')) {
+            region = 'דרום';
+          } else if (city.contains('ירושלים')) {
+            region = 'ירושלים';
+          }
+          
+          await userRef.update({
+            'location': GeoPoint(position.latitude, position.longitude),
+            'geohash': geohash,
+            'city': city,
+            if (region != null) 'region': region,
+          });
+        }
+        
+        // Update map position
+        if (mounted) {
+          setState(() {
+            _currentPosition = position;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _mapController != null && _currentPosition != null) {
+              _updateMapCamera();
+            }
+          });
+          
+          SnackbarHelper.showSuccess(context, 'מיקום נשמר: $city');
+        }
+      } else {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'לא ניתן למצוא את המיקום. נסה שוב.');
+          _setDefaultLocation();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error saving manual location: $e');
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בשמירת המיקום: $e');
+        _setDefaultLocation();
       }
     }
   }

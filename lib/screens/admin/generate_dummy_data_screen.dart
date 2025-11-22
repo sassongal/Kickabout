@@ -132,6 +132,94 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
     }
   }
 
+  Future<void> _generateHaifaScenario() async {
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'מתחיל ליצור תרחיש חיפה...';
+    });
+
+    try {
+      final generator = DummyDataGenerator();
+      await generator.generateHaifaScenario();
+
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '✅ תרחיש חיפה נוצר בהצלחה!\n• 30 שחקנים\n• 6 הובים במיקומים ספציפיים\n• כל Hub עם 5 שחקנים (1 מנהל, 4 שחקנים)';
+        });
+        SnackbarHelper.showSuccess(
+          context,
+          'נוצר תרחיש חיפה: 30 שחקנים ו-6 הובים',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '❌ שגיאה: $e';
+        });
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _deleteAllDummyData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('מחיקת כל נתוני הדמה'),
+        content: const Text(
+          'האם אתה בטוח שברצונך למחוק את כל נתוני הדמה? פעולה זו אינה הפיכה.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('מחק הכל'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'מתחיל למחוק נתוני דמה...';
+    });
+
+    try {
+      final generator = DummyDataGenerator();
+      await generator.deleteAllDummyData();
+
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '✅ כל נתוני הדמה נמחקו בהצלחה!';
+        });
+        SnackbarHelper.showSuccess(
+          context,
+          'כל נתוני הדמה נמחקו',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '❌ שגיאה: $e';
+        });
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
   Future<void> _generateComprehensiveData() async {
     setState(() {
       _isGenerating = true;
@@ -272,6 +360,47 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
               icon: Icons.people,
               onPressed: _isGenerating ? null : _generateRedDevilsHub,
               isLoading: _isGenerating,
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text(
+              'תרחיש חיפה (מומלץ לבדיקות):',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'יוצר 30 שחקנים ו-6 הובים במיקומים ספציפיים בחיפה',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            GradientButton(
+              label: 'צור תרחיש חיפה',
+              icon: Icons.location_city,
+              onPressed: _isGenerating ? null : _generateHaifaScenario,
+              isLoading: _isGenerating,
+              width: double.infinity,
+              gradient: const LinearGradient(
+                colors: [Colors.green, Colors.greenAccent],
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text(
+              'ניהול נתוני דמה:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _isGenerating ? null : _deleteAllDummyData,
+              icon: const Icon(Icons.delete_forever),
+              label: const Text('מחק כל נתוני דמה'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 48),
+              ),
             ),
             if (_statusMessage != null) ...[
               const SizedBox(height: 24),

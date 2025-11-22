@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
-/// Service for handling deep links from push notifications
+/// Service for handling deep links from push notifications and URLs
 class DeepLinkService {
   static final DeepLinkService _instance = DeepLinkService._internal();
   factory DeepLinkService() => _instance;
   DeepLinkService._internal();
 
   GoRouter? _router;
+  String? _pendingHubId; // Store hub ID for redirect after registration
 
   /// Initialize with navigator key and router
   void initialize({
@@ -15,6 +18,89 @@ class DeepLinkService {
     GoRouter? router,
   }) {
     _router = router;
+  }
+
+  /// Handle deep link from URL (e.g., kickabout://hub/HUB_ID)
+  Future<void> handleUrlDeepLink(Uri uri) async {
+    if (_router == null) {
+      debugPrint('⚠️ Router not initialized for deep linking');
+      return;
+    }
+
+    try {
+      final path = uri.path;
+      final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+
+      if (segments.isEmpty) return;
+
+      final type = segments[0];
+      final id = segments.length > 1 ? segments[1] : null;
+
+      switch (type) {
+        case 'hub':
+          if (id != null) {
+            await _handleHubDeepLink(id);
+          }
+          break;
+
+        case 'game':
+          if (id != null) {
+            await _handleGameDeepLink(id);
+          }
+          break;
+
+        default:
+          debugPrint('Unknown deep link type: $type');
+      }
+    } catch (e) {
+      debugPrint('Error handling URL deep link: $e');
+    }
+  }
+
+  /// Handle hub deep link
+  Future<void> _handleHubDeepLink(String hubId) async {
+    final auth = firebase_auth.FirebaseAuth.instance;
+    final user = auth.currentUser;
+
+    if (user != null) {
+      // User is logged in - navigate directly
+      _router!.go('/hubs/$hubId');
+    } else {
+      // User is not logged in - store for redirect after registration
+      _pendingHubId = hubId;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('pending_hub_redirect', hubId);
+      _router!.go('/register');
+    }
+  }
+
+  /// Handle game deep link
+  Future<void> _handleGameDeepLink(String gameId) async {
+    final auth = firebase_auth.FirebaseAuth.instance;
+    final user = auth.currentUser;
+
+    if (user != null) {
+      _router!.go('/games/$gameId');
+    } else {
+      _router!.go('/register');
+    }
+  }
+
+  /// Check for pending redirect after registration
+  Future<void> checkPendingRedirect() async {
+    if (_router == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final pendingHubId = prefs.getString('pending_hub_redirect');
+    
+    if (pendingHubId != null && pendingHubId.isNotEmpty) {
+      await prefs.remove('pending_hub_redirect');
+      _pendingHubId = null;
+      
+      // Small delay to ensure navigation is ready
+      await Future.delayed(const Duration(milliseconds: 500));
+      _router!.go('/hubs/$pendingHubId');
+    }
   }
 
   /// Handle deep link from notification data

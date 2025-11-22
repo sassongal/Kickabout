@@ -18,6 +18,8 @@ import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/widgets/optimized_image.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -369,17 +371,37 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                   ),
                 ),
               ),
-              // Rules button (if rules exist)
-              if (hub.hubRules != null && hub.hubRules!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/hubs/${hub.hubId}/rules'),
-                    icon: const Icon(Icons.rule, size: 18),
-                    label: const Text('חוקי ההאב'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
+              // Share and Rules buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    // Share on WhatsApp button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _shareHubOnWhatsApp(hub),
+                        icon: const Icon(Icons.share, size: 18),
+                        label: const Text('שתף ב-WhatsApp'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ),
+                    // Rules button (if rules exist)
+                    if (hub.hubRules != null && hub.hubRules!.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => context.push('/hubs/${hub.hubId}/rules'),
+                        icon: const Icon(Icons.rule, size: 18),
+                        label: const Text('חוקי ההאב'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               // Tabs
@@ -440,6 +462,44 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         );
       },
     );
+  }
+
+  Future<void> _shareHubOnWhatsApp(Hub hub) async {
+    try {
+      // Generate deep link
+      final deepLink = 'kickabout://hub/${hub.hubId}';
+      final webLink = 'https://kickabout.app/hub/${hub.hubId}'; // Fallback web link
+      
+      final message = 'בוא לשחק איתנו ב-${hub.name}!\nהצטרף כאן: $webLink\n\n$deepLink';
+      
+      final uri = Uri.parse(
+        'https://wa.me/?text=${Uri.encodeComponent(message)}',
+      );
+      
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: copy to clipboard
+        await Clipboard.setData(ClipboardData(text: message));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('הקישור הועתק ללוח'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error sharing hub on WhatsApp: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('שגיאה בשיתוף'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _toggleMembership(

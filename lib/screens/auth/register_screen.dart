@@ -8,6 +8,7 @@ import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/services/deep_link_service.dart';
 
 /// Register screen with email/password
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -79,7 +80,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'החשבון נוצר בהצלחה!');
-        context.go('/');
+        
+        // Check for pending deep link redirect
+        final deepLinkService = DeepLinkService();
+        await deepLinkService.checkPendingRedirect();
+        
+        // If no redirect, navigate to home
+        if (mounted) {
+          context.go('/');
+        }
       }
     } catch (e) {
       if (mounted) {
