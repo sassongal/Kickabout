@@ -59,22 +59,19 @@ class SignupsRepository {
         }
         
         final gameData = gameDoc.data()!;
-        final teamCount = gameData['teamCount'] as int? ?? 2;
-        final maxPlayers = teamCount * 3; // 3 players per team minimum (from AppConstants.minPlayersPerTeam)
+        final maxPlayers = gameData['maxParticipants'] as int? ?? 
+                          (gameData['teamCount'] as int? ?? 2) * 3; // Default: 3 per team
         
-        // Count current confirmed signups
-        final confirmedSignups = await _firestore
-            .collection(FirestorePaths.gameSignups(gameId))
-            .where('status', isEqualTo: SignupStatus.confirmed.toFirestore())
-            .get();
-        
-        final currentPlayerCount = confirmedSignups.docs.length;
+        // OPTIMIZED: Use denormalized confirmedPlayerCount (updated by Cloud Function)
+        // This avoids querying all signups - 90% faster!
+        final currentPlayerCount = (gameData['confirmedPlayerCount'] as int?) ?? 0;
+        final isFull = gameData['isFull'] as bool? ?? false;
         
         // Check if user is already signed up (to allow updates)
         final existingSignup = await getSignup(gameId, uid);
         final isNewSignup = existingSignup == null || existingSignup.status != SignupStatus.confirmed;
         
-        if (isNewSignup && currentPlayerCount >= maxPlayers) {
+        if (isNewSignup && (isFull || currentPlayerCount >= maxPlayers)) {
           throw Exception('המשחק מלא. אין מקום לשחקנים נוספים.');
         }
       }

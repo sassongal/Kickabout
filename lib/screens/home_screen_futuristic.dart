@@ -17,8 +17,11 @@ import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/kicka_ball_logo.dart';
 import 'package:kickadoor/widgets/availability_toggle.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kickadoor/widgets/optimized_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter/foundation.dart';
 
 /// Futuristic Home Dashboard - Next-gen mobile experience
 class HomeScreenFuturistic extends ConsumerStatefulWidget {
@@ -29,6 +32,73 @@ class HomeScreenFuturistic extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
+  bool _hasRequestedLocationPermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Request location permission when screen is first loaded
+    // This happens for both authenticated users and guests
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestLocationPermission();
+    });
+  }
+
+  /// Request location permission on home screen entry
+  /// This ensures the app has location permission before user tries to use map
+  Future<void> _requestLocationPermission() async {
+    // Only request once per screen instance
+    if (_hasRequestedLocationPermission) return;
+    _hasRequestedLocationPermission = true;
+
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('⚠️ Location services are disabled');
+        return;
+      }
+
+      // Check current permission status
+      LocationPermission permission = await Geolocator.checkPermission();
+      
+      if (permission == LocationPermission.denied) {
+        // Request permission
+        debugPrint('📍 Requesting location permission...');
+        permission = await Geolocator.requestPermission();
+        
+        if (permission == LocationPermission.denied) {
+          debugPrint('⚠️ Location permission denied by user');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('⚠️ Location permission denied forever. User needs to enable in settings.');
+        return;
+      }
+
+      // Permission granted - try to get location to verify it works
+      if (permission == LocationPermission.whileInUse || 
+          permission == LocationPermission.always) {
+        debugPrint('✅ Location permission granted');
+        
+        // Optionally get location to verify it works (non-blocking)
+        // This helps ensure location is available when user opens map
+        Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+          timeLimit: const Duration(seconds: 5),
+        ).then((position) {
+          debugPrint('📍 Location obtained: ${position.latitude}, ${position.longitude}');
+        }).catchError((e) {
+          debugPrint('⚠️ Could not get location: $e');
+        });
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error requesting location permission: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -906,16 +976,14 @@ class _MyHubsSection extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: hub.logoUrl != null
-                            ? ClipRRect(
+                            ? OptimizedImage(
+                                imageUrl: hub.logoUrl!,
+                                fit: BoxFit.cover,
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  hub.logoUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.group,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
+                                errorWidget: const Icon(
+                                  Icons.group,
+                                  color: Colors.white,
+                                  size: 28,
                                 ),
                               )
                             : const Icon(
@@ -1042,19 +1110,18 @@ class _NearbyHubsSectionState extends ConsumerState<_NearbyHubsSection> {
                   child: Row(
                     children: [
                       // Hub profile image or icon
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: hub.profileImageUrl != null && hub.profileImageUrl!.isNotEmpty
-                            ? Image.network(
-                                hub.profileImageUrl!,
+                      hub.profileImageUrl != null && hub.profileImageUrl!.isNotEmpty
+                          ? OptimizedImage(
+                              imageUrl: hub.profileImageUrl!,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              borderRadius: BorderRadius.circular(12),
+                              errorWidget: Container(
                                 width: 60,
                                 height: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    gradient: FuturisticColors.accentGradient,
+                                decoration: BoxDecoration(
+                                  gradient: FuturisticColors.accentGradient,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(

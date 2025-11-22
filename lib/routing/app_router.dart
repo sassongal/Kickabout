@@ -84,16 +84,22 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     debugLogDiagnostics: PerformanceUtils.isDebugMode,
-    initialLocation: '/auth', // Start with auth screen
+    initialLocation: '/auth', // Start with auth screen (splash can be added later if needed)
     refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
     // Optimize navigation performance
     restorationScopeId: 'app_router',
     redirect: (context, state) {
       try {
-        // Check if auth state is still loading - if so, don't redirect yet
+        // Check if auth state is still loading - if so, allow auth/register screens
         if (authState.isLoading) {
-          // Allow current navigation to proceed while auth state loads
-          return null;
+          // If going to auth/register/splash, allow it (they will show loading state)
+          if (state.matchedLocation == '/auth' || 
+              state.matchedLocation == '/register' || 
+              state.matchedLocation == '/splash') {
+            return null;
+          }
+          // Otherwise, redirect to auth while loading
+          return '/auth';
         }
         
         // Wait for auth state to be available

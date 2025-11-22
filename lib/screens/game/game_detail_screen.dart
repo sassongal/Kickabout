@@ -16,6 +16,7 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:kickadoor/widgets/optimized_image.dart';
 
 /// Game detail screen
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -1046,15 +1047,16 @@ class _TeamsDisplayWidget extends StatelessWidget {
                             radius: 12,
                             backgroundColor: teamColor.withValues(alpha: 0.2),
                             child: user.photoUrl != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      user.photoUrl!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Icon(
-                                        Icons.person,
-                                        size: 12,
-                                        color: teamColor,
-                                      ),
+                                ? OptimizedImage(
+                                    imageUrl: user.photoUrl!,
+                                    fit: BoxFit.cover,
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: BorderRadius.circular(12),
+                                    errorWidget: Icon(
+                                      Icons.person,
+                                      size: 12,
+                                      color: teamColor,
                                     ),
                                   )
                                 : Icon(

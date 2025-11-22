@@ -59,10 +59,11 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 1000));
     _logoController.forward();
     
-    // Navigate after animations complete
-    await Future.delayed(const Duration(milliseconds: 2000));
+    // Navigate after animations complete (shorter delay for better UX)
+    await Future.delayed(const Duration(milliseconds: 1500));
     if (mounted) {
-      context.go('/');
+      // Navigate to auth screen (router will handle redirects)
+      context.go('/auth');
     }
   }
 
@@ -81,7 +82,13 @@ class _SplashScreenState extends State<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Loading screen image - full screen
+          // Background gradient (always visible)
+          Container(
+            decoration: const BoxDecoration(
+              gradient: FuturisticColors.backgroundGradient,
+            ),
+          ),
+          // Loading screen image - full screen (with fallback)
           AnimatedBuilder(
             animation: _logoScale,
             builder: (context, child) {
@@ -94,18 +101,17 @@ class _SplashScreenState extends State<SplashScreen>
                   height: double.infinity,
                   errorBuilder: (context, error, stackTrace) {
                     // Fallback to gradient if image fails to load
-                    return Container(
-                      decoration: const BoxDecoration(
-                        gradient: FuturisticColors.backgroundGradient,
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
+                    return const SizedBox.shrink(); // Already have gradient background
                   },
                 ),
               );
             },
+          ),
+          // Loading indicator (always visible)
+          const Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+            ),
           ),
           
           // Optional: Add a subtle overlay for better text visibility if needed

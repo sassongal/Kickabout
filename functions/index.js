@@ -867,28 +867,76 @@ exports.onGameCompleted = onDocumentUpdated(
             saves: (currentData.stats?.saves || 0) + stats.saves,
           };
 
-          // Calculate points: 10 base + 5 per goal + 3 per assist + 2 per save + 20 bonus for win
-          const basePoints = 10;
-          const goalPoints = stats.goals * 5;
-          const assistPoints = stats.assists * 3;
-          const savePoints = stats.saves * 2;
-          const winBonus = playerWon ? 20 : 0;
-          const pointsEarned = basePoints + goalPoints + assistPoints + savePoints + winBonus;
+          // Calculate points using same logic as GamificationService.calculateGamePoints
+          // Base participation: 10 points
+          let pointsEarned = 10;
+          
+          // Win bonus: 20 points
+          if (playerWon) pointsEarned += 20;
+          
+          // Performance bonuses
+          pointsEarned += (stats.goals * 5);
+          pointsEarned += (stats.assists * 3);
+          pointsEarned += (stats.saves * 2);
+          
+          // MVP bonus: 15 points (if player has MVP votes)
+          if (stats.mvpVotes > 0) pointsEarned += 15;
+          
+          // Rating bonus (if available in future)
+          // For now, we'll skip rating bonus as it requires additional data
+          // if (averageRating >= 8.0) pointsEarned += 10;
+          // if (averageRating >= 9.0) pointsEarned += 5;
+          
           const newPoints = (currentData.points || 0) + pointsEarned;
 
-          // Calculate level (simplified: level = floor(points / 100) + 1)
-          const newLevel = Math.floor(newPoints / 100) + 1;
+          // Calculate level: level = floor(sqrt(points / 100)) + 1
+          // This matches GamificationService.calculateLevel
+          const newLevel = Math.floor(Math.sqrt(newPoints / 100)) + 1;
 
+          // Check for level up
+          const oldLevel = currentData.level || 1;
+          const leveledUp = newLevel > oldLevel;
+          
+          // Check for badges (simplified version - can be expanded)
+          const badgesToAward = [];
+          if (newStats.gamesPlayed === 1 && !(currentData.badges || []).includes('firstGame')) {
+            badgesToAward.push('firstGame');
+          }
+          if (newStats.gamesPlayed === 10 && !(currentData.badges || []).includes('tenGames')) {
+            badgesToAward.push('tenGames');
+          }
+          if (newStats.gamesPlayed === 50 && !(currentData.badges || []).includes('fiftyGames')) {
+            badgesToAward.push('fiftyGames');
+          }
+          if (newStats.gamesPlayed === 100 && !(currentData.badges || []).includes('hundredGames')) {
+            badgesToAward.push('hundredGames');
+          }
+          if (newStats.goals >= 1 && !(currentData.badges || []).includes('firstGoal')) {
+            badgesToAward.push('firstGoal');
+          }
+          if (newStats.goals >= 3 && !(currentData.badges || []).includes('hatTrick')) {
+            badgesToAward.push('hatTrick');
+          }
+          
           // Update gamification document
+          const updatedBadges = [...(currentData.badges || []), ...badgesToAward];
           batch.set(gamificationRef, {
             userId: playerId,
             points: newPoints,
             level: newLevel,
-            badges: currentData.badges || [],
+            badges: updatedBadges,
             achievements: currentData.achievements || {},
             stats: newStats,
             updatedAt: FieldValue.serverTimestamp(),
           }, {merge: true});
+          
+          // Note: Level up and badge notifications can be added here if needed
+          if (leveledUp) {
+            info(`Player ${playerId} leveled up to level ${newLevel}`);
+          }
+          if (badgesToAward.length > 0) {
+            info(`Player ${playerId} earned badges: ${badgesToAward.join(', ')}`);
+          }
 
           // Also update user's totalParticipations
           const userRef = db.collection('users').doc(playerId);
@@ -1006,6 +1054,73 @@ exports.onGameCompleted = onDocumentUpdated(
       }
     },
 );
+
+// --- Game Signup Denormalization Handler ---
+// When a signup is created/updated/deleted, update denormalized data in game document
+// This avoids N+1 queries when checking game capacity or player lists
+exports.onGameSignupChanged = onDocumentWritten(
+    'games/{gameId}/signups/{userId}',
+    async (event) => {
+      const gameId = event.params.gameId;
+      const userId = event.params.userId;
+      const signupData = event.data?.after?.data();
+      const beforeData = event.data?.before?.data();
+
+      // Only process if signup was created or deleted (not just updated)
+      const isCreated = !beforeData && signupData;
+      const isDeleted = beforeData && !signupData;
+      const statusChanged = beforeData?.status !== signupData?.status;
+      
+      if (!isCreated && !isDeleted && !statusChanged) {
+        // Signup was just updated without status change, skip
+        return;
+      }
+
+      info(`Game signup ${userId} ${isCreated ? 'created' : isDeleted ? 'deleted' : 'updated'} for game ${gameId}. Updating denormalized data.`);
+
+      try {
+        // Get all confirmed signups for this game
+        const signupsSnapshot = await db
+            .collection('games')
+            .doc(gameId)
+            .collection('signups')
+            .where('status', '==', 'confirmed')
+            .get();
+
+        const confirmedPlayerIds = signupsSnapshot.docs.map((doc) => doc.id);
+        const confirmedPlayerCount = confirmedPlayerIds.length;
+
+        // Get game document to check maxPlayers
+        const gameDoc = await db.collection('games').doc(gameId).get();
+        if (!gameDoc.exists) {
+          info(`Game ${gameId} not found. Skipping denormalization.`);
+          return;
+        }
+
+        const gameData = gameDoc.data();
+        const teamCount = gameData?.teamCount ?? 2;
+        const maxPlayers = gameData?.maxParticipants ?? (teamCount * 3); // Default: 3 per team
+
+        // Update game with denormalized data
+        await db.collection('games').doc(gameId).update({
+          confirmedPlayerIds: confirmedPlayerIds,
+          confirmedPlayerCount: confirmedPlayerCount,
+          isFull: confirmedPlayerCount >= maxPlayers,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        info(`Updated denormalized data for game ${gameId}: ${confirmedPlayerCount}/${maxPlayers} players confirmed.`);
+      } catch (error) {
+        info(`Error in onGameSignupChanged for game ${gameId}, user ${userId}:`, error);
+      }
+    },
+);
+
+// --- Hub Event Registration Denormalization Handler ---
+// When a player registers/unregisters to an event, update denormalized data in event document
+// This is already handled in registerToEvent, but this ensures consistency
+// Note: Event registrations are stored in registeredPlayerIds array, which is already denormalized
+// This function is mainly for ensuring the count is always accurate
 
 // --- Game Events Denormalization Handler ---
 // When a game event is created/updated/deleted, update denormalized data in game document
@@ -1602,6 +1717,86 @@ exports.getHomeDashboardData = onCall(
           aqiIndex: null,
           timestamp: new Date().toISOString(),
         };
+      }
+    },
+);
+
+// --- Custom Claims Update for Hub Members ---
+// When a hub's memberIds or roles change, update custom claims for affected users
+// This allows Firestore rules to check permissions without reading hub document
+// Custom claims format: { hubs: { [hubId]: 'role' } }
+exports.onHubMemberChanged = onDocumentUpdated(
+    'hubs/{hubId}',
+    async (event) => {
+      const hubId = event.params.hubId;
+      const beforeData = event.data.before.data();
+      const afterData = event.data.after.data();
+
+      if (!beforeData || !afterData) {
+        // Hub was created or deleted, skip
+        return;
+      }
+
+      const beforeMemberIds = new Set(beforeData.memberIds || []);
+      const afterMemberIds = new Set(afterData.memberIds || []);
+      const afterRoles = afterData.roles || {};
+
+      // Find users who were added, removed, or had role changes
+      const affectedUserIds = new Set([
+        ...beforeMemberIds,
+        ...afterMemberIds,
+        ...Object.keys(afterRoles),
+      ]);
+
+      if (affectedUserIds.size === 0) {
+        return;
+      }
+
+      info(`Hub ${hubId} member/role changed. Updating custom claims for ${affectedUserIds.size} users.`);
+
+      try {
+        // Update custom claims for each affected user
+        const updatePromises = Array.from(affectedUserIds).map(async (userId) => {
+          try {
+            // Get all hubs this user is a member of
+            const userHubsSnapshot = await db
+                .collection('hubs')
+                .where('memberIds', 'array-contains', userId)
+                .get();
+
+            // Build hubs map: { [hubId]: role }
+            const hubs = {};
+            for (const hubDoc of userHubsSnapshot.docs) {
+              const hubData = hubDoc.data();
+              const currentHubId = hubDoc.id;
+
+              // Determine role: creator is always 'manager', otherwise check roles map
+              let role = 'member';
+              if (hubData.createdBy === userId) {
+                role = 'manager';
+              } else if (hubData.roles && hubData.roles[userId]) {
+                role = hubData.roles[userId];
+              }
+
+              hubs[currentHubId] = role;
+            }
+
+            // Update custom claims
+            await admin.auth.setCustomUserClaims(userId, {
+              hubs: hubs,
+            });
+
+            info(`Updated custom claims for user ${userId}: ${Object.keys(hubs).length} hubs`);
+          } catch (error) {
+            info(`Error updating custom claims for user ${userId}:`, error);
+            // Continue with other users even if one fails
+          }
+        });
+
+        await Promise.all(updatePromises);
+        info(`Successfully updated custom claims for ${affectedUserIds.size} users after hub ${hubId} change.`);
+      } catch (error) {
+        info(`Error in onHubMemberChanged for hub ${hubId}:`, error);
       }
     },
 );

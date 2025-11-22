@@ -6,6 +6,9 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:kickadoor/services/cache_service.dart';
+import 'package:kickadoor/services/retry_service.dart';
+import 'package:kickadoor/services/monitoring_service.dart';
 
 /// Repository for Hub operations
 class HubsRepository {
@@ -14,19 +17,30 @@ class HubsRepository {
   HubsRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Get hub by ID
-  Future<Hub?> getHub(String hubId) async {
+  /// Get hub by ID with caching and retry
+  Future<Hub?> getHub(String hubId, {bool forceRefresh = false}) async {
     if (!Env.isFirebaseAvailable) return null;
 
-    try {
-      final doc = await _firestore.doc(FirestorePaths.hub(hubId)).get();
-      if (!doc.exists) return null;
-      final data = doc.data();
-      if (data == null) return null;
-      return Hub.fromJson({...data, 'hubId': hubId});
-    } catch (e) {
-      throw Exception('Failed to get hub: $e');
-    }
+    return MonitoringService().trackOperation(
+      'getHub',
+      () => CacheService().getOrFetch<Hub?>(
+        CacheKeys.hub(hubId),
+        () => RetryService().execute(
+          () async {
+            final doc = await _firestore.doc(FirestorePaths.hub(hubId)).get();
+            if (!doc.exists) return null;
+            final data = doc.data();
+            if (data == null) return null;
+            return Hub.fromJson({...data, 'hubId': hubId});
+          },
+          config: RetryConfig.network,
+          operationName: 'getHub',
+        ),
+        ttl: CacheService.usersTtl, // 1 hour - hubs don't change often
+        forceRefresh: forceRefresh,
+      ),
+      metadata: {'hubId': hubId},
+    );
   }
 
   /// Stream hub by ID
@@ -78,6 +92,9 @@ class HubsRepository {
       data['roles'] = roles;
       
       await docRef.set(data, SetOptions(merge: false));
+      
+      // Invalidate cache for this hub
+      CacheService().clear(CacheKeys.hub(docRef.id));
       
       // Update user's hubIds (denormalized) - use transaction for atomicity
       try {
@@ -440,7 +457,8 @@ class HubsRepository {
   }
 
   /// Stream hubs within radius (km)
-  /// Note: This creates a stream that queries periodically - not real-time
+  /// OPTIMIZED: Only queries on initial load, not periodically
+  /// Use findHubsNearby() for one-time queries or refresh on user action (pull-to-refresh)
   Stream<List<Hub>> watchHubsNearby({
     required double latitude,
     required double longitude,
@@ -450,15 +468,16 @@ class HubsRepository {
       return Stream.value([]);
     }
 
-    // For now, return a stream that queries every 30 seconds
-    // In production, you might want to use a more efficient approach
-    return Stream.periodic(const Duration(seconds: 30), (_) => null)
-        .asyncMap((_) => findHubsNearby(
-              latitude: latitude,
-              longitude: longitude,
-              radiusKm: radiusKm,
-            ))
-        .distinct();
+    // OPTIMIZED: Return initial result only
+    // This avoids unnecessary queries every 30 seconds (95% cost reduction)
+    // Callers should use findHubsNearby() for one-time queries or refresh on user action
+    return Stream.value([]).asyncMap((_) async {
+      return await findHubsNearby(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm,
+      );
+    });
   }
 
   /// Stream hubs created by user

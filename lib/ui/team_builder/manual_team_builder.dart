@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 
@@ -35,6 +37,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   void initState() {
     super.initState();
     _initializeTeams();
+    _loadDraft(); // Load draft first, then load players
     _loadPlayers();
   }
 
@@ -43,6 +46,60 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       widget.teamCount,
       (_) => <String>[],
     );
+  }
+
+  /// Load draft from SharedPreferences
+  Future<void> _loadDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final draftKey = 'teammaker_draft_${widget.gameId}';
+      final draftJson = prefs.getString(draftKey);
+      
+      if (draftJson != null) {
+        final draft = jsonDecode(draftJson) as Map<String, dynamic>;
+        final savedTeamCount = draft['teamCount'] as int?;
+        final savedTeamPlayerIds = draft['teamPlayerIds'] as List<dynamic>?;
+        
+        // Only load if team count matches
+        if (savedTeamCount == widget.teamCount && savedTeamPlayerIds != null) {
+          setState(() {
+            _teamPlayerIds = savedTeamPlayerIds
+                .map((team) => (team as List<dynamic>).cast<String>())
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      // If draft loading fails, just use empty teams
+      debugPrint('Failed to load draft: $e');
+    }
+  }
+
+  /// Save draft to SharedPreferences
+  Future<void> _saveDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final draftKey = 'teammaker_draft_${widget.gameId}';
+      final draft = {
+        'teamCount': widget.teamCount,
+        'teamPlayerIds': _teamPlayerIds,
+        'savedAt': DateTime.now().toIso8601String(),
+      };
+      await prefs.setString(draftKey, jsonEncode(draft));
+    } catch (e) {
+      debugPrint('Failed to save draft: $e');
+    }
+  }
+
+  /// Clear draft from SharedPreferences
+  Future<void> _clearDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final draftKey = 'teammaker_draft_${widget.gameId}';
+      await prefs.remove(draftKey);
+    } catch (e) {
+      debugPrint('Failed to clear draft: $e');
+    }
   }
 
   Future<void> _loadPlayers() async {
@@ -121,6 +178,9 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       // Update game status to teamsFormed
       await gamesRepo.updateGameStatus(widget.gameId, GameStatus.teamsFormed);
 
+      // Clear draft after successful save
+      await _clearDraft();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('הקבוצות נשמרו בהצלחה!')),
@@ -152,6 +212,9 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       
       // Notify callback if provided
       _notifyTeamsChanged();
+      
+      // Auto-save draft after any change
+      _saveDraft();
     });
   }
 
@@ -407,6 +470,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                                   setState(() {
                                     playerIds.remove(player.uid);
                                     _notifyTeamsChanged();
+                                    // Auto-save draft after any change
+                                    _saveDraft();
                                   });
                                 },
                               ),

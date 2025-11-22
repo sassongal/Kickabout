@@ -9,8 +9,10 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/utils/recap_generator.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/services/gamification_service.dart';
+// Removed: import 'package:kickadoor/services/gamification_service.dart';
+// Gamification is now handled by Cloud Function onGameCompleted
 import 'package:kickadoor/core/constants.dart';
+import 'package:kickadoor/widgets/optimized_image.dart';
 
 /// Stats logger screen for gameday events
 class StatsLoggerScreen extends ConsumerStatefulWidget {
@@ -146,7 +148,7 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
       final eventsRepo = ref.read(eventsRepositoryProvider);
       final teamsRepo = ref.read(teamsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
-      final gamificationRepo = ref.read(gamificationRepositoryProvider);
+      // Removed: gamificationRepo - gamification is now handled by Cloud Function
       
       // Get scores from text fields
       final teamAScore = int.tryParse(_teamAScoreController.text.trim()) ?? 0;
@@ -213,74 +215,14 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
         'venueName': venueName,
       });
       
-      // Update gamification for all players
-      try {
-        if (game != null) {
-          
-          // Determine winning team (simplified - team with most goals)
-          final teamGoals = <String, int>{};
-          for (final event in events) {
-            if (event.type == EventType.goal) {
-              // Find which team the player belongs to
-              for (final team in teams) {
-                if (team.playerIds.contains(event.playerId)) {
-                  teamGoals[team.teamId] = (teamGoals[team.teamId] ?? 0) + 1;
-                  break;
-                }
-              }
-            }
-          }
-          
-          final winningTeamId = teamGoals.entries.isNotEmpty
-              ? teamGoals.entries.reduce((a, b) => a.value > b.value ? a : b).key
-              : null;
-          
-          // Update gamification for each player
-          for (final team in teams) {
-            final isWinningTeam = team.teamId == winningTeamId;
-            final players = await usersRepo.getUsers(team.playerIds);
-            
-            for (final player in players) {
-              try {
-                // Count player's events
-                final playerGoals = events.where((e) => e.playerId == player.uid && e.type == EventType.goal).length;
-                final playerAssists = events.where((e) => e.playerId == player.uid && e.type == EventType.assist).length;
-                final playerSaves = events.where((e) => e.playerId == player.uid && e.type == EventType.save).length;
-                final isMVP = events.where((e) => e.playerId == player.uid && e.type == EventType.mvpVote).isNotEmpty;
-                
-                // Get average rating (simplified - use default for now)
-                final averageRating = 7.0; // Could be improved by getting from ratings
-                
-                // Calculate points
-                final pointsEarned = GamificationService.calculateGamePoints(
-                  won: isWinningTeam,
-                  goals: playerGoals,
-                  assists: playerAssists,
-                  saves: playerSaves,
-                  isMVP: isMVP,
-                  averageRating: averageRating,
-                );
-                
-                // Update gamification
-                await gamificationRepo.updateGamification(
-                  userId: player.uid,
-                  pointsEarned: pointsEarned,
-                  won: isWinningTeam,
-                  goals: playerGoals,
-                  assists: playerAssists,
-                  saves: playerSaves,
-                );
-              } catch (e) {
-                debugPrint('Error updating gamification for ${player.uid}: $e');
-                // Continue with other players even if one fails
-              }
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Failed to update gamification: $e');
-        // Don't fail game ending if gamification fails
-      }
+      // NOTE: Gamification is now handled by Cloud Function onGameCompleted
+      // When game status changes to 'completed', the backend automatically:
+      // 1. Calculates points for all players (base + goals + assists + saves + win bonus + MVP bonus)
+      // 2. Updates gamification stats (gamesPlayed, gamesWon, goals, assists, saves)
+      // 3. Awards badges and achievements
+      // 4. Updates denormalized data
+      // This ensures security and prevents cheating
+      debugPrint('✅ Game completed. Gamification will be updated by Cloud Function onGameCompleted.');
       
       // Auto-post recap to feed if available
       if (_recapText != null && _recapText!.isNotEmpty) {
@@ -604,14 +546,15 @@ class _StatsLoggerScreenState extends ConsumerState<StatsLoggerScreen> {
           radius: 30,
           backgroundColor: teamColor.withValues(alpha: 0.2),
           child: user.photoUrl != null
-              ? ClipOval(
-                  child: Image.network(
-                    user.photoUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.person,
-                      color: teamColor,
-                    ),
+              ? OptimizedImage(
+                  imageUrl: user.photoUrl!,
+                  fit: BoxFit.cover,
+                  width: 60,
+                  height: 60,
+                  borderRadius: BorderRadius.circular(30),
+                  errorWidget: Icon(
+                    Icons.person,
+                    color: teamColor,
                   ),
                 )
               : Icon(

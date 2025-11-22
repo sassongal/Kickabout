@@ -72,6 +72,13 @@ class GamesRepository {
           : _firestore.collection(FirestorePaths.games()).doc();
       
       await docRef.set(data);
+      
+      // Invalidate cache
+      CacheService().clear(CacheKeys.game(docRef.id));
+      if (game.hubId.isNotEmpty) {
+        CacheService().clear(CacheKeys.gamesByHub(game.hubId));
+      }
+      
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to create game: $e');
@@ -115,7 +122,17 @@ class GamesRepository {
     }
 
     try {
+      // Get game to know hubId for cache invalidation
+      final gameDoc = await _firestore.doc(FirestorePaths.game(gameId)).get();
+      final hubId = gameDoc.data()?['hubId'] as String?;
+      
       await _firestore.doc(FirestorePaths.game(gameId)).delete();
+      
+      // Invalidate cache
+      CacheService().clear(CacheKeys.game(gameId));
+      if (hubId != null && hubId.isNotEmpty) {
+        CacheService().clear(CacheKeys.gamesByHub(hubId));
+      }
     } catch (e) {
       throw Exception('Failed to delete game: $e');
     }
@@ -154,20 +171,22 @@ class GamesRepository {
   }
 
   /// Stream all completed games (for main games screen)
-  /// Shows games with scores from all hubs
+  /// OPTIMIZED: Shows games with scores from all hubs, filtered by showInCommunityFeed
   Stream<List<Game>> watchCompletedGames({int limit = 50}) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
     }
 
+    // OPTIMIZED: Filter by showInCommunityFeed AND status in Firestore (requires index)
     return _firestore
         .collection(FirestorePaths.games())
         .where('status', isEqualTo: 'completed')
+        .where('showInCommunityFeed', isEqualTo: true) // Filter in Firestore, not memory
         .orderBy('gameDate', descending: true)
         .limit(limit)
         .snapshots()
         .map((snapshot) {
-          // Filter games that have scores
+          // Only filter scores in memory (Firestore can't filter on null/not null easily)
           return snapshot.docs
               .map((doc) => Game.fromJson({...doc.data(), 'gameId': doc.id}))
               .where((game) => game.teamAScore != null && game.teamBScore != null)
@@ -176,40 +195,51 @@ class GamesRepository {
   }
 
   /// Stream all public completed games for community feed
-  /// Shows games with showInCommunityFeed = true
-  /// Note: We filter by showInCommunityFeed in query, then filter by status/scores in memory
-  /// to allow newly created games to appear immediately
+  /// OPTIMIZED: Uses Firestore indexes for filtering instead of in-memory filtering
+  /// Shows games with showInCommunityFeed = true and status = completed
   Stream<List<Game>> watchPublicCompletedGames({
-    int limit = 100,
+    int limit = 50, // Reduced from 100, use pagination for more
     String? hubId,
     String? region,
     DateTime? startDate,
     DateTime? endDate,
+    DocumentSnapshot? startAfter, // Pagination cursor
   }) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
     }
 
     try {
-      // Start with showInCommunityFeed filter (this is the main filter)
+      // OPTIMIZED: Filter by both showInCommunityFeed AND status in Firestore
+      // This requires a composite index (already defined in firestore.indexes.json)
       Query query = _firestore
           .collection(FirestorePaths.games())
-          .where('showInCommunityFeed', isEqualTo: true);
+          .where('showInCommunityFeed', isEqualTo: true)
+          .where('status', isEqualTo: 'completed'); // Filter in Firestore, not memory
 
-      // Apply additional filters (only one more where clause allowed with orderBy)
-      // Priority: hubId > region > date filters
+      // Apply additional filters
       if (hubId != null) {
         query = query.where('hubId', isEqualTo: hubId);
       } else if (region != null) {
         query = query.where('region', isEqualTo: region);
       }
 
-      // Date filters will be applied in memory if both hubId and region are null
-      // Otherwise, we'll filter in memory after fetching
+      // Date filters - apply in Firestore if possible
+      if (startDate != null && hubId == null && region == null) {
+        query = query.where('gameDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      }
+      if (endDate != null && hubId == null && region == null && startDate == null) {
+        query = query.where('gameDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+
+      // Pagination support
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
 
       return query
           .orderBy('gameDate', descending: true)
-          .limit(limit * 2) // Fetch more to account for in-memory filtering
+          .limit(limit) // No need for limit * 2 - filtering is done in Firestore
           .snapshots()
           .map((snapshot) {
             return MonitoringService().trackSyncOperation<List<Game>>(
@@ -222,30 +252,20 @@ class GamesRepository {
                     })
                     .toList();
 
-                // Filter in memory:
-                // 1. Only games with scores (completed games) OR status = completed
+                // Only filter scores in memory (Firestore can't filter on null/not null easily)
+                // But most completed games should have scores anyway
                 games = games.where((game) => 
-                    (game.teamAScore != null && game.teamBScore != null) ||
-                    game.status == GameStatus.completed
+                    game.teamAScore != null && game.teamBScore != null
                 ).toList();
 
-                // 2. Apply date filters in memory if not already in query
-                if (startDate != null) {
+                // Apply date filters in memory only if they couldn't be applied in query
+                if (startDate != null && (hubId != null || region != null)) {
                   games = games.where((g) => g.gameDate.isAfter(startDate) || g.gameDate.isAtSameMomentAs(startDate)).toList();
                 }
-                if (endDate != null) {
+                if (endDate != null && (hubId != null || region != null || startDate != null)) {
                   games = games.where((g) => g.gameDate.isBefore(endDate) || g.gameDate.isAtSameMomentAs(endDate)).toList();
                 }
-                if (region != null && hubId == null) {
-                  games = games.where((g) => g.region == region).toList();
-                }
 
-                // Sort again after filtering
-                games.sort((a, b) => b.gameDate.compareTo(a.gameDate));
-
-                // Limit to requested amount
-                games = games.take(limit).toList();
-                
                 // Cache the result
                 final cacheKey = CacheKeys.publicGames(region: region);
                 CacheService().set(cacheKey, games, ttl: CacheService.gamesTtl);
@@ -360,6 +380,10 @@ class GamesRepository {
   /// Returns games where:
   /// - Status is 'teamSelection' or 'teamsFormed' (pending/confirmed)
   /// - User is signed up (confirmed signup)
+  /// Stream upcoming games for a specific user
+  /// Optimized: Uses collection group query to avoid N+1 queries
+  /// - User is signed up (confirmed status)
+  /// - Game status is 'teamSelection' or 'teamsFormed'
   /// - Game date is in the future
   Stream<List<Game>> streamMyUpcomingGames(String userId) {
     if (!Env.isFirebaseAvailable) {
@@ -367,50 +391,61 @@ class GamesRepository {
     }
 
     try {
-      // Get current time
       final now = DateTime.now();
       
-      // Query games with status in ['teamSelection', 'teamsFormed']
-      // Note: We can't directly query signups, so we'll:
-      // 1. Get all games with pending/confirmed status
-      // 2. Filter by checking signups in the app
-      // OR use a composite index if needed
-      
-      // For now, we'll query games and filter by checking signups
+      // OPTIMIZED: Use collection group query to get all signups for this user
+      // This avoids N+1 queries (one per game)
       return _firestore
-          .collection(FirestorePaths.games())
-          .where('status', whereIn: ['teamSelection', 'teamsFormed'])
-          .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
-          .orderBy('gameDate', descending: false)
-          .limit(20)
+          .collectionGroup('signups')
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: 'confirmed')
           .snapshots()
-          .asyncMap((snapshot) async {
-            final games = <Game>[];
+          .asyncMap((signupsSnapshot) async {
+            if (signupsSnapshot.docs.isEmpty) return <Game>[];
             
-            for (final doc in snapshot.docs) {
+            // Extract game IDs from signup document paths
+            // Path format: games/{gameId}/signups/{userId}
+            final gameIds = signupsSnapshot.docs
+                .map((doc) {
+                  final pathParts = doc.reference.path.split('/');
+                  // Path: games/{gameId}/signups/{userId}
+                  if (pathParts.length >= 2 && pathParts[0] == 'games') {
+                    return pathParts[1];
+                  }
+                  return null;
+                })
+                .whereType<String>()
+                .toSet();
+            
+            if (gameIds.isEmpty) return <Game>[];
+            
+            // Batch query games - Firestore 'in' limit is 10
+            final games = <Game>[];
+            final gameIdList = gameIds.toList();
+            
+            for (var i = 0; i < gameIdList.length; i += 10) {
+              final batch = gameIdList.skip(i).take(10).toList();
+              
               try {
-                final game = Game.fromJson({...doc.data(), 'gameId': doc.id});
-                
-                // Check if user is signed up for this game
-                final signupsSnapshot = await _firestore
-                    .collection(FirestorePaths.gameSignups(doc.id))
-                    .doc(userId)
+                final gamesSnapshot = await _firestore
+                    .collection(FirestorePaths.games())
+                    .where(FieldPath.documentId, whereIn: batch)
+                    .where('status', whereIn: ['teamSelection', 'teamsFormed'])
+                    .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
                     .get();
                 
-                if (signupsSnapshot.exists) {
-                  final signupData = signupsSnapshot.data();
-                  if (signupData != null) {
-                    final status = signupData['status'] as String?;
-                    if (status == 'confirmed') {
-                      games.add(game);
-                    }
-                  }
-                }
+                games.addAll(
+                  gamesSnapshot.docs.map((doc) => 
+                      Game.fromJson({...doc.data(), 'gameId': doc.id})),
+                );
               } catch (e) {
-                debugPrint('Error processing game ${doc.id}: $e');
-                // Continue with other games
+                debugPrint('Error fetching games batch: $e');
+                // Continue with next batch
               }
             }
+            
+            // Sort by game date
+            games.sort((a, b) => a.gameDate.compareTo(b.gameDate));
             
             return games;
           });

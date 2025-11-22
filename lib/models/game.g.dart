@@ -58,6 +58,14 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       mvpPlayerId: json['mvpPlayerId'] as String?,
       mvpPlayerName: json['mvpPlayerName'] as String?,
       venueName: json['venueName'] as String?,
+      confirmedPlayerIds: (json['confirmedPlayerIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      confirmedPlayerCount:
+          (json['confirmedPlayerCount'] as num?)?.toInt() ?? 0,
+      isFull: json['isFull'] as bool? ?? false,
+      maxParticipants: (json['maxParticipants'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -97,6 +105,10 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'mvpPlayerId': instance.mvpPlayerId,
       'mvpPlayerName': instance.mvpPlayerName,
       'venueName': instance.venueName,
+      'confirmedPlayerIds': instance.confirmedPlayerIds,
+      'confirmedPlayerCount': instance.confirmedPlayerCount,
+      'isFull': instance.isFull,
+      'maxParticipants': instance.maxParticipants,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

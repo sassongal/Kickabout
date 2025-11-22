@@ -91,35 +91,49 @@ class HubEventsRepository {
           .doc(eventId)
           .set(data);
 
+      // Invalidate cache
+      CacheService().clear(CacheKeys.eventsByHub(event.hubId));
+      CacheService().clear(CacheKeys.event(event.hubId, eventId));
+
       return eventId;
     } catch (e) {
       throw Exception('Failed to create event: $e');
     }
   }
 
-  /// Get a single hub event by ID
-  Future<HubEvent?> getHubEvent(String hubId, String eventId) async {
+  /// Get a single hub event by ID with caching and retry
+  Future<HubEvent?> getHubEvent(String hubId, String eventId, {bool forceRefresh = false}) async {
     if (!Env.isFirebaseAvailable) {
       return null;
     }
 
-    try {
-      final doc = await _firestore
-          .collection(FirestorePaths.hubs())
-          .doc(hubId)
-          .collection('events')
-          .doc(eventId)
-          .get();
+    return MonitoringService().trackOperation(
+      'getHubEvent',
+      () => CacheService().getOrFetch<HubEvent?>(
+        CacheKeys.event(hubId, eventId),
+        () => RetryService().execute(
+          () async {
+            final doc = await _firestore
+                .collection(FirestorePaths.hubs())
+                .doc(hubId)
+                .collection('events')
+                .doc(eventId)
+                .get();
 
-      if (!doc.exists) {
-        return null;
-      }
+            if (!doc.exists) {
+              return null;
+            }
 
-      return HubEvent.fromJson({...doc.data()!, 'eventId': doc.id});
-    } catch (e) {
-      debugPrint('Failed to get event: $e');
-      return null;
-    }
+            return HubEvent.fromJson({...doc.data()!, 'eventId': doc.id});
+          },
+          config: RetryConfig.network,
+          operationName: 'getHubEvent',
+        ),
+        ttl: CacheService.eventsTtl, // 15 minutes
+        forceRefresh: forceRefresh,
+      ),
+      metadata: {'hubId': hubId, 'eventId': eventId},
+    );
   }
 
   /// Update a hub event
@@ -172,6 +186,7 @@ class HubEventsRepository {
 
       // Invalidate cache
       CacheService().clear(CacheKeys.eventsByHub(hubId));
+      CacheService().clear(CacheKeys.event(hubId, eventId));
     } catch (e) {
       throw Exception('Failed to delete event: $e');
     }
@@ -232,6 +247,10 @@ class HubEventsRepository {
         'updatedAt': FieldValue.serverTimestamp(),
       });
       
+      // Invalidate cache for this event
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+      
       // Return the new count (current + 1)
       return currentRegistered.length + 1;
     } catch (e) {
@@ -255,6 +274,10 @@ class HubEventsRepository {
         'registeredPlayerIds': FieldValue.arrayRemove([playerId]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      
+      // Invalidate cache for this event
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
     } catch (e) {
       throw Exception('Failed to unregister from event: $e');
     }
@@ -276,19 +299,22 @@ class HubEventsRepository {
     }
 
     try {
-      // Use collection group query to get events from all hubs
-      // Only filter by showInCommunityFeed in query (collection group queries have limitations)
+      // OPTIMIZED: Use collection group query with composite index
+      // Filter by showInCommunityFeed AND status in Firestore (requires index)
       Query query = _firestore
           .collectionGroup('events')
-          .where('showInCommunityFeed', isEqualTo: true);
+          .where('showInCommunityFeed', isEqualTo: true)
+          .where('status', whereIn: ['upcoming', 'ongoing']); // Filter in Firestore
 
-      // Note: Collection group queries have limitations
-      // We can only filter by one field at a time, so we'll filter everything else in memory
-      // For better performance, consider creating a separate collection for public events
+      // Apply additional filters if possible
+      if (hubId != null) {
+        // For collection group, we'll filter hubId in memory (can't add more where clauses)
+        // Alternative: Create a separate publicEvents collection
+      }
 
       return query
           .orderBy('eventDate', descending: false)
-          .limit(limit * 2) // Fetch more to account for in-memory filtering
+          .limit(limit) // No need for limit * 2 - filtering is done in Firestore
           .snapshots()
           .map((snapshot) {
             var events = snapshot.docs
@@ -314,20 +340,10 @@ class HubEventsRepository {
                 .whereType<HubEvent>()
                 .toList();
 
-            // Filter in memory:
-            // 1. Only upcoming or ongoing events (not cancelled or completed)
-            events = events.where((e) => 
-                e.status == 'upcoming' || e.status == 'ongoing'
-            ).toList();
-
-            // 2. Apply additional filters in memory
+            // Apply filters that can't be done in Firestore (collection group limitations)
             if (hubId != null) {
               events = events.where((e) => e.hubId == hubId).toList();
             }
-            
-            // Note: HubEvent doesn't have a region field, so we can't filter by region directly
-            // If region filtering is needed, we would need to fetch hub data for each event
-            // For now, we skip region filtering for events
             
             if (startDate != null) {
               events = events.where((e) => e.eventDate.isAfter(startDate) || e.eventDate.isAtSameMomentAs(startDate)).toList();
@@ -337,11 +353,8 @@ class HubEventsRepository {
               events = events.where((e) => e.eventDate.isBefore(endDate) || e.eventDate.isAtSameMomentAs(endDate)).toList();
             }
 
-            // Sort again after filtering
+            // Sort again after filtering (should already be sorted, but ensure)
             events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
-
-            // Limit to requested amount
-            events = events.take(limit).toList();
 
             return events;
           });

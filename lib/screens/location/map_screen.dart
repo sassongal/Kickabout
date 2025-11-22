@@ -56,6 +56,45 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _loadCurrentLocation();
   }
   
+  /// Ensure location permission is granted before trying to get location
+  /// This is a backup in case user navigated directly to map
+  Future<void> _ensureLocationPermission() async {
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('⚠️ Location services are disabled');
+        return;
+      }
+
+      // Check current permission status
+      LocationPermission permission = await Geolocator.checkPermission();
+      
+      if (permission == LocationPermission.denied) {
+        // Request permission
+        debugPrint('📍 Map screen: Requesting location permission...');
+        permission = await Geolocator.requestPermission();
+        
+        if (permission == LocationPermission.denied) {
+          debugPrint('⚠️ Map screen: Location permission denied by user');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('⚠️ Map screen: Location permission denied forever. User needs to enable in settings.');
+        return;
+      }
+
+      if (permission == LocationPermission.whileInUse || 
+          permission == LocationPermission.always) {
+        debugPrint('✅ Map screen: Location permission granted');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Map screen: Error requesting location permission: $e');
+    }
+  }
+
   /// Load custom icons for map markers
   Future<void> _loadCustomIcons() async {
     try {
@@ -100,6 +139,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _loadCurrentLocation() async {
     try {
+      // First, ensure we have location permission
+      // This is a backup in case user navigated directly to map without going through home screen
+      await _ensureLocationPermission();
+      
       final locationService = ref.read(locationServiceProvider);
       
       // Load location in background to avoid blocking UI

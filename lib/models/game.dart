@@ -52,6 +52,11 @@ class Game with _$Game {
     String? mvpPlayerId, // MVP player ID (denormalized from events)
     String? mvpPlayerName, // MVP player name (denormalized for quick display)
     String? venueName, // Venue name (denormalized from venue or event.location)
+    // Denormalized fields for signups (optimization - avoids N+1 queries)
+    @Default([]) List<String> confirmedPlayerIds, // IDs of confirmed players (denormalized from signups)
+    @Default(0) int confirmedPlayerCount, // Count of confirmed players (denormalized)
+    @Default(false) bool isFull, // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
+    int? maxParticipants, // Maximum number of participants (for games created from events)
   }) = _Game;
 
   factory Game.fromJson(Map<String, dynamic> json) => _$GameFromJson(json);

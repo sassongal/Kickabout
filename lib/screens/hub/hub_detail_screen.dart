@@ -17,6 +17,7 @@ import 'package:kickadoor/screens/hub/hub_events_tab.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:kickadoor/models/hub_role.dart';
+import 'package:kickadoor/widgets/optimized_image.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -140,7 +141,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                     )
                   : null,
               body: Column(
-            children: [
+                children: [
               // Hub info card
               Card(
                 margin: const EdgeInsets.all(8),
@@ -196,22 +197,20 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                       // Hub profile image
                       if (hub.profileImageUrl != null) ...[
                         Center(
-                          child: ClipRRect(
+                          child: OptimizedImage(
+                            imageUrl: hub.profileImageUrl ?? '',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              hub.profileImageUrl ?? '',
+                            errorWidget: Container(
                               width: 120,
                               height: 120,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.group, size: 60),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              child: const Icon(Icons.group, size: 60),
                             ),
                           ),
                         ),
@@ -1366,22 +1365,20 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
           // Hub profile image
           Center(
             child: widget.hub.profileImageUrl != null
-                ? ClipRRect(
+                ? OptimizedImage(
+                    imageUrl: widget.hub.profileImageUrl ?? '',
+                    width: 150,
+                    height: 150,
+                    fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(16),
-                    child: Image.network(
-                      widget.hub.profileImageUrl ?? '',
+                    errorWidget: Container(
                       width: 150,
                       height: 150,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 150,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(Icons.group, size: 80),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      child: const Icon(Icons.group, size: 80),
                     ),
                   )
                 : Container(

@@ -9,7 +9,8 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/services/gamification_service.dart';
+// Removed: import 'package:kickadoor/services/gamification_service.dart';
+// Gamification is now handled by Cloud Function onGameCompleted
 
 /// Basic rating screen for simple 1-7 rating system
 class BasicRatingScreen extends ConsumerStatefulWidget {
@@ -326,52 +327,13 @@ class _BasicRatingScreenState extends ConsumerState<BasicRatingScreen> {
         await ratingsRepo.addRatingSnapshot(player.uid, snapshot);
       }
 
-      // Update gamification for each player
-      final gamificationRepo = ref.read(gamificationRepositoryProvider);
-      final eventsRepo = ref.read(eventsRepositoryProvider);
-      
-      // Get game events to count goals, assists, saves
-      final events = await eventsRepo.getEvents(widget.gameId);
-      
-      for (final player in players) {
-        try {
-          // Count player's events
-          final playerGoals = events.where((e) => e.playerId == player.uid && e.type == EventType.goal).length;
-          final playerAssists = events.where((e) => e.playerId == player.uid && e.type == EventType.assist).length;
-          final playerSaves = events.where((e) => e.playerId == player.uid && e.type == EventType.save).length;
-          
-          // Get average rating for this player (simplified - use their rating from this submission)
-          final averageRating = _playerRatings[player.uid] ?? AppConstants.defaultBasicRating;
-          
-          // Check if MVP (simplified - highest rating)
-          final isMVP = players.every((p) => 
-            (_playerRatings[p.uid] ?? AppConstants.defaultBasicRating) <= averageRating
-          );
-          
-          // Calculate points
-          final pointsEarned = GamificationService.calculateGamePoints(
-            won: false, // TODO: Determine win/loss from game result
-            goals: playerGoals,
-            assists: playerAssists,
-            saves: playerSaves,
-            isMVP: isMVP,
-            averageRating: averageRating,
-          );
-          
-          // Update gamification
-          await gamificationRepo.updateGamification(
-            userId: player.uid,
-            pointsEarned: pointsEarned,
-            won: false, // TODO: Determine from game result
-            goals: playerGoals,
-            assists: playerAssists,
-            saves: playerSaves,
-          );
-        } catch (e) {
-          debugPrint('Error updating gamification for ${player.uid}: $e');
-          // Continue with other players even if one fails
-        }
-      }
+      // Gamification is now handled by Cloud Function onGameCompleted
+      // When the game status is set to 'completed', the backend automatically:
+      // 1. Calculates points for each player based on their performance
+      // 2. Updates gamification stats (points, level, badges, achievements)
+      // 3. Updates user's totalParticipations
+      // This ensures security and prevents cheating
+      debugPrint('Ratings saved. Gamification will be updated by Cloud Function when game is marked as completed.');
 
       if (!context.mounted) return;
       SnackbarHelper.showSuccess(context, 'הדירוגים נשמרו בהצלחה!');

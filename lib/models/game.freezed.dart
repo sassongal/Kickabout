@@ -87,7 +87,16 @@ mixin _$Game {
       throw _privateConstructorUsedError; // MVP player ID (denormalized from events)
   String? get mvpPlayerName =>
       throw _privateConstructorUsedError; // MVP player name (denormalized for quick display)
-  String? get venueName => throw _privateConstructorUsedError;
+  String? get venueName =>
+      throw _privateConstructorUsedError; // Venue name (denormalized from venue or event.location)
+// Denormalized fields for signups (optimization - avoids N+1 queries)
+  List<String> get confirmedPlayerIds =>
+      throw _privateConstructorUsedError; // IDs of confirmed players (denormalized from signups)
+  int get confirmedPlayerCount =>
+      throw _privateConstructorUsedError; // Count of confirmed players (denormalized)
+  bool get isFull =>
+      throw _privateConstructorUsedError; // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
+  int? get maxParticipants => throw _privateConstructorUsedError;
 
   /// Serializes this Game to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -136,7 +145,11 @@ abstract class $GameCopyWith<$Res> {
       List<String> goalScorerNames,
       String? mvpPlayerId,
       String? mvpPlayerName,
-      String? venueName});
+      String? venueName,
+      List<String> confirmedPlayerIds,
+      int confirmedPlayerCount,
+      bool isFull,
+      int? maxParticipants});
 }
 
 /// @nodoc
@@ -187,6 +200,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? mvpPlayerId = freezed,
     Object? mvpPlayerName = freezed,
     Object? venueName = freezed,
+    Object? confirmedPlayerIds = null,
+    Object? confirmedPlayerCount = null,
+    Object? isFull = null,
+    Object? maxParticipants = freezed,
   }) {
     return _then(_value.copyWith(
       gameId: null == gameId
@@ -321,6 +338,22 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.venueName
           : venueName // ignore: cast_nullable_to_non_nullable
               as String?,
+      confirmedPlayerIds: null == confirmedPlayerIds
+          ? _value.confirmedPlayerIds
+          : confirmedPlayerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      confirmedPlayerCount: null == confirmedPlayerCount
+          ? _value.confirmedPlayerCount
+          : confirmedPlayerCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      isFull: null == isFull
+          ? _value.isFull
+          : isFull // ignore: cast_nullable_to_non_nullable
+              as bool,
+      maxParticipants: freezed == maxParticipants
+          ? _value.maxParticipants
+          : maxParticipants // ignore: cast_nullable_to_non_nullable
+              as int?,
     ) as $Val);
   }
 }
@@ -365,7 +398,11 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       List<String> goalScorerNames,
       String? mvpPlayerId,
       String? mvpPlayerName,
-      String? venueName});
+      String? venueName,
+      List<String> confirmedPlayerIds,
+      int confirmedPlayerCount,
+      bool isFull,
+      int? maxParticipants});
 }
 
 /// @nodoc
@@ -413,6 +450,10 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? mvpPlayerId = freezed,
     Object? mvpPlayerName = freezed,
     Object? venueName = freezed,
+    Object? confirmedPlayerIds = null,
+    Object? confirmedPlayerCount = null,
+    Object? isFull = null,
+    Object? maxParticipants = freezed,
   }) {
     return _then(_$GameImpl(
       gameId: null == gameId
@@ -547,6 +588,22 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.venueName
           : venueName // ignore: cast_nullable_to_non_nullable
               as String?,
+      confirmedPlayerIds: null == confirmedPlayerIds
+          ? _value._confirmedPlayerIds
+          : confirmedPlayerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      confirmedPlayerCount: null == confirmedPlayerCount
+          ? _value.confirmedPlayerCount
+          : confirmedPlayerCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      isFull: null == isFull
+          ? _value.isFull
+          : isFull // ignore: cast_nullable_to_non_nullable
+              as bool,
+      maxParticipants: freezed == maxParticipants
+          ? _value.maxParticipants
+          : maxParticipants // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -587,11 +644,16 @@ class _$GameImpl implements _Game {
       final List<String> goalScorerNames = const [],
       this.mvpPlayerId,
       this.mvpPlayerName,
-      this.venueName})
+      this.venueName,
+      final List<String> confirmedPlayerIds = const [],
+      this.confirmedPlayerCount = 0,
+      this.isFull = false,
+      this.maxParticipants})
       : _photoUrls = photoUrls,
         _teams = teams,
         _goalScorerIds = goalScorerIds,
-        _goalScorerNames = goalScorerNames;
+        _goalScorerNames = goalScorerNames,
+        _confirmedPlayerIds = confirmedPlayerIds;
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameImplFromJson(json);
@@ -735,10 +797,35 @@ class _$GameImpl implements _Game {
 // MVP player name (denormalized for quick display)
   @override
   final String? venueName;
+// Venue name (denormalized from venue or event.location)
+// Denormalized fields for signups (optimization - avoids N+1 queries)
+  final List<String> _confirmedPlayerIds;
+// Venue name (denormalized from venue or event.location)
+// Denormalized fields for signups (optimization - avoids N+1 queries)
+  @override
+  @JsonKey()
+  List<String> get confirmedPlayerIds {
+    if (_confirmedPlayerIds is EqualUnmodifiableListView)
+      return _confirmedPlayerIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_confirmedPlayerIds);
+  }
+
+// IDs of confirmed players (denormalized from signups)
+  @override
+  @JsonKey()
+  final int confirmedPlayerCount;
+// Count of confirmed players (denormalized)
+  @override
+  @JsonKey()
+  final bool isFull;
+// Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
+  @override
+  final int? maxParticipants;
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
   }
 
   @override
@@ -802,7 +889,14 @@ class _$GameImpl implements _Game {
             (identical(other.mvpPlayerName, mvpPlayerName) ||
                 other.mvpPlayerName == mvpPlayerName) &&
             (identical(other.venueName, venueName) ||
-                other.venueName == venueName));
+                other.venueName == venueName) &&
+            const DeepCollectionEquality()
+                .equals(other._confirmedPlayerIds, _confirmedPlayerIds) &&
+            (identical(other.confirmedPlayerCount, confirmedPlayerCount) ||
+                other.confirmedPlayerCount == confirmedPlayerCount) &&
+            (identical(other.isFull, isFull) || other.isFull == isFull) &&
+            (identical(other.maxParticipants, maxParticipants) ||
+                other.maxParticipants == maxParticipants));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -841,7 +935,11 @@ class _$GameImpl implements _Game {
         const DeepCollectionEquality().hash(_goalScorerNames),
         mvpPlayerId,
         mvpPlayerName,
-        venueName
+        venueName,
+        const DeepCollectionEquality().hash(_confirmedPlayerIds),
+        confirmedPlayerCount,
+        isFull,
+        maxParticipants
       ]);
 
   /// Create a copy of Game
@@ -894,7 +992,11 @@ abstract class _Game implements Game {
       final List<String> goalScorerNames,
       final String? mvpPlayerId,
       final String? mvpPlayerName,
-      final String? venueName}) = _$GameImpl;
+      final String? venueName,
+      final List<String> confirmedPlayerIds,
+      final int confirmedPlayerCount,
+      final bool isFull,
+      final int? maxParticipants}) = _$GameImpl;
 
   factory _Game.fromJson(Map<String, dynamic> json) = _$GameImpl.fromJson;
 
@@ -982,7 +1084,19 @@ abstract class _Game implements Game {
   @override
   String? get mvpPlayerName; // MVP player name (denormalized for quick display)
   @override
-  String? get venueName;
+  String?
+      get venueName; // Venue name (denormalized from venue or event.location)
+// Denormalized fields for signups (optimization - avoids N+1 queries)
+  @override
+  List<String>
+      get confirmedPlayerIds; // IDs of confirmed players (denormalized from signups)
+  @override
+  int get confirmedPlayerCount; // Count of confirmed players (denormalized)
+  @override
+  bool
+      get isFull; // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
+  @override
+  int? get maxParticipants;
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.
