@@ -12,6 +12,9 @@ class TeamBuilderPageWithTabs extends ConsumerStatefulWidget {
   final int teamCount;
   final List<String> playerIds;
   final List<GameSignup> signups;
+  final bool isEvent; // If true, save teams to Event instead of Game
+  final String? eventId; // Event ID if isEvent == true
+  final String? hubId; // Hub ID if isEvent == true
 
   const TeamBuilderPageWithTabs({
     super.key,
@@ -20,6 +23,9 @@ class TeamBuilderPageWithTabs extends ConsumerStatefulWidget {
     required this.teamCount,
     required this.playerIds,
     required this.signups,
+    this.isEvent = false,
+    this.eventId,
+    this.hubId,
   });
 
   @override
@@ -113,7 +119,16 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
                               });
                             },
                             title: Text(user.name),
-                            subtitle: Text('דירוג: ${user.currentRankScore.toStringAsFixed(1)}'),
+                            subtitle: FutureBuilder<Hub?>(
+                              future: ref.read(hubsRepositoryProvider).getHub(widget.game.hubId),
+                              builder: (context, hubSnapshot) {
+                                final hub = hubSnapshot.data;
+                                final rating = (hub?.managerRatings != null && hub!.managerRatings.containsKey(user.uid))
+                                    ? hub.managerRatings[user.uid]!
+                                    : user.currentRankScore;
+                                return Text('דירוג: ${rating.toStringAsFixed(1)}');
+                              },
+                            ),
                           );
                         },
                       ),
@@ -232,6 +247,7 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
               // Automatic division tab
               TeamBuilderPage(
                 gameId: widget.gameId,
+                hubId: widget.game.hubId,
                 teamCount: widget.teamCount,
                 playerIds: _currentPlayerIds,
               ),
@@ -242,6 +258,9 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
                 game: widget.game,
                 teamCount: widget.teamCount,
                 playerIds: _currentPlayerIds,
+                isEvent: widget.isEvent,
+                eventId: widget.eventId,
+                hubId: widget.hubId,
               ),
             ],
           ),

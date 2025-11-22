@@ -43,6 +43,10 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
       logoUrl: json['logoUrl'] as String?,
       hubRules: json['hubRules'] as String?,
       region: json['region'] as String?,
+      managerRatings: (json['managerRatings'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toDouble()),
+          ) ??
+          const {},
       gameCount: (json['gameCount'] as num?)?.toInt(),
       lastActivity: _$JsonConverterFromJson<Object, DateTime>(
           json['lastActivity'], const TimestampConverter().fromJson),
@@ -72,6 +76,7 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'logoUrl': instance.logoUrl,
       'hubRules': instance.hubRules,
       'region': instance.region,
+      'managerRatings': instance.managerRatings,
       'gameCount': instance.gameCount,
       'lastActivity': _$JsonConverterToJson<Object, DateTime>(
           instance.lastActivity, const TimestampConverter().toJson),

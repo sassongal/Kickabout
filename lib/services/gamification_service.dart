@@ -1,66 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:math' as math;
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/config/env.dart';
 
-/// Service for gamification calculations and updates
+/// Service for gamification - simplified to participation tracking only
+/// No points, no levels, just milestone badges and stats
+/// All updates are handled by Cloud Function onGameCompleted
 class GamificationService {
   final FirebaseFirestore _firestore;
 
   GamificationService(this._firestore);
-
-  /// Calculate points for a game result
-  static int calculateGamePoints({
-    required bool won,
-    required int goals,
-    required int assists,
-    required int saves,
-    required bool isMVP,
-    required double averageRating,
-  }) {
-    int points = 0;
-
-    // Base participation
-    points += 10;
-
-    // Win bonus
-    if (won) points += 20;
-
-    // Performance bonuses
-    points += (goals * 5);
-    points += (assists * 3);
-    points += (saves * 2);
-
-    // MVP bonus
-    if (isMVP) points += 15;
-
-    // Rating bonus
-    if (averageRating >= 8.0) points += 10;
-    if (averageRating >= 9.0) points += 5; // Additional bonus
-
-    return points;
-  }
-
-  /// Calculate level from total points
-  static int calculateLevel(int totalPoints) {
-    if (totalPoints <= 0) return 1;
-    return math.sqrt(totalPoints / 100).floor() + 1;
-  }
-
-  /// Calculate points needed for next level
-  /// Based on calculateLevel: level = sqrt(points/100).floor() + 1
-  /// So for level N, we need points such that sqrt(points/100) >= N-1
-  /// Which means points >= (N-1)^2 * 100
-  /// For next level (N+1), we need points >= N^2 * 100
-  static int pointsForNextLevel(int currentLevel) {
-    // Level 1 needs 0 points (already at level 1)
-    // Level 2 needs 100 points (1^2 * 100)
-    // Level 3 needs 400 points (2^2 * 100)
-    // Level 4 needs 900 points (3^2 * 100)
-    // So for currentLevel N, next level needs (N)^2 * 100
-    return (currentLevel * currentLevel) * 100;
-  }
 
   /// Get gamification for a user
   Future<Gamification?> getGamification(String userId) async {
@@ -112,7 +61,10 @@ class GamificationService {
     });
   }
 
-  /// Update user gamification after game
+  /// DEPRECATED: updateGamification is now handled by Cloud Function onGameCompleted
+  /// This method is kept for backward compatibility but should not be used
+  /// All gamification updates happen server-side when a game is marked as completed
+  @Deprecated('Use Cloud Function onGameCompleted instead')
   Future<void> updateGamification({
     required String userId,
     required int pointsEarned,
@@ -121,127 +73,36 @@ class GamificationService {
     required int assists,
     required int saves,
   }) async {
-    if (!Env.isFirebaseAvailable) {
-      throw Exception('Firebase not available');
+    debugPrint('⚠️ updateGamification is deprecated. Gamification is now handled by Cloud Function.');
+    // No-op - gamification is handled by Cloud Function
+  }
+
+  /// Check and award milestone badges (simplified - only game count milestones)
+  /// This is called by Cloud Function, not by client code
+  /// Badges are awarded based on gamesPlayed count only (1st, 10th, 50th, 100th game)
+  static List<String> checkMilestoneBadges(int gamesPlayed, List<String> currentBadges) {
+    final badgesToAward = <String>[];
+
+    // Game count milestone badges only
+    if (gamesPlayed >= 1 && !currentBadges.contains(BadgeType.firstGame.name)) {
+      badgesToAward.add(BadgeType.firstGame.name);
+    }
+    if (gamesPlayed >= 10 && !currentBadges.contains(BadgeType.tenGames.name)) {
+      badgesToAward.add(BadgeType.tenGames.name);
+    }
+    if (gamesPlayed >= 50 && !currentBadges.contains(BadgeType.fiftyGames.name)) {
+      badgesToAward.add(BadgeType.fiftyGames.name);
+    }
+    if (gamesPlayed >= 100 && !currentBadges.contains(BadgeType.hundredGames.name)) {
+      badgesToAward.add(BadgeType.hundredGames.name);
     }
 
-    try {
-      final currentGamification = await getGamification(userId);
-      if (currentGamification == null) {
-        throw Exception('Failed to get current gamification');
-      }
+    // Goal badges (optional - for display only, no points)
+    // These are tracked but don't affect ranking
+    // Note: Goal tracking is handled separately in Cloud Function
 
-      final newPoints = currentGamification.points + pointsEarned;
-      final newLevel = calculateLevel(newPoints);
-      final oldLevel = currentGamification.level;
-
-      final newStats = {
-        'gamesPlayed': (currentGamification.stats['gamesPlayed'] ?? 0) + 1,
-        'gamesWon': (currentGamification.stats['gamesWon'] ?? 0) + (won ? 1 : 0),
-        'goals': (currentGamification.stats['goals'] ?? 0) + goals,
-        'assists': (currentGamification.stats['assists'] ?? 0) + assists,
-        'saves': (currentGamification.stats['saves'] ?? 0) + saves,
-      };
-
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('gamification')
-          .doc('stats')
-          .set({
-        'userId': userId,
-        'points': newPoints,
-        'level': newLevel,
-        'badges': currentGamification.badges,
-        'achievements': currentGamification.achievements,
-        'stats': newStats,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      // Check for level up
-      if (newLevel > oldLevel) {
-        await _awardLevelUpNotification(userId, newLevel);
-      }
-
-      // Check for achievement badges
-      await _checkAndAwardBadges(
-        userId,
-        newPoints,
-        newStats['gamesPlayed']!,
-        newStats['goals']!,
-      );
-    } catch (e) {
-      throw Exception('Failed to update gamification: $e');
-    }
+    return badgesToAward;
   }
 
-  /// Check and award badges
-  Future<void> _checkAndAwardBadges(
-    String userId,
-    int totalPoints,
-    int gamesPlayed,
-    int goals,
-  ) async {
-    if (!Env.isFirebaseAvailable) return;
-
-    try {
-      final currentGamification = await getGamification(userId);
-      if (currentGamification == null) return;
-
-      final currentBadges = currentGamification.badges;
-      final badgesToAward = <String>[];
-
-      // Game count badges
-      if (gamesPlayed >= 1 && !currentBadges.contains(BadgeType.firstGame.name)) {
-        badgesToAward.add(BadgeType.firstGame.name);
-      }
-      if (gamesPlayed >= 10 && !currentBadges.contains(BadgeType.tenGames.name)) {
-        badgesToAward.add(BadgeType.tenGames.name);
-      }
-      if (gamesPlayed >= 50 && !currentBadges.contains(BadgeType.fiftyGames.name)) {
-        badgesToAward.add(BadgeType.fiftyGames.name);
-      }
-      if (gamesPlayed >= 100 && !currentBadges.contains(BadgeType.hundredGames.name)) {
-        badgesToAward.add(BadgeType.hundredGames.name);
-      }
-
-      // Goal badges
-      if (goals >= 1 && !currentBadges.contains(BadgeType.firstGoal.name)) {
-        badgesToAward.add(BadgeType.firstGoal.name);
-      }
-      if (goals >= 3 && !currentBadges.contains(BadgeType.hatTrick.name)) {
-        badgesToAward.add(BadgeType.hatTrick.name);
-      }
-
-      if (badgesToAward.isNotEmpty) {
-        await _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('gamification')
-            .doc('stats')
-            .update({
-          'badges': FieldValue.arrayUnion(badgesToAward),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        // Create notifications for new badges
-        for (final badge in badgesToAward) {
-          await _createBadgeNotification(userId, badge);
-        }
-      }
-    } catch (e) {
-      debugPrint('Failed to check and award badges: $e');
-    }
-  }
-
-  Future<void> _awardLevelUpNotification(String userId, int level) async {
-    // This will be handled by NotificationsRepository
-    // Placeholder for now
-  }
-
-  Future<void> _createBadgeNotification(String userId, String badge) async {
-    // This will be handled by NotificationsRepository
-    // Placeholder for now
-  }
 }
 

@@ -867,37 +867,10 @@ exports.onGameCompleted = onDocumentUpdated(
             saves: (currentData.stats?.saves || 0) + stats.saves,
           };
 
-          // Calculate points using same logic as GamificationService.calculateGamePoints
-          // Base participation: 10 points
-          let pointsEarned = 10;
+          // SIMPLIFIED: No points, no levels - just participation tracking
+          // Only increment stats and check for milestone badges
           
-          // Win bonus: 20 points
-          if (playerWon) pointsEarned += 20;
-          
-          // Performance bonuses
-          pointsEarned += (stats.goals * 5);
-          pointsEarned += (stats.assists * 3);
-          pointsEarned += (stats.saves * 2);
-          
-          // MVP bonus: 15 points (if player has MVP votes)
-          if (stats.mvpVotes > 0) pointsEarned += 15;
-          
-          // Rating bonus (if available in future)
-          // For now, we'll skip rating bonus as it requires additional data
-          // if (averageRating >= 8.0) pointsEarned += 10;
-          // if (averageRating >= 9.0) pointsEarned += 5;
-          
-          const newPoints = (currentData.points || 0) + pointsEarned;
-
-          // Calculate level: level = floor(sqrt(points / 100)) + 1
-          // This matches GamificationService.calculateLevel
-          const newLevel = Math.floor(Math.sqrt(newPoints / 100)) + 1;
-
-          // Check for level up
-          const oldLevel = currentData.level || 1;
-          const leveledUp = newLevel > oldLevel;
-          
-          // Check for badges (simplified version - can be expanded)
+          // Check for milestone badges (based on gamesPlayed count only)
           const badgesToAward = [];
           if (newStats.gamesPlayed === 1 && !(currentData.badges || []).includes('firstGame')) {
             badgesToAward.push('firstGame');
@@ -911,6 +884,8 @@ exports.onGameCompleted = onDocumentUpdated(
           if (newStats.gamesPlayed === 100 && !(currentData.badges || []).includes('hundredGames')) {
             badgesToAward.push('hundredGames');
           }
+          
+          // Goal badges (optional - for display only, no points)
           if (newStats.goals >= 1 && !(currentData.badges || []).includes('firstGoal')) {
             badgesToAward.push('firstGoal');
           }
@@ -918,22 +893,20 @@ exports.onGameCompleted = onDocumentUpdated(
             badgesToAward.push('hatTrick');
           }
           
-          // Update gamification document
+          // Update gamification document (keep points/level for backward compatibility, but don't update them)
           const updatedBadges = [...(currentData.badges || []), ...badgesToAward];
           batch.set(gamificationRef, {
             userId: playerId,
-            points: newPoints,
-            level: newLevel,
+            // Keep existing points/level (for backward compatibility with old data)
+            points: currentData.points || 0,
+            level: currentData.level || 1,
             badges: updatedBadges,
             achievements: currentData.achievements || {},
             stats: newStats,
             updatedAt: FieldValue.serverTimestamp(),
           }, {merge: true});
           
-          // Note: Level up and badge notifications can be added here if needed
-          if (leveledUp) {
-            info(`Player ${playerId} leveled up to level ${newLevel}`);
-          }
+          // Log badge awards
           if (badgesToAward.length > 0) {
             info(`Player ${playerId} earned badges: ${badgesToAward.join(', ')}`);
           }

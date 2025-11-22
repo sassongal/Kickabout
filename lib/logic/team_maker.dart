@@ -37,10 +37,22 @@ class PlayerForTeam {
     this.playingStyle,
   });
 
-  static PlayerForTeam fromUser(User user) {
+  /// Create PlayerForTeam from User with manager rating
+  /// 
+  /// Uses managerRating from hub if available, otherwise falls back to currentRankScore
+  static PlayerForTeam fromUser(
+    User user, {
+    String? hubId,
+    Map<String, double>? managerRatings,
+  }) {
+    // Use managerRating if available, otherwise fall back to currentRankScore
+    final rating = (hubId != null && managerRatings != null && managerRatings.containsKey(user.uid))
+        ? managerRatings[user.uid]!
+        : user.currentRankScore; // Fallback for backward compatibility
+    
     return PlayerForTeam(
       uid: user.uid,
-      rating: user.currentRankScore,
+      rating: rating,
       role: PlayerRole.fromPosition(user.preferredPosition),
       playingStyle: user.playingStyle,
     );

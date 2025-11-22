@@ -13,6 +13,9 @@ class ManualTeamBuilder extends ConsumerStatefulWidget {
   final int teamCount;
   final List<String> playerIds;
   final Function(List<Team>)? onTeamsChanged; // Callback for when teams change
+  final bool isEvent; // If true, save teams to Event instead of Game
+  final String? eventId; // Event ID if isEvent == true
+  final String? hubId; // Hub ID if isEvent == true
 
   const ManualTeamBuilder({
     super.key,
@@ -21,6 +24,9 @@ class ManualTeamBuilder extends ConsumerStatefulWidget {
     required this.teamCount,
     required this.playerIds,
     this.onTeamsChanged,
+    this.isEvent = false,
+    this.eventId,
+    this.hubId,
   });
 
   @override
@@ -32,13 +38,37 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   List<User> _allPlayers = [];
   bool _isLoading = false;
   bool _isSaving = false;
+  Hub? _hub; // Cache hub for manager ratings
 
   @override
   void initState() {
     super.initState();
     _initializeTeams();
     _loadDraft(); // Load draft first, then load players
+    _loadHub();
     _loadPlayers();
+  }
+
+  Future<void> _loadHub() async {
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(widget.game.hubId);
+      if (mounted) {
+        setState(() {
+          _hub = hub;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load hub: $e');
+    }
+  }
+
+  /// Get player rating (manager rating if available, otherwise currentRankScore)
+  double _getPlayerRating(User user) {
+    if (_hub?.managerRatings != null && _hub!.managerRatings.containsKey(user.uid)) {
+      return _hub!.managerRatings[user.uid]!;
+    }
+    return user.currentRankScore; // Fallback
   }
 
   void _initializeTeams() {
@@ -144,19 +174,16 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     setState(() => _isSaving = true);
 
     try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
-      final teamsRepo = ref.read(teamsRepositoryProvider);
-
       // Create Team objects
       final teamNames = ['קבוצה א', 'קבוצה ב', 'קבוצה ג', 'קבוצה ד'];
       final teams = _teamPlayerIds.asMap().entries.map((entry) {
         final index = entry.key;
         final playerIds = entry.value;
         
-        // Calculate total score
+        // Calculate total score using manager ratings
         final totalScore = _allPlayers
             .where((p) => playerIds.contains(p.uid))
-            .fold<double>(0.0, (sum, player) => sum + player.currentRankScore);
+            .fold<double>(0.0, (sum, player) => sum + _getPlayerRating(player));
 
         return Team(
           teamId: 'team_$index',
@@ -169,14 +196,24 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
         );
       }).toList();
 
-      // Save teams to game document
-      await gamesRepo.saveTeamsForGame(widget.gameId, teams);
+      if (widget.isEvent && widget.eventId != null && widget.hubId != null) {
+        // Save teams to Event
+        final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+        await hubEventsRepo.saveTeamsForEvent(widget.hubId!, widget.eventId!, teams);
+      } else {
+        // Save teams to Game (original behavior)
+        final gamesRepo = ref.read(gamesRepositoryProvider);
+        final teamsRepo = ref.read(teamsRepositoryProvider);
 
-      // Also save to teams subcollection (for backward compatibility)
-      await teamsRepo.setTeams(widget.gameId, teams);
+        // Save teams to game document
+        await gamesRepo.saveTeamsForGame(widget.gameId, teams);
 
-      // Update game status to teamsFormed
-      await gamesRepo.updateGameStatus(widget.gameId, GameStatus.teamsFormed);
+        // Also save to teams subcollection (for backward compatibility)
+        await teamsRepo.setTeams(widget.gameId, teams);
+
+        // Update game status to teamsFormed
+        await gamesRepo.updateGameStatus(widget.gameId, GameStatus.teamsFormed);
+      }
 
       // Clear draft after successful save
       await _clearDraft();
@@ -225,10 +262,10 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
         final index = entry.key;
         final playerIds = entry.value;
         
-        // Calculate total score
+        // Calculate total score using manager ratings
         final totalScore = _allPlayers
             .where((p) => playerIds.contains(p.uid))
-            .fold<double>(0.0, (sum, player) => sum + player.currentRankScore);
+            .fold<double>(0.0, (sum, player) => sum + _getPlayerRating(player));
 
         return Team(
           teamId: 'team_$index',
@@ -362,7 +399,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                                   style: const TextStyle(fontSize: 12),
                                 ),
                                 subtitle: Text(
-                                  'דירוג: ${player.currentRankScore.toStringAsFixed(1)}',
+                                  'דירוג: ${_getPlayerRating(player).toStringAsFixed(1)}',
                                   style: const TextStyle(fontSize: 10),
                                 ),
                               ),

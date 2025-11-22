@@ -266,6 +266,36 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                   ),
                                 ),
                               ] else if (widget.isManager) ...[
+                                // Generate Teams button (if event hasn't passed and no teams exist)
+                                if (!isPast && event.teams.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => context.push('/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
+                                      icon: const Icon(Icons.group, size: 18),
+                                      label: const Text('צור קבוצות'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: FuturisticColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
+                                // Log Game button (if event has passed and no game exists)
+                                if (isPast && (event.gameId == null || event.gameId!.isEmpty))
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => context.push('/hubs/${widget.hubId}/events/${event.eventId}/log-game'),
+                                      icon: const Icon(Icons.sports_soccer, size: 18),
+                                      label: const Text('רשום משחק'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: FuturisticColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
                                 IconButton(
                                   icon: const Icon(Icons.edit),
                                   onPressed: () => context.push('/hubs/${widget.hubId}/events/${event.eventId}/edit'),

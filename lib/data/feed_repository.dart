@@ -44,21 +44,31 @@ class FeedRepository {
   }
 
   /// Stream regional feed posts (from feedPosts root collection)
-  /// Filters by region if provided
+  /// Filters by region and last 24 hours (or last 20 items)
+  /// Optimized for bulletin board display
   Stream<List<FeedPost>> streamRegionalFeed({String? region}) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
     }
 
-    Query query = _firestore
-        .collection('feedPosts')
-        .orderBy('createdAt', descending: true)
-        .limit(50);
+    // Calculate 24 hours ago
+    final now = DateTime.now();
+    final twentyFourHoursAgo = now.subtract(const Duration(hours: 24));
 
-    // Filter by region if provided
+    Query query = _firestore.collection('feedPosts');
+
+    // Filter by region if provided (required for composite index)
     if (region != null && region.isNotEmpty) {
-      query = query.where('region', isEqualTo: region);
+      query = query
+          .where('region', isEqualTo: region)
+          .where('createdAt', isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
+    } else {
+      // If no region, just filter by time
+      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
     }
+
+    // Order by createdAt descending and limit to 20 items
+    query = query.orderBy('createdAt', descending: true).limit(20);
 
     return query.snapshots().map((snapshot) => snapshot.docs
         .map((doc) {

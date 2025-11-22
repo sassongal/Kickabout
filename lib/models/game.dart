@@ -16,7 +16,8 @@ class Game with _$Game {
     required String gameId,
     required String createdBy,
     required String hubId,
-    String? eventId, // ID of the event this game belongs to (if part of an event)
+    // Event reference - Game should always be created from an Event (legacy games may not have this)
+    String? eventId, // ID of the event this game belongs to (required for new games, optional for legacy)
     @TimestampConverter() required DateTime gameDate,
     String? location, // Legacy text location (kept for backward compatibility)
     @NullableGeoPointConverter() GeoPoint? locationPoint, // New geographic location

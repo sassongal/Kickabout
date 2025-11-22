@@ -22,9 +22,10 @@ Game _$GameFromJson(Map<String, dynamic> json) {
 mixin _$Game {
   String get gameId => throw _privateConstructorUsedError;
   String get createdBy => throw _privateConstructorUsedError;
-  String get hubId => throw _privateConstructorUsedError;
+  String get hubId =>
+      throw _privateConstructorUsedError; // Event reference - Game should always be created from an Event (legacy games may not have this)
   String? get eventId =>
-      throw _privateConstructorUsedError; // ID of the event this game belongs to (if part of an event)
+      throw _privateConstructorUsedError; // ID of the event this game belongs to (required for new games, optional for legacy)
   @TimestampConverter()
   DateTime get gameDate => throw _privateConstructorUsedError;
   String? get location =>
@@ -664,9 +665,10 @@ class _$GameImpl implements _Game {
   final String createdBy;
   @override
   final String hubId;
+// Event reference - Game should always be created from an Event (legacy games may not have this)
   @override
   final String? eventId;
-// ID of the event this game belongs to (if part of an event)
+// ID of the event this game belongs to (required for new games, optional for legacy)
   @override
   @TimestampConverter()
   final DateTime gameDate;
@@ -1005,10 +1007,11 @@ abstract class _Game implements Game {
   @override
   String get createdBy;
   @override
-  String get hubId;
+  String
+      get hubId; // Event reference - Game should always be created from an Event (legacy games may not have this)
   @override
   String?
-      get eventId; // ID of the event this game belongs to (if part of an event)
+      get eventId; // ID of the event this game belongs to (required for new games, optional for legacy)
   @override
   @TimestampConverter()
   DateTime get gameDate;

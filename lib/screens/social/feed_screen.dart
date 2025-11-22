@@ -168,86 +168,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     );
   }
 
-  Widget _buildBody(
-    FeedState feedState,
-    FeedRepository feedRepo,
-    UsersRepository usersRepo,
-    String? currentUserId,
-  ) {
-    // Initial loading
-    if (feedState.posts.isEmpty && feedState.isLoading) {
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: SkeletonLoader(height: 120),
-        ),
-      );
-    }
-
-    // Error state
-    if (feedState.error != null && feedState.posts.isEmpty) {
-      return FuturisticEmptyState(
-        icon: Icons.error_outline,
-        title: 'שגיאה בטעינת הפיד',
-        message: ErrorHandlerService().handleException(
-          feedState.error!,
-          context: 'Feed screen - feed state error',
-        ),
-        action: ElevatedButton.icon(
-          onPressed: () {
-            ref.read(feedNotifierProvider(widget.hubId).notifier).refresh();
-          },
-          icon: const Icon(Icons.refresh),
-          label: const Text('נסה שוב'),
-        ),
-      );
-    }
-
-    // Empty state
-    if (feedState.posts.isEmpty) {
-      return FuturisticEmptyState(
-        icon: Icons.feed,
-        title: 'אין פעילות עדיין',
-        message: 'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
-        action: ElevatedButton.icon(
-          onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
-          icon: const Icon(Icons.add),
-          label: const Text('צור פוסט'),
-        ),
-      );
-    }
-
-    // Posts list with pagination
-    return RefreshIndicator(
-      onRefresh: () async {
-        await ref.read(feedNotifierProvider(widget.hubId).notifier).refresh();
-      },
-      child: ListView.builder(
-        controller: _scrollController,
-        itemCount: feedState.posts.length + (feedState.hasMore ? 1 : 0),
-        padding: const EdgeInsets.all(8),
-        itemBuilder: (context, index) {
-          // Show loading indicator at the bottom
-          if (index == feedState.posts.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          final post = feedState.posts[index];
-          return _PostCard(
-            post: post,
-            currentUserId: currentUserId,
-            feedRepo: feedRepo,
-            usersRepo: usersRepo,
-          );
-        },
-      ),
-    );
-  }
+  // Removed: _buildBody - not used (using StreamBuilder directly)
 }
 
 class _PostCard extends ConsumerWidget {
@@ -266,7 +187,7 @@ class _PostCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userStream = usersRepo.watchUser(post.authorId);
-    final isLiked = currentUserId != null && post.likes.contains(currentUserId);
+    // Removed: Like functionality (simplified feed - no likes)
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -359,10 +280,11 @@ class _PostCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                 ],
-                // Game link
-                if (post.gameId != null)
+                // Action buttons based on post type
+                // For completed games: "View Result"
+                if (post.type == 'game_completed' || post.gameId != null)
                   InkWell(
-                    onTap: () => context.push('/games/${post.gameId}'),
+                    onTap: () => context.push('/games/${post.gameId ?? post.entityId}'),
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -374,7 +296,7 @@ class _PostCard extends ConsumerWidget {
                           const Icon(Icons.sports_soccer, color: Colors.blue),
                           const SizedBox(width: 8),
                           const Text(
-                            'צפה במשחק',
+                            'צפה בתוצאה',
                             style: TextStyle(
                               color: Colors.blue,
                               fontWeight: FontWeight.bold,
@@ -384,30 +306,38 @@ class _PostCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: 12),
-                // Actions
+                // For events: "Join Game"
+                if (post.type == 'event_created' || (post.entityId != null && post.gameId == null))
+                  InkWell(
+                    onTap: () {
+                      // Navigate to event details
+                      context.push('/hubs/${post.hubId}/events/${post.entityId}');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.event, color: Colors.green),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'הצטרף למשחק',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                // Comments only (no likes)
                 Row(
                   children: [
-                    IconButton(
-                      icon: Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: isLiked ? Colors.red : null,
-                      ),
-                      onPressed: currentUserId != null
-                          ? () {
-                              final userId = currentUserId;
-                              if (userId != null) {
-                                if (isLiked) {
-                                  feedRepo.unlikePost(post.hubId, post.postId, userId);
-                                } else {
-                                  feedRepo.likePost(post.hubId, post.postId, userId);
-                                }
-                              }
-                            }
-                          : null,
-                    ),
-                    Text('${post.likes.length}'),
-                    const SizedBox(width: 16),
                     IconButton(
                       icon: const Icon(Icons.comment_outlined),
                       onPressed: () => context.push('/hubs/${post.hubId}/feed/${post.postId}'),
@@ -426,7 +356,12 @@ class _PostCard extends ConsumerWidget {
   String _getPostTypeText(String type) {
     switch (type) {
       case 'game':
+      case 'game_created':
         return 'יצר משחק חדש';
+      case 'game_completed':
+        return 'משחק הושלם';
+      case 'event_created':
+        return 'אירוע נפתח';
       case 'achievement':
         return 'השיג הישג';
       case 'rating':

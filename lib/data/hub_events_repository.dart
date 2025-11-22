@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/hub_event.dart';
+import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/services/cache_service.dart';
 import 'package:kickadoor/services/retry_service.dart';
@@ -101,6 +102,36 @@ class HubEventsRepository {
     }
   }
 
+  /// Get a single hub event by ID
+  Future<HubEvent?> getHubEvent(String hubId, String eventId, {bool forceRefresh = false}) async {
+    if (!Env.isFirebaseAvailable) return null;
+
+    return MonitoringService().trackOperation(
+      'getHubEvent',
+      () => CacheService().getOrFetch<HubEvent?>(
+        CacheKeys.event(hubId, eventId),
+        () => RetryService().execute(
+          () async {
+            final doc = await _firestore
+                .collection(FirestorePaths.hubs())
+                .doc(hubId)
+                .collection('events')
+                .doc(eventId)
+                .get();
+
+            if (!doc.exists) return null;
+            return HubEvent.fromJson({...doc.data()!, 'eventId': doc.id});
+          },
+          config: RetryConfig.network,
+          operationName: 'getHubEvent',
+        ),
+        ttl: CacheService.eventsTtl,
+        forceRefresh: forceRefresh,
+      ),
+      metadata: {'hubId': hubId, 'eventId': eventId},
+    );
+  }
+
   /// Get a single hub event by ID with caching and retry
   Future<HubEvent?> getHubEvent(String hubId, String eventId, {bool forceRefresh = false}) async {
     if (!Env.isFirebaseAvailable) {
@@ -134,6 +165,36 @@ class HubEventsRepository {
       ),
       metadata: {'hubId': hubId, 'eventId': eventId},
     );
+  }
+
+  /// Save teams for an event (for TeamMaker)
+  Future<void> saveTeamsForEvent(String hubId, String eventId, List<Team> teams) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+
+      // Convert teams to JSON
+      final teamsJson = teams.map((team) => team.toJson()).toList();
+
+      // Update event with teams
+      await eventRef.update({
+        'teams': teamsJson,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+    } catch (e) {
+      throw Exception('Failed to save teams for event: $e');
+    }
   }
 
   /// Update a hub event

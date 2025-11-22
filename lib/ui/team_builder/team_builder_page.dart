@@ -24,12 +24,14 @@ List<Team> _computeBalanceTeams(Map<String, dynamic> params) {
 /// Team builder page with draggable chips and balance meter
 class TeamBuilderPage extends ConsumerStatefulWidget {
   final String gameId;
+  final String hubId; // Added for manager ratings
   final int teamCount;
   final List<String> playerIds;
 
   const TeamBuilderPage({
     super.key,
     required this.gameId,
+    required this.hubId,
     required this.teamCount,
     required this.playerIds,
   });
@@ -42,11 +44,35 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
   List<Team> _teams = [];
   bool _isLoading = false;
   bool _isSaving = false;
+  Hub? _hub; // Cache hub for manager ratings
 
   @override
   void initState() {
     super.initState();
+    _loadHub();
     _loadTeams();
+  }
+
+  Future<void> _loadHub() async {
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(widget.hubId);
+      if (mounted) {
+        setState(() {
+          _hub = hub;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load hub: $e');
+    }
+  }
+
+  /// Get player rating (manager rating if available, otherwise currentRankScore)
+  double _getPlayerRating(User user) {
+    if (_hub?.managerRatings != null && _hub!.managerRatings.containsKey(user.uid)) {
+      return _hub!.managerRatings[user.uid]!;
+    }
+    return user.currentRankScore; // Fallback
   }
 
   Future<void> _loadTeams() async {
@@ -67,9 +93,18 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
 
     try {
       final usersRepo = ref.read(usersRepositoryProvider);
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      
+      // Load users and hub (for manager ratings)
       final users = await usersRepo.getUsers(widget.playerIds);
+      final hub = await hubsRepo.getHub(widget.hubId);
 
-      final players = users.map((u) => PlayerForTeam.fromUser(u)).toList();
+      // Use manager ratings if available
+      final players = users.map((u) => PlayerForTeam.fromUser(
+        u,
+        hubId: widget.hubId,
+        managerRatings: hub?.managerRatings,
+      )).toList();
       
       // Prepare data for compute (must be serializable)
       final playersData = players.map((p) => {
@@ -442,7 +477,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               trailing: Text(
-                                user.currentRankScore.toStringAsFixed(1),
+                                _getPlayerRating(user).toStringAsFixed(1),
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),

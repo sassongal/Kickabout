@@ -2,11 +2,13 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:kickadoor/models/converters/timestamp_converter.dart';
 import 'package:kickadoor/models/converters/geopoint_converter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kickadoor/models/team.dart';
 
 part 'hub_event.freezed.dart';
 part 'hub_event.g.dart';
 
 /// Hub Event model - events created by hub managers (tournaments, training, etc.)
+/// Events represent the "Plan" - when converted to a Game, they become the "Record"
 @freezed
 class HubEvent with _$HubEvent {
   const factory HubEvent({
@@ -29,6 +31,10 @@ class HubEvent with _$HubEvent {
     @Default(15) int maxParticipants, // Maximum number of participants (default: 15, required)
     @Default(false) bool notifyMembers, // Send notification to all hub members when event is created
     @Default(false) bool showInCommunityFeed, // Show this event in the community activity feed
+    // Teams planned for this event (manager-only, saved when using TeamMaker)
+    @Default([]) List<Team> teams, // Teams planned for this event (manager-only)
+    // Reference to Game if event was converted to game
+    String? gameId, // If event was converted to game, reference it
   }) = _HubEvent;
 
   factory HubEvent.fromJson(Map<String, dynamic> json) => _$HubEventFromJson(json);

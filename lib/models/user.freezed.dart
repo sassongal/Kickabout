@@ -41,12 +41,17 @@ mixin _$User {
       throw _privateConstructorUsedError; // true = פתוח להאבים והזמנות, false = לא פתוח
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
-  List<String> get hubIds => throw _privateConstructorUsedError;
-  double get currentRankScore => throw _privateConstructorUsedError;
-  String get preferredPosition => throw _privateConstructorUsedError;
+  List<String> get hubIds =>
+      throw _privateConstructorUsedError; // DEPRECATED: currentRankScore - Use managerRatings in Hub model instead
+// Keeping for backward compatibility, but should not be used for new features
+  double get currentRankScore =>
+      throw _privateConstructorUsedError; // DEPRECATED: Use Hub.managerRatings instead
+  String get preferredPosition =>
+      throw _privateConstructorUsedError; // Optional - for team balancing display
   String? get playingStyle =>
-      throw _privateConstructorUsedError; // goalkeeper, defensive, offensive
-  int get totalParticipations => throw _privateConstructorUsedError;
+      throw _privateConstructorUsedError; // goalkeeper, defensive, offensive (optional - for team balancing)
+  int get totalParticipations =>
+      throw _privateConstructorUsedError; // Total games played (for milestone badges)
   @NullableGeoPointConverter()
   GeoPoint? get location => throw _privateConstructorUsedError;
   String? get geohash => throw _privateConstructorUsedError;
@@ -514,18 +519,23 @@ class _$UserImpl implements _User {
     return EqualUnmodifiableListView(_hubIds);
   }
 
+// DEPRECATED: currentRankScore - Use managerRatings in Hub model instead
+// Keeping for backward compatibility, but should not be used for new features
   @override
   @JsonKey()
   final double currentRankScore;
+// DEPRECATED: Use Hub.managerRatings instead
   @override
   @JsonKey()
   final String preferredPosition;
+// Optional - for team balancing display
   @override
   final String? playingStyle;
-// goalkeeper, defensive, offensive
+// goalkeeper, defensive, offensive (optional - for team balancing)
   @override
   @JsonKey()
   final int totalParticipations;
+// Total games played (for milestone badges)
   @override
   @NullableGeoPointConverter()
   final GeoPoint? location;
@@ -718,15 +728,18 @@ abstract class _User implements User {
   @TimestampConverter()
   DateTime get createdAt;
   @override
-  List<String> get hubIds;
+  List<String>
+      get hubIds; // DEPRECATED: currentRankScore - Use managerRatings in Hub model instead
+// Keeping for backward compatibility, but should not be used for new features
   @override
-  double get currentRankScore;
+  double get currentRankScore; // DEPRECATED: Use Hub.managerRatings instead
   @override
-  String get preferredPosition;
+  String get preferredPosition; // Optional - for team balancing display
   @override
-  String? get playingStyle; // goalkeeper, defensive, offensive
+  String?
+      get playingStyle; // goalkeeper, defensive, offensive (optional - for team balancing)
   @override
-  int get totalParticipations;
+  int get totalParticipations; // Total games played (for milestone badges)
   @override
   @NullableGeoPointConverter()
   GeoPoint? get location;

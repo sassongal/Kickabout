@@ -495,6 +495,9 @@ class GamesRepository {
       final gameRef = _firestore.collection(FirestorePaths.games()).doc();
       final gameId = gameRef.id;
 
+      // Add gameId to gameData (required by firestore.rules)
+      gameData['gameId'] = gameId;
+
       // Create signups for all participating players
       final batch = _firestore.batch();
       
@@ -519,6 +522,133 @@ class GamesRepository {
       debugPrint('✅ Past game logged: $gameId');
     } catch (e) {
       throw Exception('Failed to log past game: $e');
+    }
+  }
+
+  /// Convert Event to Game - Core flow for logging games
+  /// 
+  /// This is the main method for converting an Event (plan) to a Game (record).
+  /// It reads the Event data, creates a Game document with status 'completed',
+  /// and updates the Event to reference the new Game.
+  /// 
+  /// The Cloud Function onGameCompleted will automatically update player stats.
+  /// 
+  /// Parameters:
+  /// - eventId: The event to convert
+  /// - hubId: The hub ID (for Firestore path)
+  /// - teamAScore: Score for team A
+  /// - teamBScore: Score for team B
+  /// - presentPlayerIds: List of player IDs who attended (defaults to all registered)
+  /// - goalScorerIds: Optional list of player IDs who scored
+  /// - mvpPlayerId: Optional MVP player ID
+  /// 
+  /// Returns: The created Game ID
+  Future<String> convertEventToGame({
+    required String eventId,
+    required String hubId,
+    required int teamAScore,
+    required int teamBScore,
+    required List<String> presentPlayerIds,
+    List<String>? goalScorerIds,
+    String? mvpPlayerId,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Get event data
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+      
+      final eventDoc = await eventRef.get();
+      if (!eventDoc.exists) {
+        throw Exception('Event not found: $eventId');
+      }
+
+      final eventData = eventDoc.data()!;
+      final event = HubEvent.fromJson({...eventData, 'eventId': eventId});
+
+      // Get teams from event (if they exist)
+      final teams = event.teams.isNotEmpty 
+          ? event.teams 
+          : <Team>[]; // Teams may not exist if TeamMaker wasn't used
+
+      // Create game document
+      final now = FieldValue.serverTimestamp();
+      final gameData = {
+        'createdBy': event.createdBy,
+        'hubId': hubId,
+        'eventId': eventId, // Required reference to event
+        'gameDate': Timestamp.fromDate(event.eventDate),
+        'location': event.location,
+        'locationPoint': event.locationPoint,
+        'geohash': event.geohash,
+        'teamCount': event.teamCount,
+        'status': GameStatus.completed.toFirestore(),
+        'teamAScore': teamAScore,
+        'teamBScore': teamBScore,
+        'teams': teams.map((team) => team.toJson()).toList(),
+        'durationInMinutes': event.durationMinutes,
+        'region': eventData['region'], // Copy from hub if available
+        'showInCommunityFeed': event.showInCommunityFeed,
+        'goalScorerIds': goalScorerIds ?? [],
+        'mvpPlayerId': mvpPlayerId,
+        'createdAt': now,
+        'updatedAt': now,
+        'photoUrls': <String>[],
+        'isRecurring': false,
+      };
+
+      final gameRef = _firestore.collection(FirestorePaths.games()).doc();
+      final gameId = gameRef.id;
+
+      // Add gameId to gameData (required by firestore.rules)
+      gameData['gameId'] = gameId;
+
+      // Create batch for atomic operations
+      final batch = _firestore.batch();
+      
+      // 1. Create game document
+      batch.set(gameRef, gameData);
+      
+      // 2. Create signups for present players (status: confirmed)
+      for (final playerId in presentPlayerIds) {
+        final signupRef = _firestore.doc(FirestorePaths.gameSignup(gameId, playerId));
+        batch.set(signupRef, {
+          'playerId': playerId,
+          'status': SignupStatus.confirmed.toFirestore(),
+          'signedUpAt': now,
+        });
+      }
+
+      // 3. Update event: mark as completed and reference the game
+      batch.update(eventRef, {
+        'status': 'completed',
+        'gameId': gameId,
+        'updatedAt': now,
+      });
+
+      // Commit all writes atomically
+      await batch.commit();
+
+      // Invalidate caches
+      CacheService().clear(CacheKeys.game(gameId));
+      CacheService().clear(CacheKeys.gamesByHub(hubId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+
+      debugPrint('✅ Event converted to Game: $gameId (from event $eventId)');
+      
+      // The onGameCompleted Cloud Function will be triggered automatically
+      // when the game status is set to 'completed'
+      
+      return gameId;
+    } catch (e) {
+      throw Exception('Failed to convert event to game: $e');
     }
   }
 }

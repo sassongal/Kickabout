@@ -307,8 +307,11 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen> {
                       builder: (context, gamificationSnapshot) {
                         final gamification = gamificationSnapshot.data;
                         if (gamification != null) {
-                          final pointsForNext = GamificationService.pointsForNextLevel(gamification.level);
-                          final progress = gamification.points / pointsForNext;
+                          // Simplified: No points/levels, just show stats
+                          // Progress is based on games played (for milestone badges)
+                          final gamesPlayed = gamification.stats['gamesPlayed'] ?? 0;
+                          final nextMilestone = gamesPlayed < 10 ? 10 : gamesPlayed < 50 ? 50 : gamesPlayed < 100 ? 100 : 100;
+                          final progress = nextMilestone > 0 ? gamesPlayed / nextMilestone : 0.0;
                           
                           return Card(
                             elevation: 4,
@@ -441,7 +444,13 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '${pointsForNext - gamification.points} נקודות נוספות',
+                                          gamesPlayed < 10 
+                                              ? '${10 - gamesPlayed} משחקים עד ה-milestone הבא'
+                                              : gamesPlayed < 50
+                                                  ? '${50 - gamesPlayed} משחקים עד ה-milestone הבא'
+                                                  : gamesPlayed < 100
+                                                      ? '${100 - gamesPlayed} משחקים עד ה-milestone הבא'
+                                                      : 'השגת את כל ה-milestones!',
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                 color: Colors.grey[600],
                                               ),

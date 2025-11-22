@@ -27,10 +27,12 @@ class User with _$User {
     @Default(true) bool isActive, // true = פתוח להאבים והזמנות, false = לא פתוח
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> hubIds,
-    @Default(5.0) double currentRankScore,
-    @Default('Midfielder') String preferredPosition,
-    String? playingStyle, // goalkeeper, defensive, offensive
-    @Default(0) int totalParticipations,
+    // DEPRECATED: currentRankScore - Use managerRatings in Hub model instead
+    // Keeping for backward compatibility, but should not be used for new features
+    @Default(5.0) double currentRankScore, // DEPRECATED: Use Hub.managerRatings instead
+    @Default('Midfielder') String preferredPosition, // Optional - for team balancing display
+    String? playingStyle, // goalkeeper, defensive, offensive (optional - for team balancing)
+    @Default(0) int totalParticipations, // Total games played (for milestone badges)
     @NullableGeoPointConverter() GeoPoint? location,
     String? geohash,
     String? region, // אזור: צפון, מרכז, דרום, ירושלים

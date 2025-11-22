@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:fl_chart/fl_chart.dart'; // Still needed for unused chart functions (can be removed later)
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/widgets/futuristic/stats_dashboard.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/gamification_service.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 
 /// Enhanced Player Profile Screen with Futuristic Design
@@ -38,7 +36,8 @@ class _PlayerProfileScreenFuturisticState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    // Simplified: Only 2 tabs - Overview and Games (removed Statistics and Ratings tabs)
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -52,13 +51,13 @@ class _PlayerProfileScreenFuturisticState
     final currentUserId = ref.watch(currentUserIdProvider);
     final isAnonymous = ref.watch(isAnonymousUserProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
-    final ratingsRepo = ref.read(ratingsRepositoryProvider);
+    // Removed: ratingsRepo - no longer needed (ratings tab removed)
     final gamesRepo = ref.read(gamesRepositoryProvider);
     final followRepo = ref.read(followRepositoryProvider);
     final gamificationRepo = ref.read(gamificationRepositoryProvider);
 
     final userStream = usersRepo.watchUser(widget.playerId);
-    final ratingHistoryStream = ratingsRepo.watchRatingHistory(widget.playerId);
+    // Removed: ratingHistoryStream - no longer needed (charts and ratings tab removed)
     final gamificationStream =
         gamificationRepo.watchGamification(widget.playerId);
     final isFollowingStream =
@@ -118,83 +117,60 @@ class _PlayerProfileScreenFuturisticState
             );
           }
 
-          return StreamBuilder<List<RatingSnapshot>>(
-            stream: ratingHistoryStream,
-            builder: (context, historySnapshot) {
-              final history = historySnapshot.data ?? [];
+          return Column(
+            children: [
+              // Anonymous User Banner (if viewing own profile as anonymous)
+              if (isOwnProfile && isAnonymous)
+                _buildAnonymousBanner(context),
+              
+              // Hero Section
+              _buildHeroSection(
+                context,
+                user,
+                isOwnProfile,
+                currentUserId,
+                followRepo,
+                usersRepo,
+                isFollowingStream,
+                followingCountStream,
+                followersCountStream,
+                isAnonymous,
+              ),
 
-              return Column(
-                children: [
-                  // Anonymous User Banner (if viewing own profile as anonymous)
-                  if (isOwnProfile && isAnonymous)
-                    _buildAnonymousBanner(context),
-                  
-                  // Hero Section
-                  _buildHeroSection(
-                    context,
-                    user,
-                    isOwnProfile,
-                    currentUserId,
-                    followRepo,
-                    usersRepo,
-                    isFollowingStream,
-                    followingCountStream,
-                    followersCountStream,
-                    isAnonymous,
-                  ),
+              // Tab Bar (Simplified: Only Overview and Games)
+              Container(
+                color: FuturisticColors.surface,
+                child: TabBar(
+                  controller: _tabController,
+                  labelColor: FuturisticColors.primary,
+                  unselectedLabelColor: FuturisticColors.textSecondary,
+                  indicatorColor: FuturisticColors.primary,
+                  tabs: const [
+                    Tab(text: 'סקירה', icon: Icon(Icons.dashboard)),
+                    Tab(text: 'משחקים', icon: Icon(Icons.sports_soccer)),
+                  ],
+                ),
+              ),
 
-                  // Tab Bar
-                  Container(
-                    color: FuturisticColors.surface,
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: FuturisticColors.primary,
-                      unselectedLabelColor: FuturisticColors.textSecondary,
-                      indicatorColor: FuturisticColors.primary,
-                      tabs: const [
-                        Tab(text: 'סקירה', icon: Icon(Icons.dashboard)),
-                        Tab(text: 'סטטיסטיקות', icon: Icon(Icons.analytics)),
-                        Tab(text: 'דירוגים', icon: Icon(Icons.trending_up)),
-                        Tab(text: 'משחקים', icon: Icon(Icons.sports_soccer)),
-                      ],
+              // Tab Content
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildOverviewTab(
+                      context,
+                      user,
+                      gamificationStream,
                     ),
-                  ),
-
-                  // Tab Content
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildOverviewTab(
-                          context,
-                          user,
-                          gamificationStream,
-                          history,
-                        ),
-                        _buildStatisticsTab(
-                          context,
-                          user,
-                          gamificationStream,
-                          history,
-                        ),
-                        _buildRatingsTab(
-                          context,
-                          user,
-                          history,
-                          ratingsRepo,
-                        ),
-                        _buildGamesTab(
-                          context,
-                          user,
-                          history,
-                          gamesRepo,
-                        ),
-                      ],
+                    _buildGamesTab(
+                      context,
+                      user,
+                      gamesRepo,
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -686,53 +662,198 @@ class _PlayerProfileScreenFuturisticState
     BuildContext context,
     User user,
     Stream<Gamification?> gamificationStream,
-    List<RatingSnapshot> history,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Quick Stats (Performance Rings)
+          // Big Counters: Games Played, Goals, MVP
           StreamBuilder<Gamification?>(
             stream: gamificationStream,
             builder: (context, snapshot) {
               final gamification = snapshot.data;
               if (gamification != null) {
                 final stats = gamification.stats;
-                return StatsDashboard(
-                  gamesPlayed: stats['gamesPlayed'] ?? 0,
-                  wins: stats['gamesWon'] ?? 0,
-                  averageRating: user.currentRankScore,
-                  goals: stats['goals'] ?? 0,
-                  assists: stats['assists'] ?? 0,
+                final gamesPlayed = stats['gamesPlayed'] ?? 0;
+                final goals = stats['goals'] ?? 0;
+                final mvpCount = stats['mvp'] ?? 0; // MVP count from stats (if available)
+                
+                return Column(
+                  children: [
+                    // Big Counters Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildBigCounter(
+                            context,
+                            'משחקים',
+                            gamesPlayed.toString(),
+                            Icons.sports_soccer,
+                            FuturisticColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildBigCounter(
+                            context,
+                            'שערים',
+                            goals.toString(),
+                            Icons.sports_soccer,
+                            FuturisticColors.secondary,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildBigCounter(
+                            context,
+                            'MVP',
+                            mvpCount.toString(),
+                            Icons.star,
+                            Colors.amber,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Badges Strip
+                    _buildBadgesStrip(context, gamification),
+                  ],
                 );
               }
               return const SizedBox.shrink();
             },
           ),
-
-          const SizedBox(height: 24),
-
-          // Gamification Card
-          StreamBuilder<Gamification?>(
-            stream: gamificationStream,
-            builder: (context, snapshot) {
-              final gamification = snapshot.data;
-              if (gamification != null) {
-                return _buildGamificationCard(context, gamification);
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
-          const SizedBox(height: 24),
-
-          // Current Rating Card
-          _buildCurrentRatingCard(context, user),
         ],
       ),
     );
+  }
+
+  Widget _buildBigCounter(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return FuturisticCard(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: FuturisticTypography.heading1.copyWith(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: FuturisticTypography.labelLarge,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadgesStrip(
+    BuildContext context,
+    Gamification gamification,
+  ) {
+    if (gamification.badges.isEmpty) {
+      return FuturisticCard(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'אין תגים עדיין',
+            style: FuturisticTypography.bodyMedium.copyWith(
+              color: FuturisticColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return FuturisticCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'תגים',
+              style: FuturisticTypography.techHeadline,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: gamification.badges.map((badgeName) {
+                return Chip(
+                  label: Text(
+                    _getBadgeDisplayName(badgeName),
+                    style: FuturisticTypography.labelSmall,
+                  ),
+                  avatar: Icon(
+                    _getBadgeIcon(badgeName),
+                    size: 18,
+                    color: FuturisticColors.primary,
+                  ),
+                  backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getBadgeDisplayName(String badgeName) {
+    switch (badgeName) {
+      case 'firstGame':
+        return 'משחק ראשון';
+      case 'tenGames':
+        return '10 משחקים';
+      case 'fiftyGames':
+        return '50 משחקים';
+      case 'hundredGames':
+        return '100 משחקים';
+      case 'firstGoal':
+        return 'שער ראשון';
+      case 'hatTrick':
+        return 'שלושער';
+      case 'mvp':
+        return 'MVP';
+      default:
+        return badgeName;
+    }
+  }
+
+  IconData _getBadgeIcon(String badgeName) {
+    switch (badgeName) {
+      case 'firstGame':
+      case 'tenGames':
+      case 'fiftyGames':
+      case 'hundredGames':
+        return Icons.sports_soccer;
+      case 'firstGoal':
+      case 'hatTrick':
+        return Icons.sports_soccer;
+      case 'mvp':
+        return Icons.star;
+      default:
+        return Icons.emoji_events;
+    }
   }
 
   Widget _buildStatisticsTab(
@@ -953,94 +1074,27 @@ class _PlayerProfileScreenFuturisticState
   Widget _buildGamesTab(
     BuildContext context,
     User user,
-    List<RatingSnapshot> history,
     GamesRepository gamesRepo,
   ) {
-    if (history.isEmpty) {
+    final privacy = user.privacySettings;
+    if (privacy['hideStats'] ?? false) {
       return Center(
         child: FuturisticEmptyState(
-          icon: Icons.sports_soccer,
-          title: 'אין משחקים',
-          message: 'עדיין לא השתתף במשחקים',
+          icon: Icons.privacy_tip,
+          title: 'משחקים מוסתרים',
+          message: 'השחקן בחר להסתיר את המשחקים שלו',
         ),
       );
     }
 
-    final gameIds =
-        history.map((snapshot) => snapshot.gameId).toSet().take(20).toList();
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: gameIds.length,
-      itemBuilder: (context, index) {
-        final gameId = gameIds[index];
-        return FutureBuilder<Game?>(
-          future: gamesRepo.getGame(gameId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const FuturisticCard(
-                child: ListTile(
-                  leading: CircularProgressIndicator(),
-                  title: Text('טוען...'),
-                ),
-              );
-            }
-
-            final game = snapshot.data;
-            if (game == null) {
-              return const SizedBox.shrink();
-            }
-
-            final rating = history.firstWhere(
-              (r) => r.gameId == gameId,
-              orElse: () => history.first,
-            );
-
-            final avgRating = (rating.defense +
-                    rating.passing +
-                    rating.shooting +
-                    rating.dribbling +
-                    rating.physical +
-                    rating.leadership +
-                    rating.teamPlay +
-                    rating.consistency) /
-                8.0;
-
-            return FuturisticCard(
-              margin: const EdgeInsets.only(bottom: 12),
-              onTap: () {
-                // TODO: Navigate to game detail
-              },
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor:
-                      _getRatingColor(avgRating).withValues(alpha: 0.2),
-                  child: Text(
-                    avgRating.toStringAsFixed(1),
-                    style: TextStyle(
-                      color: _getRatingColor(avgRating),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                title: Text(
-                  game.location ?? 'מיקום לא צוין',
-                  style: FuturisticTypography.labelLarge,
-                ),
-                subtitle: Text(
-                  DateFormat('dd/MM/yyyy HH:mm').format(game.gameDate),
-                  style: FuturisticTypography.bodySmall,
-                ),
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: FuturisticColors.textSecondary,
-                ),
-              ),
-            );
-          },
-        );
-      },
+    // Simplified: Show message for now
+    // TODO: In future, can fetch games from games collection filtered by player
+    return Center(
+      child: FuturisticEmptyState(
+        icon: Icons.sports_soccer,
+        title: 'רשימת משחקים',
+        message: 'רשימת המשחקים תוצג כאן בקרוב',
+      ),
     );
   }
 
@@ -1048,9 +1102,11 @@ class _PlayerProfileScreenFuturisticState
     BuildContext context,
     Gamification gamification,
   ) {
-    final pointsForNext =
-        GamificationService.pointsForNextLevel(gamification.level);
-    final progress = gamification.points / pointsForNext;
+    // Simplified: No points/levels, just show stats
+    // Progress is based on games played (for milestone badges)
+    final gamesPlayed = gamification.stats['gamesPlayed'] ?? 0;
+    final nextMilestone = gamesPlayed < 10 ? 10 : gamesPlayed < 50 ? 50 : gamesPlayed < 100 ? 100 : 100;
+    final progress = nextMilestone > 0 ? gamesPlayed / nextMilestone : 0.0;
 
     return FuturisticCard(
       showGlow: true,
@@ -1159,7 +1215,13 @@ class _PlayerProfileScreenFuturisticState
               ),
               const SizedBox(height: 4),
               Text(
-                '${pointsForNext - gamification.points} נקודות נוספות',
+                gamesPlayed < 10 
+                    ? '${10 - gamesPlayed} משחקים עד ה-milestone הבא'
+                    : gamesPlayed < 50
+                        ? '${50 - gamesPlayed} משחקים עד ה-milestone הבא'
+                        : gamesPlayed < 100
+                            ? '${100 - gamesPlayed} משחקים עד ה-milestone הבא'
+                            : 'השגת את כל ה-milestones!',
                 style: FuturisticTypography.bodySmall,
               ),
             ],

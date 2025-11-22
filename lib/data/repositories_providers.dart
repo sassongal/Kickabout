@@ -60,12 +60,7 @@ final hubEventsRepositoryProvider = Provider<HubEventsRepository>((ref) {
   return HubEventsRepository(firestore: ref.watch(firestoreProvider));
 });
 
-final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
-  return RatingsRepository(
-    firestore: ref.watch(firestoreProvider),
-    hubsRepo: ref.watch(hubsRepositoryProvider),
-  );
-});
+// Removed: ratingsRepositoryProvider - RatingsRepository is deprecated (manager-only ratings now)
 
 final feedRepositoryProvider = Provider<FeedRepository>((ref) {
   return FeedRepository(firestore: ref.watch(firestoreProvider));

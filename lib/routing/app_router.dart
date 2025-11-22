@@ -15,8 +15,8 @@ import 'package:kickadoor/screens/game/game_list_screen.dart';
 import 'package:kickadoor/screens/game/create_game_screen.dart';
 import 'package:kickadoor/screens/game/game_detail_screen.dart';
 import 'package:kickadoor/screens/game/team_maker_screen.dart';
-import 'package:kickadoor/screens/game/stats_logger_screen.dart';
-import 'package:kickadoor/screens/stats_input/basic_rating_screen.dart';
+import 'package:kickadoor/screens/game/log_game_screen.dart';
+// Removed: stats_logger_screen.dart, basic_rating_screen.dart - replaced by LogGameScreen
 import 'package:kickadoor/screens/profile/player_profile_screen_futuristic.dart';
 import 'package:kickadoor/screens/profile/edit_profile_screen.dart';
 import 'package:kickadoor/screens/profile/privacy_settings_screen.dart';
@@ -434,6 +434,25 @@ final routerProvider = Provider<GoRouter>((ref) {
                 },
               ),
               GoRoute(
+                path: 'events/:eventId/log-game',
+                name: 'logGame',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  final eventId = state.pathParameters['eventId']!;
+                  return LogGameScreen(hubId: hubId, eventId: eventId);
+                },
+              ),
+              GoRoute(
+                path: 'events/:eventId/team-maker',
+                name: 'eventTeamMaker',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  final eventId = state.pathParameters['eventId']!;
+                  // Use eventId as gameId for TeamMakerScreen (it will handle events differently)
+                  return TeamMakerScreen(gameId: eventId, isEvent: true, hubId: hubId);
+                },
+              ),
+              GoRoute(
                 path: 'scouting',
                 name: 'scouting',
                 builder: (context, state) {
@@ -510,22 +529,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   return TeamMakerScreen(gameId: gameId);
                 },
               ),
-              GoRoute(
-                path: 'stats',
-                name: 'stats',
-                builder: (context, state) {
-                  final gameId = state.pathParameters['id']!;
-                  return StatsLoggerScreen(gameId: gameId);
-                },
-              ),
-              GoRoute(
-                path: 'basic-rating',
-                name: 'basicRating',
-                builder: (context, state) {
-                  final gameId = state.pathParameters['id']!;
-                  return BasicRatingScreen(gameId: gameId);
-                },
-              ),
+              // Removed: stats and basic-rating routes - replaced by LogGameScreen
               GoRoute(
                 path: 'chat',
                 name: 'gameChat',
