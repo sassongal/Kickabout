@@ -1122,20 +1122,6 @@ class _NearbyHubsSectionState extends ConsumerState<_NearbyHubsSection> {
                                 height: 60,
                                 decoration: BoxDecoration(
                                   gradient: FuturisticColors.accentGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.group,
-                                    color: Colors.white,
-                                    size: 30,
-                                  ),
-                                ),
-                              )
-                            : Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  gradient: FuturisticColors.accentGradient,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Icon(
@@ -1144,7 +1130,20 @@ class _NearbyHubsSectionState extends ConsumerState<_NearbyHubsSection> {
                                   size: 30,
                                 ),
                               ),
-                      ),
+                            )
+                          : Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                gradient: FuturisticColors.accentGradient,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.group,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
