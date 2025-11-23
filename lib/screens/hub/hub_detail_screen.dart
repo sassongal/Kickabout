@@ -37,7 +37,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 4, vsync: this); // Removed Members tab
   }
 
   @override
@@ -371,6 +371,27 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                   ),
                 ),
               ),
+              // Hub Members button (prominent, cool-looking)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton.icon(
+                  onPressed: () => context.push('/hubs/${hub.hubId}/players'),
+                  icon: const Icon(Icons.groups_3, size: 24),
+                  label: Text(
+                    'חברי ההאב (${hub.memberIds.length})',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+              ),
               // Share and Rules buttons
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -409,11 +430,10 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                 controller: _tabController,
                 isScrollable: true,
                 tabs: const [
-                  Tab(icon: Icon(Icons.sports_soccer), text: 'משחקים'),
                   Tab(icon: Icon(Icons.event), text: 'אירועים'),
-                  Tab(icon: Icon(Icons.feed), text: 'פיד'),
                   Tab(icon: Icon(Icons.chat), text: 'צ\'אט'),
-                  Tab(icon: Icon(Icons.group), text: 'חברים'),
+                  Tab(icon: Icon(Icons.feed), text: 'פיד'),
+                  Tab(icon: Icon(Icons.sports_soccer), text: 'משחקים'),
                 ],
               ),
               // Tab content
@@ -421,25 +441,18 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // Games tab
-                    _GamesTab(hubId: widget.hubId),
-                    // Events tab
+                    // Events tab (first)
                     HubEventsTab(
                       hubId: widget.hubId,
                       hub: hub,
                       isManager: isAdminRole,
                     ),
-                    // Feed tab
-                    FeedScreen(hubId: widget.hubId),
-                    // Chat tab
+                    // Chat tab (second)
                     HubChatScreen(hubId: widget.hubId),
-                    // Members tab - with button to full screen
-                    _MembersTab(
-                      hubId: widget.hubId,
-                      hub: hub,
-                      usersRepo: usersRepo,
-                      onViewAll: () => context.push('/hubs/${hub.hubId}/players'),
-                    ),
+                    // Feed tab (third)
+                    FeedScreen(hubId: widget.hubId),
+                    // Games tab (fourth)
+                    _GamesTab(hubId: widget.hubId),
                   ],
                 ),
               ),

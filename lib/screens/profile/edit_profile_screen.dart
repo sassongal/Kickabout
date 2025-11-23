@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/image_picker_button.dart';
 import 'package:kickadoor/widgets/loading_widget.dart';
@@ -28,6 +29,8 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _positionController = TextEditingController();
@@ -35,6 +38,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String? _selectedPlayingStyle;
   String? _selectedRegion;
   String? _selectedAvatarColor;
+  DateTime? _selectedBirthDate;
 
   XFile? _selectedImage;
   bool _isLoading = false;
@@ -64,6 +68,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _positionController.dispose();
@@ -79,6 +85,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         setState(() {
           _currentUser = user;
           _nameController.text = user.name;
+          _firstNameController.text = user.firstName ?? '';
+          _lastNameController.text = user.lastName ?? '';
           _emailController.text = user.email;
           _phoneController.text = user.phoneNumber ?? '';
           _positionController.text = user.preferredPosition;
@@ -86,6 +94,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           _selectedPlayingStyle = user.playingStyle;
           _selectedRegion = user.region;
           _selectedAvatarColor = user.avatarColor;
+          _selectedBirthDate = user.birthDate;
         });
       }
     } catch (e) {
@@ -238,7 +247,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
         try {
           final locationService = ref.read(locationServiceProvider);
-          final position = await locationService.addressToCoordinates(result);
+          final position = await locationService.getLocationFromAddress(result);
 
           if (position != null) {
             final geoPoint = locationService.positionToGeoPoint(position);
@@ -305,6 +314,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       // Update user
       final updatedUser = _currentUser!.copyWith(
         name: _nameController.text.trim(),
+        firstName: _firstNameController.text.trim().isEmpty
+            ? null
+            : _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim().isEmpty
+            ? null
+            : _lastNameController.text.trim(),
         email: _emailController.text.trim(),
         phoneNumber: _phoneController.text.trim().isEmpty
             ? null
@@ -317,6 +332,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         region: _selectedRegion,
         photoUrl: photoUrl,
         avatarColor: _selectedAvatarColor,
+        birthDate: _selectedBirthDate,
       );
 
       await usersRepo.setUser(updatedUser);
@@ -427,20 +443,83 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   const SizedBox(height: 24),
                 ],
 
-                // Name field
+                // First Name field
                 TextFormField(
-                  controller: _nameController,
+                  controller: _firstNameController,
                   decoration: const InputDecoration(
-                    labelText: 'שם',
+                    labelText: 'שם פרטי',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person),
                   ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Last Name field
+                TextFormField(
+                  controller: _lastNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'שם משפחה',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Full Name field (computed from first + last, or manual)
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'שם מלא',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.badge),
+                    helperText: 'או הזן שם מלא ידנית',
+                  ),
+                  onChanged: (value) {
+                    // Auto-update if first/last name changes
+                    if (_firstNameController.text.isNotEmpty || _lastNameController.text.isNotEmpty) {
+                      final fullName = '${_firstNameController.text} ${_lastNameController.text}'.trim();
+                      if (fullName.isNotEmpty && value != fullName) {
+                        // User is typing manually, don't override
+                      }
+                    }
+                  },
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'נא להזין שם';
+                      return 'נא להזין שם מלא';
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                
+                // Birth Date field
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedBirthDate ?? DateTime.now().subtract(const Duration(days: 365 * 25)),
+                      firstDate: DateTime(1950),
+                      lastDate: DateTime.now(),
+                      locale: const Locale('he'),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _selectedBirthDate = picked;
+                      });
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'תאריך לידה (אופציונלי)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      _selectedBirthDate != null
+                          ? DateFormat('dd/MM/yyyy', 'he').format(_selectedBirthDate!)
+                          : 'לא נבחר',
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -490,14 +569,72 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // City field
+                // City field with "Use Current Location" button
                 TextFormField(
                   controller: _cityController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'עיר מגורים',
                     hintText: 'לדוגמה: תל אביב',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_city),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.location_city),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.my_location),
+                      tooltip: 'השתמש במיקום הנוכחי',
+                      onPressed: () async {
+                        setState(() {
+                          _isLoading = true;
+                        });
+                        try {
+                          final locationService = ref.read(locationServiceProvider);
+                          final position = await locationService.getCurrentLocation();
+                          
+                          if (position != null) {
+                            final address = await locationService.coordinatesToAddress(
+                              position.latitude,
+                              position.longitude,
+                            );
+                            
+                            if (address != null && mounted) {
+                              // Extract city name from address
+                              String cityName = address;
+                              final parts = address.split(',');
+                              if (parts.isNotEmpty) {
+                                cityName = parts[0].trim();
+                              }
+                              
+                              setState(() {
+                                _cityController.text = cityName;
+                              });
+                              
+                              // Also update user location in Firestore
+                              final usersRepo = ref.read(usersRepositoryProvider);
+                              final geoPoint = locationService.positionToGeoPoint(position);
+                              await usersRepo.updateUser(widget.userId, {
+                                'location': geoPoint,
+                                'geohash': GeohashUtils.encode(position.latitude, position.longitude, precision: 7),
+                                'city': cityName,
+                              });
+                              
+                              SnackbarHelper.showSuccess(context, 'מיקום עודכן: $cityName');
+                            }
+                          } else {
+                            if (mounted) {
+                              SnackbarHelper.showError(context, 'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.');
+                            }
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                          }
+                        }
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

@@ -28,7 +28,6 @@ class CreateHubEventScreen extends ConsumerStatefulWidget {
 class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
@@ -67,7 +66,6 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     _locationController.dispose();
     super.dispose();
   }
@@ -165,9 +163,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
         hubId: widget.hubId,
         createdBy: currentUserId,
         title: _titleController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
+        description: null, // Description field removed
         eventDate: eventDate,
         location: _locationController.text.trim().isEmpty
             ? null
@@ -325,16 +321,6 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Description
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'תיאור (אופציונלי)',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
 
               // Location
               TextFormField(
@@ -379,7 +365,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
                   labelText: 'מספר קבוצות *',
                   border: OutlineInputBorder(),
                 ),
-                items: [2, 3, 4].map((count) {
+                items: [2, 3, 4, 5, 6].map((count) {
                   return DropdownMenuItem(
                     value: count,
                     child: Text('$count קבוצות'),

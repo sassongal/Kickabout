@@ -17,6 +17,12 @@ import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kickadoor/scripts/generate_dummy_data.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:kickadoor/widgets/dialogs/location_search_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Futuristic Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly
@@ -269,6 +275,10 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                       const SizedBox(height: 24),
                     ],
                     
+                    // Weather & Vibe Widget (moved to top)
+                    const HomeWeatherVibeWidget(),
+                    const SizedBox(height: 24),
+                    
                     // Stats Dashboard (matching Figma)
                     StreamBuilder<Gamification?>(
                       stream: gamificationStream,
@@ -360,10 +370,6 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                         );
                       },
                     ),
-                    const SizedBox(height: 24),
-                    
-                    // Weather & Vibe Widget
-                    const HomeWeatherVibeWidget(),
                     const SizedBox(height: 24),
 
                     // My Hubs & Associated Hubs
@@ -693,108 +699,38 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                       },
                     ),
                     const SizedBox(height: 24),
-
-                    // Nearby Hubs
-                    Text(
-                      'הובים קרובים',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2.0,
-                        color: const Color(0xFF212121),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    FutureBuilder<List<Hub>>(
-                      future: _getNearbyHubs(hubsRepo, locationService),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const FuturisticLoadingState(
-                            message: 'מחפש הובים קרובים...',
-                          );
-                        }
-
-                        final hubs = snapshot.data ?? [];
-                        if (hubs.isEmpty) {
-                          return FuturisticEmptyState(
-                            icon: Icons.group_outlined,
-                            title: 'אין הובים קרובים',
-                            message: 'מצא הובים בקרבתך או צור הוב חדש',
-                            action: Wrap(
-                              alignment: WrapAlignment.center,
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () => context.push('/discover'),
-                                  icon: const Icon(Icons.explore),
-                                  label: const Text('גלה הובים'),
-                                ),
-                                ElevatedButton.icon(
-                                  onPressed: () => context.push('/hubs/create'),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('צור הוב'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        return Column(
-                          children: hubs.take(3).map((hub) {
-                            return FuturisticCard(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              onTap: () => context.push('/hubs/${hub.hubId}'),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      gradient: FuturisticColors.accentGradient,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.group,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          hub.name,
-                                          style: GoogleFonts.montserrat(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: const Color(0xFF212121),
-                                          ),
-                                        ),
-                                        Text(
-                                          '${hub.memberIds.length} חברים',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            color: const Color(0xFF757575),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_forward_ios,
-                                    size: 16,
-                                    color: FuturisticColors.textSecondary,
-                                  ),
-                                ],
+                    
+                    // Developer Tools
+                    if (user != null) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _generateDummyData(context),
+                              icon: const Icon(Icons.science_outlined),
+                              label: const Text('Generate Dummy Data (Dev)'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: FuturisticColors.textSecondary.withValues(alpha: 0.3)),
                               ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _forceHaifaLocation(context, currentUserId),
+                              icon: const Icon(Icons.location_city_outlined),
+                              label: const Text('Force Haifa Location (Dev)'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: FuturisticColors.textSecondary.withValues(alpha: 0.3)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ],
                 ),
               ),
@@ -805,20 +741,99 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
     );
   }
 
-  Future<List<Hub>> _getNearbyHubs(
-    HubsRepository hubsRepo,
-    LocationService locationService,
-  ) async {
+  Future<void> _generateDummyData(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     try {
-      final position = await locationService.getCurrentLocation();
-      if (position == null) return [];
-      return await hubsRepo.findHubsNearby(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        radiusKm: 10.0,
-      );
+      final generator = DummyDataGenerator();
+      await generator.generateHaifaScenario();
+      
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ נתוני דמה נוצרו בהצלחה!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
-      return [];
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ שגיאה ביצירת נתוני דמה: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Force Haifa location for emulator testing
+  Future<void> _forceHaifaLocation(BuildContext context, String userId) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Haifa coordinates
+      const double haifaLat = 32.7940;
+      const double haifaLng = 34.9896;
+      
+      final firestore = FirebaseFirestore.instance;
+      final userRef = firestore.collection('users').doc(userId);
+      
+      final locationService = ref.read(locationServiceProvider);
+      final geohash = locationService.generateGeohash(haifaLat, haifaLng);
+      
+      await userRef.update({
+        'location': GeoPoint(haifaLat, haifaLng),
+        'geohash': geohash,
+        'city': 'חיפה',
+        'region': 'צפון',
+        'manualLocationCity': 'חיפה',
+        'hasManualLocation': true,
+      });
+      
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('manual_location_city', 'חיפה');
+      await prefs.setBool('location_permission_skipped', true);
+      
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ מיקום עודכן לחיפה (Dev Mode)'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ שגיאה בעדכון מיקום: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -850,6 +865,25 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
         ),
       ),
       actions: [
+        // Profile button (top-left in RTL)
+        if (user != null)
+          Container(
+            margin: const EdgeInsets.only(left: 8),
+            decoration: BoxDecoration(
+              shape: BoxShape.rectangle,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: FuturisticColors.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.person_outline),
+              onPressed: () => context.push('/profile/$currentUserId/edit'),
+              tooltip: 'הפרטים שלי',
+              color: FuturisticColors.primary,
+            ),
+          ),
         // Inbox icon
         IconButton(
           icon: const Icon(Icons.inbox_outlined),
@@ -857,13 +891,8 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
           tooltip: 'הודעות',
           color: FuturisticColors.textSecondary,
         ),
-        // Map icon
-        IconButton(
-          icon: const Icon(Icons.map_outlined),
-          onPressed: () => context.push('/map'),
-          tooltip: 'מפה',
-          color: FuturisticColors.textSecondary,
-        ),
+        // Location toggle
+        _LocationToggleButton(),
         // Discover icon
         IconButton(
           icon: const Icon(Icons.explore_outlined),
@@ -1223,6 +1252,248 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
         title: 'שגיאה בטעינת נתוני מזג אוויר',
         message: 'לא ניתן לטעון את נתוני מזג האוויר כרגע',
       ),
+    );
+  }
+}
+
+/// Location Toggle Button for AppBar
+/// Supports GPS mode and Manual Location mode
+class _LocationToggleButton extends ConsumerStatefulWidget {
+  const _LocationToggleButton();
+
+  @override
+  ConsumerState<_LocationToggleButton> createState() => _LocationToggleButtonState();
+}
+
+class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
+  bool _isGpsMode = false;
+  bool _isManualMode = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLocationMode();
+  }
+
+  Future<void> _checkLocationMode() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      final prefs = await SharedPreferences.getInstance();
+      final hasManualLocation = prefs.getBool('location_permission_skipped') ?? false;
+      
+      setState(() {
+        _isGpsMode = permission == LocationPermission.whileInUse || 
+                     permission == LocationPermission.always;
+        _isManualMode = hasManualLocation && !_isGpsMode;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      
+      if (permission == LocationPermission.deniedForever) {
+        // Open app settings or show manual location dialog
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('הרשאת מיקום נדחתה לצמיתות'),
+            content: const Text(
+              'האם תרצה להגדיר מיקום ידני במקום?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('ביטול'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('הגדר מיקום ידני'),
+              ),
+            ],
+          ),
+        );
+        
+        if (confirmed == true) {
+          await _openManualLocationDialog();
+        } else if (await openAppSettings()) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('פתח את הגדרות האפליקציה כדי לאפשר מיקום'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      // If GPS is enabled, offer to switch to manual
+      if (permission == LocationPermission.whileInUse || 
+          permission == LocationPermission.always) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('מיקום GPS פעיל'),
+            content: const Text(
+              'האם תרצה לכבות GPS ולהגדיר מיקום ידני?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('ביטול'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('הגדר מיקום ידני'),
+              ),
+            ],
+          ),
+        );
+        
+        if (confirmed == true) {
+          await _openManualLocationDialog();
+        }
+      } else {
+        // GPS is not enabled - request permission or show manual dialog
+        final newPermission = await Geolocator.requestPermission();
+        
+        if (newPermission == LocationPermission.denied || 
+            newPermission == LocationPermission.deniedForever) {
+          // Offer manual location
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('הרשאת מיקום נדחתה'),
+              content: const Text(
+                'האם תרצה להגדיר מיקום ידני?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('ביטול'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('הגדר מיקום ידני'),
+                ),
+              ],
+            ),
+          );
+          
+          if (confirmed == true) {
+            await _openManualLocationDialog();
+          }
+        } else {
+          // GPS permission granted
+          setState(() {
+            _isGpsMode = true;
+            _isManualMode = false;
+          });
+          
+          // Get current location and update user profile
+          final locationService = ref.read(locationServiceProvider);
+          final position = await locationService.getCurrentLocation();
+          
+          if (position != null && mounted) {
+            final auth = firebase_auth.FirebaseAuth.instance;
+            final user = auth.currentUser;
+            
+            if (user != null) {
+              final firestore = FirebaseFirestore.instance;
+              final userRef = firestore.collection('users').doc(user.uid);
+              final geohash = locationService.generateGeohash(
+                position.latitude,
+                position.longitude,
+              );
+              
+              await userRef.update({
+                'location': GeoPoint(position.latitude, position.longitude),
+                'geohash': geohash,
+                'hasManualLocation': false,
+              });
+              
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('location_permission_skipped', false);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ מיקום GPS עודכן'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          }
+        }
+      }
+      
+      await _checkLocationMode(); // Refresh state
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openManualLocationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => const LocationSearchDialog(),
+    );
+    
+    if (result == true) {
+      await _checkLocationMode(); // Refresh state after manual location set
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    // Determine icon and color based on mode
+    IconData icon;
+    Color iconColor;
+    String tooltip;
+    
+    if (_isGpsMode) {
+      icon = Icons.gps_fixed;
+      iconColor = FuturisticColors.primary;
+      tooltip = 'GPS פעיל - לחץ לניהול';
+    } else if (_isManualMode) {
+      icon = Icons.edit_location;
+      iconColor = FuturisticColors.secondary;
+      tooltip = 'מיקום ידני - לחץ לניהול';
+    } else {
+      icon = Icons.location_off;
+      iconColor = FuturisticColors.textSecondary;
+      tooltip = 'מיקום מושבת - לחץ להפעיל';
+    }
+
+    return IconButton(
+      icon: Icon(icon, color: iconColor),
+      onPressed: _toggleLocation,
+      tooltip: tooltip,
     );
   }
 }

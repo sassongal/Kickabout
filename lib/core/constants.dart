@@ -17,7 +17,7 @@ class AppConstants {
   static const String historySubcollection = 'history';
   
   // Team Configuration
-  static const List<int> supportedTeamCounts = [2, 3, 4];
+  static const List<int> supportedTeamCounts = [2, 3, 4, 5, 6];
   static const int minPlayersPerTeam = 3;
   static const double teamBalanceThreshold = 0.1; // 10% difference
   

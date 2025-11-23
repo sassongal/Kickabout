@@ -1,13 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/log_past_game_details.dart';
+import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/services/cache_service.dart';
 import 'package:kickadoor/services/retry_service.dart';
 import 'package:kickadoor/services/monitoring_service.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
+import 'package:kickadoor/data/hubs_repository.dart';
+import 'package:kickadoor/data/users_repository.dart';
+import 'package:kickadoor/data/signups_repository.dart';
+import 'package:kickadoor/data/chat_repository.dart';
 
 /// Repository for Game operations
 class GamesRepository {
@@ -651,5 +657,237 @@ class GamesRepository {
       throw Exception('Failed to convert event to game: $e');
     }
   }
+
+  /// Finalize game - Manager-only operation with atomic transaction
+  /// 
+  /// This method:
+  /// 1. Verifies the current user is a Hub Manager/Admin
+  /// 2. Uses Firestore Transaction for atomic updates
+  /// 3. Updates game status, scores, and player stats
+  /// 4. Does NOT update player rank scores (rank is manual only via managerRatings)
+  /// 
+  /// Parameters:
+  /// - gameId: The game to finalize
+  /// - teamAScore: Score for team A
+  /// - teamBScore: Score for team B
+  /// - goalScorerIds: Map of playerId -> number of goals
+  /// - assistPlayerIds: Map of playerId -> number of assists (optional)
+  /// - mvpPlayerId: Optional MVP player ID
+  /// 
+  /// Throws: Exception if user is not a manager or if transaction fails
+  Future<void> finalizeGame({
+    required String gameId,
+    required int teamAScore,
+    required int teamBScore,
+    required Map<String, int> goalScorerIds, // playerId -> goals count
+    Map<String, int>? assistPlayerIds, // playerId -> assists count
+    String? mvpPlayerId,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Step 1: Permission Check - Verify user is Hub Manager/Admin
+      final auth = FirebaseAuth.instance;
+      final currentUserId = auth.currentUser?.uid;
+      if (currentUserId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Get game to check hubId
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
+      // Get hub to verify permissions
+      final hubsRepo = HubsRepository();
+      final hub = await hubsRepo.getHub(game.hubId);
+      if (hub == null) {
+        throw Exception('Hub not found: ${game.hubId}');
+      }
+
+      // Check if user is manager/admin
+      final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
+      if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
+        throw Exception('Unauthorized: Only Hub Managers can finalize games');
+      }
+
+      // Step 2: Get signups for the game (before transaction)
+      final signupsRepo = SignupsRepository();
+      final allSignups = await signupsRepo.getSignups(gameId);
+      final confirmedSignups = allSignups.where((s) => s.status == SignupStatus.confirmed).toList();
+
+      // Step 3: Determine winning team
+      final winningTeamId = teamAScore > teamBScore 
+          ? (game.teams.isNotEmpty ? game.teams[0].teamId : 'teamA')
+          : (teamAScore < teamBScore 
+              ? (game.teams.length > 1 ? game.teams[1].teamId : 'teamB')
+              : null); // Draw
+
+      // Step 4: Atomic Transaction
+      await _firestore.runTransaction((transaction) async {
+        // Read game document
+        final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+        final gameDoc = await transaction.get(gameRef);
+        
+        if (!gameDoc.exists) {
+          throw Exception('Game not found');
+        }
+
+        final gameData = gameDoc.data()!;
+        final gameHubId = gameData['hubId'] as String;
+
+        // Verify hub still exists and user is still manager
+        final hubRef = _firestore.doc(FirestorePaths.hub(gameHubId));
+        final hubDoc = await transaction.get(hubRef);
+        
+        if (!hubDoc.exists) {
+          throw Exception('Hub not found');
+        }
+
+        final hubData = hubDoc.data()!;
+        final isManager = hubData['createdBy'] == currentUserId ||
+                         (hubData['roles'] as Map?)?[currentUserId] == 'manager' ||
+                         (hubData['roles'] as Map?)?[currentUserId] == 'admin' ||
+                         (hubData['roles'] as Map?)?[currentUserId] == 'moderator';
+        
+        if (!isManager) {
+          throw Exception('Unauthorized: Only Hub Managers can finalize games');
+        }
+
+        // Update game document
+        final gameUpdates = <String, dynamic>{
+          'status': GameStatus.completed.toFirestore(),
+          'teamAScore': teamAScore,
+          'teamBScore': teamBScore,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        // Add goal scorer IDs (names will be fetched outside transaction)
+        if (goalScorerIds.isNotEmpty) {
+          gameUpdates['goalScorerIds'] = goalScorerIds.keys.toList();
+        }
+
+        // Add MVP
+        if (mvpPlayerId != null && mvpPlayerId.isNotEmpty) {
+          gameUpdates['mvpPlayerId'] = mvpPlayerId;
+        }
+
+        transaction.update(gameRef, gameUpdates);
+
+        // Step 5: Update player stats within transaction
+        // Parse teams from gameData (they're stored as List<Map>)
+        final teamsData = gameData['teams'] as List? ?? [];
+        final teams = teamsData.map((t) => Team.fromJson(t as Map<String, dynamic>)).toList();
+
+        for (final signup in confirmedSignups) {
+          final playerId = signup.playerId;
+          final userRef = _firestore.doc(FirestorePaths.user(playerId));
+          
+          // Determine which team the player was on
+          final playerTeamId = teams.isNotEmpty
+              ? teams.firstWhere(
+                  (team) => team.playerIds.contains(playerId),
+                  orElse: () => teams[0],
+                ).teamId
+              : 'teamA';
+
+          final isWinner = winningTeamId != null && playerTeamId == winningTeamId;
+
+          // Prepare user updates
+          final userUpdates = <String, dynamic>{
+            'gamesPlayed': FieldValue.increment(1),
+          };
+
+          if (isWinner) {
+            userUpdates['wins'] = FieldValue.increment(1);
+          }
+
+          // Add goals count
+          final playerGoals = goalScorerIds[playerId] ?? 0;
+          if (playerGoals > 0) {
+            userUpdates['goals'] = FieldValue.increment(playerGoals);
+          }
+
+          // Add assists count
+          final playerAssists = assistPlayerIds?[playerId] ?? 0;
+          if (playerAssists > 0) {
+            userUpdates['assists'] = FieldValue.increment(playerAssists);
+          }
+
+          transaction.update(userRef, userUpdates);
+        }
+      });
+
+      // Step 6: Fetch user names for denormalized fields (outside transaction)
+      final usersRepo = UsersRepository();
+      if (goalScorerIds.isNotEmpty) {
+        final goalScorerNames = <String>[];
+        for (final playerId in goalScorerIds.keys) {
+          try {
+            final user = await usersRepo.getUser(playerId);
+            if (user != null) {
+              final goalsCount = goalScorerIds[playerId] ?? 1;
+              if (goalsCount > 1) {
+                goalScorerNames.add('${user.name} ($goalsCount)');
+              } else {
+                goalScorerNames.add(user.name);
+              }
+            }
+          } catch (e) {
+            debugPrint('Failed to get user name for $playerId: $e');
+          }
+        }
+        if (goalScorerNames.isNotEmpty) {
+          await updateGame(gameId, {'goalScorerNames': goalScorerNames});
+        }
+      }
+
+      // Add MVP name
+      if (mvpPlayerId != null && mvpPlayerId.isNotEmpty) {
+        try {
+          final mvpUser = await usersRepo.getUser(mvpPlayerId);
+          if (mvpUser != null) {
+            await updateGame(gameId, {'mvpPlayerName': mvpUser.name});
+          }
+        } catch (e) {
+          debugPrint('Failed to get MVP user name: $e');
+        }
+      }
+
+      // Invalidate caches
+      CacheService().clear(CacheKeys.game(gameId));
+      CacheService().clear(CacheKeys.gamesByHub(game.hubId));
+
+      // Step 7: Send automated chat announcement
+      try {
+        final chatRepo = ChatRepository();
+        final mvpName = mvpPlayerId != null 
+            ? (await usersRepo.getUser(mvpPlayerId))?.name 
+            : null;
+        
+        final message = StringBuffer();
+        message.writeln('Game Finished! 🏁');
+        message.writeln('Score: $teamAScore vs $teamBScore');
+        if (mvpName != null) {
+          message.writeln('MVP: $mvpName 🏆');
+        }
+        
+        // Use current user as author (manager who finalized the game)
+        await chatRepo.sendMessage(game.hubId, currentUserId, message.toString());
+      } catch (e) {
+        // Don't fail game finalization if chat message fails
+        debugPrint('⚠️ Failed to send chat announcement: $e');
+      }
+
+      debugPrint('✅ Game finalized: $gameId');
+    } catch (e) {
+      debugPrint('❌ Failed to finalize game: $e');
+      throw Exception('Failed to finalize game: $e');
+    }
+  }
+
 }
 

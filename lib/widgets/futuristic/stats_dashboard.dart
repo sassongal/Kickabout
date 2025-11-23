@@ -39,7 +39,7 @@ class StatsDashboard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          // Horizontal list of stats rings
+          // Horizontal list of stats rings (4 metrics: Games, Wins, Goals, Assists)
           SizedBox(
             height: 100,
             child: ListView(
@@ -67,9 +67,9 @@ class StatsDashboard extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 StatsRing(
-                  value: averageRating.toInt(),
-                  maxValue: 10,
-                  label: 'דירוג ממוצע',
+                  value: assists,
+                  maxValue: 50,
+                  label: 'בישולים',
                   color: const Color(0xFFFF9800),
                 ),
               ],

@@ -421,6 +421,56 @@ class GooglePlacesService {
     }
   }
 
+  /// Get autocomplete predictions from Google Places API
+  Future<List<AutocompletePrediction>> getAutocomplete(String query) async {
+    if (apiKey.isEmpty) {
+      throw Exception('Google Maps API key not configured');
+    }
+
+    if (query.isEmpty || query.length < 2) {
+      return [];
+    }
+
+    try {
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json'
+        '?input=${Uri.encodeComponent(query)}'
+        '&key=$apiKey'
+        '&language=he'
+        '&components=country:il', // Restrict to Israel
+      );
+
+      final response = await _httpClient.get(url);
+      if (response.statusCode != 200) {
+        throw Exception('Google Places API error: ${response.statusCode}');
+      }
+
+      final data = json.decode(response.body);
+      if (data['status'] != 'OK' && data['status'] != 'ZERO_RESULTS') {
+        throw Exception('Google Places API error: ${data['status']}');
+      }
+
+      final predictions = <AutocompletePrediction>[];
+      for (final prediction in data['predictions'] ?? []) {
+        final structuredFormatting = prediction['structured_formatting'];
+        predictions.add(AutocompletePrediction(
+          placeId: prediction['place_id'],
+          description: prediction['description'],
+          structuredFormatting: structuredFormatting != null
+              ? StructuredFormatting(
+                  mainText: structuredFormatting['main_text'] ?? '',
+                  secondaryText: structuredFormatting['secondary_text'],
+                )
+              : null,
+        ));
+      }
+
+      return predictions;
+    } catch (e) {
+      throw Exception('Failed to get autocomplete: $e');
+    }
+  }
+
   /// Get place details by place ID
   Future<PlaceResult?> getPlaceDetails(String placeId) async {
     if (apiKey.isEmpty) {
@@ -495,5 +545,28 @@ class GooglePlacesService {
 
 extension MathExtensions on double {
   double toRadians() => this * (math.pi / 180);
+}
+
+/// Autocomplete prediction model
+class AutocompletePrediction {
+  final String placeId;
+  final String description;
+  final StructuredFormatting? structuredFormatting;
+
+  AutocompletePrediction({
+    required this.placeId,
+    required this.description,
+    this.structuredFormatting,
+  });
+}
+
+class StructuredFormatting {
+  final String mainText;
+  final String? secondaryText;
+
+  StructuredFormatting({
+    required this.mainText,
+    this.secondaryText,
+  });
 }
 
