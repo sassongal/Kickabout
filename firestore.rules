@@ -302,6 +302,7 @@ service cloud.firestore {
     // ============================================
     match /games/{gameId} {
       // כל אחד יכול לקרוא פרטי משחק (כדי להירשם)
+      // משחקים עם visibility == 'recruiting' מופיעים בפיד האזורי
       allow read: if true;
       
       // רק מנהל (מודרטור ומעלה) יכול ליצור משחק
@@ -314,7 +315,7 @@ service cloud.firestore {
         request.resource.data.createdAt is timestamp &&
         request.resource.data.updatedAt is timestamp;
       
-      // רק מנהל יכול לעדכן (תוצאה, סטטוס) או למחוק
+      // רק מנהל יכול לעדכן (תוצאה, סטטוס, visibility) או למחוק
       allow update, delete: if isHubModerator(resource.data.hubId) &&
         // Prevent changing gameId, createdBy, or hubId
         request.resource.data.gameId == resource.data.gameId &&

@@ -32,6 +32,8 @@ class Hub with _$Hub {
     String? logoUrl, // Hub logo URL (used for feed posts)
     String? hubRules, // Rules and guidelines for the hub
     String? region, // אזור: צפון, מרכז, דרום, ירושלים
+    // Privacy settings
+    @Default(false) bool isPrivate, // If true, requires "Request to Join" (create notification for manager)
     // Manager-only ratings for team balancing (1-10 scale)
     @Default({}) Map<String, double> managerRatings, // userId -> rating (1-10, manager-only, for team balancing)
     // Denormalized fields (updated by Cloud Functions, not written by client)

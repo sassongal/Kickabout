@@ -7,7 +7,7 @@ export 'teams_repository.dart' show FavoriteTeamsRepository;
 export 'game_teams_repository.dart';
 export 'events_repository.dart';
 export 'hub_events_repository.dart';
-export 'ratings_repository.dart';
+// export 'ratings_repository.dart'; // Removed - no longer used
 export 'feed_repository.dart';
 export 'comments_repository.dart';
 export 'follow_repository.dart';

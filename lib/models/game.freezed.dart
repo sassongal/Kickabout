@@ -39,6 +39,9 @@ mixin _$Game {
   int get teamCount => throw _privateConstructorUsedError; // 2, 3, or 4
   @GameStatusConverter()
   GameStatus get status => throw _privateConstructorUsedError;
+  @GameVisibilityConverter()
+  GameVisibility get visibility =>
+      throw _privateConstructorUsedError; // private, public, or recruiting
   List<String> get photoUrls =>
       throw _privateConstructorUsedError; // URLs of game photos
   @TimestampConverter()
@@ -125,6 +128,7 @@ abstract class $GameCopyWith<$Res> {
       String? venueId,
       int teamCount,
       @GameStatusConverter() GameStatus status,
+      @GameVisibilityConverter() GameVisibility visibility,
       List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
@@ -179,6 +183,7 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? venueId = freezed,
     Object? teamCount = null,
     Object? status = null,
+    Object? visibility = null,
     Object? photoUrls = null,
     Object? createdAt = null,
     Object? updatedAt = null,
@@ -251,6 +256,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as GameStatus,
+      visibility: null == visibility
+          ? _value.visibility
+          : visibility // ignore: cast_nullable_to_non_nullable
+              as GameVisibility,
       photoUrls: null == photoUrls
           ? _value.photoUrls
           : photoUrls // ignore: cast_nullable_to_non_nullable
@@ -378,6 +387,7 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       String? venueId,
       int teamCount,
       @GameStatusConverter() GameStatus status,
+      @GameVisibilityConverter() GameVisibility visibility,
       List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
@@ -429,6 +439,7 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? venueId = freezed,
     Object? teamCount = null,
     Object? status = null,
+    Object? visibility = null,
     Object? photoUrls = null,
     Object? createdAt = null,
     Object? updatedAt = null,
@@ -501,6 +512,10 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as GameStatus,
+      visibility: null == visibility
+          ? _value.visibility
+          : visibility // ignore: cast_nullable_to_non_nullable
+              as GameVisibility,
       photoUrls: null == photoUrls
           ? _value._photoUrls
           : photoUrls // ignore: cast_nullable_to_non_nullable
@@ -624,6 +639,7 @@ class _$GameImpl implements _Game {
       this.venueId,
       this.teamCount = 2,
       @GameStatusConverter() this.status = GameStatus.teamSelection,
+      @GameVisibilityConverter() this.visibility = GameVisibility.private,
       final List<String> photoUrls = const [],
       @TimestampConverter() required this.createdAt,
       @TimestampConverter() required this.updatedAt,
@@ -692,7 +708,13 @@ class _$GameImpl implements _Game {
   @JsonKey()
   @GameStatusConverter()
   final GameStatus status;
+  @override
+  @JsonKey()
+  @GameVisibilityConverter()
+  final GameVisibility visibility;
+// private, public, or recruiting
   final List<String> _photoUrls;
+// private, public, or recruiting
   @override
   @JsonKey()
   List<String> get photoUrls {
@@ -827,7 +849,7 @@ class _$GameImpl implements _Game {
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
   }
 
   @override
@@ -851,6 +873,8 @@ class _$GameImpl implements _Game {
             (identical(other.teamCount, teamCount) ||
                 other.teamCount == teamCount) &&
             (identical(other.status, status) || other.status == status) &&
+            (identical(other.visibility, visibility) ||
+                other.visibility == visibility) &&
             const DeepCollectionEquality()
                 .equals(other._photoUrls, _photoUrls) &&
             (identical(other.createdAt, createdAt) ||
@@ -916,6 +940,7 @@ class _$GameImpl implements _Game {
         venueId,
         teamCount,
         status,
+        visibility,
         const DeepCollectionEquality().hash(_photoUrls),
         createdAt,
         updatedAt,
@@ -973,6 +998,7 @@ abstract class _Game implements Game {
       final String? venueId,
       final int teamCount,
       @GameStatusConverter() final GameStatus status,
+      @GameVisibilityConverter() final GameVisibility visibility,
       final List<String> photoUrls,
       @TimestampConverter() required final DateTime createdAt,
       @TimestampConverter() required final DateTime updatedAt,
@@ -1031,6 +1057,9 @@ abstract class _Game implements Game {
   @override
   @GameStatusConverter()
   GameStatus get status;
+  @override
+  @GameVisibilityConverter()
+  GameVisibility get visibility; // private, public, or recruiting
   @override
   List<String> get photoUrls; // URLs of game photos
   @override

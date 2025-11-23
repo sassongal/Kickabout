@@ -1773,3 +1773,116 @@ exports.onHubMemberChanged = onDocumentUpdated(
       }
     },
 );
+
+// Automated Waitlist Management
+// Trigger: When a signup status changes from 'confirmed' to 'cancelled'
+// Action: Automatically promote the first waitlist user to 'confirmed'
+exports.onSignupStatusChanged = onDocumentUpdated(
+    'games/{gameId}/signups/{userId}',
+    async (event) => {
+      const gameId = event.params.gameId;
+      const userId = event.params.userId;
+      const beforeData = event.data.before.data();
+      const afterData = event.data.after.data();
+
+      if (!beforeData || !afterData) {
+        // Signup was created or deleted, skip
+        return;
+      }
+
+      const beforeStatus = beforeData.status;
+      const afterStatus = afterData.status;
+
+      // Only process if status changed from 'confirmed' to 'cancelled'
+      if (beforeStatus !== 'confirmed' || afterStatus !== 'cancelled') {
+        return;
+      }
+
+      info(`Signup ${userId} cancelled for game ${gameId}. Checking waitlist...`);
+
+      try {
+        // Get all waitlist signups for this game, sorted by signedUpAt (FIFO)
+        const waitlistSnapshot = await db
+            .collection('games')
+            .doc(gameId)
+            .collection('signups')
+            .where('status', '==', 'waitlist')
+            .orderBy('signedUpAt', 'asc')
+            .limit(1)
+            .get();
+
+        if (waitlistSnapshot.empty) {
+          info(`No waitlist users found for game ${gameId}.`);
+          return;
+        }
+
+        // Get the first waitlist user (FIFO)
+        const firstWaitlistDoc = waitlistSnapshot.docs[0];
+        const waitlistUserId = firstWaitlistDoc.id;
+
+        // Update waitlist user to confirmed
+        await firstWaitlistDoc.ref.update({
+          status: 'confirmed',
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        info(`Promoted waitlist user ${waitlistUserId} to confirmed for game ${gameId}.`);
+
+        // Update game playerCount
+        const gameRef = db.collection('games').doc(gameId);
+        await gameRef.update({
+          confirmedPlayerCount: FieldValue.increment(1),
+        });
+
+        // Send FCM push notification to the promoted user
+        try {
+          const tokenDoc = await db
+              .collection('users')
+              .doc(waitlistUserId)
+              .collection('fcm_tokens')
+              .doc('tokens')
+              .get();
+
+          if (tokenDoc.exists) {
+            const tokenData = tokenDoc.data();
+            const fcmToken = tokenData?.token;
+
+            if (fcmToken) {
+              const gameDoc = await gameRef.get();
+              const gameData = gameDoc.data();
+              const gameDate = gameData?.gameDate?.toDate();
+
+              const message = {
+                token: fcmToken,
+                notification: {
+                  title: 'מקום נפתח!',
+                  body: `אתה עכשיו ברשימת המשתתפים למשחק ב-${gameDate ? gameDate.toLocaleDateString('he-IL') : 'תאריך לא ידוע'}`,
+                },
+                data: {
+                  type: 'game_signup_promoted',
+                  gameId: gameId,
+                },
+                android: {
+                  priority: 'high',
+                },
+                apns: {
+                  headers: {
+                    'apns-priority': '10',
+                  },
+                },
+              };
+
+              await messaging.send(message);
+              info(`Sent push notification to user ${waitlistUserId} about game ${gameId}.`);
+            }
+          }
+        } catch (notificationError) {
+          info(`Error sending notification to user ${waitlistUserId}:`, notificationError);
+          // Don't fail the whole function if notification fails
+        }
+      } catch (error) {
+        info(`Error in onSignupStatusChanged for game ${gameId}, user ${userId}:`, error);
+        // Don't throw - we don't want to retry this function
+      }
+    },
+);

@@ -43,6 +43,7 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
       logoUrl: json['logoUrl'] as String?,
       hubRules: json['hubRules'] as String?,
       region: json['region'] as String?,
+      isPrivate: json['isPrivate'] as bool? ?? false,
       managerRatings: (json['managerRatings'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, (e as num).toDouble()),
           ) ??
@@ -76,6 +77,7 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'logoUrl': instance.logoUrl,
       'hubRules': instance.hubRules,
       'region': instance.region,
+      'isPrivate': instance.isPrivate,
       'managerRatings': instance.managerRatings,
       'gameCount': instance.gameCount,
       'lastActivity': _$JsonConverterToJson<Object, DateTime>(

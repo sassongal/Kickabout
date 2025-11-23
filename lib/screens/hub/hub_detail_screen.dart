@@ -1501,6 +1501,13 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
             const SizedBox(height: 16),
           ],
           
+          // Contact Manager button
+          _ContactManagerButton(
+            hub: widget.hub,
+            usersRepo: widget.usersRepo,
+          ),
+          const SizedBox(height: 16),
+          
           // Venues list
           Card(
             child: Padding(
@@ -1646,6 +1653,132 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Contact Manager button widget
+class _ContactManagerButton extends ConsumerWidget {
+  final Hub hub;
+  final UsersRepository usersRepo;
+
+  const _ContactManagerButton({
+    required this.hub,
+    required this.usersRepo,
+  });
+
+  Future<void> _contactManager(BuildContext context) async {
+    try {
+      // Get manager user (hub creator)
+      final manager = await usersRepo.getUser(hub.createdBy);
+      if (manager == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('לא ניתן למצוא את מנהל ההאב')),
+          );
+        }
+        return;
+      }
+
+      // Show dialog with contact options
+      final contactMethod = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('צור קשר עם ${manager.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (manager.phoneNumber != null && manager.phoneNumber!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.phone, color: Colors.green),
+                  title: const Text('WhatsApp'),
+                  subtitle: Text(manager.phoneNumber!),
+                  onTap: () => Navigator.pop(context, 'whatsapp'),
+                ),
+              if (manager.email != null && manager.email!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.email, color: Colors.blue),
+                  title: const Text('אימייל'),
+                  subtitle: Text(manager.email!),
+                  onTap: () => Navigator.pop(context, 'email'),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ביטול'),
+            ),
+          ],
+        ),
+      );
+
+      if (contactMethod == null) return;
+
+      if (contactMethod == 'whatsapp' && manager.phoneNumber != null) {
+        // Open WhatsApp
+        final phone = manager.phoneNumber!.replaceAll(RegExp(r'[-\s]'), '');
+        final url = Uri.parse('https://wa.me/$phone');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('לא ניתן לפתוח WhatsApp')),
+            );
+          }
+        }
+      } else if (contactMethod == 'email' && manager.email != null) {
+        // Open email
+        final url = Uri.parse('mailto:${manager.email}?subject=בקשה להצטרפות ל-${hub.name}');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('לא ניתן לפתוח אפליקציית אימייל')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'צור קשר עם מנהל ההאב',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _contactManager(context),
+                icon: const Icon(Icons.contact_support),
+                label: const Text('צור קשר'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

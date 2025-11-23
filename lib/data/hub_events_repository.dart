@@ -102,36 +102,6 @@ class HubEventsRepository {
     }
   }
 
-  /// Get a single hub event by ID
-  Future<HubEvent?> getHubEvent(String hubId, String eventId, {bool forceRefresh = false}) async {
-    if (!Env.isFirebaseAvailable) return null;
-
-    return MonitoringService().trackOperation(
-      'getHubEvent',
-      () => CacheService().getOrFetch<HubEvent?>(
-        CacheKeys.event(hubId, eventId),
-        () => RetryService().execute(
-          () async {
-            final doc = await _firestore
-                .collection(FirestorePaths.hubs())
-                .doc(hubId)
-                .collection('events')
-                .doc(eventId)
-                .get();
-
-            if (!doc.exists) return null;
-            return HubEvent.fromJson({...doc.data()!, 'eventId': doc.id});
-          },
-          config: RetryConfig.network,
-          operationName: 'getHubEvent',
-        ),
-        ttl: CacheService.eventsTtl,
-        forceRefresh: forceRefresh,
-      ),
-      metadata: {'hubId': hubId, 'eventId': eventId},
-    );
-  }
-
   /// Get a single hub event by ID with caching and retry
   Future<HubEvent?> getHubEvent(String hubId, String eventId, {bool forceRefresh = false}) async {
     if (!Env.isFirebaseAvailable) {

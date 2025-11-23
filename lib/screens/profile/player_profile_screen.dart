@@ -29,13 +29,14 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen> {
     final currentUserId = ref.watch(currentUserIdProvider);
     // Use ref.read for repositories - they don't change, so no need to watch
     final usersRepo = ref.read(usersRepositoryProvider);
-    final ratingsRepo = ref.read(ratingsRepositoryProvider);
+    // final ratingsRepo = ref.read(ratingsRepositoryProvider); // Removed - no longer used
     final gamesRepo = ref.read(gamesRepositoryProvider);
     final followRepo = ref.read(followRepositoryProvider);
     final gamificationRepo = ref.read(gamificationRepositoryProvider);
 
     final userStream = usersRepo.watchUser(widget.playerId);
-    final ratingHistoryStream = ratingsRepo.watchRatingHistory(widget.playerId);
+    // final ratingHistoryStream = ratingsRepo.watchRatingHistory(widget.playerId); // Removed - no longer used
+    final ratingHistoryStream = Stream.value(<RatingSnapshot>[]); // Empty stream for now
     final gamificationStream = gamificationRepo.watchGamification(widget.playerId);
     final isFollowingStream = currentUserId != null && currentUserId != widget.playerId
         ? followRepo.watchIsFollowing(currentUserId, widget.playerId)

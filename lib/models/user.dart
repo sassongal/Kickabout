@@ -14,6 +14,7 @@ class User with _$User {
     required String name,
     required String email,
     String? photoUrl,
+    String? avatarColor, // Hex color for avatar background (e.g., "#FF5733")
     String? phoneNumber,
     String? city, // עיר מגורים
     // New profile fields

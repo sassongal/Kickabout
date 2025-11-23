@@ -12,6 +12,7 @@ import 'package:kickadoor/services/push_notification_integration_service.dart';
 import 'package:kickadoor/services/scouting_service.dart';
 import 'package:kickadoor/services/google_places_service.dart';
 import 'package:kickadoor/services/custom_api_service.dart';
+import 'package:kickadoor/services/weather_service.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// Providers for repositories
@@ -105,6 +106,10 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 /// Location service provider
 final locationServiceProvider = Provider<LocationService>((ref) {
   return LocationService();
+});
+
+final weatherServiceProvider = Provider<WeatherService>((ref) {
+  return WeatherService();
 });
 
 /// Push notification service provider
@@ -307,10 +312,11 @@ final unreadNotificationsCountProvider = StreamProvider.family<int, String>((ref
   return notificationsRepo.watchUnreadCount(userId);
 });
 
-/// Home dashboard data provider (weather & vibe)
+/// Home dashboard data provider (weather & vibe) - using Open-Meteo (free)
 final homeDashboardDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   try {
     final locationService = ref.read(locationServiceProvider);
+    final weatherService = ref.read(weatherServiceProvider);
     final position = await locationService.getCurrentLocation();
 
     if (position == null) {
@@ -318,24 +324,38 @@ final homeDashboardDataProvider = FutureProvider<Map<String, dynamic>>((ref) asy
         'vibeMessage': 'יום ענק לכדורגל! ⚽',
         'temperature': null,
         'condition': null,
-        'aqiIndex': null,
+        'summary': 'יום ענק לכדורגל! ⚽',
       };
     }
 
-    final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-    final result = await functions.httpsCallable('getHomeDashboardData').call({
-      'lat': position.latitude,
-      'lon': position.longitude,
-    });
+    final weather = await weatherService.getCurrentWeather(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
 
-    return Map<String, dynamic>.from(result.data);
+    if (weather == null) {
+      return {
+        'vibeMessage': 'יום טוב לכדורגל! ☀️',
+        'temperature': null,
+        'condition': null,
+        'summary': 'יום טוב לכדורגל! ☀️',
+      };
+    }
+
+    return {
+      'vibeMessage': weather.summary,
+      'temperature': weather.temperature,
+      'condition': weather.condition,
+      'summary': weather.summary,
+      'weatherCode': weather.weatherCode,
+    };
   } catch (e) {
     // In case of error, return default message
     return {
       'vibeMessage': 'יום טוב לכדורגל! ☀️',
       'temperature': null,
       'condition': null,
-      'aqiIndex': null,
+      'summary': 'יום טוב לכדורגל! ☀️',
     };
   }
 });

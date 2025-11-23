@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/services/location_service.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
@@ -21,7 +20,7 @@ import 'package:kickadoor/widgets/optimized_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Futuristic Home Dashboard - Next-gen mobile experience
 class HomeScreenFuturistic extends ConsumerStatefulWidget {
@@ -107,7 +106,6 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
     final gamesRepo = ref.read(gamesRepositoryProvider);
     final notificationsRepo = ref.read(notificationsRepositoryProvider);
     final gamificationRepo = ref.read(gamificationRepositoryProvider);
-    final locationService = ref.read(locationServiceProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
 
     if (currentUserId == null) {
@@ -226,6 +224,8 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                 );
               },
             ),
+            // Location sharing toggle
+            _LocationSharingToggle(),
                     IconButton(
                       icon: const Icon(Icons.people_outlined),
                       onPressed: () => context.push('/players'),
@@ -237,17 +237,8 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                       tooltip: 'לוח Hubs',
                     ),
                     IconButton(
-                      icon: const Icon(Icons.map_outlined),
-                      onPressed: () => context.push('/map'),
-                    ),
-                    IconButton(
                       icon: const Icon(Icons.emoji_events_outlined),
                       onPressed: () => context.push('/leaderboard'),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.admin_panel_settings_outlined),
-                      onPressed: () => context.push('/admin/generate-dummy-data'),
-                      tooltip: 'Admin - יצירת נתוני דמה',
                     ),
           ],
           floatingActionButton: GradientButton(
@@ -358,7 +349,7 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                       ),
                       const SizedBox(height: 24),
                       
-                      // Quick Actions - 3 column grid (matching Figma)
+                      // Quick Actions - 3 column grid
                       Row(
                         children: [
                           Expanded(
@@ -483,106 +474,6 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                       const SizedBox(height: 24),
                     ],
 
-                    // Quick Actions - moved up to replace AI Recommendations
-                    Text(
-                      'פעולות מהירות',
-                      style: FuturisticTypography.techHeadline,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FuturisticCard(
-                            onTap: () => context.push('/hubs/create'),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: FuturisticColors.primaryGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.group_add,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'צור Hub',
-                                  style: FuturisticTypography.labelMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FuturisticCard(
-                            onTap: () => context.push('/discover'),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: FuturisticColors.accentGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.explore,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'גלה',
-                                  style: FuturisticTypography.labelMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FuturisticCard(
-                            onTap: () => context.push('/map'),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        FuturisticColors.secondary,
-                                        FuturisticColors.secondaryDark,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.map,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'מפה',
-                                  style: FuturisticTypography.labelMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
                     // My Upcoming Games Section
                     _MyUpcomingGamesSection(
                       currentUserId: currentUserId,
@@ -590,18 +481,23 @@ class _HomeScreenFuturisticState extends ConsumerState<HomeScreenFuturistic> {
                     ),
                     const SizedBox(height: 24),
                     
-                    // My Hubs Section
-                    _MyHubsSection(
-                      currentUserId: currentUserId,
-                      hubsRepo: hubsRepo,
-                    ),
+                    // Dummy Data Generator Button (at bottom of page)
+                    if (user != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: GradientButton(
+                          label: 'יצירת נתוני דמה',
+                          icon: Icons.science,
+                          onPressed: () => context.push('/admin/generate-dummy-data'),
+                          width: double.infinity,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 24),
-
-                    // Nearby Hubs
-                    _NearbyHubsSection(
-                      locationService: locationService,
-                      hubsRepo: hubsRepo,
-                    ),
                   ],
                 ),
               ),
@@ -1026,168 +922,6 @@ class _MyHubsSection extends ConsumerWidget {
   }
 }
 
-class _NearbyHubsSection extends ConsumerStatefulWidget {
-  final LocationService locationService;
-  final HubsRepository hubsRepo;
-
-  const _NearbyHubsSection({
-    required this.locationService,
-    required this.hubsRepo,
-  });
-
-  @override
-  ConsumerState<_NearbyHubsSection> createState() => _NearbyHubsSectionState();
-}
-
-class _NearbyHubsSectionState extends ConsumerState<_NearbyHubsSection> {
-  Future<List<Hub>>? _nearbyHubsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    // Load nearby hubs once when widget is created
-    _loadNearbyHubs();
-  }
-
-  void _loadNearbyHubs() {
-    _nearbyHubsFuture = _getNearbyHubs();
-  }
-
-  Future<List<Hub>> _getNearbyHubs() async {
-    try {
-      final position = await widget.locationService.getCurrentLocation();
-      if (position == null) return [];
-      return await widget.hubsRepo.findHubsNearby(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        radiusKm: 10.0,
-      );
-    } catch (e) {
-      return [];
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'HUBS קרובים',
-          style: FuturisticTypography.techHeadline,
-        ),
-        const SizedBox(height: 12),
-        FutureBuilder<List<Hub>>(
-          future: _nearbyHubsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const FuturisticLoadingState(
-                message: 'מחפש הובים קרובים...',
-              );
-            }
-
-            final hubs = snapshot.data ?? [];
-            if (hubs.isEmpty) {
-              return FuturisticCard(
-                child: Center(
-                  child: Text(
-                    'אין הובים קרובים',
-                    style: FuturisticTypography.bodyMedium,
-                  ),
-                ),
-              );
-            }
-
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: hubs.length,
-              itemBuilder: (context, index) {
-                final hub = hubs[index];
-                return FuturisticCard(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  onTap: () => context.push('/hubs/${hub.hubId}'),
-                  child: Row(
-                    children: [
-                      // Hub profile image or icon
-                      hub.profileImageUrl != null && hub.profileImageUrl!.isNotEmpty
-                          ? OptimizedImage(
-                              imageUrl: hub.profileImageUrl!,
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              borderRadius: BorderRadius.circular(12),
-                              errorWidget: Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  gradient: FuturisticColors.accentGradient,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.group,
-                                  color: Colors.white,
-                                  size: 30,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                gradient: FuturisticColors.accentGradient,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.group,
-                                color: Colors.white,
-                                size: 30,
-                              ),
-                            ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              hub.name,
-                              style: FuturisticTypography.heading3,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.group,
-                                  size: 16,
-                                  color: FuturisticColors.textSecondary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${hub.memberIds.length} חברים',
-                                  style: FuturisticTypography.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: FuturisticColors.textSecondary,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
 /// Associated Hubs Card - optimized to load once
 class _AssociatedHubsCard extends ConsumerStatefulWidget {
   final HubsRepository hubsRepo;
@@ -1336,9 +1070,9 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
 
     return dashboardData.when(
       data: (data) {
-        final vibeMessage = data['vibeMessage'] as String? ?? 'יום טוב לכדורגל!';
+        final summary = data['summary'] as String? ?? data['vibeMessage'] as String? ?? 'יום טוב לכדורגל!';
         final temp = data['temperature'] as int?;
-        final aqi = data['aqiIndex'] as int?;
+        final condition = data['condition'] as String?;
 
         return FuturisticCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1347,10 +1081,10 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. Vibe Message (משמאל, תופס את רוב המקום)
+              // 1. Weather Summary (משמאל, תופס את רוב המקום)
               Expanded(
                 child: Text(
-                  vibeMessage,
+                  summary,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: FuturisticColors.textPrimary,
                     fontWeight: FontWeight.bold,
@@ -1360,7 +1094,7 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              // 2. Data Icons (מימין, קומפקטי)
+              // 2. Temperature & Condition (מימין, קומפקטי)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1373,26 +1107,18 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '$temp°',
+                      '$temp°C',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: FuturisticColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(width: 12),
                   ],
-                  // איכות אוויר
-                  if (aqi != null) ...[
-                    Icon(
-                      Icons.air,
-                      size: 16,
-                      color: FuturisticColors.secondary.withValues(alpha: 0.8),
-                    ),
-                    const SizedBox(width: 4),
+                  // Condition emoji (if available)
+                  if (condition != null && condition.isNotEmpty) ...[
+                    const SizedBox(width: 8),
                     Text(
-                      '$aqi',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: FuturisticColors.textSecondary,
-                      ),
+                      condition.split(' ').last, // Get emoji from condition
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ],
                 ],
@@ -1407,6 +1133,157 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
         title: 'שגיאה בטעינת נתוני מזג אוויר',
         message: 'לא ניתן לטעון את נתוני מזג האוויר כרגע',
       ),
+    );
+  }
+}
+
+/// Location Sharing Toggle Widget
+/// Allows user to enable/disable location sharing
+class _LocationSharingToggle extends ConsumerStatefulWidget {
+  const _LocationSharingToggle();
+
+  @override
+  ConsumerState<_LocationSharingToggle> createState() => _LocationSharingToggleState();
+}
+
+class _LocationSharingToggleState extends ConsumerState<_LocationSharingToggle> {
+  bool _isLocationEnabled = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLocationStatus();
+  }
+
+  Future<void> _checkLocationStatus() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      setState(() {
+        _isLocationEnabled = permission == LocationPermission.whileInUse || 
+                            permission == LocationPermission.always;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleLocationSharing() async {
+    try {
+      if (_isLocationEnabled) {
+        // Disable location sharing - show dialog to confirm
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('הפסקת שיתוף מיקום'),
+            content: const Text(
+              'האם אתה בטוח שברצונך להפסיק את שיתוף המיקום? זה ישפיע על היכולת לראות הובים ומשחקים קרובים.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('ביטול'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('הפסק שיתוף'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          // Note: We can't actually revoke permissions programmatically
+          // But we can update the user's preference in SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('location_sharing_enabled', false);
+          
+          setState(() {
+            _isLocationEnabled = false;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('שיתוף מיקום הופסק. פתח הגדרות כדי להסיר הרשאות מיקום.'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      } else {
+        // Enable location sharing - request permission
+        final permission = await Geolocator.requestPermission();
+        
+        if (permission == LocationPermission.denied || 
+            permission == LocationPermission.deniedForever) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('הרשאת מיקום נדחתה. פתח הגדרות כדי לאפשר מיקום.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Save preference
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('location_sharing_enabled', true);
+
+        setState(() {
+          _isLocationEnabled = true;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('שיתוף מיקום הופעל בהצלחה!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    return IconButton(
+      icon: Icon(
+        _isLocationEnabled ? Icons.location_on : Icons.location_off,
+        color: _isLocationEnabled ? FuturisticColors.primary : FuturisticColors.textSecondary,
+      ),
+      onPressed: _toggleLocationSharing,
+      tooltip: _isLocationEnabled ? 'שיתוף מיקום פעיל - לחץ להפסיק' : 'שיתוף מיקום מושבת - לחץ להפעיל',
     );
   }
 }

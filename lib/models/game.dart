@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/models/enums/game_status.dart';
+import 'package:kickadoor/models/enums/game_visibility.dart';
 import 'package:kickadoor/models/converters/timestamp_converter.dart';
 import 'package:kickadoor/models/converters/geopoint_converter.dart';
 import 'package:kickadoor/models/team.dart';
@@ -25,6 +26,7 @@ class Game with _$Game {
     String? venueId, // Reference to venue (not denormalized - use venueId to fetch)
     @Default(2) int teamCount, // 2, 3, or 4
     @GameStatusConverter() @Default(GameStatus.teamSelection) GameStatus status,
+    @GameVisibilityConverter() @Default(GameVisibility.private) GameVisibility visibility, // private, public, or recruiting
     @Default([]) List<String> photoUrls, // URLs of game photos
     @TimestampConverter() required DateTime createdAt,
     @TimestampConverter() required DateTime updatedAt,

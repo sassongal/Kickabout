@@ -116,14 +116,6 @@ class PlayerAvatar extends StatelessWidget {
         Container(
           width: avatarRadius * 2,
           height: avatarRadius * 2,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1976D2), Color(0xFF9C27B0)], // Blue to purple
-            ),
-          ),
           child: user.photoUrl != null && user.photoUrl!.isNotEmpty
               ? ClipOval(
                   child: OptimizedImage(
@@ -172,17 +164,54 @@ class PlayerAvatar extends StatelessWidget {
     return avatarWidget;
   }
 
+  /// Get avatar color from user or default
+  Color _getAvatarColor() {
+    if (user.avatarColor != null && user.avatarColor!.isNotEmpty) {
+      try {
+        // Parse hex color (e.g., "#FF5733" or "FF5733")
+        final hex = user.avatarColor!.replaceFirst('#', '');
+        return Color(int.parse(hex, radix: 16) + 0xFF000000);
+      } catch (e) {
+        // Fallback to default if parsing fails
+        return _getDefaultColorForUser();
+      }
+    }
+    return _getDefaultColorForUser();
+  }
+
+  /// Get default color based on user ID (consistent for same user)
+  Color _getDefaultColorForUser() {
+    // Use user ID hash to get consistent color
+    final hash = user.uid.hashCode;
+    final colors = _getAvatarColorPalette();
+    return colors[hash.abs() % colors.length];
+  }
+
+  /// Get predefined color palette for avatars
+  List<Color> _getAvatarColorPalette() {
+    return const [
+      Color(0xFF1976D2), // Blue
+      Color(0xFF9C27B0), // Purple
+      Color(0xFF4CAF50), // Green
+      Color(0xFFFF9800), // Orange
+      Color(0xFFF44336), // Red
+      Color(0xFF00BCD4), // Cyan
+      Color(0xFFE91E63), // Pink
+      Color(0xFF795548), // Brown
+      Color(0xFF607D8B), // Blue Grey
+      Color(0xFFFFC107), // Amber
+    ];
+  }
+
   Widget _buildInitialsAvatar(double radius) {
+    final backgroundColor = _getAvatarColor();
+    
     return Container(
       width: radius * 2,
       height: radius * 2,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1976D2), Color(0xFF9C27B0)],
-        ),
+        color: backgroundColor,
       ),
       child: Center(
         child: Text(

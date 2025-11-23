@@ -34,11 +34,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _cityController = TextEditingController();
   String? _selectedPlayingStyle;
   String? _selectedRegion;
+  String? _selectedAvatarColor;
 
   XFile? _selectedImage;
   bool _isLoading = false;
   bool _isUploading = false;
   User? _currentUser;
+
+  // Predefined color palette for avatars
+  static const List<Map<String, dynamic>> _avatarColors = [
+    {'name': 'כחול', 'color': Color(0xFF1976D2), 'hex': '1976D2'},
+    {'name': 'סגול', 'color': Color(0xFF9C27B0), 'hex': '9C27B0'},
+    {'name': 'ירוק', 'color': Color(0xFF4CAF50), 'hex': '4CAF50'},
+    {'name': 'כתום', 'color': Color(0xFFFF9800), 'hex': 'FF9800'},
+    {'name': 'אדום', 'color': Color(0xFFF44336), 'hex': 'F44336'},
+    {'name': 'ציאן', 'color': Color(0xFF00BCD4), 'hex': '00BCD4'},
+    {'name': 'ורוד', 'color': Color(0xFFE91E63), 'hex': 'E91E63'},
+    {'name': 'חום', 'color': Color(0xFF795548), 'hex': '795548'},
+    {'name': 'כחול אפור', 'color': Color(0xFF607D8B), 'hex': '607D8B'},
+    {'name': 'ענבר', 'color': Color(0xFFFFC107), 'hex': 'FFC107'},
+  ];
 
   @override
   void initState() {
@@ -70,6 +85,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           _cityController.text = user.city ?? '';
           _selectedPlayingStyle = user.playingStyle;
           _selectedRegion = user.region;
+          _selectedAvatarColor = user.avatarColor;
         });
       }
     } catch (e) {
@@ -300,6 +316,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         playingStyle: _selectedPlayingStyle,
         region: _selectedRegion,
         photoUrl: photoUrl,
+        avatarColor: _selectedAvatarColor,
       );
 
       await usersRepo.setUser(updatedUser);
@@ -355,7 +372,60 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                
+                // Avatar Color Picker (only if no photo)
+                if (_currentUser?.photoUrl == null || _currentUser!.photoUrl!.isEmpty) ...[
+                  Text(
+                    'צבע אווטר',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: _avatarColors.map((colorData) {
+                      final color = colorData['color'] as Color;
+                      final hex = colorData['hex'] as String;
+                      final isSelected = _selectedAvatarColor == hex || 
+                          (_selectedAvatarColor == null && 
+                           _currentUser?.avatarColor == null &&
+                           _avatarColors.indexOf(colorData) == 0);
+                      
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedAvatarColor = hex;
+                          });
+                        },
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected 
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 24,
+                                )
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 // Name field
                 TextFormField(

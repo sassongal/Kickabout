@@ -999,7 +999,6 @@ class _PlayerProfileScreenFuturisticState
     BuildContext context,
     User user,
     List<RatingSnapshot> history,
-    RatingsRepository ratingsRepo,
   ) {
     final privacy = user.privacySettings;
     if (privacy['hideRatings'] ?? false) {

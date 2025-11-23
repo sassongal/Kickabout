@@ -24,6 +24,8 @@ mixin _$User {
   String get name => throw _privateConstructorUsedError;
   String get email => throw _privateConstructorUsedError;
   String? get photoUrl => throw _privateConstructorUsedError;
+  String? get avatarColor =>
+      throw _privateConstructorUsedError; // Hex color for avatar background (e.g., "#FF5733")
   String? get phoneNumber => throw _privateConstructorUsedError;
   String? get city => throw _privateConstructorUsedError; // עיר מגורים
 // New profile fields
@@ -82,6 +84,7 @@ abstract class $UserCopyWith<$Res> {
       String name,
       String email,
       String? photoUrl,
+      String? avatarColor,
       String? phoneNumber,
       String? city,
       String? firstName,
@@ -124,6 +127,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? name = null,
     Object? email = null,
     Object? photoUrl = freezed,
+    Object? avatarColor = freezed,
     Object? phoneNumber = freezed,
     Object? city = freezed,
     Object? firstName = freezed,
@@ -162,6 +166,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
       photoUrl: freezed == photoUrl
           ? _value.photoUrl
           : photoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      avatarColor: freezed == avatarColor
+          ? _value.avatarColor
+          : avatarColor // ignore: cast_nullable_to_non_nullable
               as String?,
       phoneNumber: freezed == phoneNumber
           ? _value.phoneNumber
@@ -263,6 +271,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String name,
       String email,
       String? photoUrl,
+      String? avatarColor,
       String? phoneNumber,
       String? city,
       String? firstName,
@@ -302,6 +311,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? name = null,
     Object? email = null,
     Object? photoUrl = freezed,
+    Object? avatarColor = freezed,
     Object? phoneNumber = freezed,
     Object? city = freezed,
     Object? firstName = freezed,
@@ -340,6 +350,10 @@ class __$$UserImplCopyWithImpl<$Res>
       photoUrl: freezed == photoUrl
           ? _value.photoUrl
           : photoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      avatarColor: freezed == avatarColor
+          ? _value.avatarColor
+          : avatarColor // ignore: cast_nullable_to_non_nullable
               as String?,
       phoneNumber: freezed == phoneNumber
           ? _value.phoneNumber
@@ -437,6 +451,7 @@ class _$UserImpl implements _User {
       required this.name,
       required this.email,
       this.photoUrl,
+      this.avatarColor,
       this.phoneNumber,
       this.city,
       this.firstName,
@@ -479,6 +494,9 @@ class _$UserImpl implements _User {
   final String email;
   @override
   final String? photoUrl;
+  @override
+  final String? avatarColor;
+// Hex color for avatar background (e.g., "#FF5733")
   @override
   final String? phoneNumber;
   @override
@@ -563,7 +581,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, phoneNumber: $phoneNumber, city: $city, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, playingStyle: $playingStyle, totalParticipations: $totalParticipations, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, privacySettings: $privacySettings)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, playingStyle: $playingStyle, totalParticipations: $totalParticipations, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, privacySettings: $privacySettings)';
   }
 
   @override
@@ -576,6 +594,8 @@ class _$UserImpl implements _User {
             (identical(other.email, email) || other.email == email) &&
             (identical(other.photoUrl, photoUrl) ||
                 other.photoUrl == photoUrl) &&
+            (identical(other.avatarColor, avatarColor) ||
+                other.avatarColor == avatarColor) &&
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
             (identical(other.city, city) || other.city == city) &&
@@ -624,6 +644,7 @@ class _$UserImpl implements _User {
         name,
         email,
         photoUrl,
+        avatarColor,
         phoneNumber,
         city,
         firstName,
@@ -669,6 +690,7 @@ abstract class _User implements User {
       required final String name,
       required final String email,
       final String? photoUrl,
+      final String? avatarColor,
       final String? phoneNumber,
       final String? city,
       final String? firstName,
@@ -701,6 +723,8 @@ abstract class _User implements User {
   String get email;
   @override
   String? get photoUrl;
+  @override
+  String? get avatarColor; // Hex color for avatar background (e.g., "#FF5733")
   @override
   String? get phoneNumber;
   @override

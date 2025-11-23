@@ -16,6 +16,7 @@ export 'gamification.dart';
 export 'private_message.dart';
 export 'venue.dart';
 export 'enums/game_status.dart';
+export 'enums/game_visibility.dart';
 export 'enums/signup_status.dart';
 export 'enums/event_type.dart';
 export 'converters/timestamp_converter.dart';

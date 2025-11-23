@@ -57,6 +57,9 @@ mixin _$Hub {
       throw _privateConstructorUsedError; // Rules and guidelines for the hub
   String? get region =>
       throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים
+// Privacy settings
+  bool get isPrivate =>
+      throw _privateConstructorUsedError; // If true, requires "Request to Join" (create notification for manager)
 // Manager-only ratings for team balancing (1-10 scale)
   Map<String, double> get managerRatings =>
       throw _privateConstructorUsedError; // userId -> rating (1-10, manager-only, for team balancing)
@@ -102,6 +105,7 @@ abstract class $HubCopyWith<$Res> {
       String? logoUrl,
       String? hubRules,
       String? region,
+      bool isPrivate,
       Map<String, double> managerRatings,
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity});
@@ -142,6 +146,7 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? logoUrl = freezed,
     Object? hubRules = freezed,
     Object? region = freezed,
+    Object? isPrivate = null,
     Object? managerRatings = null,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
@@ -231,6 +236,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      isPrivate: null == isPrivate
+          ? _value.isPrivate
+          : isPrivate // ignore: cast_nullable_to_non_nullable
+              as bool,
       managerRatings: null == managerRatings
           ? _value.managerRatings
           : managerRatings // ignore: cast_nullable_to_non_nullable
@@ -275,6 +284,7 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       String? logoUrl,
       String? hubRules,
       String? region,
+      bool isPrivate,
       Map<String, double> managerRatings,
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity});
@@ -312,6 +322,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? logoUrl = freezed,
     Object? hubRules = freezed,
     Object? region = freezed,
+    Object? isPrivate = null,
     Object? managerRatings = null,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
@@ -401,6 +412,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      isPrivate: null == isPrivate
+          ? _value.isPrivate
+          : isPrivate // ignore: cast_nullable_to_non_nullable
+              as bool,
       managerRatings: null == managerRatings
           ? _value._managerRatings
           : managerRatings // ignore: cast_nullable_to_non_nullable
@@ -443,6 +458,7 @@ class _$HubImpl implements _Hub {
       this.logoUrl,
       this.hubRules,
       this.region,
+      this.isPrivate = false,
       final Map<String, double> managerRatings = const {},
       this.gameCount,
       @TimestampConverter() this.lastActivity})
@@ -561,9 +577,14 @@ class _$HubImpl implements _Hub {
   @override
   final String? region;
 // אזור: צפון, מרכז, דרום, ירושלים
+// Privacy settings
+  @override
+  @JsonKey()
+  final bool isPrivate;
+// If true, requires "Request to Join" (create notification for manager)
 // Manager-only ratings for team balancing (1-10 scale)
   final Map<String, double> _managerRatings;
-// אזור: צפון, מרכז, דרום, ירושלים
+// If true, requires "Request to Join" (create notification for manager)
 // Manager-only ratings for team balancing (1-10 scale)
   @override
   @JsonKey()
@@ -584,7 +605,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, managerRatings: $managerRatings, gameCount: $gameCount, lastActivity: $lastActivity)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, gameCount: $gameCount, lastActivity: $lastActivity)';
   }
 
   @override
@@ -625,6 +646,8 @@ class _$HubImpl implements _Hub {
             (identical(other.hubRules, hubRules) ||
                 other.hubRules == hubRules) &&
             (identical(other.region, region) || other.region == region) &&
+            (identical(other.isPrivate, isPrivate) ||
+                other.isPrivate == isPrivate) &&
             const DeepCollectionEquality()
                 .equals(other._managerRatings, _managerRatings) &&
             (identical(other.gameCount, gameCount) ||
@@ -658,6 +681,7 @@ class _$HubImpl implements _Hub {
         logoUrl,
         hubRules,
         region,
+        isPrivate,
         const DeepCollectionEquality().hash(_managerRatings),
         gameCount,
         lastActivity
@@ -702,6 +726,7 @@ abstract class _Hub implements Hub {
       final String? logoUrl,
       final String? hubRules,
       final String? region,
+      final bool isPrivate,
       final Map<String, double> managerRatings,
       final int? gameCount,
       @TimestampConverter() final DateTime? lastActivity}) = _$HubImpl;
@@ -757,6 +782,10 @@ abstract class _Hub implements Hub {
   String? get hubRules; // Rules and guidelines for the hub
   @override
   String? get region; // אזור: צפון, מרכז, דרום, ירושלים
+// Privacy settings
+  @override
+  bool
+      get isPrivate; // If true, requires "Request to Join" (create notification for manager)
 // Manager-only ratings for team balancing (1-10 scale)
   @override
   Map<String, double>
