@@ -865,23 +865,29 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
         ),
       ),
       actions: [
-        // Profile button (top-left in RTL)
+        // Profile button (top-left in RTL) - Circular Avatar
         if (user != null)
-          Container(
-            margin: const EdgeInsets.only(left: 8),
-            decoration: BoxDecoration(
-              shape: BoxShape.rectangle,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: FuturisticColors.primary.withValues(alpha: 0.3),
-                width: 1.5,
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: InkWell(
+              onTap: () => context.push('/profile/$currentUserId/edit'),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: FuturisticColors.primary.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: PlayerAvatar(
+                  user: user,
+                  size: AvatarSize.sm,
+                  clickable: false,
+                ),
               ),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.person_outline),
-              onPressed: () => context.push('/profile/$currentUserId/edit'),
-              tooltip: 'הפרטים שלי',
-              color: FuturisticColors.primary,
             ),
           ),
         // Inbox icon
@@ -937,23 +943,6 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
             );
           },
         ),
-        // Avatar
-        if (user != null)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: InkWell(
-              onTap: () => context.push('/profile/$currentUserId'),
-              borderRadius: BorderRadius.circular(20),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: PlayerAvatar(
-                  user: user,
-                  size: AvatarSize.sm,
-                  clickable: false,
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }

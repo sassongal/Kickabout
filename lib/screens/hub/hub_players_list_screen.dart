@@ -199,8 +199,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
           final hubPermissions = currentUserId != null 
               ? HubPermissions(hub: hub, userId: currentUserId)
               : null;
-          final canManageRatings = hubPermissions?.isManager() ?? false || 
-                                   hubPermissions?.isModerator() ?? false;
+          final canManageRatings = (hubPermissions?.isManager() ?? false) || 
+                                   (hubPermissions?.isModerator() ?? false);
           
           // Load existing ratings when entering rating mode
           if (_isRatingMode && _tempRatings.isEmpty && hub.managerRatings.isNotEmpty) {

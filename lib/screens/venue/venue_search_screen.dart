@@ -130,46 +130,40 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
       return;
     }
 
-    // Convert to Venue and save
-    if (widget.hubId == null) {
-      SnackbarHelper.showError(context, 'Hub ID לא זמין');
-      return;
-    }
-
+    // In selectMode, return the venue immediately (for home venue selection)
+    // The caller will handle saving it to the hub
     try {
       final venuesRepo = ref.read(venuesRepositoryProvider);
-      final venue = place.toVenue(
-        hubId: widget.hubId!,
+      
+      // Convert PlaceResult to Venue
+      final venueFromGoogle = place.toVenue(
+        hubId: widget.hubId ?? '',
         createdBy: ref.read(currentUserIdProvider),
       );
-
-      final venueId = await venuesRepo.createVenue(venue);
-
-      // Get the created venue with its ID
-      final createdVenue = await venuesRepo.getVenue(venueId);
-      if (createdVenue == null) {
-        if (!mounted) return;
-        SnackbarHelper.showError(context, 'שגיאה בטעינת המגרש שנוצר');
-        return;
-      }
-
-      // Update hub with new venue
-      final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(widget.hubId!);
-      if (hub != null) {
-        final updatedVenueIds = [...hub.venueIds, venueId];
-        await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
+      
+      // Use getOrCreateVenueFromGooglePlace to avoid duplicates
+      // This will return existing venue if googlePlaceId matches, or create new one
+      final venue = await venuesRepo.getOrCreateVenueFromGooglePlace(venueFromGoogle);
+      
+      // If hubId is provided, ensure venue is linked to hub
+      if (widget.hubId != null) {
+        final hubsRepo = ref.read(hubsRepositoryProvider);
+        final hub = await hubsRepo.getHub(widget.hubId!);
+        if (hub != null && !hub.venueIds.contains(venue.venueId)) {
+          // Add venue to hub's venueIds if not already there
+          final updatedVenueIds = [...hub.venueIds, venue.venueId];
+          await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
+        }
       }
 
       if (!mounted) return;
-      SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
-      // Return the created venue object
+      // Return the venue object (existing or newly created)
       if (mounted) {
-        context.pop(createdVenue);
+        context.pop(venue);
       }
     } catch (e) {
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
+      SnackbarHelper.showError(context, 'שגיאה בבחירת מגרש: $e');
     }
   }
 

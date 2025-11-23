@@ -15,6 +15,7 @@ import 'package:kickadoor/utils/geohash_utils.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
+import 'package:kickadoor/widgets/dialogs/location_search_dialog.dart';
 
 /// Edit profile screen
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -294,7 +295,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final usersRepo = ref.read(usersRepositoryProvider);
       String? photoUrl = _currentUser?.photoUrl;
 
-      // Upload image if selected
+      // Upload image if selected, or clear if deleted
       if (_selectedImage != null) {
         setState(() {
           _isUploading = true;
@@ -309,6 +310,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         setState(() {
           _isUploading = false;
         });
+      } else if (_currentUser?.photoUrl != null && _currentUser!.photoUrl!.isNotEmpty && _selectedImage == null) {
+        // User deleted photo - set to null and use avatarColor
+        photoUrl = null;
       }
 
       // Update user
@@ -378,20 +382,98 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               children: [
                 // Profile photo
                 Center(
-                  child: ImagePickerButton(
-                    size: 120,
-                    currentImageUrl: _currentUser?.photoUrl,
-                    onImagePicked: (image) {
-                      setState(() {
-                        _selectedImage = image;
-                      });
-                    },
+                  child: Stack(
+                    children: [
+                      ImagePickerButton(
+                        size: 120,
+                        currentImageUrl: _currentUser?.photoUrl,
+                        onImagePicked: (image) async {
+                          // Check file size (5MB limit)
+                          final fileSize = await image.length();
+                          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                          
+                          if (fileSize > maxSize) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('התמונה גדולה מדי. מקסימום 5MB'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+                          
+                          setState(() {
+                            _selectedImage = image;
+                          });
+                        },
+                      ),
+                      // Delete photo button (if photo exists)
+                      if (_currentUser?.photoUrl != null && _currentUser!.photoUrl!.isNotEmpty)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          child: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                _selectedImage = null;
+                                // Clear photoUrl - will be handled in save
+                              });
+                              // Show confirmation
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('מחיקת תמונה'),
+                                  content: const Text('האם אתה בטוח שברצונך למחוק את התמונה?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('ביטול'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        setState(() {
+                                          // Will be saved as null in _saveProfile
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('מחק'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
                 
-                // Avatar Color Picker (only if no photo)
-                if (_currentUser?.photoUrl == null || _currentUser!.photoUrl!.isEmpty) ...[
+                // Avatar Color Picker (show always, but highlight if no photo)
+                ...[
+                  Text(
+                    'צבע אווטר',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _currentUser?.photoUrl != null && _currentUser!.photoUrl!.isNotEmpty
+                        ? 'צבע זה יופיע אם תמחק את התמונה'
+                        : 'צבע זה יופיע אם אין תמונה',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     'צבע אווטר',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -569,7 +651,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // City field with "Use Current Location" button
+                // City field with "Use Current Location" and "Manual Search" buttons
                 TextFormField(
                   controller: _cityController,
                   decoration: InputDecoration(
@@ -577,10 +659,29 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     hintText: 'לדוגמה: תל אביב',
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.location_city),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.my_location),
-                      tooltip: 'השתמש במיקום הנוכחי',
-                      onPressed: () async {
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.search),
+                          tooltip: 'חיפוש כתובת',
+                          onPressed: () async {
+                            // Show manual location search dialog
+                            final result = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => const LocationSearchDialog(),
+                            );
+                            
+                            if (result == true && mounted) {
+                              // Reload user to get updated location
+                              _loadUser();
+                            }
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.my_location),
+                          tooltip: 'השתמש במיקום הנוכחי',
+                          onPressed: () async {
                         setState(() {
                           _isLoading = true;
                         });
@@ -634,6 +735,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           }
                         }
                       },
+                    ),
+                      ],
                     ),
                   ),
                 ),
