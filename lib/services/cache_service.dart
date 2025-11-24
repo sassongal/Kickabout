@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:kickadoor/models/models.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Cache entry with expiration
 class _CacheEntry<T> {
@@ -169,16 +170,17 @@ class CacheService {
         
         // Handle complex objects (User, Hub) with proper serialization
         if (data is User) {
-          serializedData = data.toJson();
+          serializedData = _convertTimestampsToJson(data.toJson());
         } else if (data is Hub) {
-          serializedData = data.toJson();
+          serializedData = _convertTimestampsToJson(data.toJson());
         } else if (data is Map || data is List || data is String || data is num || data is bool) {
           // Simple types can be serialized directly
           serializedData = data;
         } else {
           // For other types, try toJson if available
           try {
-            serializedData = (data as dynamic).toJson();
+            final jsonData = (data as dynamic).toJson();
+            serializedData = jsonData is Map ? _convertTimestampsToJson(jsonData) : jsonData;
           } catch (e) {
             debugPrint('⚠️ Cannot serialize ${data.runtimeType} to persistent cache');
             return; // Skip saving if can't serialize
@@ -360,7 +362,7 @@ class CacheService {
       'analytics': {
         'hits': _cacheHits,
         'misses': _cacheMisses,
-        'hitRate': hitRate.toStringAsFixed(2) + '%',
+        'hitRate': '${hitRate.toStringAsFixed(2)}%',
         'totalRequests': totalRequests,
       },
       'persistent': {
@@ -378,6 +380,20 @@ class CacheService {
     _cacheMisses = 0;
     _persistentCacheHits = 0;
     _persistentCacheMisses = 0;
+  }
+
+  /// Convert Timestamp objects to JSON-serializable format
+  /// Recursively converts all Timestamp objects in a Map to ISO8601 strings
+  dynamic _convertTimestampsToJson(dynamic data) {
+    if (data is Timestamp) {
+      return data.toDate().toIso8601String();
+    } else if (data is Map) {
+      return data.map((key, value) => MapEntry(key, _convertTimestampsToJson(value)));
+    } else if (data is List) {
+      return data.map((item) => _convertTimestampsToJson(item)).toList();
+    } else {
+      return data;
+    }
   }
 }
 

@@ -370,7 +370,12 @@ service cloud.firestore {
       // Hub Events: /hubs/{hubId}/events/{eventId}
       match /events/{eventId} {
         // Only hub members can read events
-        allow read: if isAuthenticated() && isHubMember(hubId);
+        // Also allow collection group queries for public events (showInCommunityFeed)
+        allow read: if isAuthenticated() && (
+          isHubMember(hubId) ||
+          // Allow reading events with showInCommunityFeed=true for collection group queries
+          (resource.data.showInCommunityFeed == true && resource.data.status in ['upcoming', 'ongoing'])
+        );
         
         // Hub managers/moderators or users with custom permissions can create events
         allow create: if isAuthenticated() && canCreateEvents(hubId) &&
@@ -519,6 +524,7 @@ service cloud.firestore {
     // ============================================
     match /notifications/{userId}/items/{notificationId} {
       // Users can only read their own notifications
+      // Allow queries with where/orderBy clauses
       allow read: if isAuthenticated() && userId == request.auth.uid;
       
       // Allow clients to create notifications for themselves (Cloud Functions also create them)

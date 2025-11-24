@@ -50,7 +50,11 @@ class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
         leading: showBackButton
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new),
-                onPressed: () => context.pop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  }
+                },
                 tooltip: 'חזור',
                 color: FuturisticColors.textPrimary,
               )
