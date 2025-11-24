@@ -42,8 +42,10 @@ class Game with _$Game {
     String? hubName, // Denormalized from hubs/{hubId}.name (optional, for feed posts)
     // Teams and scores
     @Default([]) List<Team> teams, // List of teams created in TeamMaker
-    int? teamAScore, // Score for team A (first team)
-    int? teamBScore, // Score for team B (second team)
+    // Legacy single-match scores (deprecated - use matches list for session mode)
+    // These fields are kept for backward compatibility with old games
+    @JsonKey(name: 'teamAScore') int? legacyTeamAScore, // Legacy: Score for team A - use matches for session mode
+    @JsonKey(name: 'teamBScore') int? legacyTeamBScore, // Legacy: Score for team B - use matches for session mode
     // Multi-match session support (for Events converted to Games)
     @Default([]) List<MatchResult> matches, // List of individual match outcomes within this session
     @Default({}) Map<String, int> aggregateWins, // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}

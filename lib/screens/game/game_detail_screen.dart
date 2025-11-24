@@ -19,7 +19,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kickadoor/widgets/optimized_image.dart';
 import 'package:kickadoor/services/weather_service.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kickadoor/logic/session_logic.dart';
 
 /// Game detail screen
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -801,8 +801,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Final score widget (prominent)
-        if (game.teamAScore != null && game.teamBScore != null)
+        // Final score widget (prominent) - Show Session Summary if matches exist, otherwise legacy score
+        if (game.matches.isNotEmpty || game.aggregateWins.isNotEmpty)
+          _SessionSummaryWidget(game: game)
+        else if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
           _FinalScoreWidget(game: game),
         const SizedBox(height: 24),
 
@@ -1265,6 +1267,151 @@ class _TeamsDisplayWidget extends StatelessWidget {
   }
 }
 
+/// Widget to display session summary (for multi-match games)
+class _SessionSummaryWidget extends StatelessWidget {
+  final Game game;
+
+  const _SessionSummaryWidget({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final isSessionMode = SessionLogic.isSessionMode(game);
+    if (!isSessionMode) {
+      return const SizedBox.shrink();
+    }
+
+    final teamStats = SessionLogic.getAllTeamStats(game);
+    final seriesScore = SessionLogic.getSeriesScoreDisplay(game);
+    final winner = SessionLogic.calculateSessionWinner(game);
+
+    return Card(
+      elevation: 4,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'סיכום סשן',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              seriesScore,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+              ),
+            ),
+            if (winner != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'מנצח: ${winner.displayName}',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            // Team stats table
+            if (teamStats.isNotEmpty) ...[
+              Text(
+                'סטטיסטיקות קבוצות',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...teamStats.values.map((stats) {
+                final team = game.teams.firstWhere(
+                  (t) => (t.color ?? '') == stats.teamColor,
+                  orElse: () => game.teams.first,
+                );
+                final colorValue = team.colorValue ?? 0xFF2196F3;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: Color(colorValue),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              team.name.isNotEmpty ? team.name : stats.teamColor,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'ניצחונות: ${stats.wins} | תיקו: ${stats.draws} | הפסדים: ${stats.losses}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            Text(
+                              'שערים: ${stats.goalsFor} | הפרש: ${stats.goalDifference > 0 ? '+' : ''}${stats.goalDifference}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${stats.points} נק\'',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+            if (game.matches.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'סה"כ ${game.matches.length} משחקים',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Widget to display final score prominently
 class _FinalScoreWidget extends StatelessWidget {
   final Game game;
@@ -1273,8 +1420,8 @@ class _FinalScoreWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamAScore = game.teamAScore ?? 0;
-    final teamBScore = game.teamBScore ?? 0;
+    final teamAScore = game.legacyTeamAScore ?? 0;
+    final teamBScore = game.legacyTeamBScore ?? 0;
     final teamAName = game.teams.isNotEmpty ? game.teams[0].name : 'קבוצה א\'';
     final teamBName = game.teams.length > 1 ? game.teams[1].name : 'קבוצה ב\'';
 

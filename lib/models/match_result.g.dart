@@ -13,9 +13,19 @@ _$MatchResultImpl _$$MatchResultImplFromJson(Map<String, dynamic> json) =>
       teamBColor: json['teamBColor'] as String,
       scoreA: (json['scoreA'] as num).toInt(),
       scoreB: (json['scoreB'] as num).toInt(),
+      scorerIds: (json['scorerIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      assistIds: (json['assistIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
       loggedBy: json['loggedBy'] as String?,
+      matchDurationMinutes:
+          (json['matchDurationMinutes'] as num?)?.toInt() ?? 12,
     );
 
 Map<String, dynamic> _$$MatchResultImplToJson(_$MatchResultImpl instance) =>
@@ -25,6 +35,9 @@ Map<String, dynamic> _$$MatchResultImplToJson(_$MatchResultImpl instance) =>
       'teamBColor': instance.teamBColor,
       'scoreA': instance.scoreA,
       'scoreB': instance.scoreB,
+      'scorerIds': instance.scorerIds,
+      'assistIds': instance.assistIds,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'loggedBy': instance.loggedBy,
+      'matchDurationMinutes': instance.matchDurationMinutes,
     };

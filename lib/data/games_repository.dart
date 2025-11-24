@@ -889,5 +889,188 @@ class GamesRepository {
     }
   }
 
+  /// Add a match result to a session (Game with multiple matches)
+  /// This is a CRITICAL transaction that:
+  /// 1. Adds the MatchResult to the game's matches array
+  /// 2. Updates aggregateWins for the teams
+  /// 3. Updates player stats (goals/assists) in the users collection
+  /// 
+  /// All operations are atomic - if any fails, the entire transaction rolls back
+  Future<void> addMatchToSession(
+    String gameId,
+    MatchResult match,
+    String currentUserId,
+  ) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Step 1: Verify game exists and user has permission
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
+      // Get hub to verify permissions
+      final hubsRepo = HubsRepository();
+      final hub = await hubsRepo.getHub(game.hubId);
+      if (hub == null) {
+        throw Exception('Hub not found: ${game.hubId}');
+      }
+
+      // Check if user is manager/admin
+      final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
+      if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
+        throw Exception('Unauthorized: Only Hub Managers can add matches to sessions');
+      }
+
+      // Step 2: Atomic Transaction
+      await _firestore.runTransaction((transaction) async {
+        // Read game document
+        final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+        final gameDoc = await transaction.get(gameRef);
+        
+        if (!gameDoc.exists) {
+          throw Exception('Game not found');
+        }
+
+        final gameData = gameDoc.data()!;
+        final gameHubId = gameData['hubId'] as String;
+
+        // Verify hub still exists and user is still manager
+        final hubRef = _firestore.doc(FirestorePaths.hub(gameHubId));
+        final hubDoc = await transaction.get(hubRef);
+        
+        if (!hubDoc.exists) {
+          throw Exception('Hub not found');
+        }
+
+        final hubData = hubDoc.data()!;
+        final isManager = hubData['createdBy'] == currentUserId ||
+                         (hubData['roles'] as Map?)?[currentUserId] == 'manager' ||
+                         (hubData['roles'] as Map?)?[currentUserId] == 'admin' ||
+                         (hubData['roles'] as Map?)?[currentUserId] == 'moderator';
+        
+        if (!isManager) {
+          throw Exception('Unauthorized: Only Hub Managers can add matches to sessions');
+        }
+
+        // Get current matches list
+        final currentMatches = (gameData['matches'] as List? ?? [])
+            .map((m) => MatchResult.fromJson(m as Map<String, dynamic>))
+            .toList();
+
+        // Add new match to list
+        final updatedMatches = [...currentMatches, match];
+        final matchesJson = updatedMatches.map((m) => m.toJson()).toList();
+
+        // Calculate aggregate wins
+        final Map<String, int> aggregateWins = Map<String, int>.from(
+          gameData['aggregateWins'] as Map? ?? {},
+        );
+
+        // Determine winner of this match
+        String? winnerColor;
+        if (match.scoreA > match.scoreB) {
+          winnerColor = match.teamAColor;
+        } else if (match.scoreB > match.scoreA) {
+          winnerColor = match.teamBColor;
+        }
+        // If draw, no winner (both teams get 1 point, but we track wins only)
+
+        // Update aggregate wins
+        if (winnerColor != null) {
+          aggregateWins[winnerColor] = (aggregateWins[winnerColor] ?? 0) + 1;
+        }
+
+        // Update game document
+        final gameUpdates = <String, dynamic>{
+          'matches': matchesJson,
+          'aggregateWins': aggregateWins,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        transaction.update(gameRef, gameUpdates);
+
+        // Step 3: Update player stats within transaction
+        // Count goals and assists per player
+        final Map<String, int> playerGoals = {};
+        final Map<String, int> playerAssists = {};
+
+        for (final scorerId in match.scorerIds) {
+          playerGoals[scorerId] = (playerGoals[scorerId] ?? 0) + 1;
+        }
+
+        for (final assistId in match.assistIds) {
+          playerAssists[assistId] = (playerAssists[assistId] ?? 0) + 1;
+        }
+
+        // Update each player's stats
+        for (final playerId in {...playerGoals.keys, ...playerAssists.keys}) {
+          final userRef = _firestore.doc(FirestorePaths.user(playerId));
+          
+          final userUpdates = <String, dynamic>{};
+          
+          // Add goals count
+          final goalsCount = playerGoals[playerId] ?? 0;
+          if (goalsCount > 0) {
+            userUpdates['goals'] = FieldValue.increment(goalsCount);
+          }
+
+          // Add assists count
+          final assistsCount = playerAssists[playerId] ?? 0;
+          if (assistsCount > 0) {
+            userUpdates['assists'] = FieldValue.increment(assistsCount);
+          }
+
+          if (userUpdates.isNotEmpty) {
+            transaction.update(userRef, userUpdates);
+          }
+        }
+
+        // Also update gamification stats if they exist
+        for (final playerId in {...playerGoals.keys, ...playerAssists.keys}) {
+          final gamificationRef = _firestore
+              .collection(FirestorePaths.users())
+              .doc(playerId)
+              .collection('gamification')
+              .doc('stats');
+          
+          final gamificationDoc = await transaction.get(gamificationRef);
+          
+          if (gamificationDoc.exists) {
+            final goalsCount = playerGoals[playerId] ?? 0;
+            final assistsCount = playerAssists[playerId] ?? 0;
+            
+            final gamificationUpdates = <String, dynamic>{
+              'updatedAt': FieldValue.serverTimestamp(),
+            };
+            
+            if (goalsCount > 0) {
+              gamificationUpdates['stats.goals'] = FieldValue.increment(goalsCount);
+            }
+            if (assistsCount > 0) {
+              gamificationUpdates['stats.assists'] = FieldValue.increment(assistsCount);
+            }
+            
+            if (gamificationUpdates.length > 1) { // More than just updatedAt
+              transaction.update(gamificationRef, gamificationUpdates);
+            }
+          }
+        }
+      });
+
+      // Step 4: Invalidate caches (outside transaction)
+      CacheService().clear(CacheKeys.game(gameId));
+      CacheService().clear(CacheKeys.gamesByHub(game.hubId));
+
+      debugPrint('✅ Match added to session: $gameId, match: ${match.matchId}');
+    } catch (e) {
+      debugPrint('❌ Failed to add match to session: $e');
+      throw Exception('Failed to add match to session: $e');
+    }
+  }
+
 }
 

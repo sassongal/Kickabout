@@ -68,10 +68,14 @@ mixin _$Game {
 // Teams and scores
   List<Team> get teams =>
       throw _privateConstructorUsedError; // List of teams created in TeamMaker
-  int? get teamAScore =>
-      throw _privateConstructorUsedError; // Score for team A (first team)
-  int? get teamBScore =>
-      throw _privateConstructorUsedError; // Score for team B (second team)
+// Legacy single-match scores (deprecated - use matches list for session mode)
+// These fields are kept for backward compatibility with old games
+  @JsonKey(name: 'teamAScore')
+  int? get legacyTeamAScore =>
+      throw _privateConstructorUsedError; // Legacy: Score for team A - use matches for session mode
+  @JsonKey(name: 'teamBScore')
+  int? get legacyTeamBScore =>
+      throw _privateConstructorUsedError; // Legacy: Score for team B - use matches for session mode
 // Multi-match session support (for Events converted to Games)
   List<MatchResult> get matches =>
       throw _privateConstructorUsedError; // List of individual match outcomes within this session
@@ -145,8 +149,8 @@ abstract class $GameCopyWith<$Res> {
       String? createdByPhotoUrl,
       String? hubName,
       List<Team> teams,
-      int? teamAScore,
-      int? teamBScore,
+      @JsonKey(name: 'teamAScore') int? legacyTeamAScore,
+      @JsonKey(name: 'teamBScore') int? legacyTeamBScore,
       List<MatchResult> matches,
       Map<String, int> aggregateWins,
       int? durationInMinutes,
@@ -202,8 +206,8 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? createdByPhotoUrl = freezed,
     Object? hubName = freezed,
     Object? teams = null,
-    Object? teamAScore = freezed,
-    Object? teamBScore = freezed,
+    Object? legacyTeamAScore = freezed,
+    Object? legacyTeamBScore = freezed,
     Object? matches = null,
     Object? aggregateWins = null,
     Object? durationInMinutes = freezed,
@@ -313,13 +317,13 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
-      teamAScore: freezed == teamAScore
-          ? _value.teamAScore
-          : teamAScore // ignore: cast_nullable_to_non_nullable
+      legacyTeamAScore: freezed == legacyTeamAScore
+          ? _value.legacyTeamAScore
+          : legacyTeamAScore // ignore: cast_nullable_to_non_nullable
               as int?,
-      teamBScore: freezed == teamBScore
-          ? _value.teamBScore
-          : teamBScore // ignore: cast_nullable_to_non_nullable
+      legacyTeamBScore: freezed == legacyTeamBScore
+          ? _value.legacyTeamBScore
+          : legacyTeamBScore // ignore: cast_nullable_to_non_nullable
               as int?,
       matches: null == matches
           ? _value.matches
@@ -416,8 +420,8 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       String? createdByPhotoUrl,
       String? hubName,
       List<Team> teams,
-      int? teamAScore,
-      int? teamBScore,
+      @JsonKey(name: 'teamAScore') int? legacyTeamAScore,
+      @JsonKey(name: 'teamBScore') int? legacyTeamBScore,
       List<MatchResult> matches,
       Map<String, int> aggregateWins,
       int? durationInMinutes,
@@ -470,8 +474,8 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? createdByPhotoUrl = freezed,
     Object? hubName = freezed,
     Object? teams = null,
-    Object? teamAScore = freezed,
-    Object? teamBScore = freezed,
+    Object? legacyTeamAScore = freezed,
+    Object? legacyTeamBScore = freezed,
     Object? matches = null,
     Object? aggregateWins = null,
     Object? durationInMinutes = freezed,
@@ -581,13 +585,13 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value._teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
-      teamAScore: freezed == teamAScore
-          ? _value.teamAScore
-          : teamAScore // ignore: cast_nullable_to_non_nullable
+      legacyTeamAScore: freezed == legacyTeamAScore
+          ? _value.legacyTeamAScore
+          : legacyTeamAScore // ignore: cast_nullable_to_non_nullable
               as int?,
-      teamBScore: freezed == teamBScore
-          ? _value.teamBScore
-          : teamBScore // ignore: cast_nullable_to_non_nullable
+      legacyTeamBScore: freezed == legacyTeamBScore
+          ? _value.legacyTeamBScore
+          : legacyTeamBScore // ignore: cast_nullable_to_non_nullable
               as int?,
       matches: null == matches
           ? _value._matches
@@ -680,8 +684,8 @@ class _$GameImpl implements _Game {
       this.createdByPhotoUrl,
       this.hubName,
       final List<Team> teams = const [],
-      this.teamAScore,
-      this.teamBScore,
+      @JsonKey(name: 'teamAScore') this.legacyTeamAScore,
+      @JsonKey(name: 'teamBScore') this.legacyTeamBScore,
       final List<MatchResult> matches = const [],
       final Map<String, int> aggregateWins = const {},
       this.durationInMinutes,
@@ -801,15 +805,19 @@ class _$GameImpl implements _Game {
   }
 
 // List of teams created in TeamMaker
+// Legacy single-match scores (deprecated - use matches list for session mode)
+// These fields are kept for backward compatibility with old games
   @override
-  final int? teamAScore;
-// Score for team A (first team)
+  @JsonKey(name: 'teamAScore')
+  final int? legacyTeamAScore;
+// Legacy: Score for team A - use matches for session mode
   @override
-  final int? teamBScore;
-// Score for team B (second team)
+  @JsonKey(name: 'teamBScore')
+  final int? legacyTeamBScore;
+// Legacy: Score for team B - use matches for session mode
 // Multi-match session support (for Events converted to Games)
   final List<MatchResult> _matches;
-// Score for team B (second team)
+// Legacy: Score for team B - use matches for session mode
 // Multi-match session support (for Events converted to Games)
   @override
   @JsonKey()
@@ -906,7 +914,7 @@ class _$GameImpl implements _Game {
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
   }
 
   @override
@@ -952,10 +960,10 @@ class _$GameImpl implements _Game {
                 other.createdByPhotoUrl == createdByPhotoUrl) &&
             (identical(other.hubName, hubName) || other.hubName == hubName) &&
             const DeepCollectionEquality().equals(other._teams, _teams) &&
-            (identical(other.teamAScore, teamAScore) ||
-                other.teamAScore == teamAScore) &&
-            (identical(other.teamBScore, teamBScore) ||
-                other.teamBScore == teamBScore) &&
+            (identical(other.legacyTeamAScore, legacyTeamAScore) ||
+                other.legacyTeamAScore == legacyTeamAScore) &&
+            (identical(other.legacyTeamBScore, legacyTeamBScore) ||
+                other.legacyTeamBScore == legacyTeamBScore) &&
             const DeepCollectionEquality().equals(other._matches, _matches) &&
             const DeepCollectionEquality()
                 .equals(other._aggregateWins, _aggregateWins) &&
@@ -1012,8 +1020,8 @@ class _$GameImpl implements _Game {
         createdByPhotoUrl,
         hubName,
         const DeepCollectionEquality().hash(_teams),
-        teamAScore,
-        teamBScore,
+        legacyTeamAScore,
+        legacyTeamBScore,
         const DeepCollectionEquality().hash(_matches),
         const DeepCollectionEquality().hash(_aggregateWins),
         durationInMinutes,
@@ -1072,8 +1080,8 @@ abstract class _Game implements Game {
       final String? createdByPhotoUrl,
       final String? hubName,
       final List<Team> teams,
-      final int? teamAScore,
-      final int? teamBScore,
+      @JsonKey(name: 'teamAScore') final int? legacyTeamAScore,
+      @JsonKey(name: 'teamBScore') final int? legacyTeamBScore,
       final List<MatchResult> matches,
       final Map<String, int> aggregateWins,
       final int? durationInMinutes,
@@ -1153,10 +1161,16 @@ abstract class _Game implements Game {
 // Teams and scores
   @override
   List<Team> get teams; // List of teams created in TeamMaker
+// Legacy single-match scores (deprecated - use matches list for session mode)
+// These fields are kept for backward compatibility with old games
   @override
-  int? get teamAScore; // Score for team A (first team)
+  @JsonKey(name: 'teamAScore')
+  int?
+      get legacyTeamAScore; // Legacy: Score for team A - use matches for session mode
   @override
-  int? get teamBScore; // Score for team B (second team)
+  @JsonKey(name: 'teamBScore')
+  int?
+      get legacyTeamBScore; // Legacy: Score for team B - use matches for session mode
 // Multi-match session support (for Events converted to Games)
   @override
   List<MatchResult>

@@ -45,8 +45,8 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
               ?.map((e) => Team.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      teamAScore: (json['teamAScore'] as num?)?.toInt(),
-      teamBScore: (json['teamBScore'] as num?)?.toInt(),
+      legacyTeamAScore: (json['teamAScore'] as num?)?.toInt(),
+      legacyTeamBScore: (json['teamBScore'] as num?)?.toInt(),
       matches: (json['matches'] as List<dynamic>?)
               ?.map((e) => MatchResult.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -107,8 +107,8 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'createdByPhotoUrl': instance.createdByPhotoUrl,
       'hubName': instance.hubName,
       'teams': instance.teams,
-      'teamAScore': instance.teamAScore,
-      'teamBScore': instance.teamBScore,
+      'teamAScore': instance.legacyTeamAScore,
+      'teamBScore': instance.legacyTeamBScore,
       'matches': instance.matches,
       'aggregateWins': instance.aggregateWins,
       'durationInMinutes': instance.durationInMinutes,
