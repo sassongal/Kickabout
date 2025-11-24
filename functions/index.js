@@ -96,12 +96,12 @@ exports.sendGameReminder = onSchedule(
 
               const tokens = [];
               const userIds = [];
-              
+
               // Fetch FCM tokens from users/{userId}/fcm_tokens/tokens subcollection
               for (const signupDoc of signupsSnapshot.docs) {
                 const userId = signupDoc.id;
                 userIds.push(userId);
-                
+
                 try {
                   const tokenDoc = await db
                       .collection('users')
@@ -109,7 +109,7 @@ exports.sendGameReminder = onSchedule(
                       .collection('fcm_tokens')
                       .doc('tokens')
                       .get();
-                  
+
                   if (tokenDoc.exists) {
                     const tokenData = tokenDoc.data();
                     const userTokens = tokenData?.tokens || [];
@@ -182,7 +182,6 @@ exports.sendGameReminder = onSchedule(
 // For now, using environment variable or default (can be overridden via Secret)
 exports.addSuperAdminToHub = onDocumentCreated('hubs/{hubId}', async (event) => {
   const hubId = event.params.hubId;
-  const hubData = event.data.data();
 
   info(`New hub created: ${hubId}. Adding Super Admin...`);
 
@@ -506,12 +505,12 @@ exports.onCommentCreated = onDocumentCreated(
             .collection('fcm_tokens')
             .doc('tokens')
             .get();
-        
+
         if (!tokenDoc.exists) return;
         const tokenData = tokenDoc.data();
         const userTokens = tokenData?.tokens || [];
         if (!Array.isArray(userTokens) || userTokens.length === 0) return;
-        
+
         const fcmToken = userTokens[0]; // Use first token
 
         const payload = {
@@ -559,19 +558,19 @@ exports.onFollowCreated = onDocumentCreated(
             .collection('fcm_tokens')
             .doc('tokens')
             .get();
-        
+
         if (!tokenDoc.exists) {
           info('Followed user does not have FCM token. No notification sent.');
           return;
         }
-        
+
         const tokenData = tokenDoc.data();
         const userTokens = tokenData?.tokens || [];
         if (!Array.isArray(userTokens) || userTokens.length === 0) {
           info('Followed user does not have FCM token. No notification sent.');
           return;
         }
-        
+
         const fcmToken = userTokens[0]; // Use first token
 
         const payload = {
@@ -622,7 +621,6 @@ exports.onVenueChanged = onDocumentWritten(
       }
 
       // On create or update
-      const venueData = event.data.after.data();
       info(`Venue ${venueId} created or updated. Triggering hub updates.`);
 
       // ... (rest of your logic is identical)
@@ -882,7 +880,7 @@ exports.onGameCompleted = onDocumentUpdated(
 
           // SIMPLIFIED: No points, no levels - just participation tracking
           // Only increment stats and check for milestone badges
-          
+
           // Check for milestone badges (based on gamesPlayed count only)
           const badgesToAward = [];
           if (newStats.gamesPlayed === 1 && !(currentData.badges || []).includes('firstGame')) {
@@ -897,7 +895,7 @@ exports.onGameCompleted = onDocumentUpdated(
           if (newStats.gamesPlayed === 100 && !(currentData.badges || []).includes('hundredGames')) {
             badgesToAward.push('hundredGames');
           }
-          
+
           // Goal badges (optional - for display only, no points)
           if (newStats.goals >= 1 && !(currentData.badges || []).includes('firstGoal')) {
             badgesToAward.push('firstGoal');
@@ -905,7 +903,7 @@ exports.onGameCompleted = onDocumentUpdated(
           if (newStats.goals >= 3 && !(currentData.badges || []).includes('hatTrick')) {
             badgesToAward.push('hatTrick');
           }
-          
+
           // Update gamification document (keep points/level for backward compatibility, but don't update them)
           const updatedBadges = [...(currentData.badges || []), ...badgesToAward];
           batch.set(gamificationRef, {
@@ -918,7 +916,7 @@ exports.onGameCompleted = onDocumentUpdated(
             stats: newStats,
             updatedAt: FieldValue.serverTimestamp(),
           }, {merge: true});
-          
+
           // Log badge awards
           if (badgesToAward.length > 0) {
             info(`Player ${playerId} earned badges: ${badgesToAward.join(', ')}`);
@@ -1007,33 +1005,33 @@ exports.onGameCompleted = onDocumentUpdated(
         try {
           const hubRef = db.collection('hubs').doc(gameData.hubId);
           const hubDoc = await hubRef.get();
-          
+
           if (hubDoc.exists) {
             // Calculate hub-level aggregations
             const hubGamesSnapshot = await db.collection('games')
                 .where('hubId', '==', gameData.hubId)
                 .where('status', '==', 'completed')
                 .get();
-            
+
             const totalHubGames = hubGamesSnapshot.size;
             const totalHubGoals = hubGamesSnapshot.docs.reduce((sum, doc) => {
               const g = doc.data();
               return sum + (g.teamAScore || 0) + (g.teamBScore || 0);
             }, 0);
-            
+
             // Update hub with aggregated stats
             await hubRef.update({
               totalGames: totalHubGames,
               totalGoals: totalHubGoals,
               lastGameCompleted: FieldValue.serverTimestamp(),
             });
-            
+
             info(`Updated hub ${gameData.hubId} leaderboard stats.`);
           }
         } catch (leaderboardError) {
           info(`Failed to update hub leaderboard for game ${gameId}:`, leaderboardError);
         }
-        
+
         // Send "Game Summary" notification to all attendees
         try {
           const notificationPromises = participantIds.map(async (playerId) => {
@@ -1044,15 +1042,15 @@ exports.onGameCompleted = onDocumentUpdated(
                   .collection('fcm_tokens')
                   .doc('tokens')
                   .get();
-              
+
               if (tokenDoc.exists) {
                 const tokenData = tokenDoc.data();
                 const fcmToken = tokenData?.token;
-                
+
                 if (fcmToken) {
                   const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
                   const hubName = hubDoc.exists ? hubDoc.data()?.name || 'האב' : 'האב';
-                  
+
                   const message = {
                     token: fcmToken,
                     notification: {
@@ -1067,7 +1065,7 @@ exports.onGameCompleted = onDocumentUpdated(
                     android: {priority: 'normal'},
                     apns: {headers: {'apns-priority': '5'}},
                   };
-                  
+
                   await messaging.send(message);
                 }
               }
@@ -1075,20 +1073,20 @@ exports.onGameCompleted = onDocumentUpdated(
               info(`Failed to send notification to player ${playerId}:`, err);
             }
           });
-          
+
           await Promise.all(notificationPromises);
           info(`Sent game summary notifications to ${participantIds.length} players.`);
         } catch (notificationError) {
           info(`Failed to send game summary notifications:`, notificationError);
         }
-        
+
         // Create regional feed post in feedPosts collection (root level)
         const gameRegion = gameData.region;
         if (gameRegion) {
           try {
             const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
             const hubData = hubDoc.exists ? hubDoc.data() : null;
-            
+
             const feedPostRef = db.collection('feedPosts').doc();
             await feedPostRef.set({
               postId: feedPostRef.id,
@@ -1135,7 +1133,7 @@ exports.onGameSignupChanged = onDocumentWritten(
       const isCreated = !beforeData && signupData;
       const isDeleted = beforeData && !signupData;
       const statusChanged = beforeData?.status !== signupData?.status;
-      
+
       if (!isCreated && !isDeleted && !statusChanged) {
         // Signup was just updated without status change, skip
         return;
@@ -1200,7 +1198,7 @@ exports.onGameEventChanged = onDocumentWritten(
       // Only process if event was created or deleted (not just updated)
       const isCreated = !beforeData && eventData;
       const isDeleted = beforeData && !eventData;
-      
+
       if (!isCreated && !isDeleted) {
         // Event was just updated, skip
         return;
@@ -1417,52 +1415,52 @@ function determineVenueType(place) {
   const address = (place.formatted_address || '').toLowerCase();
   const types = (place.types || []).map((t) => t.toLowerCase());
   const vicinity = (place.vicinity || '').toLowerCase();
-  
+
   const allText = `${name} ${address} ${vicinity}`.toLowerCase();
-  
+
   // Keywords for public venues
   const publicKeywords = [
     'ציבורי', 'public', 'פארק', 'park', 'גן', 'גן ציבורי',
     'municipal', 'עירוני', 'רשות', 'municipality',
   ];
-  
+
   // Keywords for rental venues
   const rentalKeywords = [
     'השכרה', 'rental', 'rent', 'שכירות', 'להשכרה',
     'rentals', 'renting', 'lease', 'leasing',
   ];
-  
+
   // Keywords for school venues
   const schoolKeywords = [
     'בית ספר', 'school', 'תיכון', 'יסודי', 'גן ילדים',
     'high school', 'elementary', 'kindergarten', 'בית ספר יסודי',
     'בית ספר תיכון', 'מגרש בית ספר',
   ];
-  
+
   // Check for school first (most specific)
   if (schoolKeywords.some((keyword) => allText.includes(keyword)) ||
       types.includes('school') || types.includes('primary_school')) {
     return 'school';
   }
-  
+
   // Check for rental
   if (rentalKeywords.some((keyword) => allText.includes(keyword))) {
     return 'rental';
   }
-  
+
   // Check for public (default for parks, municipal facilities)
   if (publicKeywords.some((keyword) => allText.includes(keyword)) ||
       types.includes('park') || types.includes('stadium') ||
       types.includes('sports_complex')) {
     return 'public';
   }
-  
+
   // Default: if it's a stadium or sports complex, assume public
   if (types.includes('stadium') || types.includes('sports_complex') ||
       types.includes('gym') || types.includes('establishment')) {
     return 'public';
   }
-  
+
   return 'unknown';
 }
 
@@ -1495,7 +1493,7 @@ exports.searchVenues = onCall(
       try {
         const response = await axios.get(url);
         const data = response.data;
-        
+
         // Add venueType to each result
         if (data.results && Array.isArray(data.results)) {
           data.results = data.results.map((place) => {
@@ -1977,7 +1975,7 @@ exports.onSignupStatusChanged = onDocumentUpdated(
         // Don't throw - we don't want to retry this function
       }
     },
-  );
+);
 
 // ============================================
 // Image Resizing Function
@@ -1991,38 +1989,38 @@ exports.onImageUploaded = onObjectFinalized(
       const filePath = event.data.name;
       const contentType = event.data.contentType;
       const bucket = storage.bucket(event.data.bucket);
-      
+
       // Only process images
       if (!contentType || !contentType.startsWith('image/')) {
         info(`File ${filePath} is not an image, skipping resize.`);
         return;
       }
-      
+
       // Only process profile_photos and hub images
-      if (!filePath.includes('profile_photos') && 
+      if (!filePath.includes('profile_photos') &&
           !filePath.includes('hub_photos') &&
           !filePath.includes('hub_images')) {
         info(`File ${filePath} is not a profile or hub image, skipping resize.`);
         return;
       }
-      
+
       // Skip if already resized (contains _resized suffix)
       if (filePath.includes('_resized')) {
         info(`File ${filePath} is already resized, skipping.`);
         return;
       }
-      
+
       if (!sharp) {
         info('Sharp not available, skipping image resize.');
         return;
       }
-      
+
       info(`Processing image resize for ${filePath}`);
-      
+
       try {
         const file = bucket.file(filePath);
         const [fileBuffer] = await file.download();
-        
+
         // Resize to 500x500px (maintain aspect ratio, crop to fit)
         const resizedBuffer = await sharp(fileBuffer)
             .resize(500, 500, {
@@ -2031,27 +2029,26 @@ exports.onImageUploaded = onObjectFinalized(
             })
             .jpeg({quality: 85}) // Convert to JPEG with 85% quality
             .toBuffer();
-        
+
         // Upload resized image with _resized suffix
         const resizedPath = filePath.replace(/\.[^/.]+$/, '_resized.jpg');
         const resizedFile = bucket.file(resizedPath);
-        
+
         await resizedFile.save(resizedBuffer, {
           metadata: {
             contentType: 'image/jpeg',
             cacheControl: 'public, max-age=31536000', // 1 year cache
           },
         });
-        
+
         info(`Resized image saved to ${resizedPath}`);
-        
+
         // Optional: Delete original if you want to save storage
         // await file.delete();
         // info(`Deleted original image ${filePath}`);
-        
       } catch (error) {
         info(`Error resizing image ${filePath}:`, error);
         // Don't throw - we don't want to fail the upload
       }
     },
-  );
+);
