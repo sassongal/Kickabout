@@ -63,6 +63,9 @@ mixin _$Hub {
 // Manager-only ratings for team balancing (1-10 scale)
   Map<String, double> get managerRatings =>
       throw _privateConstructorUsedError; // userId -> rating (1-10, manager-only, for team balancing)
+// Payment settings
+  String? get paymentLink =>
+      throw _privateConstructorUsedError; // PayBox/Bit payment link URL
 // Denormalized fields (updated by Cloud Functions, not written by client)
   int? get gameCount =>
       throw _privateConstructorUsedError; // Denormalized: Total games created (updated by onGameCreated)
@@ -107,6 +110,7 @@ abstract class $HubCopyWith<$Res> {
       String? region,
       bool isPrivate,
       Map<String, double> managerRatings,
+      String? paymentLink,
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity});
 }
@@ -148,6 +152,7 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? region = freezed,
     Object? isPrivate = null,
     Object? managerRatings = null,
+    Object? paymentLink = freezed,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
   }) {
@@ -244,6 +249,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.managerRatings
           : managerRatings // ignore: cast_nullable_to_non_nullable
               as Map<String, double>,
+      paymentLink: freezed == paymentLink
+          ? _value.paymentLink
+          : paymentLink // ignore: cast_nullable_to_non_nullable
+              as String?,
       gameCount: freezed == gameCount
           ? _value.gameCount
           : gameCount // ignore: cast_nullable_to_non_nullable
@@ -286,6 +295,7 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       String? region,
       bool isPrivate,
       Map<String, double> managerRatings,
+      String? paymentLink,
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity});
 }
@@ -324,6 +334,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? region = freezed,
     Object? isPrivate = null,
     Object? managerRatings = null,
+    Object? paymentLink = freezed,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
   }) {
@@ -420,6 +431,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value._managerRatings
           : managerRatings // ignore: cast_nullable_to_non_nullable
               as Map<String, double>,
+      paymentLink: freezed == paymentLink
+          ? _value.paymentLink
+          : paymentLink // ignore: cast_nullable_to_non_nullable
+              as String?,
       gameCount: freezed == gameCount
           ? _value.gameCount
           : gameCount // ignore: cast_nullable_to_non_nullable
@@ -460,6 +475,7 @@ class _$HubImpl implements _Hub {
       this.region,
       this.isPrivate = false,
       final Map<String, double> managerRatings = const {},
+      this.paymentLink,
       this.gameCount,
       @TimestampConverter() this.lastActivity})
       : _memberIds = memberIds,
@@ -595,6 +611,10 @@ class _$HubImpl implements _Hub {
   }
 
 // userId -> rating (1-10, manager-only, for team balancing)
+// Payment settings
+  @override
+  final String? paymentLink;
+// PayBox/Bit payment link URL
 // Denormalized fields (updated by Cloud Functions, not written by client)
   @override
   final int? gameCount;
@@ -605,7 +625,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, gameCount: $gameCount, lastActivity: $lastActivity)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity)';
   }
 
   @override
@@ -650,6 +670,8 @@ class _$HubImpl implements _Hub {
                 other.isPrivate == isPrivate) &&
             const DeepCollectionEquality()
                 .equals(other._managerRatings, _managerRatings) &&
+            (identical(other.paymentLink, paymentLink) ||
+                other.paymentLink == paymentLink) &&
             (identical(other.gameCount, gameCount) ||
                 other.gameCount == gameCount) &&
             (identical(other.lastActivity, lastActivity) ||
@@ -683,6 +705,7 @@ class _$HubImpl implements _Hub {
         region,
         isPrivate,
         const DeepCollectionEquality().hash(_managerRatings),
+        paymentLink,
         gameCount,
         lastActivity
       ]);
@@ -728,6 +751,7 @@ abstract class _Hub implements Hub {
       final String? region,
       final bool isPrivate,
       final Map<String, double> managerRatings,
+      final String? paymentLink,
       final int? gameCount,
       @TimestampConverter() final DateTime? lastActivity}) = _$HubImpl;
 
@@ -790,6 +814,9 @@ abstract class _Hub implements Hub {
   @override
   Map<String, double>
       get managerRatings; // userId -> rating (1-10, manager-only, for team balancing)
+// Payment settings
+  @override
+  String? get paymentLink; // PayBox/Bit payment link URL
 // Denormalized fields (updated by Cloud Functions, not written by client)
   @override
   int?

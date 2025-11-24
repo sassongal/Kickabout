@@ -865,31 +865,6 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
         ),
       ),
       actions: [
-        // Profile button (top-left in RTL) - Circular Avatar
-        if (user != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: InkWell(
-              onTap: () => context.push('/profile/$currentUserId/edit'),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: FuturisticColors.primary.withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                ),
-                child: PlayerAvatar(
-                  user: user,
-                  size: AvatarSize.sm,
-                  clickable: false,
-                ),
-              ),
-            ),
-          ),
         // Inbox icon
         IconButton(
           icon: const Icon(Icons.inbox_outlined),
@@ -943,6 +918,31 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
             );
           },
         ),
+        // Profile button (top-left in RTL) - Circular Avatar - MUST BE LAST in actions list
+        if (user != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: InkWell(
+              onTap: () => context.push('/profile/$currentUserId/edit'),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: FuturisticColors.primary.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: PlayerAvatar(
+                  user: user,
+                  size: AvatarSize.sm,
+                  clickable: false,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

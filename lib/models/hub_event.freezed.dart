@@ -54,6 +54,11 @@ mixin _$HubEvent {
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   List<Team> get teams =>
       throw _privateConstructorUsedError; // Teams planned for this event (manager-only)
+// Multi-match session support
+  List<MatchResult> get matches =>
+      throw _privateConstructorUsedError; // List of individual match outcomes within this event
+  Map<String, int> get aggregateWins =>
+      throw _privateConstructorUsedError; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Reference to Game if event was converted to game
   String? get gameId => throw _privateConstructorUsedError;
 
@@ -93,6 +98,8 @@ abstract class $HubEventCopyWith<$Res> {
       bool notifyMembers,
       bool showInCommunityFeed,
       List<Team> teams,
+      List<MatchResult> matches,
+      Map<String, int> aggregateWins,
       String? gameId});
 }
 
@@ -131,6 +138,8 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
     Object? notifyMembers = null,
     Object? showInCommunityFeed = null,
     Object? teams = null,
+    Object? matches = null,
+    Object? aggregateWins = null,
     Object? gameId = freezed,
   }) {
     return _then(_value.copyWith(
@@ -214,6 +223,14 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
           ? _value.teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
+      matches: null == matches
+          ? _value.matches
+          : matches // ignore: cast_nullable_to_non_nullable
+              as List<MatchResult>,
+      aggregateWins: null == aggregateWins
+          ? _value.aggregateWins
+          : aggregateWins // ignore: cast_nullable_to_non_nullable
+              as Map<String, int>,
       gameId: freezed == gameId
           ? _value.gameId
           : gameId // ignore: cast_nullable_to_non_nullable
@@ -251,6 +268,8 @@ abstract class _$$HubEventImplCopyWith<$Res>
       bool notifyMembers,
       bool showInCommunityFeed,
       List<Team> teams,
+      List<MatchResult> matches,
+      Map<String, int> aggregateWins,
       String? gameId});
 }
 
@@ -287,6 +306,8 @@ class __$$HubEventImplCopyWithImpl<$Res>
     Object? notifyMembers = null,
     Object? showInCommunityFeed = null,
     Object? teams = null,
+    Object? matches = null,
+    Object? aggregateWins = null,
     Object? gameId = freezed,
   }) {
     return _then(_$HubEventImpl(
@@ -370,6 +391,14 @@ class __$$HubEventImplCopyWithImpl<$Res>
           ? _value._teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
+      matches: null == matches
+          ? _value._matches
+          : matches // ignore: cast_nullable_to_non_nullable
+              as List<MatchResult>,
+      aggregateWins: null == aggregateWins
+          ? _value._aggregateWins
+          : aggregateWins // ignore: cast_nullable_to_non_nullable
+              as Map<String, int>,
       gameId: freezed == gameId
           ? _value.gameId
           : gameId // ignore: cast_nullable_to_non_nullable
@@ -402,9 +431,13 @@ class _$HubEventImpl implements _HubEvent {
       this.notifyMembers = false,
       this.showInCommunityFeed = false,
       final List<Team> teams = const [],
+      final List<MatchResult> matches = const [],
+      final Map<String, int> aggregateWins = const {},
       this.gameId})
       : _registeredPlayerIds = registeredPlayerIds,
-        _teams = teams;
+        _teams = teams,
+        _matches = matches,
+        _aggregateWins = aggregateWins;
 
   factory _$HubEventImpl.fromJson(Map<String, dynamic> json) =>
       _$$HubEventImplFromJson(json);
@@ -485,13 +518,37 @@ class _$HubEventImpl implements _HubEvent {
   }
 
 // Teams planned for this event (manager-only)
+// Multi-match session support
+  final List<MatchResult> _matches;
+// Teams planned for this event (manager-only)
+// Multi-match session support
+  @override
+  @JsonKey()
+  List<MatchResult> get matches {
+    if (_matches is EqualUnmodifiableListView) return _matches;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_matches);
+  }
+
+// List of individual match outcomes within this event
+  final Map<String, int> _aggregateWins;
+// List of individual match outcomes within this event
+  @override
+  @JsonKey()
+  Map<String, int> get aggregateWins {
+    if (_aggregateWins is EqualUnmodifiableMapView) return _aggregateWins;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_aggregateWins);
+  }
+
+// Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Reference to Game if event was converted to game
   @override
   final String? gameId;
 
   @override
   String toString() {
-    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, teams: $teams, gameId: $gameId)';
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
   }
 
   @override
@@ -533,6 +590,9 @@ class _$HubEventImpl implements _HubEvent {
             (identical(other.showInCommunityFeed, showInCommunityFeed) ||
                 other.showInCommunityFeed == showInCommunityFeed) &&
             const DeepCollectionEquality().equals(other._teams, _teams) &&
+            const DeepCollectionEquality().equals(other._matches, _matches) &&
+            const DeepCollectionEquality()
+                .equals(other._aggregateWins, _aggregateWins) &&
             (identical(other.gameId, gameId) || other.gameId == gameId));
   }
 
@@ -560,6 +620,8 @@ class _$HubEventImpl implements _HubEvent {
         notifyMembers,
         showInCommunityFeed,
         const DeepCollectionEquality().hash(_teams),
+        const DeepCollectionEquality().hash(_matches),
+        const DeepCollectionEquality().hash(_aggregateWins),
         gameId
       ]);
 
@@ -601,6 +663,8 @@ abstract class _HubEvent implements HubEvent {
       final bool notifyMembers,
       final bool showInCommunityFeed,
       final List<Team> teams,
+      final List<MatchResult> matches,
+      final Map<String, int> aggregateWins,
       final String? gameId}) = _$HubEventImpl;
 
   factory _HubEvent.fromJson(Map<String, dynamic> json) =
@@ -653,6 +717,13 @@ abstract class _HubEvent implements HubEvent {
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   @override
   List<Team> get teams; // Teams planned for this event (manager-only)
+// Multi-match session support
+  @override
+  List<MatchResult>
+      get matches; // List of individual match outcomes within this event
+  @override
+  Map<String, int>
+      get aggregateWins; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Reference to Game if event was converted to game
   @override
   String? get gameId;

@@ -24,7 +24,11 @@ mixin _$Team {
   String get name => throw _privateConstructorUsedError;
   List<String> get playerIds => throw _privateConstructorUsedError;
   double get totalScore => throw _privateConstructorUsedError;
-  String? get color => throw _privateConstructorUsedError;
+  String? get color =>
+      throw _privateConstructorUsedError; // Color name (e.g., "Blue", "Red", "Green")
+  int? get colorValue =>
+      throw _privateConstructorUsedError; // Flashy neon color value (0xFFFF0000 for red, etc.)
+  int get wins => throw _privateConstructorUsedError;
 
   /// Serializes this Team to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -45,7 +49,9 @@ abstract class $TeamCopyWith<$Res> {
       String name,
       List<String> playerIds,
       double totalScore,
-      String? color});
+      String? color,
+      int? colorValue,
+      int wins});
 }
 
 /// @nodoc
@@ -68,6 +74,8 @@ class _$TeamCopyWithImpl<$Res, $Val extends Team>
     Object? playerIds = null,
     Object? totalScore = null,
     Object? color = freezed,
+    Object? colorValue = freezed,
+    Object? wins = null,
   }) {
     return _then(_value.copyWith(
       teamId: null == teamId
@@ -90,6 +98,14 @@ class _$TeamCopyWithImpl<$Res, $Val extends Team>
           ? _value.color
           : color // ignore: cast_nullable_to_non_nullable
               as String?,
+      colorValue: freezed == colorValue
+          ? _value.colorValue
+          : colorValue // ignore: cast_nullable_to_non_nullable
+              as int?,
+      wins: null == wins
+          ? _value.wins
+          : wins // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -106,7 +122,9 @@ abstract class _$$TeamImplCopyWith<$Res> implements $TeamCopyWith<$Res> {
       String name,
       List<String> playerIds,
       double totalScore,
-      String? color});
+      String? color,
+      int? colorValue,
+      int wins});
 }
 
 /// @nodoc
@@ -126,6 +144,8 @@ class __$$TeamImplCopyWithImpl<$Res>
     Object? playerIds = null,
     Object? totalScore = null,
     Object? color = freezed,
+    Object? colorValue = freezed,
+    Object? wins = null,
   }) {
     return _then(_$TeamImpl(
       teamId: null == teamId
@@ -148,6 +168,14 @@ class __$$TeamImplCopyWithImpl<$Res>
           ? _value.color
           : color // ignore: cast_nullable_to_non_nullable
               as String?,
+      colorValue: freezed == colorValue
+          ? _value.colorValue
+          : colorValue // ignore: cast_nullable_to_non_nullable
+              as int?,
+      wins: null == wins
+          ? _value.wins
+          : wins // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -160,7 +188,9 @@ class _$TeamImpl implements _Team {
       required this.name,
       final List<String> playerIds = const [],
       this.totalScore = 0.0,
-      this.color})
+      this.color,
+      this.colorValue,
+      this.wins = 0})
       : _playerIds = playerIds;
 
   factory _$TeamImpl.fromJson(Map<String, dynamic> json) =>
@@ -184,10 +214,17 @@ class _$TeamImpl implements _Team {
   final double totalScore;
   @override
   final String? color;
+// Color name (e.g., "Blue", "Red", "Green")
+  @override
+  final int? colorValue;
+// Flashy neon color value (0xFFFF0000 for red, etc.)
+  @override
+  @JsonKey()
+  final int wins;
 
   @override
   String toString() {
-    return 'Team(teamId: $teamId, name: $name, playerIds: $playerIds, totalScore: $totalScore, color: $color)';
+    return 'Team(teamId: $teamId, name: $name, playerIds: $playerIds, totalScore: $totalScore, color: $color, colorValue: $colorValue, wins: $wins)';
   }
 
   @override
@@ -201,13 +238,23 @@ class _$TeamImpl implements _Team {
                 .equals(other._playerIds, _playerIds) &&
             (identical(other.totalScore, totalScore) ||
                 other.totalScore == totalScore) &&
-            (identical(other.color, color) || other.color == color));
+            (identical(other.color, color) || other.color == color) &&
+            (identical(other.colorValue, colorValue) ||
+                other.colorValue == colorValue) &&
+            (identical(other.wins, wins) || other.wins == wins));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, teamId, name,
-      const DeepCollectionEquality().hash(_playerIds), totalScore, color);
+  int get hashCode => Object.hash(
+      runtimeType,
+      teamId,
+      name,
+      const DeepCollectionEquality().hash(_playerIds),
+      totalScore,
+      color,
+      colorValue,
+      wins);
 
   /// Create a copy of Team
   /// with the given fields replaced by the non-null parameter values.
@@ -231,7 +278,9 @@ abstract class _Team implements Team {
       required final String name,
       final List<String> playerIds,
       final double totalScore,
-      final String? color}) = _$TeamImpl;
+      final String? color,
+      final int? colorValue,
+      final int wins}) = _$TeamImpl;
 
   factory _Team.fromJson(Map<String, dynamic> json) = _$TeamImpl.fromJson;
 
@@ -244,7 +293,11 @@ abstract class _Team implements Team {
   @override
   double get totalScore;
   @override
-  String? get color;
+  String? get color; // Color name (e.g., "Blue", "Red", "Green")
+  @override
+  int? get colorValue; // Flashy neon color value (0xFFFF0000 for red, etc.)
+  @override
+  int get wins;
 
   /// Create a copy of Team
   /// with the given fields replaced by the non-null parameter values.

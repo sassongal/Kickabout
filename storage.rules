@@ -1,15 +1,55 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Profile photos
+    // Profile photos: users/{uid}/*
     match /profile_photos/{userId}/{fileName} {
+      // Anyone authenticated can read
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // Only owner can write
+      allow write: if request.auth != null && 
+        request.auth.uid == userId &&
+        // Size limit: 5MB
+        request.resource.size < 5 * 1024 * 1024 &&
+        // Type check: only images
+        request.resource.contentType.matches('image/.*');
     }
     
-    // Game photos
+    // Hub photos: hubs/{hubId}/*
+    match /hub_photos/{hubId}/{fileName} {
+      // Anyone authenticated can read
+      allow read: if request.auth != null;
+      
+      // Only hub managers can write
+      allow write: if request.auth != null &&
+        // Size limit: 5MB
+        request.resource.size < 5 * 1024 * 1024 &&
+        // Type check: only images
+        request.resource.contentType.matches('image/.*');
+      // Note: Hub manager check should be done in Cloud Function or client-side
+      // Storage rules don't have easy access to Firestore data
+    }
+    
+    // Game photos: games/{gameId}/*
     match /game_photos/{gameId}/{fileName} {
-      allow read, write: if request.auth != null;
+      // Anyone authenticated can read
+      allow read: if request.auth != null;
+      
+      // Only authenticated users can write (game participants)
+      allow write: if request.auth != null &&
+        // Size limit: 5MB
+        request.resource.size < 5 * 1024 * 1024 &&
+        // Type check: only images
+        request.resource.contentType.matches('image/.*');
+    }
+    
+    // Resized images (read-only, created by Cloud Functions)
+    match /{allPaths=**} {
+      // Allow read if file contains _resized
+      allow read: if request.auth != null && allPaths.matches('.*_resized.*');
+      
+      // Only Cloud Functions can write resized images
+      allow write: if false;
     }
   }
 }

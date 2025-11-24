@@ -11,7 +11,9 @@ class Team with _$Team {
     required String name,
     @Default([]) List<String> playerIds,
     @Default(0.0) double totalScore,
-    String? color,
+    String? color, // Color name (e.g., "Blue", "Red", "Green")
+    int? colorValue, // Flashy neon color value (0xFFFF0000 for red, etc.)
+    @Default(0) int wins, // Transient field for session wins (aggregated from matches)
   }) = _Team;
 
   factory Team.fromJson(Map<String, dynamic> json) => _$TeamFromJson(json);

@@ -235,6 +235,53 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                // Requests badge (Manager only)
+                                StreamBuilder<QuerySnapshot>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('hubs')
+                                      .doc(widget.hubId)
+                                      .collection('requests')
+                                      .where('status', isEqualTo: 'pending')
+                                      .snapshots(),
+                                  builder: (context, snapshot) {
+                                    final pendingCount = snapshot.data?.docs.length ?? 0;
+                                    return Stack(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.inbox, size: 20),
+                                          tooltip: 'בקשות הצטרפות',
+                                          onPressed: () => context.push('/hubs/${hub.hubId}/requests'),
+                                          color: Colors.orange,
+                                        ),
+                                        if (pendingCount > 0)
+                                          Positioned(
+                                            right: 8,
+                                            top: 8,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: const BoxDecoration(
+                                                color: Colors.red,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 16,
+                                                minHeight: 16,
+                                              ),
+                                              child: Text(
+                                                pendingCount > 9 ? '9+' : '$pendingCount',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
+                                ),
                                 IconButton(
                                   icon: const Icon(Icons.share, size: 20),
                                   tooltip: 'שתף ב-WhatsApp',
@@ -1380,6 +1427,47 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
     super.dispose();
   }
 
+  Future<void> _showJoinRequestDialog(BuildContext context) async {
+    final messageController = TextEditingController();
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('בקשת הצטרפות ל-${widget.hub.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: messageController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'הוסף הודעה למנהל ההאב... (אופציונלי)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('שלח בקשה'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result == true) {
+      _messageController.text = messageController.text;
+      await _sendJoinRequest();
+    }
+    
+    messageController.dispose();
+  }
+
   Future<void> _sendJoinRequest() async {
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) {
@@ -1396,7 +1484,6 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
     });
 
     try {
-      final hubsRepo = ref.read(hubsRepositoryProvider);
       final notificationsRepo = ref.read(notificationsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
       final firestore = FirebaseFirestore.instance;
@@ -1647,47 +1734,69 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
           
           // Join request section
           if (widget.joinRequestsEnabled) ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'הודעה (אופציונלי)',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _messageController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        hintText: 'כתוב הודעה למנהל ההאב...',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSubmitting ? null : _sendJoinRequest,
-                        icon: _isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.send),
-                        label: Text(_isSubmitting ? 'שולח...' : 'שלח בקשת הצטרפות'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-                  ],
+            // If hub is private, show "Request to Join" button that opens a dialog
+            if (widget.hub.isPrivate) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isSubmitting ? null : () => _showJoinRequestDialog(context),
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.person_add),
+                  label: Text(_isSubmitting ? 'שולח...' : 'בקש להצטרף'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
               ),
-            ),
+            ] else ...[
+              // If hub is not private, show the full form
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'הודעה (אופציונלי)',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _messageController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          hintText: 'כתוב הודעה למנהל ההאב...',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isSubmitting ? null : _sendJoinRequest,
+                          icon: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.send),
+                          label: Text(_isSubmitting ? 'שולח...' : 'שלח בקשת הצטרפות'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ] else ...[
             Card(
               color: Colors.grey[200],

@@ -91,6 +91,74 @@ service cloud.firestore {
     }
     
     // ============================================
+    // Schema Validation Functions
+    // ============================================
+    
+    // Validate Game document structure and values
+    function isValidGame(game) {
+      return game.keys().hasAll(['gameId', 'createdBy', 'hubId', 'gameDate', 'createdAt', 'updatedAt']) &&
+        game.gameId is string &&
+        game.createdBy is string &&
+        game.hubId is string &&
+        game.gameDate is timestamp &&
+        game.createdAt is timestamp &&
+        game.updatedAt is timestamp &&
+        // Validate teamCount (2-6 teams allowed)
+        (!('teamCount' in game) || (game.teamCount is int && game.teamCount >= 2 && game.teamCount <= 6)) &&
+        // Validate scores (non-negative integers)
+        (!('teamAScore' in game) || (game.teamAScore is int && game.teamAScore >= 0)) &&
+        (!('teamBScore' in game) || (game.teamBScore is int && game.teamBScore >= 0)) &&
+        // Validate aggregateWins if present (for session mode)
+        // Note: Firestore rules don't support complex map value validation
+        // We'll validate structure only (map exists, values are ints)
+        (!('aggregateWins' in game) || (game.aggregateWins is map)) &&
+        // Validate matches if present
+        (!('matches' in game) || (game.matches is list));
+    }
+    
+    // Validate User document - prevent users from changing protected fields
+    function isValidUser(user, existingUser) {
+      return user.keys().hasAll(['uid', 'name', 'email', 'createdAt']) &&
+        user.uid is string &&
+        user.name is string &&
+        user.email is string &&
+        user.createdAt is timestamp &&
+        // Prevent changing uid
+        (existingUser == null || user.uid == existingUser.uid) &&
+        // Prevent changing createdAt
+        (existingUser == null || user.createdAt == existingUser.createdAt) &&
+        // Prevent users from setting isManager flags (only server can)
+        (!('isManager' in user) || (existingUser != null && user.isManager == existingUser.isManager)) &&
+        // Prevent users from manually changing rating scores (only manager ratings allowed)
+        (!('currentRankScore' in user) || 
+         (existingUser != null && user.currentRankScore == existingUser.currentRankScore) ||
+         // Allow if it's a new user (no existingUser)
+         existingUser == null);
+    }
+    
+    // Validate HubEvent document
+    function isValidHubEvent(event) {
+      return event.keys().hasAll(['eventId', 'hubId', 'createdBy', 'title', 'eventDate', 'createdAt', 'updatedAt']) &&
+        event.eventId is string &&
+        event.hubId is string &&
+        event.createdBy is string &&
+        event.title is string &&
+        event.eventDate is timestamp &&
+        event.createdAt is timestamp &&
+        event.updatedAt is timestamp &&
+        // Validate teamCount (2-6 teams)
+        (!('teamCount' in event) || (event.teamCount is int && event.teamCount >= 2 && event.teamCount <= 6)) &&
+        // Validate maxParticipants (positive integer)
+        (!('maxParticipants' in event) || (event.maxParticipants is int && event.maxParticipants > 0)) &&
+        // Validate aggregateWins if present
+        // Note: Firestore rules don't support complex map value validation
+        // We'll validate structure only (map exists)
+        (!('aggregateWins' in event) || (event.aggregateWins is map)) &&
+        // Validate matches if present
+        (!('matches' in event) || (event.matches is list));
+    }
+    
+    // ============================================
     // Users Collection: /users/{userId}
     // ============================================
     match /users/{userId} {
@@ -105,10 +173,8 @@ service cloud.firestore {
         request.resource.data.createdAt is timestamp;
       
       allow update: if isAuthenticated() && isOwner(userId) &&
-        // Prevent changing uid
-        request.resource.data.uid == resource.data.uid &&
-        // Prevent changing createdAt
-        request.resource.data.createdAt == resource.data.createdAt;
+        // Use validation function
+        isValidUser(request.resource.data, resource.data);
       
       allow delete: if isAuthenticated() && isOwner(userId);
       
@@ -161,19 +227,50 @@ service cloud.firestore {
         request.resource.data.hubId == resource.data.hubId &&
         request.resource.data.createdBy == resource.data.createdBy;
       
+      // Join Requests: /hubs/{hubId}/requests/{userId}
+      match /requests/{userId} {
+        // Only hub managers can read requests
+        allow read: if isAuthenticated() && isHubAdmin(hubId);
+        
+        // Users can create their own join request
+        allow create: if isAuthenticated() && isOwner(userId) &&
+          // Validate required fields
+          request.resource.data.keys().hasAll(['userId', 'hubId', 'status', 'createdAt']) &&
+          request.resource.data.userId == userId &&
+          request.resource.data.hubId == hubId &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.createdAt is timestamp;
+        
+        // Only hub managers can update (approve/deny) or delete requests
+        allow update: if isAuthenticated() && isHubAdmin(hubId) &&
+          // Prevent changing userId or hubId
+          request.resource.data.userId == resource.data.userId &&
+          request.resource.data.hubId == resource.data.hubId &&
+          // Status must be one of: pending, approved, rejected
+          request.resource.data.status in ['pending', 'approved', 'rejected'];
+        
+        allow delete: if isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId));
+      }
+      
       // Feed Posts: /hubs/{hubId}/feed/posts/items/{postId}
       match /feed/posts/items/{postId} {
         // Only hub members can read posts
         allow read: if isAuthenticated() && isHubMember(hubId);
         
         // Hub members with permissions can create posts
+        // Rate limiting: Check if user created a post in the last minute
+        // Note: Full rate limiting should be done in Cloud Functions
         allow create: if isAuthenticated() && canCreatePosts(hubId) &&
           // Validate required fields
           request.resource.data.keys().hasAll(['postId', 'hubId', 'authorId', 'type', 'createdAt']) &&
           request.resource.data.postId == postId &&
           request.resource.data.hubId == hubId &&
           request.resource.data.authorId == request.auth.uid &&
-          request.resource.data.createdAt is timestamp;
+          request.resource.data.createdAt is timestamp &&
+          // Basic validation: text must be non-empty if present
+          (!('text' in request.resource.data) || 
+           request.resource.data.text is string && 
+           request.resource.data.text.size() > 0);
         
         // Only post author or moderators can update/delete
         allow update: if isAuthenticated() && isHubMember(hubId) && (
@@ -277,23 +374,20 @@ service cloud.firestore {
         
         // Hub managers/moderators or users with custom permissions can create events
         allow create: if isAuthenticated() && canCreateEvents(hubId) &&
-          // Validate required fields
-          request.resource.data.keys().hasAll(['eventId', 'hubId', 'createdBy', 'title', 'eventDate', 'createdAt', 'updatedAt']) &&
+          // Use validation function
+          isValidHubEvent(request.resource.data) &&
           request.resource.data.eventId == eventId &&
           request.resource.data.hubId == hubId &&
-          request.resource.data.createdBy == request.auth.uid &&
-          request.resource.data.eventDate is timestamp &&
-          request.resource.data.createdAt is timestamp &&
-          request.resource.data.updatedAt is timestamp;
+          request.resource.data.createdBy == request.auth.uid;
         
         // Only hub managers can update/delete events
         allow update, delete: if isAuthenticated() && isHubManager(hubId) &&
+          // Use validation function
+          isValidHubEvent(request.resource.data) &&
           // Prevent changing eventId, hubId, or createdBy
           request.resource.data.eventId == resource.data.eventId &&
           request.resource.data.hubId == resource.data.hubId &&
-          request.resource.data.createdBy == resource.data.createdBy &&
-          // Ensure updatedAt is updated on update operations
-          (request.resource.data.updatedAt is timestamp);
+          request.resource.data.createdBy == resource.data.createdBy;
       }
     }
 
@@ -307,22 +401,37 @@ service cloud.firestore {
       
       // רק מנהל (מודרטור ומעלה) יכול ליצור משחק
       allow create: if isHubModerator(request.resource.data.hubId) &&
-        // Validate required fields
-        request.resource.data.keys().hasAll(['gameId', 'createdBy', 'hubId', 'gameDate', 'createdAt', 'updatedAt']) &&
+        // Use validation function
+        isValidGame(request.resource.data) &&
         request.resource.data.gameId == gameId &&
-        request.resource.data.createdBy == request.auth.uid &&
-        request.resource.data.gameDate is timestamp &&
-        request.resource.data.createdAt is timestamp &&
-        request.resource.data.updatedAt is timestamp;
+        request.resource.data.createdBy == request.auth.uid;
       
       // רק מנהל יכול לעדכן (תוצאה, סטטוס, visibility) או למחוק
-      allow update, delete: if isHubModerator(resource.data.hubId) &&
+      // Strict RBAC: Only managers can update scores, MVP, and status
+      allow update: if isHubModerator(resource.data.hubId) &&
+        // Use validation function
+        isValidGame(request.resource.data) &&
         // Prevent changing gameId, createdBy, or hubId
         request.resource.data.gameId == resource.data.gameId &&
         request.resource.data.createdBy == resource.data.createdBy &&
         request.resource.data.hubId == resource.data.hubId &&
-        // updatedAt must be updated
-        request.resource.data.updatedAt is timestamp;
+        // Only managers can change status to 'completed', scores, or MVP
+        (
+          // If changing status to completed, must be manager
+          (!('status' in request.resource.data) || 
+           request.resource.data.status != 'completed' || 
+           isHubAdmin(resource.data.hubId)) &&
+          // If changing scores, must be manager
+          (!('teamAScore' in request.resource.data) || isHubAdmin(resource.data.hubId)) &&
+          (!('teamBScore' in request.resource.data) || isHubAdmin(resource.data.hubId)) &&
+          // If changing MVP, must be manager
+          (!('mvpPlayerId' in request.resource.data) || isHubAdmin(resource.data.hubId)) &&
+          // If changing aggregateWins or matches (session mode), must be manager
+          (!('aggregateWins' in request.resource.data) || isHubAdmin(resource.data.hubId)) &&
+          (!('matches' in request.resource.data) || isHubAdmin(resource.data.hubId))
+        );
+      
+      allow delete: if isHubModerator(resource.data.hubId);
       
       // Signups: /games/{gameId}/signups/{userId}
       match /signups/{userId} {

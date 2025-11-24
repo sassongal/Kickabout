@@ -3,6 +3,7 @@ const {initializeApp} = require('firebase-admin/app');
 const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
 const {getAuth} = require('firebase-admin/auth');
+const {getStorage} = require('firebase-admin/storage');
 const {info} = require('firebase-functions/logger');
 
 // v2 Imports for new syntax
@@ -14,6 +15,7 @@ const {
   onDocumentUpdated,
 } = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
+const {onObjectFinalized} = require('firebase-functions/v2/storage');
 const {defineSecret} = require('firebase-functions/params');
 
 // Define secret for Google APIs key (server-side only)
@@ -27,6 +29,17 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 const admin = {auth: getAuth()};
+const storage = getStorage();
+
+// Image processing library (sharp)
+// Note: You'll need to install: npm install sharp
+let sharp;
+try {
+  sharp = require('sharp');
+} catch (e) {
+  info('Warning: sharp not installed. Image resizing will be disabled.');
+  info('Install with: npm install sharp');
+}
 
 // Google Places API
 // -----------------
@@ -990,6 +1003,85 @@ exports.onGameCompleted = onDocumentUpdated(
           info(`Failed to update denormalized data for game ${gameId}:`, denormError);
         }
 
+        // Update Hub Leaderboard (denormalized for fast reads)
+        try {
+          const hubRef = db.collection('hubs').doc(gameData.hubId);
+          const hubDoc = await hubRef.get();
+          
+          if (hubDoc.exists) {
+            // Calculate hub-level aggregations
+            const hubGamesSnapshot = await db.collection('games')
+                .where('hubId', '==', gameData.hubId)
+                .where('status', '==', 'completed')
+                .get();
+            
+            const totalHubGames = hubGamesSnapshot.size;
+            const totalHubGoals = hubGamesSnapshot.docs.reduce((sum, doc) => {
+              const g = doc.data();
+              return sum + (g.teamAScore || 0) + (g.teamBScore || 0);
+            }, 0);
+            
+            // Update hub with aggregated stats
+            await hubRef.update({
+              totalGames: totalHubGames,
+              totalGoals: totalHubGoals,
+              lastGameCompleted: FieldValue.serverTimestamp(),
+            });
+            
+            info(`Updated hub ${gameData.hubId} leaderboard stats.`);
+          }
+        } catch (leaderboardError) {
+          info(`Failed to update hub leaderboard for game ${gameId}:`, leaderboardError);
+        }
+        
+        // Send "Game Summary" notification to all attendees
+        try {
+          const notificationPromises = participantIds.map(async (playerId) => {
+            try {
+              const tokenDoc = await db
+                  .collection('users')
+                  .doc(playerId)
+                  .collection('fcm_tokens')
+                  .doc('tokens')
+                  .get();
+              
+              if (tokenDoc.exists) {
+                const tokenData = tokenDoc.data();
+                const fcmToken = tokenData?.token;
+                
+                if (fcmToken) {
+                  const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
+                  const hubName = hubDoc.exists ? hubDoc.data()?.name || 'האב' : 'האב';
+                  
+                  const message = {
+                    token: fcmToken,
+                    notification: {
+                      title: 'סיכום משחק',
+                      body: `משחק הושלם ב-${hubName}! תוצאה: ${teamAScore}-${teamBScore}`,
+                    },
+                    data: {
+                      type: 'game_summary',
+                      gameId: gameId,
+                      hubId: gameData.hubId,
+                    },
+                    android: {priority: 'normal'},
+                    apns: {headers: {'apns-priority': '5'}},
+                  };
+                  
+                  await messaging.send(message);
+                }
+              }
+            } catch (err) {
+              info(`Failed to send notification to player ${playerId}:`, err);
+            }
+          });
+          
+          await Promise.all(notificationPromises);
+          info(`Sent game summary notifications to ${participantIds.length} players.`);
+        } catch (notificationError) {
+          info(`Failed to send game summary notifications:`, notificationError);
+        }
+        
         // Create regional feed post in feedPosts collection (root level)
         const gameRegion = gameData.region;
         if (gameRegion) {
@@ -1885,4 +1977,81 @@ exports.onSignupStatusChanged = onDocumentUpdated(
         // Don't throw - we don't want to retry this function
       }
     },
-);
+  );
+
+// ============================================
+// Image Resizing Function
+// ============================================
+// Automatically resize profile/hub images to 500x500px to save bandwidth
+exports.onImageUploaded = onObjectFinalized(
+    {
+      maxInstances: 10,
+    },
+    async (event) => {
+      const filePath = event.data.name;
+      const contentType = event.data.contentType;
+      const bucket = storage.bucket(event.data.bucket);
+      
+      // Only process images
+      if (!contentType || !contentType.startsWith('image/')) {
+        info(`File ${filePath} is not an image, skipping resize.`);
+        return;
+      }
+      
+      // Only process profile_photos and hub images
+      if (!filePath.includes('profile_photos') && 
+          !filePath.includes('hub_photos') &&
+          !filePath.includes('hub_images')) {
+        info(`File ${filePath} is not a profile or hub image, skipping resize.`);
+        return;
+      }
+      
+      // Skip if already resized (contains _resized suffix)
+      if (filePath.includes('_resized')) {
+        info(`File ${filePath} is already resized, skipping.`);
+        return;
+      }
+      
+      if (!sharp) {
+        info('Sharp not available, skipping image resize.');
+        return;
+      }
+      
+      info(`Processing image resize for ${filePath}`);
+      
+      try {
+        const file = bucket.file(filePath);
+        const [fileBuffer] = await file.download();
+        
+        // Resize to 500x500px (maintain aspect ratio, crop to fit)
+        const resizedBuffer = await sharp(fileBuffer)
+            .resize(500, 500, {
+              fit: 'cover',
+              position: 'center',
+            })
+            .jpeg({quality: 85}) // Convert to JPEG with 85% quality
+            .toBuffer();
+        
+        // Upload resized image with _resized suffix
+        const resizedPath = filePath.replace(/\.[^/.]+$/, '_resized.jpg');
+        const resizedFile = bucket.file(resizedPath);
+        
+        await resizedFile.save(resizedBuffer, {
+          metadata: {
+            contentType: 'image/jpeg',
+            cacheControl: 'public, max-age=31536000', // 1 year cache
+          },
+        });
+        
+        info(`Resized image saved to ${resizedPath}`);
+        
+        // Optional: Delete original if you want to save storage
+        // await file.delete();
+        // info(`Deleted original image ${filePath}`);
+        
+      } catch (error) {
+        info(`Error resizing image ${filePath}:`, error);
+        // Don't throw - we don't want to fail the upload
+      }
+    },
+  );

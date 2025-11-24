@@ -12,6 +12,7 @@ import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Hub Events Tab - shows events and allows registration
 class HubEventsTab extends ConsumerStatefulWidget {
@@ -238,6 +239,36 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                             _RegisteredParticipantsList(
                               event: event,
                               hubId: widget.hubId,
+                            ),
+                          ],
+                          // Pay via PayBox button (if payment link exists and user is registered)
+                          if (widget.hub.paymentLink != null && 
+                              widget.hub.paymentLink!.isNotEmpty &&
+                              currentUserId != null &&
+                              isRegistered &&
+                              !isPast) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  final uri = Uri.parse(widget.hub.paymentLink!);
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  } else {
+                                    if (mounted) {
+                                      SnackbarHelper.showError(context, 'לא ניתן לפתוח קישור תשלום');
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.payment, size: 20),
+                                label: const Text('שלם ב-PayBox 💰'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
                             ),
                           ],
                           const SizedBox(height: 16),

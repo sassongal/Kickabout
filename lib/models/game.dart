@@ -5,6 +5,7 @@ import 'package:kickadoor/models/enums/game_visibility.dart';
 import 'package:kickadoor/models/converters/timestamp_converter.dart';
 import 'package:kickadoor/models/converters/geopoint_converter.dart';
 import 'package:kickadoor/models/team.dart';
+import 'package:kickadoor/models/match_result.dart';
 
 part 'game.freezed.dart';
 part 'game.g.dart';
@@ -43,6 +44,9 @@ class Game with _$Game {
     @Default([]) List<Team> teams, // List of teams created in TeamMaker
     int? teamAScore, // Score for team A (first team)
     int? teamBScore, // Score for team B (second team)
+    // Multi-match session support (for Events converted to Games)
+    @Default([]) List<MatchResult> matches, // List of individual match outcomes within this session
+    @Default({}) Map<String, int> aggregateWins, // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
     // Game rules
     int? durationInMinutes, // Duration of the game in minutes
     String? gameEndCondition, // Condition for game end (e.g., "first to 5 goals", "time limit")

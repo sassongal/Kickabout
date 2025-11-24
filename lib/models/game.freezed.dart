@@ -72,6 +72,11 @@ mixin _$Game {
       throw _privateConstructorUsedError; // Score for team A (first team)
   int? get teamBScore =>
       throw _privateConstructorUsedError; // Score for team B (second team)
+// Multi-match session support (for Events converted to Games)
+  List<MatchResult> get matches =>
+      throw _privateConstructorUsedError; // List of individual match outcomes within this session
+  Map<String, int> get aggregateWins =>
+      throw _privateConstructorUsedError; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Game rules
   int? get durationInMinutes =>
       throw _privateConstructorUsedError; // Duration of the game in minutes
@@ -142,6 +147,8 @@ abstract class $GameCopyWith<$Res> {
       List<Team> teams,
       int? teamAScore,
       int? teamBScore,
+      List<MatchResult> matches,
+      Map<String, int> aggregateWins,
       int? durationInMinutes,
       String? gameEndCondition,
       String? region,
@@ -197,6 +204,8 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? teams = null,
     Object? teamAScore = freezed,
     Object? teamBScore = freezed,
+    Object? matches = null,
+    Object? aggregateWins = null,
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
@@ -312,6 +321,14 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.teamBScore
           : teamBScore // ignore: cast_nullable_to_non_nullable
               as int?,
+      matches: null == matches
+          ? _value.matches
+          : matches // ignore: cast_nullable_to_non_nullable
+              as List<MatchResult>,
+      aggregateWins: null == aggregateWins
+          ? _value.aggregateWins
+          : aggregateWins // ignore: cast_nullable_to_non_nullable
+              as Map<String, int>,
       durationInMinutes: freezed == durationInMinutes
           ? _value.durationInMinutes
           : durationInMinutes // ignore: cast_nullable_to_non_nullable
@@ -401,6 +418,8 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       List<Team> teams,
       int? teamAScore,
       int? teamBScore,
+      List<MatchResult> matches,
+      Map<String, int> aggregateWins,
       int? durationInMinutes,
       String? gameEndCondition,
       String? region,
@@ -453,6 +472,8 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? teams = null,
     Object? teamAScore = freezed,
     Object? teamBScore = freezed,
+    Object? matches = null,
+    Object? aggregateWins = null,
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
@@ -568,6 +589,14 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.teamBScore
           : teamBScore // ignore: cast_nullable_to_non_nullable
               as int?,
+      matches: null == matches
+          ? _value._matches
+          : matches // ignore: cast_nullable_to_non_nullable
+              as List<MatchResult>,
+      aggregateWins: null == aggregateWins
+          ? _value._aggregateWins
+          : aggregateWins // ignore: cast_nullable_to_non_nullable
+              as Map<String, int>,
       durationInMinutes: freezed == durationInMinutes
           ? _value.durationInMinutes
           : durationInMinutes // ignore: cast_nullable_to_non_nullable
@@ -653,6 +682,8 @@ class _$GameImpl implements _Game {
       final List<Team> teams = const [],
       this.teamAScore,
       this.teamBScore,
+      final List<MatchResult> matches = const [],
+      final Map<String, int> aggregateWins = const {},
       this.durationInMinutes,
       this.gameEndCondition,
       this.region,
@@ -668,6 +699,8 @@ class _$GameImpl implements _Game {
       this.maxParticipants})
       : _photoUrls = photoUrls,
         _teams = teams,
+        _matches = matches,
+        _aggregateWins = aggregateWins,
         _goalScorerIds = goalScorerIds,
         _goalScorerNames = goalScorerNames,
         _confirmedPlayerIds = confirmedPlayerIds;
@@ -774,6 +807,30 @@ class _$GameImpl implements _Game {
   @override
   final int? teamBScore;
 // Score for team B (second team)
+// Multi-match session support (for Events converted to Games)
+  final List<MatchResult> _matches;
+// Score for team B (second team)
+// Multi-match session support (for Events converted to Games)
+  @override
+  @JsonKey()
+  List<MatchResult> get matches {
+    if (_matches is EqualUnmodifiableListView) return _matches;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_matches);
+  }
+
+// List of individual match outcomes within this session
+  final Map<String, int> _aggregateWins;
+// List of individual match outcomes within this session
+  @override
+  @JsonKey()
+  Map<String, int> get aggregateWins {
+    if (_aggregateWins is EqualUnmodifiableMapView) return _aggregateWins;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_aggregateWins);
+  }
+
+// Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Game rules
   @override
   final int? durationInMinutes;
@@ -849,7 +906,7 @@ class _$GameImpl implements _Game {
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, teamAScore: $teamAScore, teamBScore: $teamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
   }
 
   @override
@@ -899,6 +956,9 @@ class _$GameImpl implements _Game {
                 other.teamAScore == teamAScore) &&
             (identical(other.teamBScore, teamBScore) ||
                 other.teamBScore == teamBScore) &&
+            const DeepCollectionEquality().equals(other._matches, _matches) &&
+            const DeepCollectionEquality()
+                .equals(other._aggregateWins, _aggregateWins) &&
             (identical(other.durationInMinutes, durationInMinutes) ||
                 other.durationInMinutes == durationInMinutes) &&
             (identical(other.gameEndCondition, gameEndCondition) ||
@@ -954,6 +1014,8 @@ class _$GameImpl implements _Game {
         const DeepCollectionEquality().hash(_teams),
         teamAScore,
         teamBScore,
+        const DeepCollectionEquality().hash(_matches),
+        const DeepCollectionEquality().hash(_aggregateWins),
         durationInMinutes,
         gameEndCondition,
         region,
@@ -1012,6 +1074,8 @@ abstract class _Game implements Game {
       final List<Team> teams,
       final int? teamAScore,
       final int? teamBScore,
+      final List<MatchResult> matches,
+      final Map<String, int> aggregateWins,
       final int? durationInMinutes,
       final String? gameEndCondition,
       final String? region,
@@ -1093,6 +1157,13 @@ abstract class _Game implements Game {
   int? get teamAScore; // Score for team A (first team)
   @override
   int? get teamBScore; // Score for team B (second team)
+// Multi-match session support (for Events converted to Games)
+  @override
+  List<MatchResult>
+      get matches; // List of individual match outcomes within this session
+  @override
+  Map<String, int>
+      get aggregateWins; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Game rules
   @override
   int? get durationInMinutes; // Duration of the game in minutes

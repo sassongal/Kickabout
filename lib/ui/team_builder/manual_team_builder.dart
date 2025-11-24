@@ -39,6 +39,21 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   bool _isLoading = false;
   bool _isSaving = false;
   Hub? _hub; // Cache hub for manager ratings
+  
+  // Team colors - predefined neon colors
+  static const List<Map<String, dynamic>> _teamColors = [
+    {'name': 'כחול', 'color': 0xFF2196F3, 'value': 0xFF2196F3},
+    {'name': 'אדום', 'color': 0xFFF44336, 'value': 0xFFF44336},
+    {'name': 'ירוק', 'color': 0xFF4CAF50, 'value': 0xFF4CAF50},
+    {'name': 'כתום', 'color': 0xFFFF9800, 'value': 0xFFFF9800},
+    {'name': 'סגול', 'color': 0xFF9C27B0, 'value': 0xFF9C27B0},
+    {'name': 'צהוב', 'color': 0xFFFFEB3B, 'value': 0xFFFFEB3B},
+    {'name': 'ורוד', 'color': 0xFFE91E63, 'value': 0xFFE91E63},
+    {'name': 'טורקיז', 'color': 0xFF00BCD4, 'value': 0xFF00BCD4},
+  ];
+  
+  // Current team colors (index -> color map)
+  final Map<int, Map<String, dynamic>> _teamColorMap = {};
 
   @override
   void initState() {
@@ -76,6 +91,22 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       widget.teamCount,
       (_) => <String>[],
     );
+    
+    // Initialize colors from existing teams or assign defaults
+    for (int i = 0; i < widget.teamCount; i++) {
+      if (widget.game.teams.length > i && widget.game.teams[i].color != null) {
+        // Use existing color if available
+        final existingColor = widget.game.teams[i].color;
+        final colorData = _teamColors.firstWhere(
+          (c) => c['name'] == existingColor,
+          orElse: () => _teamColors[i % _teamColors.length],
+        );
+        _teamColorMap[i] = colorData;
+      } else {
+        // Assign default color
+        _teamColorMap[i] = _teamColors[i % _teamColors.length];
+      }
+    }
   }
 
   /// Load draft from SharedPreferences
@@ -185,14 +216,14 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
             .where((p) => playerIds.contains(p.uid))
             .fold<double>(0.0, (sum, player) => sum + _getPlayerRating(player));
 
+        final colorData = _teamColorMap[index] ?? _teamColors[index % _teamColors.length];
         return Team(
           teamId: 'team_$index',
           name: teamNames[index],
           playerIds: playerIds,
           totalScore: totalScore,
-          color: widget.game.teams.length > index
-              ? widget.game.teams[index].color
-              : null,
+          color: colorData['name'] as String,
+          colorValue: colorData['value'] as int,
         );
       }).toList();
 
@@ -267,14 +298,14 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
             .where((p) => playerIds.contains(p.uid))
             .fold<double>(0.0, (sum, player) => sum + _getPlayerRating(player));
 
+        final colorData = _teamColorMap[index] ?? _teamColors[index % _teamColors.length];
         return Team(
           teamId: 'team_$index',
           name: teamNames[index],
           playerIds: playerIds,
           totalScore: totalScore,
-          color: widget.game.teams.length > index
-              ? widget.game.teams[index].color
-              : null,
+          color: colorData['name'] as String,
+          colorValue: colorData['value'] as int,
         );
       }).toList();
       
@@ -431,7 +462,10 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     return Container(
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.blue, width: 2),
+        border: Border.all(
+          color: Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3),
+          width: 2,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -439,18 +473,41 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
+              color: Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3).withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(6),
                 topRight: Radius.circular(6),
               ),
             ),
-            child: Text(
-              '$teamName (${playerIds.length})',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Color picker button
+                InkWell(
+                  onTap: () => _showColorPicker(teamIndex),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+                // Team name and count
+                Expanded(
+                  child: Text(
+                    '$teamName (${playerIds.length})',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                // Spacer for alignment
+                const SizedBox(width: 32),
+              ],
             ),
           ),
           Expanded(
@@ -459,7 +516,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   color: candidateData.isNotEmpty
-                      ? Colors.blue.withValues(alpha: 0.2)
+                      ? Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3).withValues(alpha: 0.2)
                       : Colors.transparent,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(8),
@@ -525,5 +582,62 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       ),
     );
   }
+
+  Future<void> _showColorPicker(int teamIndex) async {
+    final selectedColor = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('בחר צבע ל${teamNames[teamIndex]}'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: _teamColors.length,
+            itemBuilder: (context, index) {
+              final colorData = _teamColors[index];
+              final isSelected = _teamColorMap[teamIndex]?['name'] == colorData['name'];
+              
+              return InkWell(
+                onTap: () => Navigator.pop(context, colorData),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Color(colorData['value'] as int),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? Colors.white : Colors.grey,
+                      width: isSelected ? 3 : 1,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 24)
+                      : null,
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+        ],
+      ),
+    );
+    
+    if (selectedColor != null) {
+      setState(() {
+        _teamColorMap[teamIndex] = selectedColor;
+        _notifyTeamsChanged();
+      });
+    }
+  }
+  
+  List<String> get teamNames => ['קבוצה א', 'קבוצה ב', 'קבוצה ג', 'קבוצה ד'];
 }
 

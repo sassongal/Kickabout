@@ -46,6 +46,7 @@ import 'package:kickadoor/screens/hub/scouting_screen.dart';
 import 'package:kickadoor/screens/hub/hub_players_list_screen.dart';
 import 'package:kickadoor/screens/hub/hub_rules_screen.dart';
 import 'package:kickadoor/screens/hub/edit_game_screen.dart';
+import 'package:kickadoor/screens/hub/hub_manage_requests_screen.dart';
 import 'package:kickadoor/screens/venue/venue_search_screen.dart';
 import 'package:kickadoor/screens/venue/create_manual_venue_screen.dart';
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
@@ -483,6 +484,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) {
                   final hubId = state.pathParameters['id']!;
                   return HubRulesScreen(hubId: hubId);
+                },
+              ),
+              GoRoute(
+                path: 'requests',
+                name: 'hubManageRequests',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return HubManageRequestsScreen(hubId: hubId);
                 },
               ),
               GoRoute(

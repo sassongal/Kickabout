@@ -15,6 +15,8 @@ _$TeamImpl _$$TeamImplFromJson(Map<String, dynamic> json) => _$TeamImpl(
           const [],
       totalScore: (json['totalScore'] as num?)?.toDouble() ?? 0.0,
       color: json['color'] as String?,
+      colorValue: (json['colorValue'] as num?)?.toInt(),
+      wins: (json['wins'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$$TeamImplToJson(_$TeamImpl instance) =>
@@ -24,4 +26,6 @@ Map<String, dynamic> _$$TeamImplToJson(_$TeamImpl instance) =>
       'playerIds': instance.playerIds,
       'totalScore': instance.totalScore,
       'color': instance.color,
+      'colorValue': instance.colorValue,
+      'wins': instance.wins,
     };

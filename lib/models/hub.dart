@@ -36,6 +36,8 @@ class Hub with _$Hub {
     @Default(false) bool isPrivate, // If true, requires "Request to Join" (create notification for manager)
     // Manager-only ratings for team balancing (1-10 scale)
     @Default({}) Map<String, double> managerRatings, // userId -> rating (1-10, manager-only, for team balancing)
+    // Payment settings
+    String? paymentLink, // PayBox/Bit payment link URL
     // Denormalized fields (updated by Cloud Functions, not written by client)
     int? gameCount, // Denormalized: Total games created (updated by onGameCreated)
     @TimestampConverter() DateTime? lastActivity, // Denormalized: Last activity time (updated by Cloud Functions)

@@ -3,6 +3,7 @@ import 'package:kickadoor/models/converters/timestamp_converter.dart';
 import 'package:kickadoor/models/converters/geopoint_converter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/models/team.dart';
+import 'package:kickadoor/models/match_result.dart';
 
 part 'hub_event.freezed.dart';
 part 'hub_event.g.dart';
@@ -33,6 +34,9 @@ class HubEvent with _$HubEvent {
     @Default(false) bool showInCommunityFeed, // Show this event in the community activity feed
     // Teams planned for this event (manager-only, saved when using TeamMaker)
     @Default([]) List<Team> teams, // Teams planned for this event (manager-only)
+    // Multi-match session support
+    @Default([]) List<MatchResult> matches, // List of individual match outcomes within this event
+    @Default({}) Map<String, int> aggregateWins, // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
     // Reference to Game if event was converted to game
     String? gameId, // If event was converted to game, reference it
   }) = _HubEvent;

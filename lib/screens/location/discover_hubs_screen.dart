@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
@@ -23,6 +24,9 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
   bool _isLoading = false;
   bool _isLoadingLocation = false;
   double _radiusKm = 5.0; // Default 5km radius
+  bool _isMapView = false; // Toggle between List and Map
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
 
   @override
   void initState() {
@@ -106,6 +110,11 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
       setState(() {
         _nearbyHubs = hubs;
       });
+      
+      // Update map markers if in map view
+      if (_isMapView) {
+        _updateMapMarkers();
+      }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(context, 'שגיאה בחיפוש הובים: $e');
@@ -124,6 +133,79 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
       return '${(distanceKm * 1000).round()} מ\'';
     }
     return '${distanceKm.toStringAsFixed(1)} ק"מ';
+  }
+
+  void _updateMapMarkers() {
+    final markers = <Marker>{};
+    
+    for (final hub in _nearbyHubs) {
+      if (hub.location != null) {
+        final distance = _currentPosition != null
+            ? Geolocator.distanceBetween(
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+                hub.location!.latitude,
+                hub.location!.longitude,
+              ) / 1000
+            : 0.0;
+        
+        markers.add(
+          Marker(
+            markerId: MarkerId(hub.hubId),
+            position: LatLng(
+              hub.location!.latitude,
+              hub.location!.longitude,
+            ),
+            infoWindow: InfoWindow(
+              title: hub.name,
+              snippet: '${hub.memberIds.length} חברים • ${_formatDistance(distance)}',
+            ),
+            onTap: () {
+              context.push('/hubs/${hub.hubId}');
+            },
+          ),
+        );
+      }
+    }
+    
+    setState(() {
+      _markers = markers;
+    });
+    
+    // Update camera to show all markers
+    if (_mapController != null && _markers.isNotEmpty) {
+      final bounds = _calculateBounds();
+      if (bounds != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 100),
+        );
+      }
+    }
+  }
+
+  LatLngBounds? _calculateBounds() {
+    if (_nearbyHubs.isEmpty || _currentPosition == null) return null;
+    
+    double minLat = _currentPosition!.latitude;
+    double maxLat = _currentPosition!.latitude;
+    double minLng = _currentPosition!.longitude;
+    double maxLng = _currentPosition!.longitude;
+    
+    for (final hub in _nearbyHubs) {
+      if (hub.location != null) {
+        final lat = hub.location!.latitude;
+        final lng = hub.location!.longitude;
+        minLat = minLat < lat ? minLat : lat;
+        maxLat = maxLat > lat ? maxLat : lat;
+        minLng = minLng < lng ? minLng : lng;
+        maxLng = maxLng > lng ? maxLng : lng;
+      }
+    }
+    
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
   }
 
   @override
@@ -157,6 +239,33 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                 )
               : Column(
                   children: [
+                    // View Toggle (List/Map)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment<bool>(
+                            value: false,
+                            label: Text('רשימה'),
+                            icon: Icon(Icons.list),
+                          ),
+                          ButtonSegment<bool>(
+                            value: true,
+                            label: Text('מפה'),
+                            icon: Icon(Icons.map),
+                          ),
+                        ],
+                        selected: {_isMapView},
+                        onSelectionChanged: (Set<bool> newSelection) {
+                          setState(() {
+                            _isMapView = newSelection.first;
+                            if (_isMapView) {
+                              _updateMapMarkers();
+                            }
+                          });
+                        },
+                      ),
+                    ),
                     // Radius selector
                     Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -182,7 +291,7 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                         ],
                       ),
                     ),
-                    // Results
+                    // Results (List or Map)
                     Expanded(
                       child: _isLoading
                           ? const FuturisticLoadingState(message: 'מחפש הובים...')
@@ -197,62 +306,94 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                                     label: const Text('נסה שוב'),
                                   ),
                                 )
-                              : ListView.builder(
-                                  itemCount: _nearbyHubs.length,
-                                  itemBuilder: (context, index) {
-                                    final hub = _nearbyHubs[index];
-                                    double distance = 0;
-                                    if (hub.location != null) {
-                                      distance = Geolocator.distanceBetween(
-                                        _currentPosition!.latitude,
-                                        _currentPosition!.longitude,
-                                        hub.location!.latitude,
-                                        hub.location!.longitude,
-                                      ) / 1000;
-                                    }
-
-                                    return Card(
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      child: ListTile(
-                                        leading: const Icon(Icons.group),
-                                        title: Text(hub.name),
-                                        subtitle: hub.description != null
-                                            ? Text(hub.description!)
-                                            : null,
-                                        trailing: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              _formatDistance(distance),
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            Text(
-                                              '${hub.memberIds.length} חברים',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        onTap: () {
-                                          context.push('/hubs/${hub.hubId}');
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
+                              : _isMapView
+                                  ? _buildMapView()
+                                  : _buildListView(),
                     ),
                   ],
                 ),
+    );
+  }
+
+  Widget _buildListView() {
+    return ListView.builder(
+      itemCount: _nearbyHubs.length,
+      itemBuilder: (context, index) {
+        final hub = _nearbyHubs[index];
+        double distance = 0;
+        if (hub.location != null && _currentPosition != null) {
+          distance = Geolocator.distanceBetween(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            hub.location!.latitude,
+            hub.location!.longitude,
+          ) / 1000;
+        }
+
+        return Card(
+          margin: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          child: ListTile(
+            leading: const Icon(Icons.group),
+            title: Text(hub.name),
+            subtitle: hub.description != null
+                ? Text(hub.description!)
+                : null,
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _formatDistance(distance),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${hub.memberIds.length} חברים',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            onTap: () {
+              context.push('/hubs/${hub.hubId}');
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMapView() {
+    if (_currentPosition == null) {
+      return const Center(child: Text('לא ניתן להציג מפה ללא מיקום'));
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: LatLng(
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+            ),
+            zoom: 13.0,
+          ),
+          markers: _markers,
+          myLocationEnabled: true,
+          myLocationButtonEnabled: true,
+          mapType: MapType.normal,
+          onMapCreated: (controller) {
+            _mapController = controller;
+            _updateMapMarkers();
+          },
+        );
+      },
     );
   }
 }

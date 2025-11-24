@@ -6,6 +6,7 @@ export 'game.dart';
 export 'game_signup.dart';
 export 'team.dart';
 export 'team_data.dart';
+export 'match_result.dart';
 export 'game_event.dart';
 export 'rating_snapshot.dart';
 export 'feed_post.dart';

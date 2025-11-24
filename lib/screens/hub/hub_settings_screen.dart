@@ -299,6 +299,27 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+              // Payment Link
+              Card(
+                child: ExpansionTile(
+                  title: const Text('קישור תשלום (PayBox)'),
+                  subtitle: Text(
+                    hub.paymentLink != null && hub.paymentLink!.isNotEmpty
+                        ? 'מוגדר'
+                        : 'לא מוגדר',
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: _PaymentLinkEditor(
+                        hubId: widget.hubId,
+                        initialLink: hub.paymentLink ?? '',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
               // Invitations
               Card(
                 child: ListTile(
@@ -442,6 +463,95 @@ class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
                 )
               : const Icon(Icons.save),
           label: Text(_isSaving ? 'שומר...' : 'שמור חוקים'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Widget for editing payment link
+class _PaymentLinkEditor extends ConsumerStatefulWidget {
+  final String hubId;
+  final String initialLink;
+
+  const _PaymentLinkEditor({
+    required this.hubId,
+    required this.initialLink,
+  });
+
+  @override
+  ConsumerState<_PaymentLinkEditor> createState() => _PaymentLinkEditorState();
+}
+
+class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
+  late TextEditingController _linkController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _linkController = TextEditingController(text: widget.initialLink);
+  }
+
+  @override
+  void dispose() {
+    _linkController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveLink() async {
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final link = _linkController.text.trim();
+      
+      await hubsRepo.updateHub(widget.hubId, {
+        'paymentLink': link.isNotEmpty ? link : null,
+      });
+
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, 'קישור התשלום נשמר בהצלחה');
+    } catch (e) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, 'שגיאה בשמירת קישור: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextFormField(
+          controller: _linkController,
+          decoration: const InputDecoration(
+            labelText: 'קישור PayBox/Bit',
+            hintText: 'https://paybox.co.il/...',
+            border: OutlineInputBorder(),
+            helperText: 'הזן את קישור התשלום (PayBox או Bit)',
+          ),
+          keyboardType: TextInputType.url,
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: _isSaving ? null : _saveLink,
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save),
+          label: Text(_isSaving ? 'שומר...' : 'שמור קישור'),
         ),
       ],
     );

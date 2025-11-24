@@ -47,6 +47,14 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
           const [],
       teamAScore: (json['teamAScore'] as num?)?.toInt(),
       teamBScore: (json['teamBScore'] as num?)?.toInt(),
+      matches: (json['matches'] as List<dynamic>?)
+              ?.map((e) => MatchResult.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      aggregateWins: (json['aggregateWins'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const {},
       durationInMinutes: (json['durationInMinutes'] as num?)?.toInt(),
       gameEndCondition: json['gameEndCondition'] as String?,
       region: json['region'] as String?,
@@ -101,6 +109,8 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'teams': instance.teams,
       'teamAScore': instance.teamAScore,
       'teamBScore': instance.teamBScore,
+      'matches': instance.matches,
+      'aggregateWins': instance.aggregateWins,
       'durationInMinutes': instance.durationInMinutes,
       'gameEndCondition': instance.gameEndCondition,
       'region': instance.region,

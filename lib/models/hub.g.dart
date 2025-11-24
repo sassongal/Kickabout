@@ -48,6 +48,7 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
             (k, e) => MapEntry(k, (e as num).toDouble()),
           ) ??
           const {},
+      paymentLink: json['paymentLink'] as String?,
       gameCount: (json['gameCount'] as num?)?.toInt(),
       lastActivity: _$JsonConverterFromJson<Object, DateTime>(
           json['lastActivity'], const TimestampConverter().fromJson),
@@ -79,6 +80,7 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'region': instance.region,
       'isPrivate': instance.isPrivate,
       'managerRatings': instance.managerRatings,
+      'paymentLink': instance.paymentLink,
       'gameCount': instance.gameCount,
       'lastActivity': _$JsonConverterToJson<Object, DateTime>(
           instance.lastActivity, const TimestampConverter().toJson),

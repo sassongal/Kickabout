@@ -38,6 +38,14 @@ _$HubEventImpl _$$HubEventImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => Team.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      matches: (json['matches'] as List<dynamic>?)
+              ?.map((e) => MatchResult.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      aggregateWins: (json['aggregateWins'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const {},
       gameId: json['gameId'] as String?,
     );
 
@@ -64,5 +72,7 @@ Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
       'notifyMembers': instance.notifyMembers,
       'showInCommunityFeed': instance.showInCommunityFeed,
       'teams': instance.teams,
+      'matches': instance.matches,
+      'aggregateWins': instance.aggregateWins,
       'gameId': instance.gameId,
     };
