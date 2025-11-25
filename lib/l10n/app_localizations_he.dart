@@ -82,4 +82,439 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get success => 'הצלחה';
+
+  @override
+  String get locationPermissionError => 'אין הרשאת מיקום';
+
+  @override
+  String get pleaseLogin => 'נא להתחבר';
+
+  @override
+  String get guestsCannotCreateHubs =>
+      'אורחים לא יכולים ליצור הובים. נא להתחבר או להירשם.';
+
+  @override
+  String get hubCreatedSuccess => 'ההוב נוצר בהצלחה!';
+
+  @override
+  String get hubCreationError => 'שגיאה ביצירת הוב';
+
+  @override
+  String get hubCreationPermissionError => 'אין לך הרשאה ליצור הוב.';
+
+  @override
+  String get pleaseReLogin => 'נא להתחבר מחדש';
+
+  @override
+  String hubCreationErrorDetails(String error) {
+    return 'שגיאה ביצירת הוב: $error';
+  }
+
+  @override
+  String get createHubTitle => 'צור הוב';
+
+  @override
+  String get hubNameLabel => 'שם ההוב';
+
+  @override
+  String get hubNameHint => 'הכנס שם להוב';
+
+  @override
+  String get hubNameValidator => 'נא להכניס שם';
+
+  @override
+  String get hubDescriptionLabel => 'תיאור (אופציונלי)';
+
+  @override
+  String get hubDescriptionHint => 'הכנס תיאור להוב';
+
+  @override
+  String get regionLabel => 'אזור';
+
+  @override
+  String get regionHint => 'בחר אזור';
+
+  @override
+  String get regionHelperText => 'משפיע על הפיד האזורי';
+
+  @override
+  String get regionNorth => 'צפון';
+
+  @override
+  String get regionCenter => 'מרכז';
+
+  @override
+  String get regionSouth => 'דרום';
+
+  @override
+  String get regionJerusalem => 'ירושלים';
+
+  @override
+  String get venuesOptionalLabel => 'מגרשים (אופציונלי)';
+
+  @override
+  String get venuesAddLaterInfo => 'תוכל להוסיף מגרשים מאוחר יותר בהגדרות ההוב';
+
+  @override
+  String get venuesAddAfterCreationInfo => 'תוכל להוסיף מגרשים לאחר יצירת ההוב';
+
+  @override
+  String get addVenuesButton => 'הוסף מגרשים';
+
+  @override
+  String get locationOptionalLabel => 'מיקום (אופציונלי)';
+
+  @override
+  String get gettingLocation => 'מקבל מיקום...';
+
+  @override
+  String get currentLocation => 'מיקום נוכחי';
+
+  @override
+  String get selectOnMap => 'בחר במפה';
+
+  @override
+  String get creating => 'יוצר...';
+
+  @override
+  String get errorMissingHubId => 'שגיאה: מזהה הוב חסר';
+
+  @override
+  String get eventNotFound => 'אירוע לא נמצא';
+
+  @override
+  String get gameNotFound => 'משחק לא נמצא';
+
+  @override
+  String get noAdminPermissionForScreen => 'אין לך הרשאת ניהול למסך זה';
+
+  @override
+  String get onlyHubAdminsCanCreateTeams => 'רק מנהלי הוב יכולים ליצור קבוצות';
+
+  @override
+  String get notEnoughRegisteredPlayers => 'אין מספיק נרשמים';
+
+  @override
+  String requiredPlayersCount(int count) {
+    return 'נדרשים לפחות $count שחקנים';
+  }
+
+  @override
+  String registeredPlayerCount(int count) {
+    return 'נרשמו: $count';
+  }
+
+  @override
+  String permissionCheckErrorDetails(String error) {
+    return 'שגיאה בבדיקת הרשאות: $error';
+  }
+
+  @override
+  String get hubSettingsTitle => 'הגדרות הוב';
+
+  @override
+  String get loadingSettings => 'טוען הגדרות...';
+
+  @override
+  String get hubNotFound => 'הוב לא נמצא';
+
+  @override
+  String get tryAgain => 'נסה שוב';
+
+  @override
+  String get ratingMode => 'מצב דירוג';
+
+  @override
+  String get advancedRating => 'מתקדם';
+
+  @override
+  String get basicRating => 'בסיסי';
+
+  @override
+  String get basicRatingDescription => 'דירוג פשוט 1-10';
+
+  @override
+  String get advancedRatingDescription =>
+      'תכונות מפורטות (מהירות, בעיטה וכו\')';
+
+  @override
+  String get privacySettings => 'פרטיות';
+
+  @override
+  String get privateHub => 'פרטי';
+
+  @override
+  String get publicHub => 'ציבורי';
+
+  @override
+  String get publicHubDescription => 'גלוי לכולם';
+
+  @override
+  String get privateHubDescription => 'הזמנה בלבד';
+
+  @override
+  String get joinMode => 'מצב הצטרפות';
+
+  @override
+  String get approvalRequired => 'נדרש אישור';
+
+  @override
+  String get autoJoin => 'הצטרפות אוטומטית';
+
+  @override
+  String get autoJoinDescription => 'כל אחד יכול להצטרף מיידית';
+
+  @override
+  String get approvalRequiredDescription => 'מנהלים חייבים לאשר בקשות';
+
+  @override
+  String get notifications => 'התראות';
+
+  @override
+  String get notificationsDescription => 'אפשר התראות הוב';
+
+  @override
+  String get hubChat => 'צ\'אט הוב';
+
+  @override
+  String get hubChatDescription => 'אפשר צ\'אט לחברים';
+
+  @override
+  String get activityFeed => 'פיד פעילות';
+
+  @override
+  String get activityFeedDescription => 'הצג פעילות חברים';
+
+  @override
+  String get manageVenues => 'ניהול מגרשים';
+
+  @override
+  String get manageVenuesDescription => 'הוסף או הסר מגרשי משחק';
+
+  @override
+  String get hubRules => 'חוקי ההוב';
+
+  @override
+  String characterCount(int count) {
+    return '$count תווים';
+  }
+
+  @override
+  String get noRulesDefined => 'לא הוגדרו חוקים';
+
+  @override
+  String get paymentLinkLabel => 'קישור לתשלום';
+
+  @override
+  String get defined => 'מוגדר';
+
+  @override
+  String get notDefined => 'לא מוגדר';
+
+  @override
+  String get hubInvitations => 'הזמנות';
+
+  @override
+  String get hubInvitationsDescription => 'ניהול הזמנות ממתינות';
+
+  @override
+  String get checkingPermissions => 'בודק הרשאות...';
+
+  @override
+  String get permissionCheckError => 'שגיאה בבדיקת הרשאות';
+
+  @override
+  String get settingUpdatedSuccess => 'הגדרה עודכנה בהצלחה';
+
+  @override
+  String settingUpdateError(String error) {
+    return 'שגיאה בעדכון הגדרה: $error';
+  }
+
+  @override
+  String get hubRulesSavedSuccess => 'חוקים נשמרו בהצלחה';
+
+  @override
+  String hubRulesSaveError(String error) {
+    return 'שגיאה בשמירת חוקים: $error';
+  }
+
+  @override
+  String get hubRulesHint => 'הכנס חוקי הוב כאן...';
+
+  @override
+  String get hubRulesHelper => 'גלוי לכל החברים';
+
+  @override
+  String get saving => 'שומר...';
+
+  @override
+  String get saveRules => 'שמור חוקים';
+
+  @override
+  String get paymentLinkSavedSuccess => 'קישור לתשלום נשמר';
+
+  @override
+  String paymentLinkSaveError(String error) {
+    return 'שגיאה בשמירת קישור: $error';
+  }
+
+  @override
+  String get paymentLinkBitLabel => 'קישור לתשלום (ביט/פייבוקס)';
+
+  @override
+  String get paymentLinkHint => 'https://...';
+
+  @override
+  String get paymentLinkHelper => 'משמש לאיסוף כספי משחק';
+
+  @override
+  String get saveLink => 'שמור קישור';
+
+  @override
+  String get onlyHubAdminsCanChangeSettings =>
+      'רק מנהלי הוב יכולים לשנות הגדרות';
+
+  @override
+  String get playerDetailsUpdatedSuccess => 'פרטי השחקן עודכנו בהצלחה';
+
+  @override
+  String get pleaseEnterValidEmail => 'נא להזין כתובת אימייל תקינה';
+
+  @override
+  String hubInvitationEmailSubject(String hubName) {
+    return 'הזמנה להצטרף ל-$hubName ב-Kickabout';
+  }
+
+  @override
+  String hubInvitationEmailBody(
+      String playerName, String hubName, String link, String code) {
+    return 'היי!\n\n$playerName הזמין אותך להצטרף ל-$hubName ב-Kickabout.\n\nלחץ על הקישור להצטרפות:\n$link\n\nאו השתמש בקוד: $code';
+  }
+
+  @override
+  String get emailClientOpened => 'אפליקציית האימייל נפתחה';
+
+  @override
+  String get linkCopiedToClipboard => 'הקישור הועתק ללוח';
+
+  @override
+  String get editManualPlayerTitle => 'עריכת שחקן';
+
+  @override
+  String get editManualPlayerSubtitle => 'עדכון פרטים לשחקן ידני';
+
+  @override
+  String get fullNameRequired => 'שם מלא *';
+
+  @override
+  String get pleaseEnterName => 'נא להזין שם';
+
+  @override
+  String get emailForInvitationLabel => 'אימייל (להזמנה)';
+
+  @override
+  String get invalidEmailAddress => 'כתובת אימייל לא תקינה';
+
+  @override
+  String get phoneNumberLabel => 'מספר טלפון';
+
+  @override
+  String get cityLabel => 'עיר';
+
+  @override
+  String get ratingLabel => 'דירוג (0-10)';
+
+  @override
+  String get ratingRangeError => 'הדירוג חייב להיות בין 0 ל-10';
+
+  @override
+  String get preferredPositionLabel => 'עמדה מועדפת';
+
+  @override
+  String get sendEmailInvitation => 'שלח הזמנה במייל';
+
+  @override
+  String get saveChanges => 'שמור שינויים';
+
+  @override
+  String get positionGoalkeeper => 'שוער';
+
+  @override
+  String get positionDefense => 'הגנה';
+
+  @override
+  String get positionMidfielder => 'קישור';
+
+  @override
+  String get positionForward => 'התקפה';
+
+  @override
+  String get yourHubsTitle => 'ההובים שלך';
+
+  @override
+  String get notificationsTooltip => 'התראות';
+
+  @override
+  String get mapTooltip => 'מפה';
+
+  @override
+  String get discoverHubsTooltip => 'גלה הובים';
+
+  @override
+  String get backToHomeTooltip => 'חזרה לבית';
+
+  @override
+  String get errorLoadingHubs => 'שגיאה בטעינת הובים';
+
+  @override
+  String get noHubs => 'לא נמצאו הובים';
+
+  @override
+  String get createHubToStart => 'צור הוב כדי להתחיל!';
+
+  @override
+  String memberCount(int count) {
+    return '$count חברים';
+  }
+
+  @override
+  String get hubNotFoundWithInviteCode => 'לא נמצא הוב עם קוד הזמנה זה';
+
+  @override
+  String get pleaseLoginFirst => 'נא להתחבר תחילה';
+
+  @override
+  String get hubInvitationsDisabled => 'ההזמנות להוב זה מושבתות';
+
+  @override
+  String joinedHubSuccess(String hubName) {
+    return 'הצטרפת בהצלחה ל-$hubName';
+  }
+
+  @override
+  String get joinRequestSent => 'בקשת הצטרפות נשלחה בהצלחה';
+
+  @override
+  String joinHubError(String error) {
+    return 'שגיאה בהצטרפות להוב: $error';
+  }
+
+  @override
+  String get joinHubTitle => 'הצטרף להוב';
+
+  @override
+  String get backToHome => 'חזרה לבית';
+
+  @override
+  String get hubRequiresApproval => 'הוב זה דורש אישור מנהל להצטרפות';
+
+  @override
+  String get sendJoinRequest => 'שלח בקשת הצטרפות';
+
+  @override
+  String get joinHubButton => 'הצטרף להוב';
+
+  @override
+  String get temp => 'temp';
 }

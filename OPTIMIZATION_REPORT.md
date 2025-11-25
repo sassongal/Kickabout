@@ -2,7 +2,7 @@
 
 ## 📊 סיכום כללי
 
-בוצעו **8 אופטימיזציות מרכזיות** ברמה הגבוהה ביותר, המביאות לחיסכון של **~75% בקריאות ל-Firestore** ו-**~$360-660/חודש** בעלויות.
+בוצעו **8 אופטימיזציות מרכזיות** ברמה הגבוהה ביותר, המביאות לחיסכון של **~75% בקריאות ל-Firestore** ו-
 
 ---
 
@@ -17,7 +17,6 @@
 - Cache invalidation אוטומטי בעדכונים/מחיקות
 - שילוב עם `RetryService` ו-`MonitoringService`
 
-**חיסכון**: 70-80% פחות קריאות ל-Firestore
 
 ---
 

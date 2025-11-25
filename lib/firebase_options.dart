@@ -70,6 +70,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '731836758075',
     projectId: 'kickabout-ddc06',
     storageBucket: 'kickabout-ddc06.firebasestorage.app',
+    androidClientId: '731836758075-d9maq17n6a05a38l4uc6c70vt36bml7b.apps.googleusercontent.com',
     iosClientId: '731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com',
     iosBundleId: 'com.mycompany.CounterApp',
   );

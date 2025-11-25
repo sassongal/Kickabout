@@ -21,3 +21,25 @@ class TimestampConverter implements JsonConverter<DateTime, Object> {
   Object toJson(DateTime object) => Timestamp.fromDate(object);
 }
 
+/// Nullable Timestamp converter for Firestore
+class NullableTimestampConverter implements JsonConverter<DateTime?, Object?> {
+  const NullableTimestampConverter();
+
+  @override
+  DateTime? fromJson(Object? json) {
+    if (json == null) return null;
+    if (json is Timestamp) {
+      return json.toDate();
+    } else if (json is String) {
+      return DateTime.parse(json);
+    } else if (json is int) {
+      return DateTime.fromMillisecondsSinceEpoch(json);
+    }
+    return null;
+  }
+
+  @override
+  Object? toJson(DateTime? object) => 
+      object != null ? Timestamp.fromDate(object) : null;
+}
+

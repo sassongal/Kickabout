@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +14,8 @@ class PushNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+
+  final List<StreamSubscription> _subscriptions = [];
 
   /// Initialize push notifications
   Future<void> initialize() async {
@@ -48,6 +51,15 @@ class PushNotificationService {
     }
   }
 
+  /// Dispose service
+  void dispose() {
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    _initialized = false;
+  }
+
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -71,14 +83,14 @@ class PushNotificationService {
   /// Setup message handlers
   void _setupMessageHandlers() {
     // Foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _subscriptions.add(FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
-    });
+    }));
 
     // Background messages (when app is in background)
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _subscriptions.add(FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _handleNotificationTap(message);
-    });
+    }));
 
     // App opened from terminated state
     _messaging.getInitialMessage().then((RemoteMessage? message) {

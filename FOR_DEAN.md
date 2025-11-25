@@ -365,8 +365,7 @@ class MyScreen extends StatelessWidget {
 
 2. **`/hubs/{hubId}`** - קבוצות
    - פרטי Hub, חברים, תפקידים, הרשאות
-   - **Subcollections**:
-     - `/hubs/{hubId}/events/{eventId}` - אירועים
+   - **Subcollections**:hubs/{hubId}/events/{eventId}` - אירועים
      - `/hubs/{hubId}/feed/posts/items/{postId}` - פוסטים בפיד
      - `/hubs/{hubId}/chat/messages/{messageId}` - הודעות צ'אט
 

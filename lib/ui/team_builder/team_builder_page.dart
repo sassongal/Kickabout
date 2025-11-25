@@ -15,10 +15,11 @@ List<Team> _computeBalanceTeams(Map<String, dynamic> params) {
   )).toList();
   final teamCount = params['teamCount'] as int;
   
-  return TeamMaker.createBalancedTeams(
+  final result = TeamMaker.createBalancedTeams(
     players,
     teamCount: teamCount,
   );
+  return result.teams;
 }
 
 /// Team builder page with draggable chips and balance meter

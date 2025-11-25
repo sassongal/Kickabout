@@ -55,7 +55,7 @@ mixin _$Game {
       throw _privateConstructorUsedError; // ID of the original recurring game (for child games)
   String? get recurrencePattern =>
       throw _privateConstructorUsedError; // 'weekly', 'biweekly', 'monthly'
-  @TimestampConverter()
+  @NullableTimestampConverter()
   DateTime? get recurrenceEndDate =>
       throw _privateConstructorUsedError; // When to stop creating recurring games
 // Denormalized fields for efficient display (no need to fetch user/hub)
@@ -144,7 +144,7 @@ abstract class $GameCopyWith<$Res> {
       bool isRecurring,
       String? parentGameId,
       String? recurrencePattern,
-      @TimestampConverter() DateTime? recurrenceEndDate,
+      @NullableTimestampConverter() DateTime? recurrenceEndDate,
       String? createdByName,
       String? createdByPhotoUrl,
       String? hubName,
@@ -415,7 +415,7 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       bool isRecurring,
       String? parentGameId,
       String? recurrencePattern,
-      @TimestampConverter() DateTime? recurrenceEndDate,
+      @NullableTimestampConverter() DateTime? recurrenceEndDate,
       String? createdByName,
       String? createdByPhotoUrl,
       String? hubName,
@@ -679,7 +679,7 @@ class _$GameImpl implements _Game {
       this.isRecurring = false,
       this.parentGameId,
       this.recurrencePattern,
-      @TimestampConverter() this.recurrenceEndDate,
+      @NullableTimestampConverter() this.recurrenceEndDate,
       this.createdByName,
       this.createdByPhotoUrl,
       this.hubName,
@@ -779,7 +779,7 @@ class _$GameImpl implements _Game {
   final String? recurrencePattern;
 // 'weekly', 'biweekly', 'monthly'
   @override
-  @TimestampConverter()
+  @NullableTimestampConverter()
   final DateTime? recurrenceEndDate;
 // When to stop creating recurring games
 // Denormalized fields for efficient display (no need to fetch user/hub)
@@ -1075,7 +1075,7 @@ abstract class _Game implements Game {
       final bool isRecurring,
       final String? parentGameId,
       final String? recurrencePattern,
-      @TimestampConverter() final DateTime? recurrenceEndDate,
+      @NullableTimestampConverter() final DateTime? recurrenceEndDate,
       final String? createdByName,
       final String? createdByPhotoUrl,
       final String? hubName,
@@ -1148,7 +1148,7 @@ abstract class _Game implements Game {
   @override
   String? get recurrencePattern; // 'weekly', 'biweekly', 'monthly'
   @override
-  @TimestampConverter()
+  @NullableTimestampConverter()
   DateTime? get recurrenceEndDate; // When to stop creating recurring games
 // Denormalized fields for efficient display (no need to fetch user/hub)
   @override

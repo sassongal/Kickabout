@@ -2,6 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ============================================
+    // ============================================
     // Helper Functions
     // ============================================
     
@@ -13,32 +14,37 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // פונקציית עזר לבדיקת הרשאת מנהל בהאב
-    // בודק אם המשתמש הוא admin (roles[uid] == 'admin') או manager או היוצר
-    // IMPORTANT: Hub creator (createdBy) is ALWAYS considered a manager/admin
-    // This is set automatically when hub is created (see hubs_repository.dart:77)
-    function isHubAdmin(hubId) {
-      return isAuthenticated() && 
-        (
-          // For reads, check resource.data
-          (resource != null && resource.data.createdBy == request.auth.uid) ||
-          (resource != null && resource.data.roles[request.auth.uid] in ['admin', 'manager']) ||
-          // For writes, check request.resource.data
-          (request.resource != null && request.resource.data.createdBy == request.auth.uid) ||
-          (request.resource != null && request.resource.data.roles[request.auth.uid] in ['admin', 'manager']) ||
-          // Fallback: check hub document directly
-          // CRITICAL: Creator is always manager (checked first)
-          (exists(/databases/$(database)/documents/hubs/$(hubId)) &&
-           (get(/databases/$(database)/documents/hubs/$(hubId)).data.createdBy == request.auth.uid ||
-            get(/databases/$(database)/documents/hubs/$(hubId)).data.roles[request.auth.uid] in ['admin', 'manager']))
-        );
+    // Helper to get hub data safely
+    function getHubData(hubId) {
+      return get(/databases/$(database)/documents/hubs/$(hubId)).data;
     }
     
-    // פונקציה לבדיקת חברות בהאב
+    // Check if user is admin based on Hub document (via get)
+    // Use this for subcollections (requests, events, etc.)
+    function isHubAdmin(hubId) {
+      let hub = getHubData(hubId);
+      return isAuthenticated() && (
+        hub.createdBy == request.auth.uid ||
+        (hub.roles != null && request.auth.uid in hub.roles && hub.roles[request.auth.uid] in ['admin', 'manager'])
+      );
+    }
+    
+    // Check if user is admin based on Resource data (via resource)
+    // Use this ONLY for the Hub document itself
+    function isHubResourceAdmin() {
+      return isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        (resource.data.roles != null && request.auth.uid in resource.data.roles && resource.data.roles[request.auth.uid] in ['admin', 'manager'])
+      );
+    }
+    
+    // Check if user is member (via get)
     function isHubMember(hubId) {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/hubs/$(hubId)) &&
-        request.auth.uid in get(/databases/$(database)/documents/hubs/$(hubId)).data.memberIds;
+      let hub = getHubData(hubId);
+      return isAuthenticated() && (
+        (hub.memberIds != null && request.auth.uid in hub.memberIds) ||
+        hub.createdBy == request.auth.uid // Safety: Creator is always a member
+      );
     }
     
     // Helper to check if user is hub manager (kept for backward compatibility)
@@ -46,47 +52,37 @@ service cloud.firestore {
       return isHubAdmin(hubId);
     }
     
-    // פונקציה לבדיקת הרשאת "מנהל" (יוצר, מנהל, או מודרטור)
-    // IMPORTANT: Hub creator (createdBy) is ALWAYS considered a moderator/manager
-    // This allows creators to: create events, manage members, delete posts, etc.
+    // Check if user is moderator (via get)
     function isHubModerator(hubId) {
-      let hubData = get(/databases/$(database)/documents/hubs/$(hubId)).data;
-      return isAuthenticated() && 
-        (
-          // Creator is always moderator/manager (checked first)
-          hubData.createdBy == request.auth.uid ||
-          (hubData.roles != null && hubData.roles[request.auth.uid] in ['manager', 'moderator', 'admin'])
-        );
-    }
-    
-    // פונקציה לבדיקת הרשאה ליצירת אירועים (manager/moderator או הרשאה מותאמת אישית)
-    // IMPORTANT: Hub creator (createdBy) can ALWAYS create events
-    function canCreateEvents(hubId) {
-      let hubData = get(/databases/$(database)/documents/hubs/$(hubId)).data;
+      let hub = getHubData(hubId);
       return isAuthenticated() && (
-        // Creator can always create events (checked first)
-        hubData.createdBy == request.auth.uid ||
-        // Check default permissions (manager/moderator)
-        (hubData.roles != null && hubData.roles[request.auth.uid] in ['manager', 'moderator', 'admin']) ||
-        // Check custom permissions (set by manager)
-        (hubData.permissions != null && 
-         hubData.permissions.canCreateEvents != null &&
-         hubData.permissions.canCreateEvents is list &&
-         request.auth.uid in hubData.permissions.canCreateEvents)
+        hub.createdBy == request.auth.uid ||
+        (hub.roles != null && request.auth.uid in hub.roles && hub.roles[request.auth.uid] in ['manager', 'moderator', 'admin'])
       );
     }
     
-    // פונקציה לבדיקת הרשאה ליצירת פוסטים (כל חבר או הרשאה מותאמת אישית)
+    // Check permission to create events
+    function canCreateEvents(hubId) {
+      let hub = getHubData(hubId);
+      return isAuthenticated() && (
+        hub.createdBy == request.auth.uid ||
+        (hub.roles != null && request.auth.uid in hub.roles && hub.roles[request.auth.uid] in ['manager', 'moderator', 'admin']) ||
+        (hub.permissions != null && 
+         hub.permissions.canCreateEvents != null &&
+         hub.permissions.canCreateEvents is list &&
+         request.auth.uid in hub.permissions.canCreateEvents)
+      );
+    }
+    
+    // Check permission to create posts
     function canCreatePosts(hubId) {
-      let hubData = get(/databases/$(database)/documents/hubs/$(hubId)).data;
+      let hub = getHubData(hubId);
       return isAuthenticated() && 
-        request.auth.uid in hubData.memberIds && (
-        // If custom permissions exist, check if user is in the list
-        // Otherwise, all members can post (default)
-        hubData.permissions == null ||
-        hubData.permissions.canCreatePosts == null ||
-        !(hubData.permissions.canCreatePosts is list) ||
-        request.auth.uid in hubData.permissions.canCreatePosts
+        (request.auth.uid in hub.memberIds || hub.createdBy == request.auth.uid) && (
+        hub.permissions == null ||
+        hub.permissions.canCreatePosts == null ||
+        !(hub.permissions.canCreatePosts is list) ||
+        request.auth.uid in hub.permissions.canCreatePosts
       );
     }
     
@@ -166,15 +162,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       
       // Only the user themselves can create/update/delete their own profile
-      allow create: if isAuthenticated() && isOwner(userId) &&
-        // Validate required fields
-        request.resource.data.keys().hasAll(['uid', 'name', 'email', 'createdAt']) &&
-        request.resource.data.uid == userId &&
-        request.resource.data.createdAt is timestamp;
+      allow create: if isAuthenticated() && isOwner(userId);
       
-      allow update: if isAuthenticated() && isOwner(userId) &&
-        // Use validation function
-        isValidUser(request.resource.data, resource.data);
+      allow update: if isAuthenticated() && isOwner(userId);
       
       allow delete: if isAuthenticated() && isOwner(userId);
       
@@ -208,7 +198,7 @@ service cloud.firestore {
     // ============================================
     match /hubs/{hubId} {
       // כל אחד יכול לקרוא נתוני האב (כדי לראות במפה/רשימות)
-      allow read: if true;
+      allow read: if isAuthenticated();
       
       // כל משתמש מחובר יכול ליצור האב חדש
       allow create: if request.auth != null &&
@@ -402,7 +392,7 @@ service cloud.firestore {
     match /games/{gameId} {
       // כל אחד יכול לקרוא פרטי משחק (כדי להירשם)
       // משחקים עם visibility == 'recruiting' מופיעים בפיד האזורי
-      allow read: if true;
+      allow read: if isAuthenticated();
       
       // רק מנהל (מודרטור ומעלה) יכול ליצור משחק
       allow create: if isHubModerator(request.resource.data.hubId) &&

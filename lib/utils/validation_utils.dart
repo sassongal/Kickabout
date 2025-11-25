@@ -43,33 +43,18 @@ class ValidationUtils {
 
   /// Validate name (Hebrew/English, 2-50 characters)
   static String? validateName(String? value, {String fieldName = 'שם'}) {
-    if (value == null || value.trim().isEmpty) {
-      return 'נא להזין $fieldName';
-    }
+    var error = validateRequired(value, fieldName: fieldName);
+    if (error != null) return error;
 
-    final trimmed = value.trim();
+    error = validateMinLength(value, 2, fieldName: fieldName);
+    if (error != null) return error;
 
-    if (trimmed.length < 2) {
-      return '$fieldName חייב להכיל לפחות 2 תווים';
-    }
+    error = validateMaxLength(value, 50, fieldName: fieldName);
+    if (error != null) return error;
 
-    if (trimmed.length > 50) {
-      return '$fieldName לא יכול להכיל יותר מ-50 תווים';
-    }
-
-    // Allow Hebrew, English, numbers, spaces, and common punctuation
-    // Check if contains only valid characters
-    final hasInvalidChars = trimmed.split('').any((char) {
-      final code = char.codeUnitAt(0);
-      final isHebrew = (code >= 0x0590 && code <= 0x05FF);
-      final isEnglish = (code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A);
-      final isNumber = (code >= 0x30 && code <= 0x39);
-      final isSpace = code == 0x20;
-      final isPunctuation = ['-', '.', '\''].contains(char);
-      return !isHebrew && !isEnglish && !isNumber && !isSpace && !isPunctuation;
-    });
-    
-    if (hasInvalidChars) {
+    // Allow letters (English and Hebrew), numbers, spaces, and specific punctuation.
+    final nameRegex = RegExp('^[a-zA-Z0-9\\s\\-\\.\\\'\u0590-\u05FF]+\$');
+    if (!nameRegex.hasMatch(value!.trim())) {
       return '$fieldName מכיל תווים לא תקינים';
     }
 
@@ -78,19 +63,14 @@ class ValidationUtils {
 
   /// Validate city name
   static String? validateCity(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'נא להזין עיר';
-    }
+    var error = validateRequired(value, fieldName: 'עיר');
+    if (error != null) return error;
 
-    final trimmed = value.trim();
+    error = validateMinLength(value, 2, fieldName: 'שם העיר');
+    if (error != null) return error;
 
-    if (trimmed.length < 2) {
-      return 'שם העיר חייב להכיל לפחות 2 תווים';
-    }
-
-    if (trimmed.length > 50) {
-      return 'שם העיר לא יכול להכיל יותר מ-50 תווים';
-    }
+    error = validateMaxLength(value, 50, fieldName: 'שם העיר');
+    if (error != null) return error;
 
     return null;
   }
@@ -115,7 +95,8 @@ class ValidationUtils {
   }
 
   /// Validate non-empty text
-  static String? validateRequired(String? value, {String fieldName = 'שדה זה'}) {
+  static String? validateRequired(String? value,
+      {String fieldName = 'שדה זה'}) {
     if (value == null || value.trim().isEmpty) {
       return 'נא למלא $fieldName';
     }
@@ -157,7 +138,8 @@ class ValidationUtils {
     // Collapse multiple spaces into a single space
     return text
         .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
-        .replaceAll(RegExp(r'\s+'), ' ') // Collapse multiple whitespace to single space
+        .replaceAll(
+            RegExp(r'\s+'), ' ') // Collapse multiple whitespace to single space
         .trim();
   }
 
@@ -165,8 +147,10 @@ class ValidationUtils {
   static String sanitizeHtml(String html) {
     // Remove script tags and dangerous HTML
     return html
-        .replaceAll(RegExp(r'<script[^>]*>.*?</script>', caseSensitive: false), '')
-        .replaceAll(RegExp(r'<iframe[^>]*>.*?</iframe>', caseSensitive: false), '')
+        .replaceAll(
+            RegExp(r'<script[^>]*>.*?</script>', caseSensitive: false), '')
+        .replaceAll(
+            RegExp(r'<iframe[^>]*>.*?</iframe>', caseSensitive: false), '')
         .replaceAll(RegExp(r'on\w+\s*=', caseSensitive: false), '');
   }
 
@@ -189,16 +173,18 @@ class ValidationUtils {
 
   static List<TextInputFormatter> nameInputFormatter() {
     return [
-      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\s\-\.]')),
+      // Allow letters (English and Hebrew), numbers, spaces, and specific punctuation.
+      FilteringTextInputFormatter.allow(
+          RegExp('^[a-zA-Z0-9\\s\\-\\.\\\'\u0590-\u05FF]')),
       LengthLimitingTextInputFormatter(50),
     ];
   }
 
   static List<TextInputFormatter> cityInputFormatter() {
     return [
-      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\-]')),
+      // Allow letters (including Hebrew), spaces, and hyphens.
+      FilteringTextInputFormatter.allow(RegExp(r'[\p{L}\s\-]', unicode: true)),
       LengthLimitingTextInputFormatter(50),
     ];
   }
 }
-

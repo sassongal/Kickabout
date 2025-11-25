@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/image_picker_button.dart';
 import 'package:kickadoor/widgets/loading_widget.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/services/storage_service.dart';
-import 'package:kickadoor/services/location_service.dart';
 import 'package:kickadoor/utils/geohash_utils.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/screens/location/map_picker_screen.dart';
+import 'package:kickadoor/utils/city_utils.dart';
 import 'package:kickadoor/widgets/dialogs/location_search_dialog.dart';
 
 /// Edit profile screen
@@ -30,13 +27,15 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _displayNameController = TextEditingController(); // Custom nickname
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _positionController = TextEditingController();
   final _cityController = TextEditingController();
-  String? _selectedPlayingStyle;
+
+  // Replaces _positionController and _selectedPlayingStyle
+  String? _selectedPosition;
   String? _selectedRegion;
   String? _selectedAvatarColor;
   DateTime? _selectedBirthDate;
@@ -60,6 +59,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     {'name': 'ענבר', 'color': Color(0xFFFFC107), 'hex': 'FFC107'},
   ];
 
+  // Valid positions
+  final List<Map<String, String>> _positions = [
+    {'value': 'Goalkeeper', 'label': 'שוער'},
+    {'value': 'Defender', 'label': 'הגנה'},
+    {'value': 'Midfielder', 'label': 'קישור'},
+    {'value': 'Attacker', 'label': 'התקפה'},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -69,11 +76,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _displayNameController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _positionController.dispose();
     _cityController.dispose();
     super.dispose();
   }
@@ -86,13 +93,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         setState(() {
           _currentUser = user;
           _nameController.text = user.name;
+          _displayNameController.text = user.displayName ?? '';
           _firstNameController.text = user.firstName ?? '';
           _lastNameController.text = user.lastName ?? '';
           _emailController.text = user.email;
           _phoneController.text = user.phoneNumber ?? '';
-          _positionController.text = user.preferredPosition;
           _cityController.text = user.city ?? '';
-          _selectedPlayingStyle = user.playingStyle;
+
+          // Load position. If current value isn't standard, try to map or default
+          _selectedPosition = user.preferredPosition;
+          if (!_positions.any((p) => p['value'] == _selectedPosition)) {
+            _selectedPosition = 'Midfielder'; // Default fallback
+          }
+
           _selectedRegion = user.region;
           _selectedAvatarColor = user.avatarColor;
           _selectedBirthDate = user.birthDate;
@@ -101,185 +114,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showErrorFromException(context, e);
-      }
-    }
-  }
-
-  Future<void> _setLocation() async {
-    // Show dialog with options: current location or search address
-    final option = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('הגדר מיקום'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.my_location),
-              title: const Text('מיקום נוכחי'),
-              onTap: () => Navigator.pop(context, 'current'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.search),
-              title: const Text('חיפוש כתובת'),
-              onTap: () => Navigator.pop(context, 'search'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.map),
-              title: const Text('בחר במפה'),
-              onTap: () => Navigator.pop(context, 'map'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (option == null) return;
-
-    if (option == 'current') {
-      // Get current location
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        final locationService = ref.read(locationServiceProvider);
-        final position = await locationService.getCurrentLocation();
-
-        if (position != null) {
-          final geoPoint = locationService.positionToGeoPoint(position);
-          final address = await locationService.coordinatesToAddress(
-            position.latitude,
-            position.longitude,
-          );
-
-          // Update user location
-          final usersRepo = ref.read(usersRepositoryProvider);
-          await usersRepo.updateUser(widget.userId, {
-            'location': geoPoint,
-            'geohash': GeohashUtils.encode(position.latitude, position.longitude, precision: 7),
-          });
-
-          if (mounted) {
-            SnackbarHelper.showSuccess(
-              context,
-              'מיקום עודכן: ${address ?? '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}'}',
-            );
-            _loadUser(); // Reload user data
-          }
-        } else {
-          if (mounted) {
-            SnackbarHelper.showError(
-              context,
-              'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
-    } else if (option == 'map') {
-      // Open map picker
-      final result = await context.push<Map<String, dynamic>?>(
-        '/map-picker',
-        extra: _currentUser?.location,
-      );
-
-      if (result != null && mounted) {
-        final geoPoint = result['location'] as GeoPoint;
-        final address = result['address'] as String?;
-
-        // Update user location
-        final usersRepo = ref.read(usersRepositoryProvider);
-        await usersRepo.updateUser(widget.userId, {
-          'location': geoPoint,
-          'geohash': GeohashUtils.encode(geoPoint.latitude, geoPoint.longitude, precision: 7),
-        });
-
-        if (mounted) {
-          SnackbarHelper.showSuccess(
-            context,
-            'מיקום עודכן: ${address ?? '${geoPoint.latitude.toStringAsFixed(6)}, ${geoPoint.longitude.toStringAsFixed(6)}'}',
-          );
-          _loadUser(); // Reload user data
-        }
-      }
-    } else if (option == 'search') {
-      // Show address search dialog
-      final addressController = TextEditingController();
-      final result = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('חיפוש כתובת'),
-          content: TextField(
-            controller: addressController,
-            decoration: const InputDecoration(
-              labelText: 'הזן כתובת',
-              hintText: 'לדוגמה: תל אביב, רחוב רוטשילד 1',
-            ),
-            autofocus: true,
-            onSubmitted: (value) => Navigator.pop(context, value),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ביטול'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, addressController.text),
-              child: const Text('חפש'),
-            ),
-          ],
-        ),
-      );
-
-      if (result != null && result.isNotEmpty && mounted) {
-        setState(() {
-          _isLoading = true;
-        });
-
-        try {
-          final locationService = ref.read(locationServiceProvider);
-          final position = await locationService.getLocationFromAddress(result);
-
-          if (position != null) {
-            final geoPoint = locationService.positionToGeoPoint(position);
-
-            // Update user location
-            final usersRepo = ref.read(usersRepositoryProvider);
-            await usersRepo.updateUser(widget.userId, {
-              'location': geoPoint,
-              'geohash': GeohashUtils.encode(position.latitude, position.longitude, precision: 7),
-            });
-
-            if (mounted) {
-              SnackbarHelper.showSuccess(context, 'מיקום עודכן: $result');
-              _loadUser(); // Reload user data
-            }
-          } else {
-            if (mounted) {
-              SnackbarHelper.showError(context, 'לא נמצא מיקום לכתובת זו');
-            }
-          }
-        } catch (e) {
-          if (mounted) {
-            SnackbarHelper.showError(context, 'שגיאה בחיפוש כתובת: $e');
-          }
-        } finally {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
-        }
       }
     }
   }
@@ -295,29 +129,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final usersRepo = ref.read(usersRepositoryProvider);
       String? photoUrl = _currentUser?.photoUrl;
 
-      // Upload image if selected, or clear if deleted
+      // Upload image logic
       if (_selectedImage != null) {
-        setState(() {
-          _isUploading = true;
-        });
-
+        setState(() => _isUploading = true);
         final storageService = StorageService();
         photoUrl = await storageService.uploadProfilePhoto(
-          widget.userId,
-          _selectedImage!,
-        );
+            widget.userId, _selectedImage!);
+        setState(() => _isUploading = false);
+      } else if (_currentUser?.photoUrl != null &&
+          _currentUser!.photoUrl!.isNotEmpty &&
+          _selectedImage == null) {
+        // Keep existing or logic for deletion handled by ImagePickerButton state usually
+      }
 
-        setState(() {
-          _isUploading = false;
-        });
-      } else if (_currentUser?.photoUrl != null && _currentUser!.photoUrl!.isNotEmpty && _selectedImage == null) {
-        // User deleted photo - set to null and use avatarColor
-        photoUrl = null;
+      // Auto-derive region if city changed
+      String? region = _selectedRegion;
+      if (_cityController.text.isNotEmpty) {
+        region = CityUtils.getRegionForCity(_cityController.text);
       }
 
       // Update user
       final updatedUser = _currentUser!.copyWith(
         name: _nameController.text.trim(),
+        displayName: _displayNameController.text.trim().isEmpty
+            ? null
+            : _displayNameController.text.trim(),
         firstName: _firstNameController.text.trim().isEmpty
             ? null
             : _firstNameController.text.trim(),
@@ -328,12 +164,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         phoneNumber: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
-        preferredPosition: _positionController.text.trim(),
+
+        // Use the selected Dropdown value
+        preferredPosition: _selectedPosition ?? 'Midfielder',
+
         city: _cityController.text.trim().isEmpty
             ? null
             : _cityController.text.trim(),
-        playingStyle: _selectedPlayingStyle,
-        region: _selectedRegion,
+
+        // Auto-set region
+        region: region,
+
         photoUrl: photoUrl,
         avatarColor: _selectedAvatarColor,
         birthDate: _selectedBirthDate,
@@ -341,11 +182,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
       await usersRepo.setUser(updatedUser);
 
+      // --- IMPROVEMENT: Ensure state is updated before navigating ---
+      // Invalidate the provider to force a refresh from the database.
+      ref.invalidate(userProfileProvider(widget.userId));
+
+      // Wait for the provider to rebuild with the complete profile.
+      // This ensures the router's redirect logic will see the updated profile.
+      await ref.read(userProfileProvider(widget.userId).future);
+
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'הפרופיל עודכן בהצלחה!');
-        Navigator.pop(context);
+        // Use context.go('/') to re-evaluate the router's state.
+        // This correctly navigates to the home screen instead of just popping.
+        // It solves the redirect loop issue.
+        context.go('/');
       }
     } catch (e) {
+      // Note: The userProfileProvider might be an autoDispose family provider.
+      // If so, you'd use `userProfileProvider(widget.userId)`.
       if (mounted) {
         SnackbarHelper.showErrorFromException(context, e);
       }
@@ -358,6 +212,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
     }
   }
+
+  // Dummy provider for demonstration. Replace with your actual provider.
+  // You likely have this in your providers file, e.g., `data/repositories_providers.dart`
+  // It should be a FutureProvider or StreamProvider that fetches a user.
+  final userProfileProvider =
+      FutureProvider.family<User?, String>((ref, userId) async {
+    return ref.watch(usersRepositoryProvider).getUser(userId);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -382,476 +244,161 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               children: [
                 // Profile photo
                 Center(
-                  child: Stack(
-                    children: [
-                      ImagePickerButton(
-                        size: 120,
-                        currentImageUrl: _currentUser?.photoUrl,
-                        onImagePicked: (image) async {
-                          // Check file size (5MB limit)
-                          final fileSize = await image.length();
-                          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-                          
-                          if (fileSize > maxSize) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('התמונה גדולה מדי. מקסימום 5MB'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                            return;
-                          }
-                          
-                          setState(() {
-                            _selectedImage = image;
-                          });
-                        },
-                      ),
-                      // Delete photo button (if photo exists)
-                      if (_currentUser?.photoUrl != null && _currentUser!.photoUrl!.isNotEmpty)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          child: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                _selectedImage = null;
-                                // Clear photoUrl - will be handled in save
-                              });
-                              // Show confirmation
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('מחיקת תמונה'),
-                                  content: const Text('האם אתה בטוח שברצונך למחוק את התמונה?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('ביטול'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        setState(() {
-                                          // Will be saved as null in _saveProfile
-                                        });
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      child: const Text('מחק'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                    ],
+                  child: ImagePickerButton(
+                    size: 120,
+                    currentImageUrl: _currentUser?.photoUrl,
+                    onImagePicked: (image) {
+                      setState(() {
+                        _selectedImage = image;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(height: 16),
-                
-                // Avatar Color Picker (show always, but highlight if no photo)
-                ...[
-                  Text(
-                    'צבע אווטר',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _currentUser?.photoUrl != null && _currentUser!.photoUrl!.isNotEmpty
-                        ? 'צבע זה יופיע אם תמחק את התמונה'
-                        : 'צבע זה יופיע אם אין תמונה',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'צבע אווטר',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: _avatarColors.map((colorData) {
-                      final color = colorData['color'] as Color;
-                      final hex = colorData['hex'] as String;
-                      final isSelected = _selectedAvatarColor == hex || 
-                          (_selectedAvatarColor == null && 
-                           _currentUser?.avatarColor == null &&
-                           _avatarColors.indexOf(colorData) == 0);
-                      
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedAvatarColor = hex;
-                          });
-                        },
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected 
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.transparent,
-                              width: 3,
-                            ),
-                          ),
-                          child: isSelected
-                              ? const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 24,
-                                )
+
+                // Avatar Color
+                Text('צבע רקע (כשאין תמונה)',
+                    style: Theme.of(context).textTheme.labelMedium),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: _avatarColors.map((colorData) {
+                    final hex = colorData['hex'] as String;
+                    final isSelected = _selectedAvatarColor == hex ||
+                        (_selectedAvatarColor == null &&
+                            _currentUser?.avatarColor == null &&
+                            _avatarColors.indexOf(colorData) == 0);
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedAvatarColor = hex),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: colorData['color'],
+                          shape: BoxShape.circle,
+                          border: isSelected
+                              ? Border.all(color: Colors.white, width: 3)
+                              : null,
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                      color: Colors.black26, blurRadius: 4)
+                                ]
                               : null,
                         ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                        child: isSelected
+                            ? const Icon(Icons.check, color: Colors.white)
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
 
-                // First Name field
+                // Display Name (Nickname)
                 TextFormField(
-                  controller: _firstNameController,
+                  controller: _displayNameController,
                   decoration: const InputDecoration(
-                    labelText: 'שם פרטי',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Last Name field
-                TextFormField(
-                  controller: _lastNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'שם משפחה',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Full Name field (computed from first + last, or manual)
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'שם מלא',
+                    labelText: 'כינוי (שם תצוגה)',
+                    hintText: 'הכינוי שמוצג לאחרים',
+                    helperText: 'אופציונאלי - השאר ריק לשימוש בשם הפרטי',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.badge),
-                    helperText: 'או הזן שם מלא ידנית',
                   ),
-                  onChanged: (value) {
-                    // Auto-update if first/last name changes
-                    if (_firstNameController.text.isNotEmpty || _lastNameController.text.isNotEmpty) {
-                      final fullName = '${_firstNameController.text} ${_lastNameController.text}'.trim();
-                      if (fullName.isNotEmpty && value != fullName) {
-                        // User is typing manually, don't override
-                      }
-                    }
-                  },
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'נא להזין שם מלא';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 16),
-                
-                // Birth Date field
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _selectedBirthDate ?? DateTime.now().subtract(const Duration(days: 365 * 25)),
-                      firstDate: DateTime(1950),
-                      lastDate: DateTime.now(),
-                      locale: const Locale('he'),
+
+                // Names
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _firstNameController,
+                        decoration: const InputDecoration(
+                            labelText: 'שם פרטי', border: OutlineInputBorder()),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _lastNameController,
+                        decoration: const InputDecoration(
+                            labelText: 'שם משפחה',
+                            border: OutlineInputBorder()),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // City (Autocomplete)
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text == '') {
+                      return const Iterable<String>.empty();
+                    }
+                    return CityUtils.cities.where((String option) =>
+                        option.contains(textEditingValue.text));
+                  },
+                  onSelected: (String selection) {
+                    _cityController.text = selection;
+                  },
+                  fieldViewBuilder: (context, textEditingController, focusNode,
+                      onFieldSubmitted) {
+                    if (_cityController.text.isNotEmpty &&
+                        textEditingController.text != _cityController.text) {
+                      textEditingController.text = _cityController.text;
+                    }
+                    return TextFormField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                          labelText: 'עיר מגורים',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.location_city)),
+                      onChanged: (val) => _cityController.text = val,
                     );
-                    if (picked != null) {
-                      setState(() {
-                        _selectedBirthDate = picked;
-                      });
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'תאריך לידה (אופציונלי)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.calendar_today),
-                    ),
-                    child: Text(
-                      _selectedBirthDate != null
-                          ? DateFormat('dd/MM/yyyy', 'he').format(_selectedBirthDate!)
-                          : 'לא נבחר',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'אימייל',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'נא להזין אימייל';
-                    }
-                    if (!value.contains('@')) {
-                      return 'נא להזין אימייל תקין';
-                    }
-                    return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // Phone field
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'טלפון',
-                    hintText: '05X-XXXXXXX',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.phone),
-                    helperText: 'מספר טלפון ייחודי (לא יכול להיות בשימוש על ידי משתמש אחר)',
-                  ),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    if (value != null && value.trim().isNotEmpty) {
-                      // Basic Israeli phone validation
-                      final phoneRegex = RegExp(r'^0[2-9]\d{7,8}$');
-                      final cleanPhone = value.trim().replaceAll(RegExp(r'[-\s]'), '');
-                      if (!phoneRegex.hasMatch(cleanPhone)) {
-                        return 'נא להזין מספר טלפון תקין (ישראל)';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // City field with "Use Current Location" and "Manual Search" buttons
-                TextFormField(
-                  controller: _cityController,
-                  decoration: InputDecoration(
-                    labelText: 'עיר מגורים',
-                    hintText: 'לדוגמה: תל אביב',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.location_city),
-                    suffixIcon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.search),
-                          tooltip: 'חיפוש כתובת',
-                          onPressed: () async {
-                            // Show manual location search dialog
-                            final result = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => const LocationSearchDialog(),
-                            );
-                            
-                            if (result == true && mounted) {
-                              // Reload user to get updated location
-                              _loadUser();
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.my_location),
-                          tooltip: 'השתמש במיקום הנוכחי',
-                          onPressed: () async {
-                        setState(() {
-                          _isLoading = true;
-                        });
-                        try {
-                          final locationService = ref.read(locationServiceProvider);
-                          final position = await locationService.getCurrentLocation();
-                          
-                          if (position != null) {
-                            final address = await locationService.coordinatesToAddress(
-                              position.latitude,
-                              position.longitude,
-                            );
-                            
-                            if (address != null && mounted) {
-                              // Extract city name from address
-                              String cityName = address;
-                              final parts = address.split(',');
-                              if (parts.isNotEmpty) {
-                                cityName = parts[0].trim();
-                              }
-                              
-                              setState(() {
-                                _cityController.text = cityName;
-                              });
-                              
-                              // Also update user location in Firestore
-                              final usersRepo = ref.read(usersRepositoryProvider);
-                              final geoPoint = locationService.positionToGeoPoint(position);
-                              await usersRepo.updateUser(widget.userId, {
-                                'location': geoPoint,
-                                'geohash': GeohashUtils.encode(position.latitude, position.longitude, precision: 7),
-                                'city': cityName,
-                              });
-                              
-                              SnackbarHelper.showSuccess(context, 'מיקום עודכן: $cityName');
-                            }
-                          } else {
-                            if (mounted) {
-                              SnackbarHelper.showError(context, 'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.');
-                            }
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
-                          }
-                        } finally {
-                          if (mounted) {
-                            setState(() {
-                              _isLoading = false;
-                            });
-                          }
-                        }
-                      },
-                    ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Position field
-                TextFormField(
-                  controller: _positionController,
+                // Position (Dropdown) - The replacement for text field + playing style
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedPosition,
                   decoration: const InputDecoration(
                     labelText: 'עמדה מועדפת',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.sports_soccer),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'נא להזין עמדה';
-                    }
-                    return null;
-                  },
+                  items: _positions
+                      .map((pos) => DropdownMenuItem(
+                            value: pos['value'],
+                            child: Text(pos['label']!),
+                          ))
+                      .toList(),
+                  onChanged: (value) =>
+                      setState(() => _selectedPosition = value),
                 ),
                 const SizedBox(height: 16),
-                
-                // Playing Style field
-                DropdownButtonFormField<String>(
-                  value: _selectedPlayingStyle,
-                  decoration: const InputDecoration(
-                    labelText: 'סגנון משחק',
-                    hintText: 'בחר סגנון משחק',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.style),
-                    helperText: 'משפיע על חלוקת הקבוצות במשחקים',
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'goalkeeper',
-                      child: Text('שוער'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'defensive',
-                      child: Text('הגנתי'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'offensive',
-                      child: Text('התקפי'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPlayingStyle = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Region field
-                DropdownButtonFormField<String>(
-                  value: _selectedRegion,
-                  decoration: const InputDecoration(
-                    labelText: 'אזור',
-                    hintText: 'בחר אזור',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.map),
-                    helperText: 'משפיע על הפיד האזורי שתראה',
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'צפון',
-                      child: Text('צפון'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'מרכז',
-                      child: Text('מרכז'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'דרום',
-                      child: Text('דרום'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'ירושלים',
-                      child: Text('ירושלים'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedRegion = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Set location button
-                OutlinedButton.icon(
-                  onPressed: _setLocation,
-                  icon: const Icon(Icons.location_on),
-                  label: const Text('הגדר מיקום'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-                const SizedBox(height: 32),
 
-                // Save button
+                // Phone & Email (Read only mostly, but editable here)
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                      labelText: 'טלפון',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.phone)),
+                ),
+                const SizedBox(height: 16),
+
+                // Save
                 ElevatedButton.icon(
                   onPressed: _isLoading ? null : _saveProfile,
-                  icon: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save),
+                  icon: const Icon(Icons.save),
                   label: Text(_isLoading ? 'שומר...' : 'שמור שינויים'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
+                      padding: const EdgeInsets.symmetric(vertical: 16)),
                 ),
               ],
             ),
@@ -861,4 +408,3 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 }
-

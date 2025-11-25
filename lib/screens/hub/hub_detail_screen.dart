@@ -668,8 +668,8 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (game.teamAScore != null && game.teamBScore != null)
-                                  Text('תוצאה: ${game.teamAScore} - ${game.teamBScore}'),
+                                if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
+                                  Text('תוצאה: ${game.legacyTeamAScore} - ${game.legacyTeamBScore}'),
                                 if (game.eventId != null)
                                   Text('אירוע: ${game.eventId}', style: const TextStyle(fontSize: 12)),
                               ],

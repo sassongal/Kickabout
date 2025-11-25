@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kickadoor/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
@@ -76,13 +77,14 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
         setState(() {
           _selectedLocation = geoPoint;
-          _locationAddress = address ?? '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+          _locationAddress = address ??
+              '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
         });
       } else {
         if (mounted) {
           SnackbarHelper.showError(
             context,
-            'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
+            AppLocalizations.of(context)!.locationPermissionError,
           );
         }
       }
@@ -104,18 +106,18 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
     final currentUserId = ref.read(currentUserIdProvider);
     final isAnonymous = ref.read(isAnonymousUserProvider);
-    
+
     if (currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('נא להתחבר')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogin)),
       );
       return;
     }
-    
+
     if (isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('אורחים לא יכולים ליצור הובים. נא להתחבר או להירשם.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.guestsCannotCreateHubs),
           duration: Duration(seconds: 4),
         ),
       );
@@ -131,7 +133,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
-      
+
       // Generate geohash if location is provided
       String? geohash;
       if (_selectedLocation != null) {
@@ -167,7 +169,8 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ההוב נוצר בהצלחה!')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.hubCreatedSuccess)),
         );
         context.pop();
       }
@@ -175,13 +178,15 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
       debugPrint('Error creating hub: $e');
       debugPrint('Stack trace: $stackTrace');
       if (mounted) {
-        String errorMessage = 'שגיאה ביצירת הוב';
+        String errorMessage = AppLocalizations.of(context)!.hubCreationError;
         if (e.toString().contains('permission-denied')) {
-          errorMessage = 'אין הרשאה ליצור הוב. נא לבדוק את הגדרות Firebase.';
+          errorMessage =
+              AppLocalizations.of(context)!.hubCreationPermissionError;
         } else if (e.toString().contains('unauthenticated')) {
-          errorMessage = 'נא להתחבר מחדש';
+          errorMessage = AppLocalizations.of(context)!.pleaseReLogin;
         } else {
-          errorMessage = 'שגיאה ביצירת הוב: $e';
+          errorMessage = AppLocalizations.of(context)!
+              .hubCreationErrorDetails(e.toString());
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -199,8 +204,9 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AppScaffold(
-      title: 'צור הוב',
+      title: l10n.createHubTitle,
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -211,16 +217,16 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
               // Name field
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'שם ההוב',
-                  hintText: 'הכנס שם להוב',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.group),
+                decoration: InputDecoration(
+                  labelText: l10n.hubNameLabel,
+                  hintText: l10n.hubNameHint,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.group),
                 ),
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'נא להכניס שם';
+                    return l10n.hubNameValidator;
                   }
                   return null;
                 },
@@ -230,11 +236,11 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
               // Description field
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'תיאור (אופציונלי)',
-                  hintText: 'הכנס תיאור להוב',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
+                decoration: InputDecoration(
+                  labelText: l10n.hubDescriptionLabel,
+                  hintText: l10n.hubDescriptionHint,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.description),
                 ),
                 maxLines: 3,
                 textInputAction: TextInputAction.done,
@@ -242,39 +248,36 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
               const SizedBox(height: 16),
 
               // Region field
-              DropdownButtonFormField<String>(
-                value: _selectedRegion,
-                decoration: const InputDecoration(
-                  labelText: 'אזור',
-                  hintText: 'בחר אזור',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.map),
-                  helperText: 'משפיע על הפיד האזורי',
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'צפון',
-                    child: Text('צפון'),
+              Builder(builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                final regions = {
+                  'צפון': l10n.regionNorth,
+                  'מרכז': l10n.regionCenter,
+                  'דרום': l10n.regionSouth,
+                  'ירושלים': l10n.regionJerusalem,
+                };
+                return DropdownButtonFormField<String>(
+                  initialValue: _selectedRegion,
+                  decoration: InputDecoration(
+                    labelText: l10n.regionLabel,
+                    hintText: l10n.regionHint,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.map),
+                    helperText: l10n.regionHelperText,
                   ),
-                  DropdownMenuItem(
-                    value: 'מרכז',
-                    child: Text('מרכז'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'דרום',
-                    child: Text('דרום'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'ירושלים',
-                    child: Text('ירושלים'),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedRegion = value;
-                  });
-                },
-              ),
+                  items: regions.entries
+                      .map((entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRegion = value;
+                    });
+                  },
+                );
+              }),
               const SizedBox(height: 16),
 
               // Venues section
@@ -284,17 +287,17 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'מגרשים (אופציונלי)',
-                        style: TextStyle(
+                      Text(
+                        l10n.venuesOptionalLabel,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'תוכל להוסיף מגרשים מאוחר יותר בהגדרות ההוב',
-                        style: TextStyle(
+                      Text(
+                        l10n.venuesAddLaterInfo,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
@@ -305,13 +308,13 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                           // Note: Hub ID will be available after creation
                           // For now, just show info
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('תוכל להוסיף מגרשים לאחר יצירת ההוב'),
+                            SnackBar(
+                              content: Text(l10n.venuesAddAfterCreationInfo),
                             ),
                           );
                         },
-                        icon: const Icon(Icons.add_location),
-                        label: const Text('הוסף מגרשים'),
+                        icon: const Icon(Icons.add_location_alt),
+                        label: Text(l10n.addVenuesButton),
                       ),
                     ],
                   ),
@@ -326,9 +329,9 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'מיקום (אופציונלי)',
-                        style: TextStyle(
+                      Text(
+                        l10n.locationOptionalLabel,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -372,35 +375,39 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                                   ? const SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     )
                                   : const Icon(Icons.my_location),
-                              label: Text(_isLoadingLocation
-                                  ? 'מקבל מיקום...'
-                                  : 'מיקום נוכחי'),
+                              label: Text(
+                                _isLoadingLocation
+                                    ? l10n.gettingLocation
+                                    : l10n.currentLocation,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MapPickerScreen(
-                                      initialLocation: _selectedLocation,
-                                    ),
+                                final result =
+                                    await context.push<Map<String, dynamic>>(
+                                  '/map-picker',
+                                  extra: MapPickerScreen(
+                                    initialLocation: _selectedLocation,
                                   ),
                                 );
                                 if (result != null && mounted) {
                                   setState(() {
-                                    _selectedLocation = result['location'] as GeoPoint;
-                                    _locationAddress = result['address'] as String?;
+                                    _selectedLocation =
+                                        result['location'] as GeoPoint;
+                                    _locationAddress =
+                                        result['address'] as String?;
                                   });
                                 }
                               },
                               icon: const Icon(Icons.map),
-                              label: const Text('בחר במפה'),
+                              label: Text(l10n.selectOnMap),
                             ),
                           ),
                         ],
@@ -421,7 +428,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.add),
-                label: Text(_isLoading ? 'יוצר...' : 'צור הוב'),
+                label: Text(_isLoading ? l10n.creating : l10n.createHub),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: Theme.of(context).textTheme.titleMedium,

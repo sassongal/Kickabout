@@ -2,28 +2,421 @@
   "@@locale": "en",
   "appName": "Kickadoor",
   "welcome": "Welcome",
+  "@welcome": {},
   "login": "Login",
+  "@login": {},
   "register": "Register",
+  "@register": {},
   "email": "Email",
+  "@email": {},
   "password": "Password",
+  "@password": {},
   "name": "Name",
+  "@name": {},
   "phoneNumber": "Phone Number",
+  "@phoneNumber": {},
   "home": "Home",
+  "@home": {},
   "players": "Players",
+  "@players": {},
   "games": "Games",
+  "@games": {},
   "hubs": "Hubs",
+  "@hubs": {},
   "createGame": "Create Game",
+  "@createGame": {},
   "createHub": "Create Hub",
+  "@createHub": {},
   "teamFormation": "Team Formation",
+  "@teamFormation": {},
   "stats": "Stats",
+  "@stats": {},
   "profile": "Profile",
+  "@profile": {},
   "share": "Share",
+  "@share": {},
   "save": "Save",
+  "@save": {},
   "cancel": "Cancel",
+  "@cancel": {},
   "delete": "Delete",
+  "@delete": {},
   "edit": "Edit",
+  "@edit": {},
   "loading": "Loading...",
+  "@loading": {},
   "error": "Error",
-  "success": "Success"
+  "@error": {},
+  "success": "Success",
+  "@success": {},
+  "locationPermissionError": "Location permission denied",
+  "@locationPermissionError": {
+    "description": "Error message when location permission is not granted."
+  },
+  "pleaseLogin": "Please login",
+  "@pleaseLogin": {
+    "description": "A prompt asking the user to log in."
+  },
+  "guestsCannotCreateHubs": "Guests cannot create hubs. Please login or register.",
+  "@guestsCannotCreateHubs": {
+    "description": "Message shown to guest users trying to create a hub."
+  },
+  "hubCreatedSuccess": "Hub created successfully!",
+  "@hubCreatedSuccess": {
+    "description": "Success message after a hub is created."
+  },
+  "hubCreationError": "Error creating hub",
+  "@hubCreationError": {
+    "description": "Generic error message when hub creation fails."
+  },
+  "hubCreationPermissionError": "You do not have permission to create a hub.",
+  "@hubCreationPermissionError": {
+    "description": "Error message when a user without permission tries to create a hub."
+  },
+  "pleaseReLogin": "Please re-login",
+  "@pleaseReLogin": {
+    "description": "Prompt to ask the user to log in again, usually after a session expiry."
+  },
+  "hubCreationErrorDetails": "Error creating hub: {error}",
+  "@hubCreationErrorDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "description": "The specific error message."
+      }
+    }
+  },
+  "createHubTitle": "Create Hub",
+  "@createHubTitle": {},
+  "hubNameLabel": "Hub Name",
+  "@hubNameLabel": {},
+  "hubNameHint": "Enter hub name",
+  "@hubNameHint": {},
+  "hubNameValidator": "Please enter a name",
+  "@hubNameValidator": {},
+  "hubDescriptionLabel": "Description (Optional)",
+  "@hubDescriptionLabel": {},
+  "hubDescriptionHint": "Enter hub description",
+  "@hubDescriptionHint": {},
+  "regionLabel": "Region",
+  "@regionLabel": {},
+  "regionHint": "Select region",
+  "@regionHint": {},
+  "regionHelperText": "Affects regional feed",
+  "@regionHelperText": {},
+  "regionNorth": "North",
+  "@regionNorth": {},
+  "regionCenter": "Center",
+  "@regionCenter": {},
+  "regionSouth": "South",
+  "@regionSouth": {},
+  "regionJerusalem": "Jerusalem",
+  "@regionJerusalem": {},
+  "venuesOptionalLabel": "Venues (Optional)",
+  "@venuesOptionalLabel": {},
+  "venuesAddLaterInfo": "You can add venues later in hub settings",
+  "@venuesAddLaterInfo": {},
+  "venuesAddAfterCreationInfo": "You can add venues after creating the hub",
+  "@venuesAddAfterCreationInfo": {},
+  "addVenuesButton": "Add Venues",
+  "@addVenuesButton": {},
+  "locationOptionalLabel": "Location (Optional)",
+  "@locationOptionalLabel": {},
+  "gettingLocation": "Getting location...",
+  "@gettingLocation": {},
+  "currentLocation": "Current Location",
+  "@currentLocation": {},
+  "selectOnMap": "Select on Map",
+  "@selectOnMap": {},
+  "creating": "Creating...",
+  "@creating": {},
+  "errorMissingHubId": "Error: Missing Hub ID",
+  "@errorMissingHubId": {},
+  "eventNotFound": "Event not found",
+  "@eventNotFound": {},
+  "gameNotFound": "Game not found",
+  "@gameNotFound": {},
+  "noAdminPermissionForScreen": "You do not have admin permission for this screen",
+  "@noAdminPermissionForScreen": {},
+  "onlyHubAdminsCanCreateTeams": "Only Hub admins can create teams",
+  "@onlyHubAdminsCanCreateTeams": {},
+  "notEnoughRegisteredPlayers": "Not enough registered players",
+  "@notEnoughRegisteredPlayers": {},
+  "requiredPlayersCount": "At least {count} players are required",
+  "@requiredPlayersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "registeredPlayerCount": "Registered: {count}",
+  "@registeredPlayerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "permissionCheckErrorDetails": "Permission check error: {error}",
+  "@permissionCheckErrorDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hubSettingsTitle": "Hub Settings",
+  "@hubSettingsTitle": {},
+  "loadingSettings": "Loading settings...",
+  "@loadingSettings": {},
+  "hubNotFound": "Hub not found",
+  "@hubNotFound": {},
+  "tryAgain": "Try Again",
+  "@tryAgain": {},
+  "ratingMode": "Rating Mode",
+  "@ratingMode": {},
+  "advancedRating": "Advanced",
+  "@advancedRating": {},
+  "basicRating": "Basic",
+  "@basicRating": {},
+  "basicRatingDescription": "Simple 1-10 rating",
+  "@basicRatingDescription": {},
+  "advancedRatingDescription": "Detailed attributes (Pace, Shooting, etc.)",
+  "@advancedRatingDescription": {},
+  "privacySettings": "Privacy",
+  "@privacySettings": {},
+  "privateHub": "Private",
+  "@privateHub": {},
+  "publicHub": "Public",
+  "@publicHub": {},
+  "publicHubDescription": "Visible to everyone",
+  "@publicHubDescription": {},
+  "privateHubDescription": "Invite only",
+  "@privateHubDescription": {},
+  "joinMode": "Join Mode",
+  "@joinMode": {},
+  "approvalRequired": "Approval Required",
+  "@approvalRequired": {},
+  "autoJoin": "Auto Join",
+  "@autoJoin": {},
+  "autoJoinDescription": "Anyone can join instantly",
+  "@autoJoinDescription": {},
+  "approvalRequiredDescription": "Admins must approve requests",
+  "@approvalRequiredDescription": {},
+  "notifications": "Notifications",
+  "@notifications": {},
+  "notificationsDescription": "Enable hub notifications",
+  "@notificationsDescription": {},
+  "hubChat": "Hub Chat",
+  "@hubChat": {},
+  "hubChatDescription": "Enable chat for members",
+  "@hubChatDescription": {},
+  "activityFeed": "Activity Feed",
+  "@activityFeed": {},
+  "activityFeedDescription": "Show member activity",
+  "@activityFeedDescription": {},
+  "manageVenues": "Manage Venues",
+  "@manageVenues": {},
+  "manageVenuesDescription": "Add or remove playing venues",
+  "@manageVenuesDescription": {},
+  "hubRules": "Hub Rules",
+  "@hubRules": {},
+  "characterCount": "{count} characters",
+  "@characterCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noRulesDefined": "No rules defined",
+  "@noRulesDefined": {},
+  "paymentLinkLabel": "Payment Link",
+  "@paymentLinkLabel": {},
+  "defined": "Defined",
+  "@defined": {},
+  "notDefined": "Not defined",
+  "@notDefined": {},
+  "hubInvitations": "Invitations",
+  "@hubInvitations": {},
+  "hubInvitationsDescription": "Manage pending invitations",
+  "@hubInvitationsDescription": {},
+  "checkingPermissions": "Checking permissions...",
+  "@checkingPermissions": {},
+  "permissionCheckError": "Permission check error",
+  "@permissionCheckError": {},
+  "settingUpdatedSuccess": "Setting updated successfully",
+  "@settingUpdatedSuccess": {},
+  "settingUpdateError": "Error updating setting: {error}",
+  "@settingUpdateError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hubRulesSavedSuccess": "Rules saved successfully",
+  "@hubRulesSavedSuccess": {},
+  "hubRulesSaveError": "Error saving rules: {error}",
+  "@hubRulesSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hubRulesHint": "Enter hub rules here...",
+  "@hubRulesHint": {},
+  "hubRulesHelper": "Visible to all members",
+  "@hubRulesHelper": {},
+  "saving": "Saving...",
+  "@saving": {},
+  "saveRules": "Save Rules",
+  "@saveRules": {},
+  "paymentLinkSavedSuccess": "Payment link saved",
+  "@paymentLinkSavedSuccess": {},
+  "paymentLinkSaveError": "Error saving link: {error}",
+  "@paymentLinkSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentLinkBitLabel": "Payment Link (Bit/PayBox)",
+  "@paymentLinkBitLabel": {},
+  "paymentLinkHint": "https://...",
+  "@paymentLinkHint": {},
+  "paymentLinkHelper": "Used for collecting game fees",
+  "@paymentLinkHelper": {},
+  "saveLink": "Save Link",
+  "@saveLink": {},
+  "onlyHubAdminsCanChangeSettings": "Only Hub admins can change settings",
+  "@onlyHubAdminsCanChangeSettings": {},
+  "playerDetailsUpdatedSuccess": "Player details updated successfully",
+  "@playerDetailsUpdatedSuccess": {},
+  "pleaseEnterValidEmail": "Please enter a valid email",
+  "@pleaseEnterValidEmail": {},
+  "hubInvitationEmailSubject": "Invitation to join {hubName} on Kickabout",
+  "@hubInvitationEmailSubject": {
+    "placeholders": {
+      "hubName": {
+        "type": "String"
+      }
+    }
+  },
+  "hubInvitationEmailBody": "Hi!\n\n{playerName} invited you to join {hubName} on Kickabout.\n\nClick the link to join:\n{link}\n\nOr use code: {code}",
+  "@hubInvitationEmailBody": {
+    "placeholders": {
+      "playerName": {
+        "type": "String"
+      },
+      "hubName": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "emailClientOpened": "Email client opened",
+  "@emailClientOpened": {},
+  "linkCopiedToClipboard": "Link copied to clipboard",
+  "@linkCopiedToClipboard": {},
+  "editManualPlayerTitle": "Edit Player",
+  "@editManualPlayerTitle": {},
+  "editManualPlayerSubtitle": "Update details for manual player",
+  "@editManualPlayerSubtitle": {},
+  "fullNameRequired": "Full Name *",
+  "@fullNameRequired": {},
+  "pleaseEnterName": "Please enter a name",
+  "@pleaseEnterName": {},
+  "emailForInvitationLabel": "Email (for invitation)",
+  "@emailForInvitationLabel": {},
+  "invalidEmailAddress": "Invalid email address",
+  "@invalidEmailAddress": {},
+  "phoneNumberLabel": "Phone Number",
+  "@phoneNumberLabel": {},
+  "cityLabel": "City",
+  "@cityLabel": {},
+  "ratingLabel": "Rating (0-10)",
+  "@ratingLabel": {},
+  "ratingRangeError": "Rating must be between 0 and 10",
+  "@ratingRangeError": {},
+  "preferredPositionLabel": "Preferred Position",
+  "@preferredPositionLabel": {},
+  "sendEmailInvitation": "Send Invitation via Email",
+  "@sendEmailInvitation": {},
+  "saveChanges": "Save Changes",
+  "@saveChanges": {},
+  "positionGoalkeeper": "Goalkeeper",
+  "@positionGoalkeeper": {},
+  "positionDefense": "Defender",
+  "@positionDefense": {},
+  "positionMidfielder": "Midfielder",
+  "@positionMidfielder": {},
+  "positionForward": "Forward",
+  "@positionForward": {},
+  "yourHubsTitle": "Your Hubs",
+  "@yourHubsTitle": {},
+  "notificationsTooltip": "Notifications",
+  "@notificationsTooltip": {},
+  "mapTooltip": "Map",
+  "@mapTooltip": {},
+  "discoverHubsTooltip": "Discover Hubs",
+  "@discoverHubsTooltip": {},
+  "backToHomeTooltip": "Back to Home",
+  "@backToHomeTooltip": {},
+  "errorLoadingHubs": "Error loading hubs",
+  "@errorLoadingHubs": {},
+  "noHubs": "No hubs found",
+  "@noHubs": {},
+  "createHubToStart": "Create a hub to get started!",
+  "@createHubToStart": {},
+  "memberCount": "{count} members",
+  "@memberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hubNotFoundWithInviteCode": "Hub not found with this invitation code",
+  "@hubNotFoundWithInviteCode": {},
+  "pleaseLoginFirst": "Please login first",
+  "@pleaseLoginFirst": {},
+  "hubInvitationsDisabled": "Invitations are disabled for this hub",
+  "@hubInvitationsDisabled": {},
+  "joinedHubSuccess": "Successfully joined {hubName}",
+  "@joinedHubSuccess": {
+    "placeholders": {
+      "hubName": {
+        "type": "String"
+      }
+    }
+  },
+  "joinRequestSent": "Join request sent successfully",
+  "@joinRequestSent": {},
+  "joinHubError": "Error joining hub: {error}",
+  "@joinHubError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "joinHubTitle": "Join Hub",
+  "@joinHubTitle": {},
+  "backToHome": "Back to Home",
+  "@backToHome": {},
+  "hubRequiresApproval": "This hub requires admin approval to join",
+  "@hubRequiresApproval": {},
+  "sendJoinRequest": "Send Join Request",
+  "@sendJoinRequest": {},
+  "joinHubButton": "Join Hub",
+  "@joinHubButton": {}
 }
-

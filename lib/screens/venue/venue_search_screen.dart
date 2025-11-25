@@ -229,19 +229,15 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                 final hub = await hubsRepo.getHub(widget.hubId!);
                 if (hub != null) {
                   final updatedVenueIds = [...hub.venueIds, result.venueId];
-                  await hubsRepo.updateHub(widget.hubId!, {'venueIds': updatedVenueIds});
+                  await hubsRepo.updateHub(
+                      widget.hubId!, {'venueIds': updatedVenueIds});
                 }
-                if (mounted) {
-                  SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
-                  // Return the created venue object
-                  if (mounted) {
-                    context.pop(result);
-                  }
-                }
+                if (!mounted) return;
+                SnackbarHelper.showSuccess(context, 'המגרש נוסף בהצלחה!');
+                context.pop(result);
               } catch (e) {
-                if (mounted) {
-                  SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
-                }
+                if (!mounted) return;
+                SnackbarHelper.showError(context, 'שגיאה בהוספת מגרש: $e');
               }
             }
           },

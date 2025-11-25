@@ -5,9 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/error_widget.dart';
-import 'package:kickadoor/widgets/loading_widget.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
-import 'package:kickadoor/widgets/game_photos_gallery.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
@@ -15,11 +13,11 @@ import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/core/constants.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:kickadoor/widgets/optimized_image.dart';
 import 'package:kickadoor/services/weather_service.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/logic/session_logic.dart';
+import 'package:kickadoor/widgets/loading_widget.dart';
 
 /// Game detail screen
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -71,7 +69,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
           final isCreator = currentUserId == game.createdBy;
           final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
-          
+
           // Get user role for this hub
           final roleAsync = ref.watch(hubRoleProvider(game.hubId));
 
@@ -92,7 +90,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       signups.any((s) => s.playerId == currentUserId);
 
                   // Check if game is full
-                  final maxPlayers = game.teamCount * 3; // 3 players per team minimum
+                  final maxPlayers =
+                      game.teamCount * 3; // 3 players per team minimum
                   final isGameFull = confirmedSignups.length >= maxPlayers;
 
                   return SingleChildScrollView(
@@ -109,21 +108,27 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                               children: [
                                 Text(
                                   dateFormat.format(game.gameDate),
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
-                                if (game.location != null && game.location!.isNotEmpty) ...[
+                                if (game.location?.isNotEmpty ?? false) ...[
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
                                       Icon(
                                         Icons.location_on,
                                         size: 20,
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
                                       ),
                                       const SizedBox(width: 8),
-                                      Text(game.location!),
+                                      Text(game.location ?? ''),
                                     ],
                                   ),
                                 ],
@@ -132,8 +137,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                   children: [
                                     Chip(
                                       label: Text(_getStatusText(game.status)),
-                                      backgroundColor: _getStatusColor(game.status, context)
-                                          .withValues(alpha: 0.1),
+                                      backgroundColor:
+                                          _getStatusColor(game.status, context)
+                                              .withValues(alpha: 0.1),
                                     ),
                                     const SizedBox(width: 8),
                                     Text('${game.teamCount} קבוצות'),
@@ -145,15 +151,19 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 // Game rules (if defined)
-                                if (game.durationInMinutes != null || game.gameEndCondition != null) ...[
+                                if (game.durationInMinutes != null ||
+                                    game.gameEndCondition != null) ...[
                                   const SizedBox(height: 16),
                                   const Divider(),
                                   const SizedBox(height: 8),
                                   Text(
                                     'חוקי המשחק',
-                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                   if (game.durationInMinutes != null) ...[
                                     const SizedBox(height: 4),
@@ -162,12 +172,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                         Icon(
                                           Icons.timer,
                                           size: 16,
-                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
                                           'משך: ${game.durationInMinutes} דקות',
-                                          style: Theme.of(context).textTheme.bodySmall,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
                                         ),
                                       ],
                                     ),
@@ -175,18 +190,24 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                   if (game.gameEndCondition != null) ...[
                                     const SizedBox(height: 4),
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Icon(
                                           Icons.flag,
                                           size: 16,
-                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                         ),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             'תנאי סיום: ${game.gameEndCondition}',
-                                            style: Theme.of(context).textTheme.bodySmall,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
                                           ),
                                         ),
                                       ],
@@ -299,12 +320,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           SnackbarHelper.showSuccess(context, 'הסרת הרשמה');
         }
       } else {
-        await signupsRepo.setSignup(widget.gameId, currentUserId, SignupStatus.confirmed);
+        await signupsRepo.setSignup(
+            widget.gameId, currentUserId, SignupStatus.confirmed);
         // Increment participation counter
         await usersRepo.updateUser(currentUserId, {
           'totalParticipations': FieldValue.increment(1),
         });
-        
+
         // Log analytics
         try {
           final analytics = AnalyticsService();
@@ -312,7 +334,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         } catch (e) {
           debugPrint('Failed to log analytics: $e');
         }
-        
+
         if (context.mounted) {
           SnackbarHelper.showSuccess(context, 'נרשמת למשחק');
         }
@@ -354,76 +376,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       await gamesRepo.updateGameStatus(widget.gameId, GameStatus.completed);
       if (context.mounted) {
         SnackbarHelper.showSuccess(context, 'המשחק הסתיים');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-      }
-    }
-  }
-
-  Future<void> _addPhoto(BuildContext context, Game game) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image == null) return;
-
-      if (!context.mounted) return;
-
-      // Show loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-          ),
-        ),
-      );
-
-      try {
-        final storageService = ref.read(storageServiceProvider);
-        final gamesRepo = ref.read(gamesRepositoryProvider);
-
-        // Upload photo
-        final photoUrl = await storageService.uploadGamePhoto(widget.gameId, image);
-
-        // Add to game
-        await gamesRepo.addGamePhoto(widget.gameId, photoUrl);
-
-        if (context.mounted) {
-          Navigator.pop(context); // Close loading
-          SnackbarHelper.showSuccess(context, 'התמונה הועלתה בהצלחה!');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          Navigator.pop(context); // Close loading
-          SnackbarHelper.showErrorFromException(context, e);
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-      }
-    }
-  }
-
-  Future<void> _deletePhoto(
-    BuildContext context,
-    String photoUrl,
-  ) async {
-    try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
-      await gamesRepo.removeGamePhoto(widget.gameId, photoUrl);
-
-      if (context.mounted) {
-        SnackbarHelper.showSuccess(context, 'התמונה נמחקה');
       }
     } catch (e) {
       if (context.mounted) {
@@ -641,13 +593,14 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Admin buttons
           if (role == UserRole.admin) ...[
             // Find Missing Players button (if game is private and not full)
             if (game.visibility == GameVisibility.private && !isGameFull)
               ElevatedButton.icon(
-                onPressed: () => _findMissingPlayers(context, game, confirmedSignups.length, maxPlayers),
+                onPressed: () => _findMissingPlayers(
+                    context, game, confirmedSignups.length, maxPlayers),
                 icon: const Icon(Icons.person_add),
                 label: const Text('מצא שחקנים חסרים'),
                 style: ElevatedButton.styleFrom(
@@ -658,18 +611,19 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               ),
             if (game.visibility == GameVisibility.private && !isGameFull)
               const SizedBox(height: 12),
-            
+
             // If teams not created yet
             if (game.teams.isEmpty)
               ElevatedButton.icon(
-                onPressed: () => context.push('/games/${widget.gameId}/team-maker'),
+                onPressed: () =>
+                    context.push('/games/${widget.gameId}/team-maker'),
                 icon: const Icon(Icons.group),
                 label: const Text('צור קבוצות'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
-            
+
             // If teams created, show stats logger button
             if (game.teams.isNotEmpty)
               ElevatedButton.icon(
@@ -682,7 +636,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                   foregroundColor: Colors.white,
                 ),
               ),
-            
+
             // Start game button (creator only)
             if (isCreator && game.teams.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -743,7 +697,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Admin buttons
           if (role == UserRole.admin) ...[
             ElevatedButton.icon(
@@ -758,7 +712,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ),
             const SizedBox(height: 12),
           ],
-          
+
           // Creator-only: End game button
           if (isCreator)
             ElevatedButton.icon(
@@ -895,8 +849,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         Text(
           'נרשמים',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 16),
 
@@ -908,11 +862,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           ),
           const SizedBox(height: 8),
           ...confirmedSignups.map((signup) => _buildSignupTile(
-            context,
-            signup,
-            usersRepo,
-            true,
-          )),
+                context,
+                signup,
+                usersRepo,
+                true,
+              )),
           const SizedBox(height: 16),
         ],
 
@@ -924,11 +878,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           ),
           const SizedBox(height: 8),
           ...pendingSignups.map((signup) => _buildSignupTile(
-            context,
-            signup,
-            usersRepo,
-            false,
-          )),
+                context,
+                signup,
+                usersRepo,
+                false,
+              )),
         ],
 
         if (confirmedSignups.isEmpty && pendingSignups.isEmpty)
@@ -992,7 +946,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           hubId: game.hubId,
           authorId: currentUserId,
           type: 'game_recruitment',
-          content: 'Hub $hubName צריך ${maxPlayers - currentPlayers} שחקנים למשחק ב-${DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate)}',
+          content:
+              'Hub $hubName צריך ${maxPlayers - currentPlayers} שחקנים למשחק ב-${DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate)}',
           createdAt: DateTime.now(),
           gameId: widget.gameId,
           region: game.region ?? hub?.region,
@@ -1016,12 +971,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   /// Build weather widget for game date and location
   Widget _buildGameWeatherWidget(Game game) {
-    if (game.locationPoint == null) return const SizedBox.shrink();
+    final locationPoint = game.locationPoint;
+    if (locationPoint == null) return const SizedBox.shrink();
 
     final weatherService = ref.read(weatherServiceProvider);
     final weatherFuture = weatherService.getWeatherForDate(
-      latitude: game.locationPoint!.latitude,
-      longitude: game.locationPoint!.longitude,
+      latitude: locationPoint.latitude,
+      longitude: locationPoint.longitude,
       date: game.gameDate,
     );
 
@@ -1068,8 +1024,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     Text(
                       'תנאי מזג אוויר למשחק',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -1135,8 +1091,8 @@ class _TeamsDisplayWidget extends StatelessWidget {
             Text(
               'הקבוצות',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -1189,9 +1145,9 @@ class _TeamsDisplayWidget extends StatelessWidget {
                 Text(
                   team.name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: teamColor,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: teamColor,
+                      ),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -1228,7 +1184,7 @@ class _TeamsDisplayWidget extends StatelessWidget {
                             backgroundColor: teamColor.withValues(alpha: 0.2),
                             child: user.photoUrl != null
                                 ? OptimizedImage(
-                                    imageUrl: user.photoUrl!,
+                                    imageUrl: user.photoUrl ?? '',
                                     fit: BoxFit.cover,
                                     width: 24,
                                     height: 24,
@@ -1305,25 +1261,25 @@ class _SessionSummaryWidget extends StatelessWidget {
             Text(
               'סיכום סשן',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             Text(
               seriesScore,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-              ),
+                    color: Colors.white,
+                  ),
             ),
             if (winner != null) ...[
               const SizedBox(height: 8),
               Text(
                 'מנצח: ${winner.displayName}',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ],
             const SizedBox(height: 24),
@@ -1332,9 +1288,9 @@ class _SessionSummaryWidget extends StatelessWidget {
               Text(
                 'סטטיסטיקות קבוצות',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 12),
               ...teamStats.values.map((stats) {
@@ -1343,7 +1299,7 @@ class _SessionSummaryWidget extends StatelessWidget {
                   orElse: () => game.teams.first,
                 );
                 final colorValue = team.colorValue ?? 0xFF2196F3;
-                
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
@@ -1363,33 +1319,45 @@ class _SessionSummaryWidget extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              team.name.isNotEmpty ? team.name : stats.teamColor,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              team.name.isNotEmpty
+                                  ? team.name
+                                  : stats.teamColor,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                             Text(
                               'ניצחונות: ${stats.wins} | תיקו: ${stats.draws} | הפסדים: ${stats.losses}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                  ),
                             ),
                             Text(
                               'שערים: ${stats.goalsFor} | הפרש: ${stats.goalDifference > 0 ? '+' : ''}${stats.goalDifference}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                  ),
                             ),
                           ],
                         ),
                       ),
                       Text(
                         '${stats.points} נק\'',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                     ],
                   ),
@@ -1401,8 +1369,8 @@ class _SessionSummaryWidget extends StatelessWidget {
               Text(
                 'סה"כ ${game.matches.length} משחקים',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
               ),
             ],
           ],
@@ -1445,9 +1413,9 @@ class _FinalScoreWidget extends StatelessWidget {
             Text(
               'תוצאה סופית',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 24),
             Row(
@@ -1458,18 +1426,20 @@ class _FinalScoreWidget extends StatelessWidget {
                     children: [
                       Text(
                         teamAName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '$teamAScore',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.displayLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                     ],
                   ),
@@ -1479,9 +1449,9 @@ class _FinalScoreWidget extends StatelessWidget {
                   child: Text(
                     ':',
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 Expanded(
@@ -1489,18 +1459,20 @@ class _FinalScoreWidget extends StatelessWidget {
                     children: [
                       Text(
                         teamBName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '$teamBScore',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.displayLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                     ],
                   ),
@@ -1511,18 +1483,5 @@ class _FinalScoreWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Helper function to check if user is hub manager
-Future<bool> _checkIfHubManager(HubsRepository hubsRepo, String hubId, String? userId) async {
-  if (userId == null) return false;
-  try {
-    final hub = await hubsRepo.getHub(hubId);
-    if (hub == null) return false;
-    final permissions = HubPermissions(hub: hub, userId: userId);
-    return permissions.isManager();
-  } catch (e) {
-    return false;
   }
 }

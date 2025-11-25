@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kickadoor/l10n/app_localizations.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
@@ -19,10 +20,12 @@ class EditManualPlayerDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EditManualPlayerDialog> createState() => _EditManualPlayerDialogState();
+  ConsumerState<EditManualPlayerDialog> createState() =>
+      _EditManualPlayerDialogState();
 }
 
-class _EditManualPlayerDialogState extends ConsumerState<EditManualPlayerDialog> {
+class _EditManualPlayerDialogState
+    extends ConsumerState<EditManualPlayerDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
@@ -43,12 +46,15 @@ class _EditManualPlayerDialogState extends ConsumerState<EditManualPlayerDialog>
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.player.name);
-    _phoneController = TextEditingController(text: widget.player.phoneNumber ?? '');
+    _phoneController =
+        TextEditingController(text: widget.player.phoneNumber ?? '');
     _emailController = TextEditingController(
-      text: widget.player.email.startsWith('manual_') ? '' : widget.player.email,
+      text:
+          widget.player.email.startsWith('manual_') ? '' : widget.player.email,
     );
     _cityController = TextEditingController(text: widget.player.city ?? '');
-    _ratingController = TextEditingController(text: widget.player.currentRankScore.toStringAsFixed(1));
+    _ratingController = TextEditingController(
+        text: widget.player.currentRankScore.toStringAsFixed(1));
     _selectedPosition = widget.player.preferredPosition;
   }
 
@@ -63,9 +69,11 @@ class _EditManualPlayerDialogState extends ConsumerState<EditManualPlayerDialog>
   }
 
   Future<void> _updatePlayer() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     if (!Env.isFirebaseAvailable) {
-      SnackbarHelper.showError(context, 'Firebase לא זמין');
+      SnackbarHelper.showError(
+          context, 'Firebase not available'); // This should be localized too
       return;
     }
 
@@ -97,56 +105,50 @@ class _EditManualPlayerDialogState extends ConsumerState<EditManualPlayerDialog>
 
       await usersRepo.setUser(updatedUser);
 
-      if (!context.mounted) return;
+      if (!mounted) return;
       Navigator.of(context).pop(true);
       SnackbarHelper.showSuccess(
         context,
-        'פרטי השחקן עודכנו בהצלחה',
+        l10n.playerDetailsUpdatedSuccess,
       );
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       setState(() => _isLoading = false);
       SnackbarHelper.showErrorFromException(context, e);
     }
   }
 
   Future<void> _sendEmailInvitation() async {
+    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      SnackbarHelper.showError(context, 'נא להזין כתובת אימייל תקינה');
+      SnackbarHelper.showError(context, l10n.pleaseEnterValidEmail);
       return;
     }
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(widget.hubId);
-      
-      if (!context.mounted) return;
+
+      if (!mounted) return;
       if (hub == null) {
-        SnackbarHelper.showError(context, 'Hub לא נמצא');
+        SnackbarHelper.showError(context, l10n.hubNotFound);
         return;
       }
 
       // Get invitation code or use hub ID
-      final invitationCode = hub.settings['invitationCode'] as String? ?? 
+      final invitationCode = hub.settings['invitationCode'] as String? ??
           widget.hubId.substring(0, 8).toUpperCase();
       final invitationLink = 'https://kickadoor.app/invite/$invitationCode';
 
       // Create email subject and body
-      final subject = 'הזמנה להצטרף ל-Hub: ${hub.name}';
-      final body = '''
-שלום ${_nameController.text.trim()},
-
-אתה מוזמן להצטרף ל-Hub "${hub.name}" באפליקציית Kickadoor!
-
-להצטרפות, לחץ על הקישור הבא:
-$invitationLink
-
-או פתח את האפליקציה והזן את קוד ההזמנה: $invitationCode
-
-נתראה במגרש!
-צוות Kickadoor
-''';
+      final subject = l10n.hubInvitationEmailSubject(hub.name);
+      final body = l10n.hubInvitationEmailBody(
+        _nameController.text.trim(),
+        hub.name,
+        invitationLink,
+        invitationCode,
+      );
 
       // Open email client
       final uri = Uri(
@@ -160,25 +162,23 @@ $invitationLink
 
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
-        if (!context.mounted) return;
-        SnackbarHelper.showSuccess(context, 'נפתחה תוכנת המייל');
+        if (!mounted) return;
+        SnackbarHelper.showSuccess(context, l10n.emailClientOpened);
       } else {
         // Fallback: Copy invitation link to clipboard
         await Clipboard.setData(ClipboardData(text: invitationLink));
-        if (!context.mounted) return;
-        SnackbarHelper.showSuccess(
-          context,
-          'הקישור הועתק ללוח - נא לשלוח במייל ידנית',
-        );
+        if (!mounted) return;
+        SnackbarHelper.showSuccess(context, l10n.linkCopiedToClipboard);
       }
     } catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       SnackbarHelper.showErrorFromException(context, e);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
@@ -191,26 +191,26 @@ $invitationLink
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ערוך שחקן ידני',
+                  l10n.editManualPlayerTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ערוך פרטי שחקן או שלח לו הזמנה במייל',
+                  l10n.editManualPlayerSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
                 // Name field
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'שם מלא *',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.fullNameRequired,
+                    border: const OutlineInputBorder(),
                   ),
                   textCapitalization: TextCapitalization.words,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'נא להזין שם';
+                      return l10n.pleaseEnterName;
                     }
                     return null;
                   },
@@ -219,16 +219,16 @@ $invitationLink
                 // Email field
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'אימייל (לשליחת הזמנה)',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.emailForInvitationLabel,
+                    border: const OutlineInputBorder(),
                     hintText: 'player@example.com',
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value != null && value.trim().isNotEmpty) {
                       if (!value.contains('@') || !value.contains('.')) {
-                        return 'כתובת אימייל לא תקינה';
+                        return l10n.invalidEmailAddress;
                       }
                     }
                     return null;
@@ -238,9 +238,9 @@ $invitationLink
                 // Phone field
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'מספר טלפון',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.phoneNumberLabel,
+                    border: const OutlineInputBorder(),
                     hintText: '050-1234567',
                   ),
                   keyboardType: TextInputType.phone,
@@ -252,9 +252,9 @@ $invitationLink
                 // City field
                 TextFormField(
                   controller: _cityController,
-                  decoration: const InputDecoration(
-                    labelText: 'עיר',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.cityLabel,
+                    border: const OutlineInputBorder(),
                     hintText: 'חיפה',
                   ),
                   textCapitalization: TextCapitalization.words,
@@ -263,20 +263,22 @@ $invitationLink
                 // Rating field
                 TextFormField(
                   controller: _ratingController,
-                  decoration: const InputDecoration(
-                    labelText: 'ציון (0-10)',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.ratingLabel,
+                    border: const OutlineInputBorder(),
                     hintText: '3.3',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d+\.?\d{0,1}')),
                   ],
                   validator: (value) {
                     if (value != null && value.trim().isNotEmpty) {
                       final rating = double.tryParse(value);
                       if (rating == null || rating < 0 || rating > 10) {
-                        return 'ציון חייב להיות בין 0 ל-10';
+                        return l10n.ratingRangeError;
                       }
                     }
                     return null;
@@ -286,9 +288,9 @@ $invitationLink
                 // Position dropdown
                 DropdownButtonFormField<String>(
                   initialValue: _selectedPosition,
-                  decoration: const InputDecoration(
-                    labelText: 'עמדה מועדפת',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.preferredPositionLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   items: _positions.map((position) {
                     return DropdownMenuItem(
@@ -312,7 +314,7 @@ $invitationLink
                       child: OutlinedButton.icon(
                         onPressed: _sendEmailInvitation,
                         icon: const Icon(Icons.email),
-                        label: const Text('שלח הזמנה במייל'),
+                        label: Text(l10n.sendEmailInvitation),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -324,10 +326,9 @@ $invitationLink
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      child: const Text('ביטול'),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.of(context).pop(),
+                      child: Text(l10n.cancel),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -338,7 +339,7 @@ $invitationLink
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('שמור שינויים'),
+                          : Text(l10n.saveChanges),
                     ),
                   ],
                 ),
@@ -351,18 +352,18 @@ $invitationLink
   }
 
   String _getPositionHebrew(String position) {
+    final l10n = AppLocalizations.of(context)!;
     switch (position) {
       case 'Goalkeeper':
-        return 'שוער';
+        return l10n.positionGoalkeeper;
       case 'Defender':
-        return 'מגן';
+        return l10n.positionDefense;
       case 'Midfielder':
-        return 'קשר';
+        return l10n.positionMidfielder;
       case 'Forward':
-        return 'חלוץ';
+        return l10n.positionForward;
       default:
         return position;
     }
   }
 }
-

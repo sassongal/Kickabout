@@ -36,8 +36,8 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       isRecurring: json['isRecurring'] as bool? ?? false,
       parentGameId: json['parentGameId'] as String?,
       recurrencePattern: json['recurrencePattern'] as String?,
-      recurrenceEndDate: _$JsonConverterFromJson<Object, DateTime>(
-          json['recurrenceEndDate'], const TimestampConverter().fromJson),
+      recurrenceEndDate: const NullableTimestampConverter()
+          .fromJson(json['recurrenceEndDate']),
       createdByName: json['createdByName'] as String?,
       createdByPhotoUrl: json['createdByPhotoUrl'] as String?,
       hubName: json['hubName'] as String?,
@@ -101,8 +101,8 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'isRecurring': instance.isRecurring,
       'parentGameId': instance.parentGameId,
       'recurrencePattern': instance.recurrencePattern,
-      'recurrenceEndDate': _$JsonConverterToJson<Object, DateTime>(
-          instance.recurrenceEndDate, const TimestampConverter().toJson),
+      'recurrenceEndDate':
+          const NullableTimestampConverter().toJson(instance.recurrenceEndDate),
       'createdByName': instance.createdByName,
       'createdByPhotoUrl': instance.createdByPhotoUrl,
       'hubName': instance.hubName,
@@ -125,15 +125,3 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'isFull': instance.isFull,
       'maxParticipants': instance.maxParticipants,
     };
-
-Value? _$JsonConverterFromJson<Json, Value>(
-  Object? json,
-  Value? Function(Json json) fromJson,
-) =>
-    json == null ? null : fromJson(json as Json);
-
-Json? _$JsonConverterToJson<Json, Value>(
-  Value? value,
-  Json? Function(Value value) toJson,
-) =>
-    value == null ? null : toJson(value);

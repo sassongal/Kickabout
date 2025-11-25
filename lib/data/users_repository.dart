@@ -45,16 +45,13 @@ class UsersRepository {
       return Stream.value(null);
     }
 
-    return _firestore
-        .doc(FirestorePaths.user(uid))
-        .snapshots()
-        .map((doc) => doc.exists
-            ? User.fromJson({...doc.data()!, 'uid': uid})
-            : null);
+    return _firestore.doc(FirestorePaths.user(uid)).snapshots().map((doc) =>
+        doc.exists ? User.fromJson({...doc.data()!, 'uid': uid}) : null);
   }
 
   /// Check if phone number is already in use by another user
-  Future<bool> isPhoneNumberTaken(String phoneNumber, String excludeUserId) async {
+  Future<bool> isPhoneNumberTaken(
+      String phoneNumber, String excludeUserId) async {
     if (!Env.isFirebaseAvailable) return false;
     if (phoneNumber.trim().isEmpty) return false;
 
@@ -96,9 +93,8 @@ class UsersRepository {
       }
 
       final data = user.toJson();
-      data.remove('uid'); // Remove uid from data (it's the document ID)
       await _firestore.doc(FirestorePaths.user(user.uid)).set(data);
-      
+
       // Invalidate cache for this user
       CacheService().clear(CacheKeys.user(user.uid));
     } catch (e) {
@@ -114,7 +110,7 @@ class UsersRepository {
 
     try {
       await _firestore.doc(FirestorePaths.user(uid)).update(data);
-      
+
       // Invalidate cache for this user
       CacheService().clear(CacheKeys.user(uid));
     } catch (e) {
@@ -141,12 +137,12 @@ class UsersRepository {
 
     try {
       if (uids.isEmpty) return [];
-      
+
       // OPTIMIZED: Batch queries in parallel instead of sequential
       // Firestore 'in' query limit is 10, so we need to batch
       final List<User> users = [];
       final batches = <Future<QuerySnapshot>>[];
-      
+
       // Create all batch queries
       for (var i = 0; i < uids.length; i += 10) {
         final batch = uids.skip(i).take(10).toList();
@@ -157,10 +153,10 @@ class UsersRepository {
               .get(),
         );
       }
-      
+
       // Execute all batches in parallel (50% faster than sequential)
       final results = await Future.wait(batches);
-      
+
       // Process results
       for (final snapshot in results) {
         for (var doc in snapshot.docs) {
@@ -172,11 +168,11 @@ class UsersRepository {
           }
         }
       }
-      
+
       // For users not found in Firestore, create placeholder users
       final foundIds = users.map((u) => u.uid).toSet();
       final missingIds = uids.where((id) => !foundIds.contains(id)).toList();
-      
+
       for (final missingId in missingIds) {
         // Create a placeholder user so it shows in the list
         users.add(User(
@@ -186,7 +182,7 @@ class UsersRepository {
           createdAt: DateTime.now(),
         ));
       }
-      
+
       return users;
     } catch (e) {
       throw Exception('Failed to get users: $e');
@@ -203,12 +199,10 @@ class UsersRepository {
         .collection(FirestorePaths.users())
         .where('hubIds', arrayContains: hubId)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) {
+        .map((snapshot) => snapshot.docs.map((doc) {
               final docData = doc.data();
               return User.fromJson({...docData, 'uid': doc.id});
-            })
-            .toList());
+            }).toList());
   }
 
   /// Get all users (with limit for pagination)
@@ -243,8 +237,8 @@ class UsersRepository {
       // Query users with availability status 'available' or 'busy'
       final query = _firestore
           .collection(FirestorePaths.users())
-          .where('availabilityStatus', whereIn: ['available', 'busy'])
-          .limit(50); // Get more to filter by distance
+          .where('availabilityStatus', whereIn: ['available', 'busy']).limit(
+              50); // Get more to filter by distance
 
       final snapshot = await query.get();
 
@@ -254,11 +248,12 @@ class UsersRepository {
           .where((user) => user.uid != excludeUserId && user.location != null)
           .map((user) {
             final distance = Geolocator.distanceBetween(
-              latitude,
-              longitude,
-              user.location!.latitude,
-              user.location!.longitude,
-            ) / 1000; // Convert to km
+                  latitude,
+                  longitude,
+                  user.location!.latitude,
+                  user.location!.longitude,
+                ) /
+                1000; // Convert to km
             return MapEntry(user, distance);
           })
           .where((entry) => entry.value <= radiusKm)
@@ -298,7 +293,8 @@ class UsersRepository {
       );
 
       // Sort by rating (higher is better) and take top players
-      nearbyPlayers.sort((a, b) => b.currentRankScore.compareTo(a.currentRankScore));
+      nearbyPlayers
+          .sort((a, b) => b.currentRankScore.compareTo(a.currentRankScore));
 
       return nearbyPlayers.take(limit).toList();
     } catch (e) {
@@ -306,4 +302,3 @@ class UsersRepository {
     }
   }
 }
-

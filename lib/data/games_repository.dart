@@ -195,7 +195,7 @@ class GamesRepository {
           // Only filter scores in memory (Firestore can't filter on null/not null easily)
           return snapshot.docs
               .map((doc) => Game.fromJson({...doc.data(), 'gameId': doc.id}))
-              .where((game) => game.teamAScore != null && game.teamBScore != null)
+              .where((game) => game.legacyTeamAScore != null && game.legacyTeamBScore != null)
               .toList();
         });
   }
@@ -261,7 +261,7 @@ class GamesRepository {
                 // Only filter scores in memory (Firestore can't filter on null/not null easily)
                 // But most completed games should have scores anyway
                 games = games.where((game) => 
-                    game.teamAScore != null && game.teamBScore != null
+                    game.legacyTeamAScore != null && game.legacyTeamBScore != null
                 ).toList();
 
                 // Apply date filters in memory only if they couldn't be applied in query
@@ -288,7 +288,7 @@ class GamesRepository {
     } catch (e) {
       debugPrint('Error in watchPublicCompletedGames: $e');
       ErrorHandlerService().logError(e, reason: 'watchPublicCompletedGames failed');
-      return Stream.value([]);
+      return Stream.error(e);
     }
   }
 
@@ -457,7 +457,7 @@ class GamesRepository {
           });
     } catch (e) {
       debugPrint('Error in streamMyUpcomingGames: $e');
-      return Stream.value([]);
+      return Stream.error(e);
     }
   }
 

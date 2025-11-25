@@ -1,56 +1,49 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kickadoor/services/gamification_service.dart';
+import 'package:kickadoor/models/models.dart';
 
 void main() {
   group('GamificationService', () {
-    test('calculateGamePoints should return correct points', () {
-      // Base participation: 10 points
-      // Win bonus: 20 points
-      // Goals: 2 * 5 = 10 points
-      // Assists: 1 * 3 = 3 points
-      // Saves: 0 * 2 = 0 points
-      // MVP bonus: 15 points
-      // Rating bonus (8.0+): 10 points
-      // Total: 10 + 20 + 10 + 3 + 0 + 15 + 10 = 68 points
-      
-      final points = GamificationService.calculateGamePoints(
-        won: true,
-        goals: 2,
-        assists: 1,
-        saves: 0,
-        isMVP: true,
-        averageRating: 8.5,
-      );
+    // NOTE: calculateGamePoints, calculateLevel, and pointsForNextLevel
+    // are now handled by Cloud Functions, not by the client
+    // These tests are removed as those methods no longer exist in GamificationService
 
-      expect(points, 68);
+    test('checkMilestoneBadges should award first game badge', () {
+      final badges = GamificationService.checkMilestoneBadges(1, []);
+      expect(badges.contains(BadgeType.firstGame.name), true);
     });
 
-    test('calculateGamePoints should not include win bonus if lost', () {
-      final points = GamificationService.calculateGamePoints(
-        won: false,
-        goals: 1,
-        assists: 0,
-        saves: 0,
-        isMVP: false,
-        averageRating: 7.0,
-      );
-
-      // Base: 10, Goal: 5, Total: 15
-      expect(points, 15);
+    test('checkMilestoneBadges should award ten games badge', () {
+      final badges = GamificationService.checkMilestoneBadges(
+          10, [BadgeType.firstGame.name]);
+      expect(badges.contains(BadgeType.tenGames.name), true);
     });
 
-    test('calculateLevel should return correct level', () {
-      expect(GamificationService.calculateLevel(0), 1);
-      expect(GamificationService.calculateLevel(100), 2);
-      expect(GamificationService.calculateLevel(400), 3);
-      expect(GamificationService.calculateLevel(900), 4);
+    test('checkMilestoneBadges should award fifty games badge', () {
+      final badges = GamificationService.checkMilestoneBadges(50, [
+        BadgeType.firstGame.name,
+        BadgeType.tenGames.name,
+      ]);
+      expect(badges.contains(BadgeType.fiftyGames.name), true);
     });
 
-    test('pointsForNextLevel should return correct points', () {
-      expect(GamificationService.pointsForNextLevel(1), 100);
-      expect(GamificationService.pointsForNextLevel(2), 400);
-      expect(GamificationService.pointsForNextLevel(3), 900);
+    test('checkMilestoneBadges should award hundred games badge', () {
+      final badges = GamificationService.checkMilestoneBadges(100, [
+        BadgeType.firstGame.name,
+        BadgeType.tenGames.name,
+        BadgeType.fiftyGames.name,
+      ]);
+      expect(badges.contains(BadgeType.hundredGames.name), true);
+    });
+
+    test('checkMilestoneBadges should not award already earned badges', () {
+      final badges = GamificationService.checkMilestoneBadges(100, [
+        BadgeType.firstGame.name,
+        BadgeType.tenGames.name,
+        BadgeType.fiftyGames.name,
+        BadgeType.hundredGames.name,
+      ]);
+      expect(badges.isEmpty, true);
     });
   });
 }
-

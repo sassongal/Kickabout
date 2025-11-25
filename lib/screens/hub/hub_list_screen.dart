@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kickadoor/l10n/app_localizations.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
@@ -18,17 +19,17 @@ class HubListScreen extends ConsumerStatefulWidget {
 }
 
 class _HubListScreenState extends ConsumerState<HubListScreen> {
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final currentUserId = ref.watch(currentUserIdProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
 
     if (currentUserId == null) {
       return AppScaffold(
-        title: 'Hubs שיצרת',
-        body: const Center(
-          child: Text('נא להתחבר'),
+        title: l10n.yourHubsTitle,
+        body: Center(
+          child: Text(l10n.pleaseLogin),
         ),
       );
     }
@@ -36,17 +37,19 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
     final hubsStream = hubsRepo.watchHubsByMember(currentUserId);
 
     return AppScaffold(
-      title: 'Hubs שיצרת',
+      title: l10n.yourHubsTitle,
       actions: [
         StreamBuilder<int>(
-          stream: ref.read(notificationsRepositoryProvider).watchUnreadCount(currentUserId),
+          stream: ref
+              .read(notificationsRepositoryProvider)
+              .watchUnreadCount(currentUserId),
           builder: (context, snapshot) {
             final count = snapshot.data ?? 0;
             return Badge(
               label: count > 0 ? Text('$count') : null,
               child: IconButton(
                 icon: const Icon(Icons.notifications),
-                tooltip: 'התראות',
+                tooltip: l10n.notificationsTooltip,
                 onPressed: () => context.push('/notifications'),
               ),
             );
@@ -54,24 +57,24 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.map),
-          tooltip: 'מפה',
+          tooltip: l10n.mapTooltip,
           onPressed: () => context.push('/map'),
         ),
         IconButton(
           icon: const Icon(Icons.explore),
-          tooltip: 'גלה הובים',
+          tooltip: l10n.discoverHubsTooltip,
           onPressed: () => context.push('/discover'),
         ),
         IconButton(
           icon: const Icon(Icons.home),
-          tooltip: 'חזרה למסך הבית',
+          tooltip: l10n.backToHomeTooltip,
           onPressed: () => context.go('/'),
         ),
       ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/hubs/create'),
         icon: const Icon(Icons.add),
-        label: const Text('צור הוב'),
+        label: Text(l10n.createHub),
       ),
       body: StreamBuilder<List<Hub>>(
         stream: hubsStream,
@@ -90,7 +93,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
           if (snapshot.hasError) {
             return FuturisticEmptyState(
               icon: Icons.error_outline,
-              title: 'שגיאה בטעינת הובים',
+              title: l10n.errorLoadingHubs,
               message: ErrorHandlerService().handleException(
                 snapshot.error,
                 context: 'Hub list screen',
@@ -101,7 +104,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
                   setState(() {});
                 },
                 icon: const Icon(Icons.refresh),
-                label: const Text('נסה שוב'),
+                label: Text(l10n.tryAgain),
               ),
             );
           }
@@ -111,12 +114,12 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
           if (hubs.isEmpty) {
             return FuturisticEmptyState(
               icon: Icons.group_outlined,
-              title: 'אין הובס',
-              message: 'צור הוב חדש כדי להתחיל',
+              title: l10n.noHubs,
+              message: l10n.createHubToStart,
               action: ElevatedButton.icon(
                 onPressed: () => context.push('/hubs/create'),
                 icon: const Icon(Icons.add),
-                label: const Text('צור הוב'),
+                label: Text(l10n.createHub),
               ),
             );
           }
@@ -130,7 +133,8 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
                     child: Icon(
                       Icons.group,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -139,13 +143,14 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
                   title: Text(
                     hub.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (hub.description != null && hub.description!.isNotEmpty)
+                      if (hub.description != null &&
+                          hub.description!.isNotEmpty)
                         Text(
                           hub.description!,
                           maxLines: 2,
@@ -153,7 +158,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
                         ),
                       const SizedBox(height: 4),
                       Text(
-                        '${hub.memberIds.length} חברים',
+                        l10n.memberCount(hub.memberIds.length),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],

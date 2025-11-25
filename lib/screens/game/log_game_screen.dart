@@ -12,7 +12,7 @@ import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Log Game Screen - "The Session Dashboard" (Manager only)
-/// 
+///
 /// This screen supports TWO modes:
 /// 1. **Session Mode** (Multi-Match): If event has teams with colors
 ///    - Shows aggregate wins scoreboard (Blue: 6, Red: 4, Green: 2)
@@ -21,7 +21,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// 2. **Single Game Mode**: If no teams or teams without colors
 ///    - Traditional Team A vs Team B score input
 ///    - Attendance and highlights
-/// 
+///
 /// When "Finish & Log" is clicked, it calls GamesRepository.convertEventToGame()
 /// which creates a Game document and triggers the Cloud Function to update stats.
 class LogGameScreen extends ConsumerStatefulWidget {
@@ -42,8 +42,10 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
   int _teamAScore = 0;
   int _teamBScore = 0;
   final Map<String, bool> _presentPlayers = {}; // playerId -> isPresent
-  final Map<String, Set<String>> _playerHighlights = {}; // playerId -> {goal, assist, mvp}
-  final Map<String, bool> _paidPlayers = {}; // playerId -> isPaid (for payment tracking)
+  final Map<String, Set<String>> _playerHighlights =
+      {}; // playerId -> {goal, assist, mvp}
+  final Map<String, bool> _paidPlayers =
+      {}; // playerId -> isPaid (for payment tracking)
   bool _isLoading = false;
   bool _isSubmitting = false;
   HubEvent? _event;
@@ -61,8 +63,9 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
     try {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
-      
-      final event = await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
+
+      final event =
+          await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
       if (event == null) {
         if (mounted) {
           SnackbarHelper.showError(context, 'אירוע לא נמצא');
@@ -82,11 +85,11 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
 
       // Load registered players
       final players = await usersRepo.getUsers(event.registeredPlayerIds);
-      
+
       // Load hub for payment link
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(widget.hubId);
-      
+
       // Initialize present players (default: all checked)
       final presentMap = <String, bool>{};
       final paidMap = <String, bool>{};
@@ -152,15 +155,17 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
 
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      
+
       // Extract goal scorers and MVP
       final goalScorerIds = _playerHighlights.entries
-          .where((e) => e.value.contains('goal') && presentPlayerIds.contains(e.key))
+          .where((e) =>
+              e.value.contains('goal') && presentPlayerIds.contains(e.key))
           .map((e) => e.key)
           .toList();
-      
+
       final mvpPlayerId = _playerHighlights.entries
-          .where((e) => e.value.contains('mvp') && presentPlayerIds.contains(e.key))
+          .where((e) =>
+              e.value.contains('mvp') && presentPlayerIds.contains(e.key))
           .map((e) => e.key)
           .firstOrNull;
 
@@ -172,13 +177,14 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
         final gameId = await gamesRepo.convertEventToGame(
           eventId: widget.eventId,
           hubId: widget.hubId,
-          teamAScore: _teamAScore, // Final score (can be 0-0 if using aggregateWins)
+          teamAScore:
+              _teamAScore, // Final score (can be 0-0 if using aggregateWins)
           teamBScore: _teamBScore,
           presentPlayerIds: presentPlayerIds,
           goalScorerIds: goalScorerIds.isNotEmpty ? goalScorerIds : null,
           mvpPlayerId: mvpPlayerId,
         );
-        
+
         // Update game with session data
         await gamesRepo.updateGame(gameId, {
           'aggregateWins': _event!.aggregateWins,
@@ -212,8 +218,9 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
   // Check if event has teams with colors (Session Mode)
   bool get _isSessionMode {
     if (_event == null) return false;
-    return _event!.teams.isNotEmpty && 
-           _event!.teams.any((team) => team.color != null && team.color!.isNotEmpty);
+    return _event!.teams.isNotEmpty &&
+        _event!.teams
+            .any((team) => team.color != null && team.color!.isNotEmpty);
   }
 
   Future<void> _logMatchResult() async {
@@ -235,7 +242,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       final firestore = FirebaseFirestore.instance;
       final currentUserId = ref.read(currentUserIdProvider);
-      
+
       if (currentUserId == null) {
         throw Exception('משתמש לא מחובר');
       }
@@ -272,7 +279,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
       }
 
       // Add match to list
-      final updatedMatches = List<MatchResult>.from(_event!.matches)..add(matchResult);
+      final updatedMatches = List<MatchResult>.from(_event!.matches)
+        ..add(matchResult);
 
       // Update event
       await hubEventsRepo.updateHubEvent(
@@ -356,14 +364,17 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.green.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text(
                             'מפגש פעיל',
-                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -412,11 +423,13 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                       )
                     else
                       ..._event!.teams.map((team) {
-                        final wins = _event!.aggregateWins[team.color ?? ''] ?? 0;
+                        final wins =
+                            _event!.aggregateWins[team.color ?? ''] ?? 0;
                         final colorValue = team.colorValue ?? 0xFF2196F3;
                         final maxWins = _event!.aggregateWins.values.isEmpty
                             ? 1
-                            : _event!.aggregateWins.values.reduce((a, b) => a > b ? a : b);
+                            : _event!.aggregateWins.values
+                                .reduce((a, b) => a > b ? a : b);
                         final percentage = maxWins > 0 ? (wins / maxWins) : 0.0;
 
                         return Padding(
@@ -425,7 +438,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
@@ -435,13 +449,15 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                         decoration: BoxDecoration(
                                           color: Color(colorValue),
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 2),
+                                          border: Border.all(
+                                              color: Colors.white, width: 2),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         team.color ?? team.name,
-                                        style: FuturisticTypography.bodyLarge.copyWith(
+                                        style: FuturisticTypography.bodyLarge
+                                            .copyWith(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -460,7 +476,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                   value: percentage,
                                   minHeight: 24,
                                   backgroundColor: Colors.grey[300],
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(colorValue)),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(colorValue)),
                                 ),
                               ),
                             ],
@@ -606,12 +623,13 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                player.displayName,
+                                player.displayName ?? '',
                                 style: FuturisticTypography.bodyLarge,
                               ),
                             ),
                             // Payment toggle (only if hub has payment link)
-                            if (_hub?.paymentLink != null && _hub!.paymentLink!.isNotEmpty)
+                            if (_hub?.paymentLink != null &&
+                                _hub!.paymentLink!.isNotEmpty)
                               InkWell(
                                 onTap: () {
                                   setState(() {
@@ -624,7 +642,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                   decoration: BoxDecoration(
                                     color: isPaid ? Colors.green : Colors.red,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
+                                    border: Border.all(
+                                        color: Colors.white, width: 2),
                                   ),
                                   child: Icon(
                                     isPaid ? Icons.check : Icons.close,
@@ -672,12 +691,12 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
 
   Color _getColorForTeam(String? colorName) {
     if (colorName == null) return Colors.grey;
-    
+
     final team = _event?.teams.firstWhere(
       (t) => t.color == colorName,
       orElse: () => Team(teamId: '', name: '', colorValue: 0xFF2196F3),
     );
-    
+
     return Color(team?.colorValue ?? 0xFF2196F3);
   }
 
@@ -780,7 +799,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                 ),
                                 Container(
                                   width: 60,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
                                   decoration: BoxDecoration(
                                     color: FuturisticColors.surfaceVariant,
                                     borderRadius: BorderRadius.circular(8),
@@ -793,7 +813,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline),
-                                  onPressed: () => setState(() => _teamAScore++),
+                                  onPressed: () =>
+                                      setState(() => _teamAScore++),
                                   color: FuturisticColors.primary,
                                 ),
                               ],
@@ -826,7 +847,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                 ),
                                 Container(
                                   width: 60,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
                                   decoration: BoxDecoration(
                                     color: FuturisticColors.surfaceVariant,
                                     borderRadius: BorderRadius.circular(8),
@@ -839,7 +861,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline),
-                                  onPressed: () => setState(() => _teamBScore++),
+                                  onPressed: () =>
+                                      setState(() => _teamBScore++),
                                   color: FuturisticColors.primary,
                                 ),
                               ],
@@ -883,12 +906,13 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                player.displayName,
+                                player.displayName ?? '',
                                 style: FuturisticTypography.bodyLarge,
                               ),
                             ),
                             // Payment toggle (only if hub has payment link)
-                            if (_hub?.paymentLink != null && _hub!.paymentLink!.isNotEmpty)
+                            if (_hub?.paymentLink != null &&
+                                _hub!.paymentLink!.isNotEmpty)
                               InkWell(
                                 onTap: () {
                                   setState(() {
@@ -901,7 +925,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                   decoration: BoxDecoration(
                                     color: isPaid ? Colors.green : Colors.red,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
+                                    border: Border.all(
+                                        color: Colors.white, width: 2),
                                   ),
                                   child: Icon(
                                     isPaid ? Icons.check : Icons.close,
@@ -935,7 +960,9 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ..._registeredPlayers.where((p) => _presentPlayers[p.uid] == true).map((player) {
+                    ..._registeredPlayers
+                        .where((p) => _presentPlayers[p.uid] == true)
+                        .map((player) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Row(
@@ -947,7 +974,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                player.displayName,
+                                player.displayName ?? '',
                                 style: FuturisticTypography.bodyMedium,
                               ),
                             ),
@@ -955,24 +982,30 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             FilterChip(
                               label: const Text('שער'),
                               selected: _hasHighlight(player.uid, 'goal'),
-                              onSelected: (selected) => _toggleHighlight(player.uid, 'goal'),
-                              selectedColor: FuturisticColors.primary.withValues(alpha: 0.2),
+                              onSelected: (selected) =>
+                                  _toggleHighlight(player.uid, 'goal'),
+                              selectedColor: FuturisticColors.primary
+                                  .withValues(alpha: 0.2),
                             ),
                             const SizedBox(width: 8),
                             // Assist tag
                             FilterChip(
                               label: const Text('אסיסט'),
                               selected: _hasHighlight(player.uid, 'assist'),
-                              onSelected: (selected) => _toggleHighlight(player.uid, 'assist'),
-                              selectedColor: FuturisticColors.primary.withValues(alpha: 0.2),
+                              onSelected: (selected) =>
+                                  _toggleHighlight(player.uid, 'assist'),
+                              selectedColor: FuturisticColors.primary
+                                  .withValues(alpha: 0.2),
                             ),
                             const SizedBox(width: 8),
                             // MVP tag
                             FilterChip(
                               label: const Text('MVP'),
                               selected: _hasHighlight(player.uid, 'mvp'),
-                              onSelected: (selected) => _toggleHighlight(player.uid, 'mvp'),
-                              selectedColor: Colors.amber.withValues(alpha: 0.3),
+                              onSelected: (selected) =>
+                                  _toggleHighlight(player.uid, 'mvp'),
+                              selectedColor:
+                                  Colors.amber.withValues(alpha: 0.3),
                             ),
                           ],
                         ),
@@ -1032,9 +1065,11 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
   void initState() {
     super.initState();
     if (widget.event.teams.isNotEmpty) {
-      _selectedTeamA = widget.event.teams[0].color ?? widget.event.teams[0].name;
+      _selectedTeamA =
+          widget.event.teams[0].color ?? widget.event.teams[0].name;
       if (widget.event.teams.length > 1) {
-        _selectedTeamB = widget.event.teams[1].color ?? widget.event.teams[1].name;
+        _selectedTeamB =
+            widget.event.teams[1].color ?? widget.event.teams[1].name;
       }
     }
   }
@@ -1085,31 +1120,29 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
                 labelText: 'קבוצה ב',
                 border: OutlineInputBorder(),
               ),
-              items: widget.event.teams
-                  .where((team) {
-                    final colorName = team.color ?? team.name;
-                    return colorName != _selectedTeamA;
-                  })
-                  .map((team) {
-                    final colorName = team.color ?? team.name;
-                    return DropdownMenuItem(
-                      value: colorName,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: Color(team.colorValue ?? 0xFF2196F3),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(colorName),
-                        ],
+              items: widget.event.teams.where((team) {
+                final colorName = team.color ?? team.name;
+                return colorName != _selectedTeamA;
+              }).map((team) {
+                final colorName = team.color ?? team.name;
+                return DropdownMenuItem(
+                  value: colorName,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: Color(team.colorValue ?? 0xFF2196F3),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    );
-                  }).toList(),
+                      const SizedBox(width: 8),
+                      Text(colorName),
+                    ],
+                  ),
+                );
+              }).toList(),
               onChanged: (value) => setState(() => _selectedTeamB = value),
             ),
             const SizedBox(height: 24),
@@ -1126,7 +1159,9 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.remove),
-                          onPressed: _scoreA > 0 ? () => setState(() => _scoreA--) : null,
+                          onPressed: _scoreA > 0
+                              ? () => setState(() => _scoreA--)
+                              : null,
                         ),
                         Container(
                           width: 60,
@@ -1159,7 +1194,9 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.remove),
-                          onPressed: _scoreB > 0 ? () => setState(() => _scoreB--) : null,
+                          onPressed: _scoreB > 0
+                              ? () => setState(() => _scoreB--)
+                              : null,
                         ),
                         Container(
                           width: 60,

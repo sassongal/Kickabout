@@ -25,7 +25,7 @@ class CreateGameScreen extends ConsumerStatefulWidget {
 class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
-  
+
   String? _selectedHubId;
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = TimeOfDay.now();
@@ -47,6 +47,10 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     super.initState();
     // Initialize hubId from parameter if provided
     _selectedHubId = widget.hubId;
+    if (_selectedHubId != null) {
+      // Load default venue for the hub
+      _loadDefaultVenue(_selectedHubId!);
+    }
   }
 
   @override
@@ -98,7 +102,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
         setState(() {
           _selectedLocation = geoPoint;
-          _locationAddress = address ?? '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+          _locationAddress = address ??
+              '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
           _locationController.text = address ?? '';
         });
       } else {
@@ -122,6 +127,31 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     }
   }
 
+  /// Load default venue from hub's mainVenueId
+  Future<void> _loadDefaultVenue(String hubId) async {
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(hubId);
+
+      if (hub?.mainVenueId != null && hub!.mainVenueId!.isNotEmpty) {
+        // Load the main venue
+        final venuesRepo = ref.read(venuesRepositoryProvider);
+        final venue = await venuesRepo.getVenue(hub.mainVenueId!);
+
+        if (venue != null && mounted) {
+          setState(() {
+            _selectedLocation = venue.location;
+            _locationAddress = venue.address ?? venue.name;
+            _locationController.text = venue.name;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to load default venue: $e');
+      // Don't show error to user, just skip defaulting
+    }
+  }
+
   Future<void> _createGame() async {
     if (_selectedHubId == null) {
       if (!_formKey.currentState!.validate()) return;
@@ -134,14 +164,14 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
     final currentUserId = ref.read(currentUserIdProvider);
     final isAnonymous = ref.read(isAnonymousUserProvider);
-    
+
     if (currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('נא להתחבר')),
       );
       return;
     }
-    
+
     if (isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -163,7 +193,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
-      
+
       final gameDate = DateTime(
         _selectedDate.year,
         _selectedDate.month,
@@ -213,10 +243,13 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       );
 
       final gameId = await gamesRepo.createGame(game);
-      
+
       // If recurring, schedule future games
-      if (_isRecurring && _recurrencePattern != null && _recurrenceEndDate != null) {
-        await _scheduleRecurringGames(gameId, gameDate, _recurrencePattern!, _recurrenceEndDate!);
+      if (_isRecurring &&
+          _recurrencePattern != null &&
+          _recurrenceEndDate != null) {
+        await _scheduleRecurringGames(
+            gameId, gameDate, _recurrencePattern!, _recurrenceEndDate!);
       }
 
       // Get hub for notifications and reminders (already fetched above)
@@ -252,10 +285,11 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
       // Create notifications for hub members (using integration service)
       try {
-        final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
+        final pushIntegration =
+            ref.read(pushNotificationIntegrationServiceProvider);
         final usersRepo = ref.read(usersRepositoryProvider);
         final currentUser = await usersRepo.getUser(currentUserId);
-        
+
         if (hub != null) {
           await pushIntegration.notifyNewGame(
             gameId: gameId,
@@ -275,7 +309,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       try {
         final functions = FirebaseFunctions.instance;
         final notifyFunction = functions.httpsCallable('notifyHubOnNewGame');
-        
+
         final gameDate = DateTime(
           _selectedDate.year,
           _selectedDate.month,
@@ -283,16 +317,17 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
           _selectedTime.hour,
           _selectedTime.minute,
         );
-        
-        final gameTime = DateFormat('dd MMMM yyyy, HH:mm', 'he').format(gameDate);
-        
+
+        final gameTime =
+            DateFormat('dd MMMM yyyy, HH:mm', 'he').format(gameDate);
+
         await notifyFunction.call({
           'hubId': selectedHubId,
           'gameId': gameId,
           'gameTitle': 'משחק חדש',
           'gameTime': gameTime,
         });
-        
+
         debugPrint('✅ Notified hub members via Cloud Function');
       } catch (e) {
         // Log error but don't fail game creation
@@ -336,7 +371,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   ) async {
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      
+
       Duration interval;
       switch (pattern) {
         case 'weekly':
@@ -441,12 +476,18 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.group),
                       ),
-                      items: hubs.map((hub) => DropdownMenuItem<String>(
-                        value: hub.hubId,
-                        child: Text(hub.name),
-                      )).toList(),
+                      items: hubs
+                          .map((hub) => DropdownMenuItem<String>(
+                                value: hub.hubId,
+                                child: Text(hub.name),
+                              ))
+                          .toList(),
                       onChanged: (value) {
                         setState(() => _selectedHubId = value);
+                        // Load default venue when hub changes
+                        if (value != null) {
+                          _loadDefaultVenue(value);
+                        }
                       },
                       validator: (value) {
                         if (value == null) {
@@ -500,12 +541,14 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.group),
                 ),
-                items: AppConstants.supportedTeamCounts.map((teamCount) =>
-                  DropdownMenuItem<int>(
-                    value: teamCount,
-                    child: Text('$teamCount קבוצות'),
-                  ),
-                ).toList(),
+                items: AppConstants.supportedTeamCounts
+                    .map(
+                      (teamCount) => DropdownMenuItem<int>(
+                        value: teamCount,
+                        child: Text('$teamCount קבוצות'),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (value) {
                   if (value != null) {
                     setState(() => _teamCount = value);
@@ -533,7 +576,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                               _recurrenceEndDate = null;
                             } else {
                               _recurrencePattern = 'weekly';
-                              _recurrenceEndDate = DateTime.now().add(const Duration(days: 90));
+                              _recurrenceEndDate =
+                                  DateTime.now().add(const Duration(days: 90));
                             }
                           });
                         },
@@ -575,9 +619,11 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                           onTap: () async {
                             final picked = await showDatePicker(
                               context: context,
-                              initialDate: _recurrenceEndDate ?? DateTime.now().add(const Duration(days: 90)),
+                              initialDate: _recurrenceEndDate ??
+                                  DateTime.now().add(const Duration(days: 90)),
                               firstDate: _selectedDate,
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
                               locale: const Locale('he'),
                             );
                             if (picked != null) {
@@ -703,7 +749,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                                   ? const SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     )
                                   : const Icon(Icons.my_location),
                               label: Text(_isLoadingLocation
@@ -725,9 +772,12 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                                 );
                                 if (result != null && mounted) {
                                   setState(() {
-                                    _selectedLocation = result['location'] as GeoPoint;
-                                    _locationAddress = result['address'] as String?;
-                                    _locationController.text = result['address'] as String? ?? '';
+                                    _selectedLocation =
+                                        result['location'] as GeoPoint;
+                                    _locationAddress =
+                                        result['address'] as String?;
+                                    _locationController.text =
+                                        result['address'] as String? ?? '';
                                   });
                                 }
                               },

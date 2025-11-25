@@ -29,6 +29,8 @@ mixin _$User {
   String? get phoneNumber => throw _privateConstructorUsedError;
   String? get city => throw _privateConstructorUsedError; // עיר מגורים
 // New profile fields
+  String? get displayName =>
+      throw _privateConstructorUsedError; // Custom nickname (shown to others) - independent from firstName/lastName
   String? get firstName => throw _privateConstructorUsedError;
   String? get lastName => throw _privateConstructorUsedError;
   @TimestampConverter()
@@ -49,9 +51,8 @@ mixin _$User {
   double get currentRankScore =>
       throw _privateConstructorUsedError; // DEPRECATED: Use Hub.managerRatings instead
   String get preferredPosition =>
-      throw _privateConstructorUsedError; // Optional - for team balancing display
-  String? get playingStyle =>
-      throw _privateConstructorUsedError; // goalkeeper, defensive, offensive (optional - for team balancing)
+      throw _privateConstructorUsedError; // 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'
+// REMOVED: playingStyle - merged into preferredPosition
   int get totalParticipations =>
       throw _privateConstructorUsedError; // Total games played (for milestone badges)
   @NullableGeoPointConverter()
@@ -87,6 +88,7 @@ abstract class $UserCopyWith<$Res> {
       String? avatarColor,
       String? phoneNumber,
       String? city,
+      String? displayName,
       String? firstName,
       String? lastName,
       @TimestampConverter() DateTime? birthDate,
@@ -99,7 +101,6 @@ abstract class $UserCopyWith<$Res> {
       List<String> hubIds,
       double currentRankScore,
       String preferredPosition,
-      String? playingStyle,
       int totalParticipations,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
@@ -130,6 +131,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? avatarColor = freezed,
     Object? phoneNumber = freezed,
     Object? city = freezed,
+    Object? displayName = freezed,
     Object? firstName = freezed,
     Object? lastName = freezed,
     Object? birthDate = freezed,
@@ -142,7 +144,6 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? hubIds = null,
     Object? currentRankScore = null,
     Object? preferredPosition = null,
-    Object? playingStyle = freezed,
     Object? totalParticipations = null,
     Object? location = freezed,
     Object? geohash = freezed,
@@ -178,6 +179,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
       city: freezed == city
           ? _value.city
           : city // ignore: cast_nullable_to_non_nullable
+              as String?,
+      displayName: freezed == displayName
+          ? _value.displayName
+          : displayName // ignore: cast_nullable_to_non_nullable
               as String?,
       firstName: freezed == firstName
           ? _value.firstName
@@ -227,10 +232,6 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.preferredPosition
           : preferredPosition // ignore: cast_nullable_to_non_nullable
               as String,
-      playingStyle: freezed == playingStyle
-          ? _value.playingStyle
-          : playingStyle // ignore: cast_nullable_to_non_nullable
-              as String?,
       totalParticipations: null == totalParticipations
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
@@ -274,6 +275,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String? avatarColor,
       String? phoneNumber,
       String? city,
+      String? displayName,
       String? firstName,
       String? lastName,
       @TimestampConverter() DateTime? birthDate,
@@ -286,7 +288,6 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       List<String> hubIds,
       double currentRankScore,
       String preferredPosition,
-      String? playingStyle,
       int totalParticipations,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
@@ -314,6 +315,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? avatarColor = freezed,
     Object? phoneNumber = freezed,
     Object? city = freezed,
+    Object? displayName = freezed,
     Object? firstName = freezed,
     Object? lastName = freezed,
     Object? birthDate = freezed,
@@ -326,7 +328,6 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? hubIds = null,
     Object? currentRankScore = null,
     Object? preferredPosition = null,
-    Object? playingStyle = freezed,
     Object? totalParticipations = null,
     Object? location = freezed,
     Object? geohash = freezed,
@@ -362,6 +363,10 @@ class __$$UserImplCopyWithImpl<$Res>
       city: freezed == city
           ? _value.city
           : city // ignore: cast_nullable_to_non_nullable
+              as String?,
+      displayName: freezed == displayName
+          ? _value.displayName
+          : displayName // ignore: cast_nullable_to_non_nullable
               as String?,
       firstName: freezed == firstName
           ? _value.firstName
@@ -411,10 +416,6 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.preferredPosition
           : preferredPosition // ignore: cast_nullable_to_non_nullable
               as String,
-      playingStyle: freezed == playingStyle
-          ? _value.playingStyle
-          : playingStyle // ignore: cast_nullable_to_non_nullable
-              as String?,
       totalParticipations: null == totalParticipations
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
@@ -454,6 +455,7 @@ class _$UserImpl implements _User {
       this.avatarColor,
       this.phoneNumber,
       this.city,
+      this.displayName,
       this.firstName,
       this.lastName,
       @TimestampConverter() this.birthDate,
@@ -466,7 +468,6 @@ class _$UserImpl implements _User {
       final List<String> hubIds = const [],
       this.currentRankScore = 5.0,
       this.preferredPosition = 'Midfielder',
-      this.playingStyle,
       this.totalParticipations = 0,
       @NullableGeoPointConverter() this.location,
       this.geohash,
@@ -503,6 +504,9 @@ class _$UserImpl implements _User {
   final String? city;
 // עיר מגורים
 // New profile fields
+  @override
+  final String? displayName;
+// Custom nickname (shown to others) - independent from firstName/lastName
   @override
   final String? firstName;
   @override
@@ -546,10 +550,8 @@ class _$UserImpl implements _User {
   @override
   @JsonKey()
   final String preferredPosition;
-// Optional - for team balancing display
-  @override
-  final String? playingStyle;
-// goalkeeper, defensive, offensive (optional - for team balancing)
+// 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'
+// REMOVED: playingStyle - merged into preferredPosition
   @override
   @JsonKey()
   final int totalParticipations;
@@ -581,7 +583,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, playingStyle: $playingStyle, totalParticipations: $totalParticipations, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, privacySettings: $privacySettings)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, privacySettings: $privacySettings)';
   }
 
   @override
@@ -599,6 +601,8 @@ class _$UserImpl implements _User {
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
             (identical(other.city, city) || other.city == city) &&
+            (identical(other.displayName, displayName) ||
+                other.displayName == displayName) &&
             (identical(other.firstName, firstName) ||
                 other.firstName == firstName) &&
             (identical(other.lastName, lastName) ||
@@ -622,8 +626,6 @@ class _$UserImpl implements _User {
                 other.currentRankScore == currentRankScore) &&
             (identical(other.preferredPosition, preferredPosition) ||
                 other.preferredPosition == preferredPosition) &&
-            (identical(other.playingStyle, playingStyle) ||
-                other.playingStyle == playingStyle) &&
             (identical(other.totalParticipations, totalParticipations) ||
                 other.totalParticipations == totalParticipations) &&
             (identical(other.location, location) ||
@@ -647,6 +649,7 @@ class _$UserImpl implements _User {
         avatarColor,
         phoneNumber,
         city,
+        displayName,
         firstName,
         lastName,
         birthDate,
@@ -659,7 +662,6 @@ class _$UserImpl implements _User {
         const DeepCollectionEquality().hash(_hubIds),
         currentRankScore,
         preferredPosition,
-        playingStyle,
         totalParticipations,
         location,
         geohash,
@@ -693,6 +695,7 @@ abstract class _User implements User {
       final String? avatarColor,
       final String? phoneNumber,
       final String? city,
+      final String? displayName,
       final String? firstName,
       final String? lastName,
       @TimestampConverter() final DateTime? birthDate,
@@ -705,7 +708,6 @@ abstract class _User implements User {
       final List<String> hubIds,
       final double currentRankScore,
       final String preferredPosition,
-      final String? playingStyle,
       final int totalParticipations,
       @NullableGeoPointConverter() final GeoPoint? location,
       final String? geohash,
@@ -730,6 +732,9 @@ abstract class _User implements User {
   @override
   String? get city; // עיר מגורים
 // New profile fields
+  @override
+  String?
+      get displayName; // Custom nickname (shown to others) - independent from firstName/lastName
   @override
   String? get firstName;
   @override
@@ -758,10 +763,9 @@ abstract class _User implements User {
   @override
   double get currentRankScore; // DEPRECATED: Use Hub.managerRatings instead
   @override
-  String get preferredPosition; // Optional - for team balancing display
-  @override
-  String?
-      get playingStyle; // goalkeeper, defensive, offensive (optional - for team balancing)
+  String
+      get preferredPosition; // 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'
+// REMOVED: playingStyle - merged into preferredPosition
   @override
   int get totalParticipations; // Total games played (for milestone badges)
   @override

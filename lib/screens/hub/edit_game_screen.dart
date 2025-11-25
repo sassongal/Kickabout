@@ -117,8 +117,8 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
           _events = events;
           _hubMembers = members;
           _selectedEventId = game.eventId;
-          _teamAScoreController.text = game.teamAScore?.toString() ?? '';
-          _teamBScoreController.text = game.teamBScore?.toString() ?? '';
+          _teamAScoreController.text = game.legacyTeamAScore?.toString() ?? '';
+          _teamBScoreController.text = game.legacyTeamBScore?.toString() ?? '';
           _selectedPlayerIds.addAll(allPlayerIds);
           _goalScorers.addAll(goalScorers);
           _assistProviders.addAll(assistProviders);

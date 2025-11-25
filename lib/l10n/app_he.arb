@@ -99,6 +99,361 @@
   "success": "הצלחה",
   "@success": {
     "description": "כותרת הצלחה"
-  }
+  },
+  "locationPermissionError": "אין הרשאת מיקום",
+  "@locationPermissionError": {},
+  "pleaseLogin": "נא להתחבר",
+  "@pleaseLogin": {},
+  "guestsCannotCreateHubs": "אורחים לא יכולים ליצור הובים. נא להתחבר או להירשם.",
+  "@guestsCannotCreateHubs": {},
+  "hubCreatedSuccess": "ההוב נוצר בהצלחה!",
+  "@hubCreatedSuccess": {},
+  "hubCreationError": "שגיאה ביצירת הוב",
+  "@hubCreationError": {},
+  "hubCreationPermissionError": "אין לך הרשאה ליצור הוב.",
+  "@hubCreationPermissionError": {},
+  "pleaseReLogin": "נא להתחבר מחדש",
+  "@pleaseReLogin": {},
+  "hubCreationErrorDetails": "שגיאה ביצירת הוב: {error}",
+  "@hubCreationErrorDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "createHubTitle": "צור הוב",
+  "@createHubTitle": {},
+  "hubNameLabel": "שם ההוב",
+  "@hubNameLabel": {},
+  "hubNameHint": "הכנס שם להוב",
+  "@hubNameHint": {},
+  "hubNameValidator": "נא להכניס שם",
+  "@hubNameValidator": {},
+  "hubDescriptionLabel": "תיאור (אופציונלי)",
+  "@hubDescriptionLabel": {},
+  "hubDescriptionHint": "הכנס תיאור להוב",
+  "@hubDescriptionHint": {},
+  "regionLabel": "אזור",
+  "@regionLabel": {},
+  "regionHint": "בחר אזור",
+  "@regionHint": {},
+  "regionHelperText": "משפיע על הפיד האזורי",
+  "@regionHelperText": {},
+  "regionNorth": "צפון",
+  "@regionNorth": {},
+  "regionCenter": "מרכז",
+  "@regionCenter": {},
+  "regionSouth": "דרום",
+  "@regionSouth": {},
+  "regionJerusalem": "ירושלים",
+  "@regionJerusalem": {},
+  "venuesOptionalLabel": "מגרשים (אופציונלי)",
+  "@venuesOptionalLabel": {},
+  "venuesAddLaterInfo": "תוכל להוסיף מגרשים מאוחר יותר בהגדרות ההוב",
+  "@venuesAddLaterInfo": {},
+  "venuesAddAfterCreationInfo": "תוכל להוסיף מגרשים לאחר יצירת ההוב",
+  "@venuesAddAfterCreationInfo": {},
+  "addVenuesButton": "הוסף מגרשים",
+  "@addVenuesButton": {},
+  "locationOptionalLabel": "מיקום (אופציונלי)",
+  "@locationOptionalLabel": {},
+  "gettingLocation": "מקבל מיקום...",
+  "@gettingLocation": {},
+  "currentLocation": "מיקום נוכחי",
+  "@currentLocation": {},
+  "selectOnMap": "בחר במפה",
+  "@selectOnMap": {},
+  "creating": "יוצר...",
+  "@creating": {},
+  "errorMissingHubId": "שגיאה: מזהה הוב חסר",
+  "@errorMissingHubId": {},
+  "eventNotFound": "אירוע לא נמצא",
+  "@eventNotFound": {},
+  "gameNotFound": "משחק לא נמצא",
+  "@gameNotFound": {},
+  "noAdminPermissionForScreen": "אין לך הרשאת ניהול למסך זה",
+  "@noAdminPermissionForScreen": {},
+  "onlyHubAdminsCanCreateTeams": "רק מנהלי הוב יכולים ליצור קבוצות",
+  "@onlyHubAdminsCanCreateTeams": {},
+  "notEnoughRegisteredPlayers": "אין מספיק נרשמים",
+  "@notEnoughRegisteredPlayers": {},
+  "requiredPlayersCount": "נדרשים לפחות {count} שחקנים",
+  "@requiredPlayersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "registeredPlayerCount": "נרשמו: {count}",
+  "@registeredPlayerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "permissionCheckErrorDetails": "שגיאה בבדיקת הרשאות: {error}",
+  "@permissionCheckErrorDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hubSettingsTitle": "הגדרות הוב",
+  "@hubSettingsTitle": {},
+  "loadingSettings": "טוען הגדרות...",
+  "@loadingSettings": {},
+  "hubNotFound": "הוב לא נמצא",
+  "@hubNotFound": {},
+  "tryAgain": "נסה שוב",
+  "@tryAgain": {},
+  "ratingMode": "מצב דירוג",
+  "@ratingMode": {},
+  "advancedRating": "מתקדם",
+  "@advancedRating": {},
+  "basicRating": "בסיסי",
+  "@basicRating": {},
+  "basicRatingDescription": "דירוג פשוט 1-10",
+  "@basicRatingDescription": {},
+  "advancedRatingDescription": "תכונות מפורטות (מהירות, בעיטה וכו')",
+  "@advancedRatingDescription": {},
+  "privacySettings": "פרטיות",
+  "@privacySettings": {},
+  "privateHub": "פרטי",
+  "@privateHub": {},
+  "publicHub": "ציבורי",
+  "@publicHub": {},
+  "publicHubDescription": "גלוי לכולם",
+  "@publicHubDescription": {},
+  "privateHubDescription": "הזמנה בלבד",
+  "@privateHubDescription": {},
+  "joinMode": "מצב הצטרפות",
+  "@joinMode": {},
+  "approvalRequired": "נדרש אישור",
+  "@approvalRequired": {},
+  "autoJoin": "הצטרפות אוטומטית",
+  "@autoJoin": {},
+  "autoJoinDescription": "כל אחד יכול להצטרף מיידית",
+  "@autoJoinDescription": {},
+  "approvalRequiredDescription": "מנהלים חייבים לאשר בקשות",
+  "@approvalRequiredDescription": {},
+  "notifications": "התראות",
+  "@notifications": {},
+  "notificationsDescription": "אפשר התראות הוב",
+  "@notificationsDescription": {},
+  "hubChat": "צ'אט הוב",
+  "@hubChat": {},
+  "hubChatDescription": "אפשר צ'אט לחברים",
+  "@hubChatDescription": {},
+  "activityFeed": "פיד פעילות",
+  "@activityFeed": {},
+  "activityFeedDescription": "הצג פעילות חברים",
+  "@activityFeedDescription": {},
+  "manageVenues": "ניהול מגרשים",
+  "@manageVenues": {},
+  "manageVenuesDescription": "הוסף או הסר מגרשי משחק",
+  "@manageVenuesDescription": {},
+  "hubRules": "חוקי ההוב",
+  "@hubRules": {},
+  "characterCount": "{count} תווים",
+  "@characterCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noRulesDefined": "לא הוגדרו חוקים",
+  "@noRulesDefined": {},
+  "paymentLinkLabel": "קישור לתשלום",
+  "@paymentLinkLabel": {},
+  "defined": "מוגדר",
+  "@defined": {},
+  "notDefined": "לא מוגדר",
+  "@notDefined": {},
+  "hubInvitations": "הזמנות",
+  "@hubInvitations": {},
+  "hubInvitationsDescription": "ניהול הזמנות ממתינות",
+  "@hubInvitationsDescription": {},
+  "checkingPermissions": "בודק הרשאות...",
+  "@checkingPermissions": {},
+  "permissionCheckError": "שגיאה בבדיקת הרשאות",
+  "@permissionCheckError": {},
+  "settingUpdatedSuccess": "הגדרה עודכנה בהצלחה",
+  "@settingUpdatedSuccess": {},
+  "settingUpdateError": "שגיאה בעדכון הגדרה: {error}",
+  "@settingUpdateError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hubRulesSavedSuccess": "חוקים נשמרו בהצלחה",
+  "@hubRulesSavedSuccess": {},
+  "hubRulesSaveError": "שגיאה בשמירת חוקים: {error}",
+  "@hubRulesSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hubRulesHint": "הכנס חוקי הוב כאן...",
+  "@hubRulesHint": {},
+  "hubRulesHelper": "גלוי לכל החברים",
+  "@hubRulesHelper": {},
+  "saving": "שומר...",
+  "@saving": {},
+  "saveRules": "שמור חוקים",
+  "@saveRules": {},
+  "paymentLinkSavedSuccess": "קישור לתשלום נשמר",
+  "@paymentLinkSavedSuccess": {},
+  "paymentLinkSaveError": "שגיאה בשמירת קישור: {error}",
+  "@paymentLinkSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentLinkBitLabel": "קישור לתשלום (ביט/פייבוקס)",
+  "@paymentLinkBitLabel": {},
+  "paymentLinkHint": "https://...",
+  "@paymentLinkHint": {},
+  "paymentLinkHelper": "משמש לאיסוף כספי משחק",
+  "@paymentLinkHelper": {},
+  "saveLink": "שמור קישור",
+  "@saveLink": {},
+  "onlyHubAdminsCanChangeSettings": "רק מנהלי הוב יכולים לשנות הגדרות",
+  "@onlyHubAdminsCanChangeSettings": {},
+  "playerDetailsUpdatedSuccess": "פרטי השחקן עודכנו בהצלחה",
+  "@playerDetailsUpdatedSuccess": {},
+  "pleaseEnterValidEmail": "נא להזין כתובת אימייל תקינה",
+  "@pleaseEnterValidEmail": {},
+  "hubInvitationEmailSubject": "הזמנה להצטרף ל-{hubName} ב-Kickabout",
+  "@hubInvitationEmailSubject": {
+    "placeholders": {
+      "hubName": {
+        "type": "String"
+      }
+    }
+  },
+  "hubInvitationEmailBody": "היי!\n\n{playerName} הזמין אותך להצטרף ל-{hubName} ב-Kickabout.\n\nלחץ על הקישור להצטרפות:\n{link}\n\nאו השתמש בקוד: {code}",
+  "@hubInvitationEmailBody": {
+    "placeholders": {
+      "playerName": {
+        "type": "String"
+      },
+      "hubName": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "emailClientOpened": "אפליקציית האימייל נפתחה",
+  "@emailClientOpened": {},
+  "linkCopiedToClipboard": "הקישור הועתק ללוח",
+  "@linkCopiedToClipboard": {},
+  "editManualPlayerTitle": "עריכת שחקן",
+  "@editManualPlayerTitle": {},
+  "editManualPlayerSubtitle": "עדכון פרטים לשחקן ידני",
+  "@editManualPlayerSubtitle": {},
+  "fullNameRequired": "שם מלא *",
+  "@fullNameRequired": {},
+  "pleaseEnterName": "נא להזין שם",
+  "@pleaseEnterName": {},
+  "emailForInvitationLabel": "אימייל (להזמנה)",
+  "@emailForInvitationLabel": {},
+  "invalidEmailAddress": "כתובת אימייל לא תקינה",
+  "@invalidEmailAddress": {},
+  "phoneNumberLabel": "מספר טלפון",
+  "@phoneNumberLabel": {},
+  "cityLabel": "עיר",
+  "@cityLabel": {},
+  "ratingLabel": "דירוג (0-10)",
+  "@ratingLabel": {},
+  "ratingRangeError": "הדירוג חייב להיות בין 0 ל-10",
+  "@ratingRangeError": {},
+  "preferredPositionLabel": "עמדה מועדפת",
+  "@preferredPositionLabel": {},
+  "sendEmailInvitation": "שלח הזמנה במייל",
+  "@sendEmailInvitation": {},
+  "saveChanges": "שמור שינויים",
+  "@saveChanges": {},
+  "positionGoalkeeper": "שוער",
+  "@positionGoalkeeper": {},
+  "positionDefense": "הגנה",
+  "@positionDefense": {},
+  "positionMidfielder": "קישור",
+  "@positionMidfielder": {},
+  "positionForward": "התקפה",
+  "@positionForward": {},
+  "yourHubsTitle": "ההובים שלך",
+  "@yourHubsTitle": {},
+  "notificationsTooltip": "התראות",
+  "@notificationsTooltip": {},
+  "mapTooltip": "מפה",
+  "@mapTooltip": {},
+  "discoverHubsTooltip": "גלה הובים",
+  "@discoverHubsTooltip": {},
+  "backToHomeTooltip": "חזרה לבית",
+  "@backToHomeTooltip": {},
+  "errorLoadingHubs": "שגיאה בטעינת הובים",
+  "@errorLoadingHubs": {},
+  "noHubs": "לא נמצאו הובים",
+  "@noHubs": {},
+  "createHubToStart": "צור הוב כדי להתחיל!",
+  "@createHubToStart": {},
+  "memberCount": "{count} חברים",
+  "@memberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hubNotFoundWithInviteCode": "לא נמצא הוב עם קוד הזמנה זה",
+  "@hubNotFoundWithInviteCode": {},
+  "pleaseLoginFirst": "נא להתחבר תחילה",
+  "@pleaseLoginFirst": {},
+  "hubInvitationsDisabled": "ההזמנות להוב זה מושבתות",
+  "@hubInvitationsDisabled": {},
+  "joinedHubSuccess": "הצטרפת בהצלחה ל-{hubName}",
+  "@joinedHubSuccess": {
+    "placeholders": {
+      "hubName": {
+        "type": "String"
+      }
+    }
+  },
+  "joinRequestSent": "בקשת הצטרפות נשלחה בהצלחה",
+  "@joinRequestSent": {},
+  "joinHubError": "שגיאה בהצטרפות להוב: {error}",
+  "@joinHubError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "joinHubTitle": "הצטרף להוב",
+  "@joinHubTitle": {},
+  "backToHome": "חזרה לבית",
+  "@backToHome": {},
+  "hubRequiresApproval": "הוב זה דורש אישור מנהל להצטרפות",
+  "@hubRequiresApproval": {},
+  "sendJoinRequest": "שלח בקשת הצטרפות",
+  "@sendJoinRequest": {},
+  "joinHubButton": "הצטרף להוב",
+  "@joinHubButton": {},
+  "temp": "temp"
 }
-

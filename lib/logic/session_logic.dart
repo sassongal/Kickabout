@@ -1,6 +1,4 @@
 import 'package:kickadoor/models/game.dart';
-import 'package:kickadoor/models/match_result.dart';
-import 'package:kickadoor/models/team.dart';
 
 /// Enum representing the winner of a session
 enum SessionWinner {

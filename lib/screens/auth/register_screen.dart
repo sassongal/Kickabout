@@ -9,6 +9,10 @@ import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/deep_link_service.dart';
+import 'package:kickadoor/utils/city_utils.dart';
+import 'package:kickadoor/services/storage_service.dart';
+import 'package:kickadoor/widgets/avatar_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// Register screen with email/password
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -20,21 +24,47 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _cityController = TextEditingController();
+
+  String _selectedPosition = 'Midfielder'; // Default
+  XFile? _selectedImage;
+  String? _selectedAvatarColor;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // Position options
+  final List<String> _positions = [
+    'Goalkeeper',
+    'Defender',
+    'Midfielder',
+    'Attacker'
+  ];
+
+  // Hebrew labels for positions
+  final Map<String, String> _positionLabels = {
+    'Goalkeeper': 'שוער',
+    'Defender': 'הגנה',
+    'Midfielder': 'אמצע',
+    'Attacker': 'התקפה',
+  };
+
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _phoneController.dispose();
+    _cityController.dispose();
     super.dispose();
   }
 
@@ -53,6 +83,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     try {
       final authService = ref.read(authServiceProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
+      final storageService = StorageService();
 
       // Create user account
       final userCredential = await authService.createUserWithEmailAndPassword(
@@ -60,12 +91,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _passwordController.text,
       );
 
-      // Create user document in Firestore
+      final uid = userCredential.user!.uid;
+      String? photoUrl;
+
+      // Upload photo if selected
+      if (_selectedImage != null) {
+        try {
+          photoUrl =
+              await storageService.uploadProfilePhoto(uid, _selectedImage!);
+        } catch (e) {
+          debugPrint('Failed to upload photo: $e');
+          // Continue without photo
+        }
+      }
+
+      // Determine region from city
+      final region = CityUtils.getRegionForCity(_cityController.text);
+
+      // Create user document in Firestore with ALL fields
       final user = User(
-        uid: userCredential.user!.uid,
-        name: _nameController.text.trim(),
+        uid: uid,
+        name:
+            '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
         email: _emailController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        city: _cityController.text.trim(),
+        region: region,
+        preferredPosition: _selectedPosition,
+        photoUrl: photoUrl,
+        avatarColor: _selectedAvatarColor,
         createdAt: DateTime.now(),
+        isActive: true,
       );
 
       await usersRepo.setUser(user);
@@ -80,11 +138,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'החשבון נוצר בהצלחה!');
-        
+
         // Check for pending deep link redirect
         final deepLinkService = DeepLinkService();
         await deepLinkService.checkPendingRedirect();
-        
+
         // If no redirect, navigate to home
         if (mounted) {
           context.go('/');
@@ -125,42 +183,170 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // App Logo/Icon
-                  Icon(
-                    Icons.sports_soccer,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.primary,
+                  // Avatar Picker
+                  Center(
+                    child: AvatarPicker(
+                      user: null, // New user
+                      selectedImage: _selectedImage,
+                      selectedAvatarColor: _selectedAvatarColor,
+                      onImagePicked: (image) {
+                        setState(() {
+                          _selectedImage = image;
+                        });
+                      },
+                      onColorSelected: (color) {
+                        setState(() {
+                          _selectedAvatarColor = color;
+                        });
+                      },
+                      onDeletePhoto: () {
+                        setState(() {
+                          _selectedImage = null;
+                        });
+                      },
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
                   // Title
                   Text(
                     'צור חשבון חדש',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
-                  // Name field
+                  // First & Last Name Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _firstNameController,
+                          decoration: const InputDecoration(
+                            labelText: 'שם פרטי',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.person),
+                          ),
+                          textCapitalization: TextCapitalization.words,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'חובה';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _lastNameController,
+                          decoration: const InputDecoration(
+                            labelText: 'שם משפחה',
+                            border: OutlineInputBorder(),
+                          ),
+                          textCapitalization: TextCapitalization.words,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'חובה';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Phone Number
                   TextFormField(
-                    controller: _nameController,
+                    controller: _phoneController,
                     decoration: const InputDecoration(
-                      labelText: 'שם מלא',
+                      labelText: 'טלפון',
                       border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                      prefixIcon: Icon(Icons.phone),
+                      hintText: '05X-XXXXXXX',
                     ),
-                    textCapitalization: TextCapitalization.words,
+                    keyboardType: TextInputType.phone,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'נא להזין שם';
+                        return 'נא להזין טלפון';
                       }
-                      if (value.trim().length < 2) {
-                        return 'השם חייב להכיל לפחות 2 תווים';
+                      // Basic validation
+                      if (value.trim().replaceAll(RegExp(r'[-\s]'), '').length <
+                          9) {
+                        return 'מספר לא תקין';
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // City Autocomplete
+                  Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (textEditingValue.text == '') {
+                        return const Iterable<String>.empty();
+                      }
+                      return CityUtils.cities.where((String option) {
+                        return option.contains(textEditingValue.text);
+                      });
+                    },
+                    onSelected: (String selection) {
+                      _cityController.text = selection;
+                      // Region is auto-calculated on save
+                    },
+                    fieldViewBuilder: (context, textEditingController,
+                        focusNode, onFieldSubmitted) {
+                      // Sync controllers
+                      if (_cityController.text.isNotEmpty &&
+                          textEditingController.text.isEmpty) {
+                        textEditingController.text = _cityController.text;
+                      }
+                      return TextFormField(
+                        controller: textEditingController,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'עיר מגורים',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.location_city),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'נא לבחור עיר';
+                          }
+                          // Update main controller if user typed manually
+                          _cityController.text = value;
+                          return null;
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Position Selector (Chips)
+                  Text(
+                    'עמדה מועדפת',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: _positions.map((pos) {
+                      final isSelected = _selectedPosition == pos;
+                      return ChoiceChip(
+                        label: Text(_positionLabels[pos]!),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedPosition = pos;
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 16),
 
@@ -174,7 +360,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     textDirection: TextDirection.ltr,
-                    textInputAction: TextInputAction.next,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'נא להזין אימייל';
@@ -196,7 +381,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -206,7 +393,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                     obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.next,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'נא להזין סיסמה';
@@ -228,7 +414,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -284,4 +472,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
-

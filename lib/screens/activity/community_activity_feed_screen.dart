@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/hub_event.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
@@ -422,12 +420,12 @@ class _GameFeedCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Score - LARGE and prominent
-            if (game.teamAScore != null && game.teamBScore != null)
+            if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${game.teamAScore}',
+                    '${game.legacyTeamAScore}',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -443,7 +441,7 @@ class _GameFeedCard extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '${game.teamBScore}',
+                    '${game.legacyTeamBScore}',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -451,7 +449,7 @@ class _GameFeedCard extends ConsumerWidget {
                   ),
                 ],
               ),
-            if (game.teamAScore != null && game.teamBScore != null)
+            if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
               const SizedBox(height: 16),
 
             // Hub name - medium size

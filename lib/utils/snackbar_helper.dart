@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kickadoor/utils/error_messages.dart';
 import 'package:kickadoor/core/constants.dart';
 
 /// Helper class for showing snackbars consistently
@@ -78,12 +79,14 @@ class SnackbarHelper {
   /// Show error from exception
   static void showErrorFromException(BuildContext context, dynamic error) {
     String message = ErrorMessages.unknownError;
-    
+
     if (error is Exception) {
       final errorString = error.toString().toLowerCase();
-      if (errorString.contains('network') || errorString.contains('connection')) {
+      if (errorString.contains('network') ||
+          errorString.contains('connection')) {
         message = ErrorMessages.networkError;
-      } else if (errorString.contains('permission') || errorString.contains('unauthorized')) {
+      } else if (errorString.contains('permission') ||
+          errorString.contains('unauthorized')) {
         message = ErrorMessages.permissionError;
       } else if (errorString.contains('auth')) {
         message = ErrorMessages.authError;
@@ -92,11 +95,14 @@ class SnackbarHelper {
         final match = RegExp(r"'([^']+)'").firstMatch(error.toString());
         if (match != null) {
           message = match.group(1) ?? ErrorMessages.unknownError;
+        } else {
+          message = error.toString();
         }
       }
+    } else if (error is String) {
+      message = error;
     }
-    
+
     showError(context, message);
   }
 }
-

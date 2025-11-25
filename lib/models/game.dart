@@ -35,7 +35,7 @@ class Game with _$Game {
     @Default(false) bool isRecurring, // Is this a recurring game?
     String? parentGameId, // ID of the original recurring game (for child games)
     String? recurrencePattern, // 'weekly', 'biweekly', 'monthly'
-    @TimestampConverter() DateTime? recurrenceEndDate, // When to stop creating recurring games
+    @NullableTimestampConverter() DateTime? recurrenceEndDate, // When to stop creating recurring games
     // Denormalized fields for efficient display (no need to fetch user/hub)
     String? createdByName, // Denormalized from users/{createdBy}.name
     String? createdByPhotoUrl, // Denormalized from users/{createdBy}.photoUrl

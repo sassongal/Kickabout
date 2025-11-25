@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/futuristic/bottom_navigation_bar.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/services/location_service.dart';
+
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
@@ -30,10 +30,12 @@ class HomeScreenFuturisticFigma extends ConsumerStatefulWidget {
   const HomeScreenFuturisticFigma({super.key});
 
   @override
-  ConsumerState<HomeScreenFuturisticFigma> createState() => _HomeScreenFuturisticFigmaState();
+  ConsumerState<HomeScreenFuturisticFigma> createState() =>
+      _HomeScreenFuturisticFigmaState();
 }
 
-class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturisticFigma> {
+class _HomeScreenFuturisticFigmaState
+    extends ConsumerState<HomeScreenFuturisticFigma> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -42,7 +44,6 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
     final notificationsRepo = ref.read(notificationsRepositoryProvider);
     final gamificationRepo = ref.read(gamificationRepositoryProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
-    final locationService = ref.read(locationServiceProvider);
 
     if (currentUserId == null) {
       return Scaffold(
@@ -89,7 +90,8 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
     }
 
     final unreadCountStream = notificationsRepo.watchUnreadCount(currentUserId);
-    final gamificationStream = gamificationRepo.watchGamification(currentUserId);
+    final gamificationStream =
+        gamificationRepo.watchGamification(currentUserId);
     final userStream = usersRepo.watchUser(currentUserId);
 
     return StreamBuilder<User?>(
@@ -98,7 +100,8 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
         if (userSnapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             backgroundColor: FuturisticColors.background,
-            appBar: _buildAppBar(context, null, unreadCountStream, currentUserId),
+            appBar:
+                _buildAppBar(context, null, unreadCountStream, currentUserId),
             body: const FuturisticLoadingState(message: 'טוען...'),
           );
         }
@@ -106,7 +109,8 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
         if (userSnapshot.hasError) {
           return Scaffold(
             backgroundColor: FuturisticColors.background,
-            appBar: _buildAppBar(context, null, unreadCountStream, currentUserId),
+            appBar:
+                _buildAppBar(context, null, unreadCountStream, currentUserId),
             body: FuturisticEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת הנתונים',
@@ -140,7 +144,7 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                     // Admin Tasks Card (if user is admin)
                     _buildAdminTasksCard(context, currentUserId),
                     const SizedBox(height: 16),
-                    
+
                     // User Profile Card (matching Figma design)
                     if (user != null) ...[
                       FuturisticCard(
@@ -154,13 +158,14 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                                   size: AvatarSize.lg,
                                 ),
                                 const SizedBox(width: 16),
-                                // Name and city
+                                // Name and city ONLY (Rating removed)
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        user.name,
+                                        user.name, // השם המלא כפי שמוגדר
                                         style: GoogleFonts.montserrat(
                                           fontSize: 20,
                                           fontWeight: FontWeight.w700,
@@ -178,27 +183,7 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                                     ],
                                   ),
                                 ),
-                                // Rating display
-                                Column(
-                                  children: [
-                                    Text(
-                                      user.currentRankScore.toStringAsFixed(1),
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF1976D2),
-                                        height: 1,
-                                      ),
-                                    ),
-                                    Text(
-                                      'דירוג',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: const Color(0xFF757575),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                // REMOVED: The Column with currentRankScore
                               ],
                             ),
                             const Divider(height: 24),
@@ -216,9 +201,14 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                                 Switch(
                                   value: user.availabilityStatus == 'available',
                                   onChanged: (value) {
-                                    ref.read(usersRepositoryProvider).updateUser(
+                                    ref
+                                        .read(usersRepositoryProvider)
+                                        .updateUser(
                                       currentUserId,
-                                      {'availabilityStatus': value ? 'available' : 'notAvailable'},
+                                      {
+                                        'availabilityStatus':
+                                            value ? 'available' : 'notAvailable'
+                                      },
                                     );
                                   },
                                 ),
@@ -227,58 +217,78 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      
-                      // Quick Actions - 3 column grid (matching Figma)
+                      const SizedBox(height: 16), // Reduced space
+
+                      // כותרת קטנה לפעולות מהירות (אופציונלי, אפשר גם להוריד לגמרי)
+                      Text(
+                        'פעולות מהירות',
+                        style: FuturisticTypography.bodySmall
+                            .copyWith(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Quick Actions - Updated Layout
                       Row(
                         children: [
+                          // 1. צור הוב (עבר לכאן)
                           Expanded(
                             child: _QuickActionButton(
-                              icon: Icons.add,
+                              icon: Icons.add_business, // או אייקון אחר מתאים
+                              label: 'צור Hub',
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF9C27B0),
+                                  Color(0xFF7B1FA2)
+                                ], // סגול
+                              ),
+                              onTap: () => context.push('/hubs/create'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // 2. צור משחק
+                          Expanded(
+                            child: _QuickActionButton(
+                              icon: Icons.sports_soccer,
                               label: 'צור משחק',
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
+                                colors: [
+                                  Color(0xFF1976D2),
+                                  Color(0xFF1565C0)
+                                ], // כחול
                               ),
                               onTap: () => context.push('/games/create'),
                             ),
                           ),
                           const SizedBox(width: 12),
+                          // 3. מצא שחקנים
                           Expanded(
                             child: _QuickActionButton(
-                              icon: Icons.people,
+                              icon: Icons.person_search,
                               label: 'מצא שחקנים',
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Color(0xFF4CAF50), Color(0xFF388E3C)],
+                                colors: [
+                                  Color(0xFF4CAF50),
+                                  Color(0xFF388E3C)
+                                ], // ירוק
                               ),
                               onTap: () => context.push('/players'),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _QuickActionButton(
-                              icon: Icons.trending_up,
-                              label: 'גלה קהילות',
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
-                              ),
-                              onTap: () => context.push('/hubs-board'),
-                            ),
-                          ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16), // Reduced space
                     ],
-                    
+
                     // Weather & Vibe Widget (moved to top)
                     const HomeWeatherVibeWidget(),
                     const SizedBox(height: 24),
-                    
+
                     // Stats Dashboard (matching Figma)
                     StreamBuilder<Gamification?>(
                       stream: gamificationStream,
@@ -321,51 +331,57 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                             ),
                             const SizedBox(height: 12),
                             ...hubs.take(3).map((hub) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: FuturisticCard(
-                                onTap: () => context.push('/hubs/${hub.hubId}'),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        gradient: FuturisticColors.primaryGradient,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.group,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            hub.name,
-                                            style: GoogleFonts.montserrat(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700,
-                                              color: const Color(0xFF212121),
-                                            ),
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: FuturisticCard(
+                                    onTap: () =>
+                                        context.push('/hubs/${hub.hubId}'),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            gradient: FuturisticColors
+                                                .primaryGradient,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
-                                          Text(
-                                            '${hub.memberIds.length} חברים',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 14,
-                                              color: const Color(0xFF757575),
-                                            ),
+                                          child: const Icon(
+                                            Icons.group,
+                                            color: Colors.white,
+                                            size: 24,
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                hub.name,
+                                                style: GoogleFonts.montserrat(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700,
+                                                  color:
+                                                      const Color(0xFF212121),
+                                                ),
+                                              ),
+                                              Text(
+                                                '${hub.memberIds.length} חברים',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
+                                                  color:
+                                                      const Color(0xFF757575),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                            )),
+                                  ),
+                                )),
                           ],
                         );
                       },
@@ -388,7 +404,8 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                                       width: 48,
                                       height: 48,
                                       decoration: BoxDecoration(
-                                        gradient: FuturisticColors.primaryGradient,
+                                        gradient:
+                                            FuturisticColors.primaryGradient,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: const Icon(
@@ -426,14 +443,16 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                             builder: (context, snapshot) {
                               final associatedHubs = snapshot.data ?? [];
                               return FuturisticCard(
-                                onTap: () => _showAssociatedHubs(context, associatedHubs),
+                                onTap: () => _showAssociatedHubs(
+                                    context, associatedHubs),
                                 child: Column(
                                   children: [
                                     Container(
                                       width: 48,
                                       height: 48,
                                       decoration: BoxDecoration(
-                                        gradient: FuturisticColors.accentGradient,
+                                        gradient:
+                                            FuturisticColors.accentGradient,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: const Icon(
@@ -590,27 +609,29 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                     StreamBuilder<List<Hub>>(
                       stream: hubsRepo.watchHubsByMember(currentUserId),
                       builder: (context, hubsSnapshot) {
-                        if (hubsSnapshot.connectionState == ConnectionState.waiting) {
+                        if (hubsSnapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const SizedBox.shrink();
                         }
-                        
+
                         final hubs = hubsSnapshot.data ?? [];
                         if (hubs.isEmpty) {
                           return const SizedBox.shrink();
                         }
-                        
+
                         final hubIds = hubs.map((h) => h.hubId).toList();
                         final now = DateTime.now();
                         final nextWeek = now.add(const Duration(days: 7));
-                        
+
                         return FutureBuilder<List<Game>>(
-                          future: _getUpcomingGames(gamesRepo, hubIds, now, nextWeek),
+                          future: _getUpcomingGames(
+                              gamesRepo, hubIds, now, nextWeek),
                           builder: (context, snapshot) {
                             final games = snapshot.data ?? [];
                             if (games.isEmpty) {
                               return const SizedBox.shrink();
                             }
-                            
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -625,73 +646,105 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                                 ),
                                 const SizedBox(height: 12),
                                 ...games.take(2).map((game) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: FuturisticCard(
-                                    onTap: () => context.push('/games/${game.gameId}'),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.calendar_today,
-                                          color: FuturisticColors.primary,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                DateFormat('dd/MM HH:mm').format(game.gameDate),
-                                                style: GoogleFonts.montserrat(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: const Color(0xFF212121),
-                                                ),
-                                              ),
-                                              if (game.location != null)
-                                                Text(
-                                                  game.location!,
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 14,
-                                                    color: const Color(0xFF757575),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        // Signup count (simplified - just show status)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: FuturisticColors.secondary,
-                                            borderRadius: BorderRadius.circular(16),
-                                          ),
-                                          child: Builder(
-                                            builder: (context) {
-                                              final signupsRepo = ref.read(signupsRepositoryProvider);
-                                              return StreamBuilder<List<GameSignup>>(
-                                                stream: signupsRepo.watchSignups(game.gameId),
-                                                builder: (context, signupsSnapshot) {
-                                                  final signups = signupsSnapshot.data ?? [];
-                                                  final confirmedCount = signups.where((s) => s.status == SignupStatus.confirmed).length;
-                                                  final minRequired = game.teamCount * AppConstants.minPlayersPerTeam;
-                                                  return Text(
-                                                    '$confirmedCount/$minRequired',
-                                                    style: GoogleFonts.montserrat(
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: Colors.white,
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: FuturisticCard(
+                                        onTap: () => context
+                                            .push('/games/${game.gameId}'),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.calendar_today,
+                                              color: FuturisticColors.primary,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    DateFormat('dd/MM HH:mm')
+                                                        .format(game.gameDate),
+                                                    style:
+                                                        GoogleFonts.montserrat(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: const Color(
+                                                          0xFF212121),
                                                     ),
+                                                  ),
+                                                  if (game.location != null)
+                                                    Text(
+                                                      game.location!,
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 14,
+                                                        color: const Color(
+                                                            0xFF757575),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                            // Signup count (simplified - just show status)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    FuturisticColors.secondary,
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              child: Builder(
+                                                builder: (context) {
+                                                  final signupsRepo = ref.read(
+                                                      signupsRepositoryProvider);
+                                                  return StreamBuilder<
+                                                      List<GameSignup>>(
+                                                    stream: signupsRepo
+                                                        .watchSignups(
+                                                            game.gameId),
+                                                    builder: (context,
+                                                        signupsSnapshot) {
+                                                      final signups =
+                                                          signupsSnapshot
+                                                                  .data ??
+                                                              [];
+                                                      final confirmedCount =
+                                                          signups
+                                                              .where((s) =>
+                                                                  s.status ==
+                                                                  SignupStatus
+                                                                      .confirmed)
+                                                              .length;
+                                                      final minRequired = game
+                                                              .teamCount *
+                                                          AppConstants
+                                                              .minPlayersPerTeam;
+                                                      return Text(
+                                                        '$confirmedCount/$minRequired',
+                                                        style: GoogleFonts
+                                                            .montserrat(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.white,
+                                                        ),
+                                                      );
+                                                    },
                                                   );
                                                 },
-                                              );
-                                            },
-                                          ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                )),
+                                      ),
+                                    )),
                               ],
                             );
                           },
@@ -699,7 +752,7 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                       },
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Developer Tools
                     if (user != null) ...[
                       Row(
@@ -710,20 +763,27 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
                               icon: const Icon(Icons.science_outlined),
                               label: const Text('Generate Dummy Data (Dev)'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                side: BorderSide(color: FuturisticColors.textSecondary.withValues(alpha: 0.3)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(
+                                    color: FuturisticColors.textSecondary
+                                        .withValues(alpha: 0.3)),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => _forceHaifaLocation(context, currentUserId),
+                              onPressed: () =>
+                                  _forceHaifaLocation(context, currentUserId),
                               icon: const Icon(Icons.location_city_outlined),
                               label: const Text('Force Haifa Location (Dev)'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                side: BorderSide(color: FuturisticColors.textSecondary.withValues(alpha: 0.3)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(
+                                    color: FuturisticColors.textSecondary
+                                        .withValues(alpha: 0.3)),
                               ),
                             ),
                           ),
@@ -742,6 +802,35 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
   }
 
   Future<void> _generateDummyData(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('יצירת נתוני דמה'),
+        content: const Text(
+          'פעולה זו תיצור:\n'
+          '• 20 שחקנים\n'
+          '• 3 Hubs\n'
+          '• 15 משחקי עבר\n\n'
+          'האם להמשיך?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: FuturisticColors.primary,
+            ),
+            child: const Text('צור נתוני דמה'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -752,15 +841,16 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
 
     try {
       final generator = DummyDataGenerator();
-      await generator.generateHaifaScenario();
-      
+      await generator.generateComprehensiveData();
+
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ נתוני דמה נוצרו בהצלחה!'),
+            content: Text(
+                '✅ נתוני דמה נוצרו בהצלחה! (20 שחקנים, 3 Hubs, 15 משחקים)'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+            duration: Duration(seconds: 4),
           ),
         );
       }
@@ -792,13 +882,13 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
       // Haifa coordinates
       const double haifaLat = 32.7940;
       const double haifaLng = 34.9896;
-      
+
       final firestore = FirebaseFirestore.instance;
       final userRef = firestore.collection('users').doc(userId);
-      
+
       final locationService = ref.read(locationServiceProvider);
       final geohash = locationService.generateGeohash(haifaLat, haifaLng);
-      
+
       await userRef.update({
         'location': GeoPoint(haifaLat, haifaLng),
         'geohash': geohash,
@@ -807,12 +897,12 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
         'manualLocationCity': 'חיפה',
         'hasManualLocation': true,
       });
-      
+
       // Save to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('manual_location_city', 'חיפה');
       await prefs.setBool('location_permission_skipped', true);
-      
+
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
@@ -918,31 +1008,36 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
             );
           },
         ),
-        // Profile button (top-left in RTL) - Circular Avatar - MUST BE LAST in actions list
-        if (user != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: InkWell(
-              onTap: () => context.push('/profile/$currentUserId/edit'),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: FuturisticColors.primary.withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                ),
-                child: PlayerAvatar(
-                  user: user,
-                  size: AvatarSize.sm,
-                  clickable: false,
+        // Profile button (top-left in RTL) - Circular Avatar - ALWAYS SHOWN
+        Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: InkWell(
+            onTap: () {
+              debugPrint('Navigating to edit profile for $currentUserId');
+              context.push('/profile/$currentUserId/edit');
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: FuturisticColors.primary, // solid color for visibility
+                  width: 2,
                 ),
               ),
+              child: user != null
+                  ? PlayerAvatar(
+                      user: user,
+                      size: AvatarSize.sm,
+                      clickable: false,
+                    )
+                  : const Icon(Icons.person,
+                      color: FuturisticColors.textPrimary),
             ),
           ),
+        ),
       ],
     );
   }
@@ -967,22 +1062,23 @@ class _HomeScreenFuturisticFigmaState extends ConsumerState<HomeScreenFuturistic
       ..sort((a, b) => a.gameDate.compareTo(b.gameDate));
   }
 
-
-  Future<List<Hub>> _getAssociatedHubs(HubsRepository hubsRepo, String userId) async {
+  Future<List<Hub>> _getAssociatedHubs(
+      HubsRepository hubsRepo, String userId) async {
     try {
-      final position = await ref.read(locationServiceProvider).getCurrentLocation();
+      final position =
+          await ref.read(locationServiceProvider).getCurrentLocation();
       if (position == null) return [];
-      
+
       final nearbyHubs = await hubsRepo.findHubsNearby(
         latitude: position.latitude,
         longitude: position.longitude,
         radiusKm: 50.0,
       );
-      
-      return nearbyHubs.where((hub) => 
-        hub.memberIds.contains(userId) && 
-        hub.createdBy != userId
-      ).toList();
+
+      return nearbyHubs
+          .where((hub) =>
+              hub.memberIds.contains(userId) && hub.createdBy != userId)
+          .toList();
     } catch (e) {
       return [];
     }
@@ -1170,7 +1266,8 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
 
     return dashboardData.when(
       data: (data) {
-        final vibeMessage = data['vibeMessage'] as String? ?? 'יום טוב לכדורגל!';
+        final vibeMessage =
+            data['vibeMessage'] as String? ?? 'יום טוב לכדורגל!';
         final temp = data['temperature'] as int?;
         final aqi = data['aqiIndex'] as int?;
 
@@ -1186,9 +1283,9 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                 child: Text(
                   vibeMessage,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: FuturisticColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: FuturisticColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 2,
                 ),
@@ -1209,8 +1306,8 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                     Text(
                       '$temp°',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: FuturisticColors.textSecondary,
-                      ),
+                            color: FuturisticColors.textSecondary,
+                          ),
                     ),
                     const SizedBox(width: 12),
                   ],
@@ -1225,8 +1322,8 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                     Text(
                       '$aqi',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: FuturisticColors.textSecondary,
-                      ),
+                            color: FuturisticColors.textSecondary,
+                          ),
                     ),
                   ],
                 ],
@@ -1251,7 +1348,8 @@ class _LocationToggleButton extends ConsumerStatefulWidget {
   const _LocationToggleButton();
 
   @override
-  ConsumerState<_LocationToggleButton> createState() => _LocationToggleButtonState();
+  ConsumerState<_LocationToggleButton> createState() =>
+      _LocationToggleButtonState();
 }
 
 class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
@@ -1269,11 +1367,12 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
     try {
       final permission = await Geolocator.checkPermission();
       final prefs = await SharedPreferences.getInstance();
-      final hasManualLocation = prefs.getBool('location_permission_skipped') ?? false;
-      
+      final hasManualLocation =
+          prefs.getBool('location_permission_skipped') ?? false;
+
       setState(() {
-        _isGpsMode = permission == LocationPermission.whileInUse || 
-                     permission == LocationPermission.always;
+        _isGpsMode = permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always;
         _isManualMode = hasManualLocation && !_isGpsMode;
         _isLoading = false;
       });
@@ -1287,7 +1386,7 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
   Future<void> _toggleLocation() async {
     try {
       final permission = await Geolocator.checkPermission();
-      
+
       if (permission == LocationPermission.deniedForever) {
         // Open app settings or show manual location dialog
         final confirmed = await showDialog<bool>(
@@ -1309,7 +1408,7 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
             ],
           ),
         );
-        
+
         if (confirmed == true) {
           await _openManualLocationDialog();
         } else if (await openAppSettings()) {
@@ -1326,7 +1425,7 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
       }
 
       // If GPS is enabled, offer to switch to manual
-      if (permission == LocationPermission.whileInUse || 
+      if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         final confirmed = await showDialog<bool>(
           context: context,
@@ -1347,15 +1446,15 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
             ],
           ),
         );
-        
+
         if (confirmed == true) {
           await _openManualLocationDialog();
         }
       } else {
         // GPS is not enabled - request permission or show manual dialog
         final newPermission = await Geolocator.requestPermission();
-        
-        if (newPermission == LocationPermission.denied || 
+
+        if (newPermission == LocationPermission.denied ||
             newPermission == LocationPermission.deniedForever) {
           // Offer manual location
           final confirmed = await showDialog<bool>(
@@ -1377,7 +1476,7 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
               ],
             ),
           );
-          
+
           if (confirmed == true) {
             await _openManualLocationDialog();
           }
@@ -1387,15 +1486,15 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
             _isGpsMode = true;
             _isManualMode = false;
           });
-          
+
           // Get current location and update user profile
           final locationService = ref.read(locationServiceProvider);
           final position = await locationService.getCurrentLocation();
-          
+
           if (position != null && mounted) {
             final auth = firebase_auth.FirebaseAuth.instance;
             final user = auth.currentUser;
-            
+
             if (user != null) {
               final firestore = FirebaseFirestore.instance;
               final userRef = firestore.collection('users').doc(user.uid);
@@ -1403,16 +1502,16 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
                 position.latitude,
                 position.longitude,
               );
-              
+
               await userRef.update({
                 'location': GeoPoint(position.latitude, position.longitude),
                 'geohash': geohash,
                 'hasManualLocation': false,
               });
-              
+
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('location_permission_skipped', false);
-              
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('✅ מיקום GPS עודכן'),
@@ -1424,7 +1523,7 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
           }
         }
       }
-      
+
       await _checkLocationMode(); // Refresh state
     } catch (e) {
       if (mounted) {
@@ -1444,7 +1543,7 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
       context: context,
       builder: (context) => const LocationSearchDialog(),
     );
-    
+
     if (result == true) {
       await _checkLocationMode(); // Refresh state after manual location set
     }
@@ -1464,7 +1563,7 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
     IconData icon;
     Color iconColor;
     String tooltip;
-    
+
     if (_isGpsMode) {
       icon = Icons.gps_fixed;
       iconColor = FuturisticColors.primary;
@@ -1530,4 +1629,3 @@ class _QuickActionButton extends StatelessWidget {
     );
   }
 }
-

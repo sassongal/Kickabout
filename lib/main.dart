@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/core/constants.dart';
@@ -42,112 +43,20 @@ Future<void> _initializeBackgroundServices() async {
   }
 }
 
-void main() async {
+/// Main entry point of the application.
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase with safe error handling
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    // Firebase initialized successfully
-    Env.limitedMode = false;
-    debugPrint('✅ Firebase initialized successfully');
-    
-    // Initialize Crashlytics (but not for Web)
-    if (!kIsWeb) {
-      try {
-        // Pass all uncaught Flutter framework errors to Crashlytics
-        FlutterError.onError = (errorDetails) {
-          FlutterError.presentError(errorDetails);
-          FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-        };
-        
-        // Pass all uncaught async errors to Crashlytics
-        PlatformDispatcher.instance.onError = (error, stack) {
-          FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-          return true;
-        };
-        
-        debugPrint('✅ Crashlytics initialized');
-      } catch (e) {
-        debugPrint('⚠️ Crashlytics initialization failed: $e');
-        // Set up basic error handling even if Crashlytics fails
-        FlutterError.onError = (errorDetails) {
-          FlutterError.presentError(errorDetails);
-        };
-        PlatformDispatcher.instance.onError = (error, stack) => true;
-      }
-    } else {
-      // Basic error handling for Web (without Crashlytics)
-      FlutterError.onError = (errorDetails) {
-        FlutterError.presentError(errorDetails);
-      };
-      PlatformDispatcher.instance.onError = (error, stack) => true;
-      debugPrint('✅ Crashlytics disabled for Web. Basic error handling enabled.');
-    }
-    
-    // Enable Firestore offline persistence
-    try {
-      FirebaseFirestore.instance.settings = const Settings(
-        persistenceEnabled: true,
-        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-      );
-      debugPrint('✅ Firestore offline persistence enabled');
-    } catch (e) {
-      ErrorHandlerService().logError(
-        e,
-        reason: 'Failed to enable Firestore offline persistence',
-      );
-      debugPrint('⚠️ Failed to enable offline persistence: $e');
-      // Continue without offline support
-    }
-    
-    // Initialize push notifications
-    try {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-      final pushService = PushNotificationService();
-      await pushService.initialize();
-      debugPrint('✅ Push notifications initialized');
-    } catch (e) {
-      ErrorHandlerService().logError(
-        e,
-        reason: 'Failed to initialize push notifications',
-      );
-      debugPrint('⚠️ Push notifications initialization failed: $e');
-    }
+  await dotenv.load(fileName: ".env");
 
-    // Sign out any anonymous users on startup (force real login)
-    // This MUST happen before the app starts to prevent race conditions
-    try {
-      final auth = FirebaseAuth.instance;
-      final currentUser = auth.currentUser;
-      if (currentUser != null && currentUser.isAnonymous) {
-        debugPrint('🔓 Signing out anonymous user on startup...');
-        await auth.signOut();
-        debugPrint('✅ Anonymous user signed out - app will start at /auth');
-        // Wait a bit to ensure sign out completes before app starts
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-    } catch (e) {
-      debugPrint('⚠️ Error signing out anonymous user on startup: $e');
-      // Continue anyway - router will handle it
-    }
-    
-    // Initialize Analytics and Remote Config in background (non-blocking)
-    // This improves cold start time
-    _initializeBackgroundServices(); // Fire and forget
-  } catch (e) {
-    // Firebase not configured or initialization failed
-    // App will continue in limited mode (no crash)
-    Env.limitedMode = true;
-    debugPrint('⚠️ Firebase initialization failed: $e');
-    debugPrint('⚠️ App running in LIMITED MODE (Firebase features disabled)');
-    debugPrint('💡 To enable Firebase, run: flutterfire configure');
-  }
-  
-  // If in limited mode, show limited mode screen
-  if (Env.limitedMode) {
+  final bool servicesInitialized = await _initializeAppServices();
+
+  if (servicesInitialized) {
+    runApp(
+      const ProviderScope(
+        child: MyApp(),
+      ),
+    );
+  } else {
     runApp(
       const MaterialApp(
         title: AppConstants.appName,
@@ -155,18 +64,142 @@ void main() async {
         home: LimitedModeScreen(),
       ),
     );
-  } else {
-    runApp(
-      const ProviderScope(
-        child: MyApp(),
-      ),
+  }
+}
+
+/// Initializes all essential app services and returns true on success.
+Future<bool> _initializeAppServices() async {
+  try {
+    // Initialize Firebase first, as it's critical.
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
     );
+    debugPrint('✅ Firebase initialized successfully');
+
+    // Set up global error handling and Crashlytics.
+    _initializeErrorHandling();
+
+    // Enable Firestore offline persistence.
+    _initializeFirestoreCache();
+
+    // Sign out anonymous users to enforce proper login.
+    await _handleAnonymousUserSignOut();
+
+    // Initialize non-critical services in parallel.
+    await Future.wait([
+      _initializePushNotifications(),
+      _initializeBackgroundServices(), // This is already fire-and-forget
+    ]);
+
+    Env.limitedMode = false;
+    return true;
+  } catch (e, stackTrace) {
+    // If any critical initialization fails, enter limited mode.
+    Env.limitedMode = true;
+    debugPrint('⚠️ Firebase initialization failed: $e');
+    debugPrint('Stack trace: $stackTrace');
+    debugPrint('⚠️ App running in LIMITED MODE (Firebase features disabled)');
+    debugPrint('💡 To enable Firebase, run: flutterfire configure');
+    return false;
+  }
+}
+
+/// Configures Crashlytics and global error handlers.
+void _initializeErrorHandling() {
+  if (kIsWeb) {
+    // Basic error handling for Web (without Crashlytics)
+    FlutterError.onError = FlutterError.presentError;
+    PlatformDispatcher.instance.onError = (error, stack) => true;
+    debugPrint('✅ Crashlytics disabled for Web. Basic error handling enabled.');
+    return;
+  }
+
+  try {
+    // Pass all uncaught Flutter framework errors to Crashlytics.
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+
+    // Pass all uncaught async errors to Crashlytics.
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true; // Mark as handled.
+    };
+    debugPrint('✅ Crashlytics initialized');
+  } catch (e) {
+    debugPrint('⚠️ Crashlytics initialization failed: $e');
+    // Fallback to basic error handling if Crashlytics fails.
+    FlutterError.onError = FlutterError.presentError;
+    PlatformDispatcher.instance.onError = (error, stack) => true;
+  }
+}
+
+/// Enables Firestore's offline persistence.
+void _initializeFirestoreCache() {
+  try {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+    debugPrint('✅ Firestore offline persistence enabled');
+  } catch (e) {
+    ErrorHandlerService()
+        .logError(e, reason: 'Failed to enable Firestore cache');
+  }
+}
+
+/// Initializes push notifications and background message handler.
+Future<void> _initializePushNotifications() async {
+  try {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await PushNotificationService().initialize();
+    debugPrint('✅ Push notifications initialized');
+  } catch (e) {
+    ErrorHandlerService()
+        .logError(e, reason: 'Failed to init push notifications');
+  }
+}
+
+/// Signs out anonymous users on startup to prevent race conditions.
+Future<void> _handleAnonymousUserSignOut() async {
+  final auth = FirebaseAuth.instance;
+  if (auth.currentUser?.isAnonymous ?? false) {
+    debugPrint('🔓 Signing out anonymous user on startup...');
+    await auth.signOut();
+    debugPrint('✅ Anonymous user signed out.');
   }
 }
 
 /// Limited mode screen - shown when Firebase initialization fails
-class LimitedModeScreen extends StatelessWidget {
+class LimitedModeScreen extends StatefulWidget {
   const LimitedModeScreen({super.key});
+
+  @override
+  State<LimitedModeScreen> createState() => _LimitedModeScreenState();
+}
+
+class _LimitedModeScreenState extends State<LimitedModeScreen> {
+  bool _isRetrying = false;
+
+  Future<void> _retryInitialization() async {
+    setState(() => _isRetrying = true);
+
+    final bool success = await _initializeAppServices();
+
+    if (success && mounted) {
+      // On success, run the main app.
+      runApp(const ProviderScope(child: MyApp()));
+    } else if (mounted) {
+      // On failure, stop the loading indicator and show a snackbar.
+      setState(() => _isRetrying = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('החיבור נכשל. נסה שוב מאוחר יותר.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,8 +219,8 @@ class LimitedModeScreen extends StatelessWidget {
               Text(
                 'שגיאת חיבור לשרת',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -200,10 +233,25 @@ class LimitedModeScreen extends StatelessWidget {
               Text(
                 'אם הבעיה נמשכת, בדוק את חיבור האינטרנט שלך.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey,
-                ),
+                      color: Colors.grey,
+                    ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 32),
+              if (_isRetrying)
+                const CircularProgressIndicator()
+              else
+                ElevatedButton.icon(
+                  onPressed: _retryInitialization,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('נסה שוב'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -225,27 +273,27 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      
+
       // Theme - Futuristic Football Design
       theme: futuristicDarkTheme,
       darkTheme: futuristicDarkTheme,
       themeMode: ThemeMode.dark, // Force dark mode for futuristic theme
-      
+
       // Localization & RTL
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('he'), // Default to Hebrew
-      
+
       // Router
       routerConfig: router,
-      
+
       // RTL Support & Error handling
       builder: (context, child) {
         // Set custom error widget builder
         ErrorWidget.builder = (FlutterErrorDetails details) {
           // Check if user is authenticated before redirecting
           final isAuthenticated = FirebaseAuth.instance.currentUser != null;
-          
+
           // Show error screen instead of red screen
           return Scaffold(
             body: Center(
@@ -254,7 +302,8 @@ class MyApp extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    const Icon(Icons.error_outline,
+                        size: 64, color: Colors.red),
                     const SizedBox(height: 16),
                     Text(
                       'שגיאה בטעינת האפליקציה',
@@ -287,7 +336,7 @@ class MyApp extends ConsumerWidget {
             ),
           );
         };
-        
+
         return Directionality(
           textDirection: TextDirection.rtl, // Hebrew is RTL
           child: child!,

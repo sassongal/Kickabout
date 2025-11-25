@@ -160,7 +160,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       if (hub != null) {
         final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
         if (!hubPermissions.canCreatePosts()) {
-          SnackbarHelper.showError(context, 'אין לך הרשאה ליצור פוסטים בהאב זה');
+          if (mounted) {
+            SnackbarHelper.showError(
+                context, 'אין לך הרשאה ליצור פוסטים בהאב זה');
+          }
           return;
         }
       }

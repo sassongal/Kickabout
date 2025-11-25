@@ -238,5 +238,10 @@ class AuthService {
       rethrow;
     }
   }
+  /// Dispose resources
+  void dispose() {
+    // No internal resources to dispose currently
+    // This method is kept for consistency and future use
+  }
 }
 

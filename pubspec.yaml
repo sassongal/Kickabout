@@ -59,6 +59,7 @@ dependencies:
   riverpod_annotation: ^2.6.1
   # Routing
   go_router: ^14.2.7
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +79,7 @@ flutter:
 
   # Assets
   assets:
+    - .env
     - assets/logo/
     - assets/images/
     - assets/icons/

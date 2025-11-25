@@ -11,7 +11,7 @@ import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Event Management Screen - "The Session Dashboard"
-/// 
+///
 /// This screen allows managers to:
 /// 1. View aggregate wins scoreboard (Blue: 6, Red: 4, Green: 2)
 /// 2. Log individual match results during the session
@@ -27,7 +27,8 @@ class EventManagementScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EventManagementScreen> createState() => _EventManagementScreenState();
+  ConsumerState<EventManagementScreen> createState() =>
+      _EventManagementScreenState();
 }
 
 class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
@@ -45,8 +46,9 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     setState(() => _isLoading = true);
     try {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-      final event = await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
-      
+      final event =
+          await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
+
       if (mounted) {
         setState(() {
           _event = event;
@@ -80,7 +82,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       final firestore = FirebaseFirestore.instance;
       final currentUserId = ref.read(currentUserIdProvider);
-      
+
       if (currentUserId == null) {
         throw Exception('משתמש לא מחובר');
       }
@@ -117,7 +119,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
       }
 
       // Add match to list
-      final updatedMatches = List<MatchResult>.from(_event!.matches)..add(matchResult);
+      final updatedMatches = List<MatchResult>.from(_event!.matches)
+        ..add(matchResult);
 
       // Update event
       await hubEventsRepo.updateHubEvent(
@@ -190,14 +193,17 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         ),
                         if (_event!.status == 'ongoing')
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.green.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Text(
                               'מתקיים',
-                              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                       ],
@@ -212,7 +218,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          DateFormat('dd/MM/yyyy HH:mm', 'he').format(_event!.eventDate),
+                          DateFormat('dd/MM/yyyy HH:mm', 'he')
+                              .format(_event!.eventDate),
                           style: FuturisticTypography.bodyMedium,
                         ),
                       ],
@@ -246,11 +253,13 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                       )
                     else
                       ..._event!.teams.map((team) {
-                        final wins = _event!.aggregateWins[team.color ?? ''] ?? 0;
+                        final wins =
+                            _event!.aggregateWins[team.color ?? ''] ?? 0;
                         final colorValue = team.colorValue ?? 0xFF2196F3;
                         final maxWins = _event!.aggregateWins.values.isEmpty
                             ? 1
-                            : _event!.aggregateWins.values.reduce((a, b) => a > b ? a : b);
+                            : _event!.aggregateWins.values
+                                .reduce((a, b) => a > b ? a : b);
                         final percentage = maxWins > 0 ? (wins / maxWins) : 0.0;
 
                         return Padding(
@@ -259,7 +268,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
@@ -269,13 +279,15 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                                         decoration: BoxDecoration(
                                           color: Color(colorValue),
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 2),
+                                          border: Border.all(
+                                              color: Colors.white, width: 2),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         team.color ?? team.name,
-                                        style: FuturisticTypography.bodyLarge.copyWith(
+                                        style: FuturisticTypography.bodyLarge
+                                            .copyWith(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -294,7 +306,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                                   value: percentage,
                                   minHeight: 24,
                                   backgroundColor: Colors.grey[300],
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(colorValue)),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(colorValue)),
                                 ),
                               ),
                             ],
@@ -306,6 +319,33 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // Generate Teams Button
+            if (_event!.registeredPlayerIds.isNotEmpty && _event!.teams.isEmpty)
+              Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push(
+                        '/events/${widget.eventId}/team-generator/config',
+                        extra: {
+                          'hubId': widget.hubId,
+                          'eventId': widget.eventId,
+                        },
+                      ),
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('צור כוחות אוטומטי'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: FuturisticColors.primary),
+                        foregroundColor: FuturisticColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
 
             // Log Match Result Button
             SizedBox(
@@ -417,12 +457,12 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
 
   Color _getColorForTeam(String? colorName) {
     if (colorName == null) return Colors.grey;
-    
+
     final team = _event?.teams.firstWhere(
       (t) => t.color == colorName,
       orElse: () => Team(teamId: '', name: '', colorValue: 0xFF2196F3),
     );
-    
+
     return Color(team?.colorValue ?? 0xFF2196F3);
   }
 }
@@ -447,9 +487,11 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
   void initState() {
     super.initState();
     if (widget.event.teams.isNotEmpty) {
-      _selectedTeamA = widget.event.teams[0].color ?? widget.event.teams[0].name;
+      _selectedTeamA =
+          widget.event.teams[0].color ?? widget.event.teams[0].name;
       if (widget.event.teams.length > 1) {
-        _selectedTeamB = widget.event.teams[1].color ?? widget.event.teams[1].name;
+        _selectedTeamB =
+            widget.event.teams[1].color ?? widget.event.teams[1].name;
       }
     }
   }
@@ -500,31 +542,29 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
                 labelText: 'קבוצה ב',
                 border: OutlineInputBorder(),
               ),
-              items: widget.event.teams
-                  .where((team) {
-                    final colorName = team.color ?? team.name;
-                    return colorName != _selectedTeamA;
-                  })
-                  .map((team) {
-                    final colorName = team.color ?? team.name;
-                    return DropdownMenuItem(
-                      value: colorName,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: Color(team.colorValue ?? 0xFF2196F3),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(colorName),
-                        ],
+              items: widget.event.teams.where((team) {
+                final colorName = team.color ?? team.name;
+                return colorName != _selectedTeamA;
+              }).map((team) {
+                final colorName = team.color ?? team.name;
+                return DropdownMenuItem(
+                  value: colorName,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: Color(team.colorValue ?? 0xFF2196F3),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    );
-                  }).toList(),
+                      const SizedBox(width: 8),
+                      Text(colorName),
+                    ],
+                  ),
+                );
+              }).toList(),
               onChanged: (value) => setState(() => _selectedTeamB = value),
             ),
             const SizedBox(height: 24),
@@ -541,7 +581,9 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.remove),
-                          onPressed: _scoreA > 0 ? () => setState(() => _scoreA--) : null,
+                          onPressed: _scoreA > 0
+                              ? () => setState(() => _scoreA--)
+                              : null,
                         ),
                         Container(
                           width: 60,
@@ -574,7 +616,9 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.remove),
-                          onPressed: _scoreB > 0 ? () => setState(() => _scoreB--) : null,
+                          onPressed: _scoreB > 0
+                              ? () => setState(() => _scoreB--)
+                              : null,
                         ),
                         Container(
                           width: 60,
@@ -625,4 +669,3 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
     );
   }
 }
-

@@ -144,11 +144,46 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // This is a backup in case user navigated directly to map without going through home screen
       await _ensureLocationPermission();
       
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('⚠️ Location services are disabled');
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'שירותי המיקום מושבתים. אנא הפעל את שירותי המיקום בהגדרות המכשיר.',
+          );
+          _setDefaultLocation();
+        }
+        return;
+      }
+
+      // Check permission status
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || 
+          permission == LocationPermission.deniedForever) {
+        debugPrint('⚠️ Location permission denied');
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'אין הרשאת מיקום. אנא אפשר גישה למיקום בהגדרות האפליקציה.',
+          );
+          _showManualLocationDialog();
+        }
+        return;
+      }
+      
       final locationService = ref.read(locationServiceProvider);
       
       // Load location in background to avoid blocking UI
       final position = await locationService.getCurrentLocation()
-          .timeout(const Duration(seconds: 10));
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint('⚠️ Location timeout');
+              return null;
+            },
+          );
 
       if (position != null) {
         if (mounted) {
@@ -186,6 +221,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         } else {
           // Show dialog for manual location entry
           if (mounted) {
+            SnackbarHelper.showError(
+              context,
+              'לא ניתן לקבל מיקום. אנא הזן את העיר שלך ידנית.',
+            );
             _showManualLocationDialog();
           } else {
             _setDefaultLocation();
@@ -197,6 +236,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // Use unawaited to allow UI to continue rendering
       _loadMarkersInBackground();
     } catch (e) {
+      debugPrint('❌ Error loading location: $e');
       // If location fails, still try to load hubs with default location
       setState(() {
         _currentPosition = Position(
@@ -245,7 +285,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
       
       if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+        SnackbarHelper.showError(
+          context, 
+          'שגיאה בקבלת מיקום. המפה תוצג במיקום ברירת מחדל (ירושלים).',
+        );
       }
     } finally {
       // Always clear loading state, even if something failed

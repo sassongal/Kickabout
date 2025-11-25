@@ -138,3 +138,24 @@ logs/
 # client/
 # client_backup/
 # kickabout/
+
+# Generated files
+*.g.dart
+*.freezed.dart
+pubspec.lock
+# Antigravity internal artifacts
+.gemini/
+# Local environment files
+.env
+# Unused generated markdown/docs
+LOCATION_TROUBLESHOOTING.md
+PLAYER_PROFILE_IMPLEMENTATION.md
+error_messages.dart
+lib/l10n/fix_arb_metadata.dart
+lib/routing/app_paths.dart
+lib/screens/event/team_generator_config_screen.dart
+lib/screens/event/team_generator_result_screen.dart
+lib/utils/city_utils.dart
+lib/utils/error_messages.dart
+lib/widgets/avatar_picker.dart
+untranslated_messages.txt

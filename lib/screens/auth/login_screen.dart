@@ -12,6 +12,7 @@ import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/models.dart' as model;
 
 /// Futuristic login screen with seamless one-tap sign-in
 class LoginScreen extends ConsumerStatefulWidget {
@@ -104,7 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         debugPrint('✅ Auto-login successful!');
         
         // Navigate to home (router will handle onboarding if needed)
-        context.go('/');
+        await _navigateToEditProfile();
       } on FirebaseAuthException catch (e) {
         if (e.code == 'user-not-found' || e.code == 'wrong-password') {
           debugPrint('⚠️ Auto-login failed: Invalid credentials. Please check Env.autoLoginEmail and Env.autoLoginPassword');
@@ -158,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
 
       if (mounted) {
-        context.go('/');
+        await _navigateToEditProfile();
       }
     } catch (e) {
       if (mounted) {
@@ -198,7 +199,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
 
       if (mounted) {
-        context.go('/');
+        await _navigateToEditProfile();
       }
     } catch (e) {
       if (mounted) {
@@ -239,7 +240,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
 
       if (mounted) {
-        context.go('/');
+        await _navigateToEditProfile();
       }
     } catch (e) {
       if (mounted) {
@@ -268,12 +269,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
-  Future<void> _signInWithApple() async {
+  /// Navigates to the edit‑profile screen, creating a minimal user document if needed.
+  Future<void> _navigateToEditProfile() async {
+    final authService = ref.read(authServiceProvider);
+    final uid = authService.currentUser?.uid;
+    if (uid == null) return;
+
+    final usersRepo = ref.read(usersRepositoryProvider);
+    // Try to fetch the user document.
+    model.User? existingUser;
+    try {
+      existingUser = await usersRepo.getUser(uid);
+    } catch (_) {
+      // ignore – will create below if null.
+    }
+
+    if (existingUser == null) {
+      // Create a minimal user document so the edit screen has something to edit.
+      final newUser = model.User(
+        uid: uid,
+        name: '',
+        email: authService.currentUser?.email ?? '',
+        createdAt: DateTime.now(),
+      );
+      await usersRepo.setUser(newUser);
+    }
+
+    if (!mounted) return;
+    context.push('/profile/$uid/edit');
+  }
+
+        Future<void> _signInWithApple() async {
     if (!Env.isFirebaseAvailable) {
       SnackbarHelper.showError(context, 'Firebase not available');
       return;
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
@@ -289,7 +321,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
 
       if (mounted) {
-        context.go('/');
+        await _navigateToEditProfile();
       }
     } catch (e) {
       if (mounted) {
@@ -304,6 +336,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
     }
   }
+
 
   Future<void> _showPasswordResetDialog(BuildContext context) async {
     final emailController = TextEditingController(text: _emailController.text);

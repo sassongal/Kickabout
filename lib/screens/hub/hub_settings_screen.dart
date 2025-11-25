@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kickadoor/l10n/app_localizations.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
@@ -26,6 +27,7 @@ class HubSettingsScreen extends ConsumerStatefulWidget {
 class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hubsRepo = ref.watch(hubsRepositoryProvider);
     final hubStream = hubsRepo.watchHub(widget.hubId);
 
@@ -36,21 +38,22 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
       data: (role) {
         if (role != UserRole.admin) {
           return FuturisticScaffold(
-            title: 'הגדרות Hub',
-            body: const Center(
+            title: l10n.hubSettingsTitle,
+            body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.lock, size: 64, color: Colors.orange),
-                  SizedBox(height: 16),
+                  const Icon(Icons.lock, size: 64, color: Colors.orange),
+                  const SizedBox(height: 16),
                   Text(
-                    'אין לך הרשאת ניהול למסך זה',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    l10n.noAdminPermissionForScreen,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    'רק מנהלי Hub יכולים לשנות הגדרות',
-                    style: TextStyle(color: Colors.grey),
+                    l10n.onlyHubAdminsCanChangeSettings,
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
@@ -63,25 +66,25 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return FuturisticScaffold(
-                title: 'הגדרות Hub',
-                body: const FuturisticLoadingState(message: 'טוען הגדרות...'),
+                title: l10n.hubSettingsTitle,
+                body: FuturisticLoadingState(message: l10n.loadingSettings),
               );
             }
 
             if (snapshot.hasError || snapshot.data == null) {
               return FuturisticScaffold(
-                title: 'הגדרות Hub',
+                title: l10n.hubSettingsTitle,
                 body: FuturisticEmptyState(
                   icon: Icons.error_outline,
-                  title: 'שגיאה',
-                  message: snapshot.error?.toString() ?? 'Hub לא נמצא',
+                  title: l10n.error,
+                  message: snapshot.error?.toString() ?? l10n.hubNotFound,
                   action: ElevatedButton.icon(
                     onPressed: () {
                       // Retry by rebuilding
                       setState(() {});
                     },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('נסה שוב'),
+                    label: Text(l10n.tryAgain),
                   ),
                 ),
               );
@@ -91,264 +94,275 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
             final settings = hub.settings;
 
             return FuturisticScaffold(
-              title: 'הגדרות Hub',
+              title: l10n.hubSettingsTitle,
               body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Rating Mode
-              Card(
-                child: ExpansionTile(
-                  title: const Text('מצב דירוג'),
-                  subtitle: Text(
-                    settings['ratingMode'] == 'advanced'
-                        ? 'דירוג מתקדם (1-10)'
-                        : 'דירוג בסיסי (1-7)',
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Rating Mode
+                  Card(
+                    child: ExpansionTile(
+                      title: Text(l10n.ratingMode),
+                      subtitle: Text(
+                        settings['ratingMode'] == 'advanced'
+                            ? l10n.advancedRating
+                            : l10n.basicRating,
+                      ),
+                      children: [
+                        ListTile(
+                          title: Text(l10n.basicRating),
+                          subtitle: Text(l10n.basicRatingDescription),
+                          leading: Radio<String>(
+                            value: 'basic',
+                            // ignore: deprecated_member_use
+                            groupValue:
+                                settings['ratingMode'] as String? ?? 'basic',
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              if (value != null) {
+                                _updateSetting('ratingMode', value);
+                              }
+                            },
+                          ),
+                          onTap: () => _updateSetting('ratingMode', 'basic'),
+                        ),
+                        ListTile(
+                          title: Text(l10n.advancedRating),
+                          subtitle: Text(l10n.advancedRatingDescription),
+                          leading: Radio<String>(
+                            value: 'advanced',
+                            // ignore: deprecated_member_use
+                            groupValue:
+                                settings['ratingMode'] as String? ?? 'basic',
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              if (value != null) {
+                                _updateSetting('ratingMode', value);
+                              }
+                            },
+                          ),
+                          onTap: () => _updateSetting('ratingMode', 'advanced'),
+                        ),
+                      ],
+                    ),
                   ),
-                  children: [
-                    ListTile(
-                      title: const Text('דירוג בסיסי (1-7)'),
-                      subtitle: const Text('ציון יחיד לכל שחקן'),
-                      leading: Radio<String>(
-                        value: 'basic',
-                        // ignore: deprecated_member_use
-                        groupValue: settings['ratingMode'] as String? ?? 'basic',
-                        // ignore: deprecated_member_use
-                        onChanged: (value) {
-                          if (value != null) {
-                            _updateSetting('ratingMode', value);
-                          }
-                        },
-                      ),
-                      onTap: () => _updateSetting('ratingMode', 'basic'),
-                    ),
-                    ListTile(
-                      title: const Text('דירוג מתקדם (1-10)'),
-                      subtitle: const Text('8 קטגוריות דירוג'),
-                      leading: Radio<String>(
-                        value: 'advanced',
-                        // ignore: deprecated_member_use
-                        groupValue: settings['ratingMode'] as String? ?? 'basic',
-                        // ignore: deprecated_member_use
-                        onChanged: (value) {
-                          if (value != null) {
-                            _updateSetting('ratingMode', value);
-                          }
-                        },
-                      ),
-                      onTap: () => _updateSetting('ratingMode', 'advanced'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-              // Privacy Settings
-              Card(
-                child: ExpansionTile(
-                  title: const Text('הגדרות פרטיות'),
-                  subtitle: Text(
-                    settings['privacy'] == 'private'
-                        ? 'Hub פרטי'
-                        : 'Hub פתוח',
+                  // Privacy Settings
+                  Card(
+                    child: ExpansionTile(
+                      title: Text(l10n.privacySettings),
+                      subtitle: Text(
+                        settings['privacy'] == 'private'
+                            ? l10n.privateHub
+                            : l10n.publicHub,
+                      ),
+                      children: [
+                        ListTile(
+                          title: Text(l10n.publicHub),
+                          subtitle: Text(l10n.publicHubDescription),
+                          leading: Radio<String>(
+                            value: 'public',
+                            // ignore: deprecated_member_use
+                            groupValue:
+                                settings['privacy'] as String? ?? 'public',
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              if (value != null) {
+                                _updateSetting('privacy', value);
+                              }
+                            },
+                          ),
+                          onTap: () => _updateSetting('privacy', 'public'),
+                        ),
+                        ListTile(
+                          title: Text(l10n.privateHub),
+                          subtitle: Text(l10n.privateHubDescription),
+                          leading: Radio<String>(
+                            value: 'private',
+                            // ignore: deprecated_member_use
+                            groupValue:
+                                settings['privacy'] as String? ?? 'public',
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              if (value != null) {
+                                _updateSetting('privacy', value);
+                              }
+                            },
+                          ),
+                          onTap: () => _updateSetting('privacy', 'private'),
+                        ),
+                      ],
+                    ),
                   ),
-                  children: [
-                    ListTile(
-                      title: const Text('Hub פתוח'),
-                      subtitle: const Text('כל אחד יכול להצטרף'),
-                      leading: Radio<String>(
-                        value: 'public',
-                        // ignore: deprecated_member_use
-                        groupValue: settings['privacy'] as String? ?? 'public',
-                        // ignore: deprecated_member_use
-                        onChanged: (value) {
-                          if (value != null) {
-                            _updateSetting('privacy', value);
-                          }
-                        },
-                      ),
-                      onTap: () => _updateSetting('privacy', 'public'),
-                    ),
-                    ListTile(
-                      title: const Text('Hub פרטי'),
-                      subtitle: const Text('רק בהזמנה'),
-                      leading: Radio<String>(
-                        value: 'private',
-                        // ignore: deprecated_member_use
-                        groupValue: settings['privacy'] as String? ?? 'public',
-                        // ignore: deprecated_member_use
-                        onChanged: (value) {
-                          if (value != null) {
-                            _updateSetting('privacy', value);
-                          }
-                        },
-                      ),
-                      onTap: () => _updateSetting('privacy', 'private'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-              // Join Mode
-              Card(
-                child: ExpansionTile(
-                  title: const Text('מצב הרשמה'),
-                  subtitle: Text(
-                    settings['joinMode'] == 'approval'
-                        ? 'דורש אישור'
-                        : 'הצטרפות אוטומטית',
+                  // Join Mode
+                  Card(
+                    child: ExpansionTile(
+                      title: Text(l10n.joinMode),
+                      subtitle: Text(
+                        settings['joinMode'] == 'approval'
+                            ? l10n.approvalRequired
+                            : l10n.autoJoin,
+                      ),
+                      children: [
+                        ListTile(
+                          title: Text(l10n.autoJoin),
+                          subtitle: Text(l10n.autoJoinDescription),
+                          leading: Radio<String>(
+                            value: 'auto',
+                            // ignore: deprecated_member_use
+                            groupValue:
+                                settings['joinMode'] as String? ?? 'auto',
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              if (value != null) {
+                                _updateSetting('joinMode', value);
+                              }
+                            },
+                          ),
+                          onTap: () => _updateSetting('joinMode', 'auto'),
+                        ),
+                        ListTile(
+                          title: Text(l10n.approvalRequired),
+                          subtitle: Text(l10n.approvalRequiredDescription),
+                          leading: Radio<String>(
+                            value: 'approval',
+                            // ignore: deprecated_member_use
+                            groupValue:
+                                settings['joinMode'] as String? ?? 'auto',
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              if (value != null) {
+                                _updateSetting('joinMode', value);
+                              }
+                            },
+                          ),
+                          onTap: () => _updateSetting('joinMode', 'approval'),
+                        ),
+                      ],
+                    ),
                   ),
-                  children: [
-                    ListTile(
-                      title: const Text('הצטרפות אוטומטית'),
-                      subtitle: const Text('כל אחד יכול להצטרף מיד'),
-                      leading: Radio<String>(
-                        value: 'auto',
-                        // ignore: deprecated_member_use
-                        groupValue: settings['joinMode'] as String? ?? 'auto',
-                        // ignore: deprecated_member_use
-                        onChanged: (value) {
-                          if (value != null) {
-                            _updateSetting('joinMode', value);
-                          }
-                        },
-                      ),
-                      onTap: () => _updateSetting('joinMode', 'auto'),
-                    ),
-                    ListTile(
-                      title: const Text('דורש אישור'),
-                      subtitle: const Text('מנהל Hub צריך לאשר'),
-                      leading: Radio<String>(
-                        value: 'approval',
-                        // ignore: deprecated_member_use
-                        groupValue: settings['joinMode'] as String? ?? 'auto',
-                        // ignore: deprecated_member_use
-                        onChanged: (value) {
-                          if (value != null) {
-                            _updateSetting('joinMode', value);
-                          }
-                        },
-                      ),
-                      onTap: () => _updateSetting('joinMode', 'approval'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-              // Notifications
-              Card(
-                child: SwitchListTile(
-                  title: const Text('התראות'),
-                  subtitle: const Text('שלח התראות לחברי Hub על משחקים חדשים'),
-                  value: settings['notificationsEnabled'] as bool? ?? true,
-                  onChanged: (value) => _updateSetting('notificationsEnabled', value),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Chat
-              Card(
-                child: SwitchListTile(
-                  title: const Text('צ\'אט Hub'),
-                  subtitle: const Text('אפשר צ\'אט בין חברי Hub'),
-                  value: settings['chatEnabled'] as bool? ?? true,
-                  onChanged: (value) => _updateSetting('chatEnabled', value),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Feed
-              Card(
-                child: SwitchListTile(
-                  title: const Text('פיד פעילות'),
-                  subtitle: const Text('אפשר פוסטים בפיד Hub'),
-                  value: settings['feedEnabled'] as bool? ?? true,
-                  onChanged: (value) => _updateSetting('feedEnabled', value),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Venues Management
-              Card(
-                child: ListTile(
-                  title: const Text('ניהול מגרשים'),
-                  subtitle: const Text('הוסף וערוך מגרשים של ההוב'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => context.push('/venues/search?hubId=${widget.hubId}&select=true'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Hub Rules
-              Card(
-                child: ExpansionTile(
-                  title: const Text('חוקי האב'),
-                  subtitle: Text(
-                    hub.hubRules != null && hub.hubRules!.isNotEmpty
-                        ? '${hub.hubRules!.length} תווים'
-                        : 'אין חוקים מוגדרים',
+                  // Notifications
+                  Card(
+                    child: SwitchListTile(
+                      title: Text(l10n.notifications),
+                      subtitle: Text(l10n.notificationsDescription),
+                      value: settings['notificationsEnabled'] as bool? ?? true,
+                      onChanged: (value) =>
+                          _updateSetting('notificationsEnabled', value),
+                    ),
                   ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: _HubRulesEditor(
-                        hubId: widget.hubId,
-                        initialRules: hub.hubRules ?? '',
+                  const SizedBox(height: 8),
+
+                  // Chat
+                  Card(
+                    child: SwitchListTile(
+                      title: Text(l10n.hubChat),
+                      subtitle: Text(l10n.hubChatDescription),
+                      value: settings['chatEnabled'] as bool? ?? true,
+                      onChanged: (value) =>
+                          _updateSetting('chatEnabled', value),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Feed
+                  Card(
+                    child: SwitchListTile(
+                      title: Text(l10n.activityFeed),
+                      subtitle: Text(l10n.activityFeedDescription),
+                      value: settings['feedEnabled'] as bool? ?? true,
+                      onChanged: (value) =>
+                          _updateSetting('feedEnabled', value),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Venues Management
+                  Card(
+                    child: ListTile(
+                      title: Text(l10n.manageVenues),
+                      subtitle: Text(l10n.manageVenuesDescription),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () => context.push(
+                          '/venues/search?hubId=${widget.hubId}&select=true'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Hub Rules
+                  Card(
+                    child: ExpansionTile(
+                      title: Text(l10n.hubRules),
+                      subtitle: Text(
+                        hub.hubRules != null && hub.hubRules!.isNotEmpty
+                            ? l10n.characterCount(hub.hubRules!.length)
+                            : l10n.noRulesDefined,
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: _HubRulesEditor(
+                            hubId: widget.hubId,
+                            initialRules: hub.hubRules ?? '',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Payment Link
+                  Card(
+                    child: ExpansionTile(
+                      title: Text(l10n.paymentLinkLabel),
+                      subtitle: Text(
+                        hub.paymentLink != null && hub.paymentLink!.isNotEmpty
+                            ? l10n.defined
+                            : l10n.notDefined,
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: _PaymentLinkEditor(
+                            hubId: widget.hubId,
+                            initialLink: hub.paymentLink ?? '',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Invitations
+                  Card(
+                    child: ListTile(
+                      title: Text(l10n.hubInvitations),
+                      subtitle: Text(l10n.hubInvitationsDescription),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              HubInvitationsScreen(hubId: widget.hubId),
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Payment Link
-              Card(
-                child: ExpansionTile(
-                  title: const Text('קישור תשלום (PayBox)'),
-                  subtitle: Text(
-                    hub.paymentLink != null && hub.paymentLink!.isNotEmpty
-                        ? 'מוגדר'
-                        : 'לא מוגדר',
                   ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: _PaymentLinkEditor(
-                        hubId: widget.hubId,
-                        initialLink: hub.paymentLink ?? '',
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-              const SizedBox(height: 8),
-              // Invitations
-              Card(
-                child: ListTile(
-                  title: const Text('הזמנות ל-Hub'),
-                  subtitle: const Text('נהל קישורי הזמנה וקודים'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => HubInvitationsScreen(hubId: widget.hubId),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
+            );
           },
         );
       },
       loading: () => FuturisticScaffold(
-        title: 'הגדרות Hub',
-        body: const FuturisticLoadingState(message: 'בודק הרשאות...'),
+        title: l10n.hubSettingsTitle,
+        body: FuturisticLoadingState(message: l10n.checkingPermissions),
       ),
       error: (error, stack) => FuturisticScaffold(
-        title: 'הגדרות Hub',
+        title: l10n.hubSettingsTitle,
         body: FuturisticEmptyState(
           icon: Icons.error_outline,
-          title: 'שגיאה בבדיקת הרשאות',
+          title: l10n.permissionCheckError,
           message: error.toString(),
         ),
       ),
@@ -356,12 +370,13 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
   }
 
   Future<void> _updateSetting(String key, dynamic value) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(widget.hubId);
-      if (!context.mounted) return;
+      if (!mounted) return;
       if (hub == null) {
-        SnackbarHelper.showError(context, 'Hub לא נמצא');
+        SnackbarHelper.showError(context, l10n.hubNotFound);
         return;
       }
 
@@ -372,11 +387,11 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
         'settings': updatedSettings,
       });
 
-      if (!context.mounted) return;
-      SnackbarHelper.showSuccess(context, 'ההגדרה עודכנה בהצלחה');
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, l10n.settingUpdatedSuccess);
     } catch (e) {
-      if (!context.mounted) return;
-      SnackbarHelper.showError(context, 'שגיאה בעדכון הגדרה: $e');
+      if (!mounted) return;
+      SnackbarHelper.showError(context, l10n.settingUpdateError(e.toString()));
     }
   }
 }
@@ -412,6 +427,7 @@ class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
   }
 
   Future<void> _saveRules() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
     });
@@ -423,10 +439,10 @@ class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
       });
 
       if (!mounted) return;
-      SnackbarHelper.showSuccess(context, 'חוקי האב נשמרו בהצלחה');
+      SnackbarHelper.showSuccess(context, l10n.hubRulesSavedSuccess);
     } catch (e) {
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'שגיאה בשמירת חוקים: $e');
+      SnackbarHelper.showError(context, l10n.hubRulesSaveError(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -438,16 +454,17 @@ class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextFormField(
           controller: _rulesController,
-          decoration: const InputDecoration(
-            labelText: 'חוקי האב',
-            hintText: 'הזן את חוקי האב כאן...',
-            border: OutlineInputBorder(),
-            helperText: 'השתמש בשורות נפרדות לכל חוק',
+          decoration: InputDecoration(
+            labelText: l10n.hubRules,
+            hintText: l10n.hubRulesHint,
+            border: const OutlineInputBorder(),
+            helperText: l10n.hubRulesHelper,
           ),
           maxLines: 10,
           minLines: 5,
@@ -462,7 +479,7 @@ class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.save),
-          label: Text(_isSaving ? 'שומר...' : 'שמור חוקים'),
+          label: Text(_isSaving ? l10n.saving : l10n.saveRules),
         ),
       ],
     );
@@ -500,6 +517,7 @@ class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
   }
 
   Future<void> _saveLink() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
     });
@@ -507,16 +525,17 @@ class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final link = _linkController.text.trim();
-      
+
       await hubsRepo.updateHub(widget.hubId, {
         'paymentLink': link.isNotEmpty ? link : null,
       });
 
       if (!mounted) return;
-      SnackbarHelper.showSuccess(context, 'קישור התשלום נשמר בהצלחה');
+      SnackbarHelper.showSuccess(context, l10n.paymentLinkSavedSuccess);
     } catch (e) {
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'שגיאה בשמירת קישור: $e');
+      SnackbarHelper.showError(
+          context, l10n.paymentLinkSaveError(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -528,16 +547,17 @@ class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextFormField(
           controller: _linkController,
-          decoration: const InputDecoration(
-            labelText: 'קישור PayBox/Bit',
-            hintText: 'https://paybox.co.il/...',
-            border: OutlineInputBorder(),
-            helperText: 'הזן את קישור התשלום (PayBox או Bit)',
+          decoration: InputDecoration(
+            labelText: l10n.paymentLinkBitLabel,
+            hintText: l10n.paymentLinkHint,
+            border: const OutlineInputBorder(),
+            helperText: l10n.paymentLinkHelper,
           ),
           keyboardType: TextInputType.url,
         ),
@@ -551,10 +571,9 @@ class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.save),
-          label: Text(_isSaving ? 'שומר...' : 'שמור קישור'),
+          label: Text(_isSaving ? l10n.saving : l10n.saveLink),
         ),
       ],
     );
   }
 }
-

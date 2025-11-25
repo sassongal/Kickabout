@@ -14,6 +14,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       avatarColor: json['avatarColor'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
       city: json['city'] as String?,
+      displayName: json['displayName'] as String?,
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
       birthDate: _$JsonConverterFromJson<Object, DateTime>(
@@ -31,7 +32,6 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
           const [],
       currentRankScore: (json['currentRankScore'] as num?)?.toDouble() ?? 5.0,
       preferredPosition: json['preferredPosition'] as String? ?? 'Midfielder',
-      playingStyle: json['playingStyle'] as String?,
       totalParticipations: (json['totalParticipations'] as num?)?.toInt() ?? 0,
       location: const NullableGeoPointConverter().fromJson(json['location']),
       geohash: json['geohash'] as String?,
@@ -59,6 +59,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'avatarColor': instance.avatarColor,
       'phoneNumber': instance.phoneNumber,
       'city': instance.city,
+      'displayName': instance.displayName,
       'firstName': instance.firstName,
       'lastName': instance.lastName,
       'birthDate': _$JsonConverterToJson<Object, DateTime>(
@@ -72,7 +73,6 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'hubIds': instance.hubIds,
       'currentRankScore': instance.currentRankScore,
       'preferredPosition': instance.preferredPosition,
-      'playingStyle': instance.playingStyle,
       'totalParticipations': instance.totalParticipations,
       'location': const NullableGeoPointConverter().toJson(instance.location),
       'geohash': instance.geohash,

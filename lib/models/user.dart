@@ -18,27 +18,36 @@ class User with _$User {
     String? phoneNumber,
     String? city, // עיר מגורים
     // New profile fields
+    String?
+        displayName, // Custom nickname (shown to others) - independent from firstName/lastName
     String? firstName,
     String? lastName,
     @TimestampConverter() DateTime? birthDate,
     String? favoriteTeamId, // ID of favorite team from Firestore
     String? facebookProfileUrl,
     String? instagramProfileUrl,
-    @Default('available') String availabilityStatus, // available, busy, notAvailable (deprecated, use isActive)
+    @Default('available')
+    String
+        availabilityStatus, // available, busy, notAvailable (deprecated, use isActive)
     @Default(true) bool isActive, // true = פתוח להאבים והזמנות, false = לא פתוח
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> hubIds,
     // DEPRECATED: currentRankScore - Use managerRatings in Hub model instead
     // Keeping for backward compatibility, but should not be used for new features
-    @Default(5.0) double currentRankScore, // DEPRECATED: Use Hub.managerRatings instead
-    @Default('Midfielder') String preferredPosition, // Optional - for team balancing display
-    String? playingStyle, // goalkeeper, defensive, offensive (optional - for team balancing)
-    @Default(0) int totalParticipations, // Total games played (for milestone badges)
+    @Default(5.0)
+    double currentRankScore, // DEPRECATED: Use Hub.managerRatings instead
+    @Default('Midfielder')
+    String
+        preferredPosition, // 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'
+    // REMOVED: playingStyle - merged into preferredPosition
+    @Default(0)
+    int totalParticipations, // Total games played (for milestone badges)
     @NullableGeoPointConverter() GeoPoint? location,
     String? geohash,
     String? region, // אזור: צפון, מרכז, דרום, ירושלים
     // Denormalized fields (updated by Cloud Functions, not written by client)
-    @Default(0) int followerCount, // Denormalized: Count of followers (updated by onFollowCreated)
+    @Default(0)
+    int followerCount, // Denormalized: Count of followers (updated by onFollowCreated)
     // Privacy settings - control what data is visible in search and profile
     @Default({
       'hideFromSearch': false,
@@ -47,7 +56,8 @@ class User with _$User {
       'hideCity': false,
       'hideStats': false,
       'hideRatings': false,
-    }) Map<String, bool> privacySettings,
+    })
+    Map<String, bool> privacySettings,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
@@ -55,11 +65,17 @@ class User with _$User {
 
 /// Extension to add displayName getter to User
 extension UserDisplayName on User {
-  /// Get display name - prefers firstName + lastName, falls back to name
+  /// Get display name - prioritizes custom displayName, then firstName + lastName, falls back to name
   String get displayName {
+    // 1. Prioritize custom displayName if set
+    if (this.displayName != null && this.displayName!.isNotEmpty) {
+      return this.displayName!;
+    }
+    // 2. Try firstName + lastName
     if (firstName != null && lastName != null) {
       return '$firstName $lastName';
     }
+    // 3. Fall back to generic name
     return name;
   }
 }
@@ -74,4 +90,3 @@ class UserConverter implements JsonConverter<User, Map<String, dynamic>> {
   @override
   Map<String, dynamic> toJson(User object) => object.toJson();
 }
-

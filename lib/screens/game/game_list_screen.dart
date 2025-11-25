@@ -247,12 +247,12 @@ class _GameCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Score row (prominent)
-              if (game.teamAScore != null && game.teamBScore != null)
+              if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '${game.teamAScore}',
+                      '${game.legacyTeamAScore}',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,
@@ -268,7 +268,7 @@ class _GameCard extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      '${game.teamBScore}',
+                      '${game.legacyTeamBScore}',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,
@@ -276,7 +276,7 @@ class _GameCard extends ConsumerWidget {
                     ),
                   ],
                 ),
-              if (game.teamAScore != null && game.teamBScore != null)
+              if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
                 const SizedBox(height: 12),
               
               // Date
