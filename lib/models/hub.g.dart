@@ -22,7 +22,11 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
           : const TimestampMapConverter()
               .fromJson(json['memberJoinDates'] as Map<String, dynamic>),
       settings: json['settings'] as Map<String, dynamic>? ??
-          const {'ratingMode': 'basic'},
+          const {
+            'ratingMode': 'basic',
+            'showManagerContactInfo': true,
+            'allowJoinRequests': true
+          },
       roles: (json['roles'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, e as String),
           ) ??

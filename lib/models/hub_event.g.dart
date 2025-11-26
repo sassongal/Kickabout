@@ -24,6 +24,9 @@ _$HubEventImpl _$$HubEventImplFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       status: json['status'] as String? ?? 'upcoming',
+      isStarted: json['isStarted'] as bool? ?? false,
+      startedAt: _$JsonConverterFromJson<Object, DateTime>(
+          json['startedAt'], const TimestampConverter().fromJson),
       location: json['location'] as String?,
       locationPoint:
           const NullableGeoPointConverter().fromJson(json['locationPoint']),
@@ -61,6 +64,9 @@ Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
       'updatedAt': const TimestampConverter().toJson(instance.updatedAt),
       'registeredPlayerIds': instance.registeredPlayerIds,
       'status': instance.status,
+      'isStarted': instance.isStarted,
+      'startedAt': _$JsonConverterToJson<Object, DateTime>(
+          instance.startedAt, const TimestampConverter().toJson),
       'location': instance.location,
       'locationPoint':
           const NullableGeoPointConverter().toJson(instance.locationPoint),
@@ -76,3 +82,15 @@ Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
       'aggregateWins': instance.aggregateWins,
       'gameId': instance.gameId,
     };
+
+Value? _$JsonConverterFromJson<Json, Value>(
+  Object? json,
+  Value? Function(Json json) fromJson,
+) =>
+    json == null ? null : fromJson(json as Json);
+
+Json? _$JsonConverterToJson<Json, Value>(
+  Value? value,
+  Json? Function(Value value) toJson,
+) =>
+    value == null ? null : toJson(value);

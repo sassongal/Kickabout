@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/services/scouting_service.dart';
@@ -168,7 +167,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
 
             // Region filter
             DropdownButtonFormField<String>(
-              value: _selectedRegion,
+              initialValue: _selectedRegion,
               decoration: const InputDecoration(
                 labelText: 'איזור מגורים',
                 border: OutlineInputBorder(),

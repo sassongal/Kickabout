@@ -44,7 +44,9 @@ class Game with _$Game {
     @Default([]) List<Team> teams, // List of teams created in TeamMaker
     // Legacy single-match scores (deprecated - use matches list for session mode)
     // These fields are kept for backward compatibility with old games
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'teamAScore') int? legacyTeamAScore, // Legacy: Score for team A - use matches for session mode
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'teamBScore') int? legacyTeamBScore, // Legacy: Score for team B - use matches for session mode
     // Multi-match session support (for Events converted to Games)
     @Default([]) List<MatchResult> matches, // List of individual match outcomes within this session
@@ -92,3 +94,4 @@ class GameStatusConverter implements JsonConverter<GameStatus, String> {
   @override
   String toJson(GameStatus object) => object.toFirestore();
 }
+// ignore_for_file: invalid_annotation_target

@@ -113,7 +113,7 @@ class PlayerAvatar extends StatelessWidget {
             ),
           ),
         // Avatar circle
-        Container(
+        SizedBox(
           width: avatarRadius * 2,
           height: avatarRadius * 2,
           child: user.photoUrl != null && user.photoUrl!.isNotEmpty

@@ -86,7 +86,6 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
   Widget build(BuildContext context) {
     final gamesRepo = ref.watch(gamesRepositoryProvider);
     final eventsRepo = ref.watch(hubEventsRepositoryProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
 
     // OPTIMIZED: Use pagination - load 20 items at a time
     // Get games stream with pagination
@@ -719,7 +718,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
 
           // Region filter
           DropdownButtonFormField<String>(
-            value: _region,
+            initialValue: _region,
             decoration: const InputDecoration(
               labelText: 'איזור',
               border: OutlineInputBorder(),
@@ -740,7 +739,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
 
           // Game type filter
           DropdownButtonFormField<String>(
-            value: _gameType,
+            initialValue: _gameType,
             decoration: const InputDecoration(
               labelText: 'סוג משחק',
               border: OutlineInputBorder(),
@@ -848,4 +847,3 @@ class _FiltersSheetState extends State<_FiltersSheet> {
     );
   }
 }
-

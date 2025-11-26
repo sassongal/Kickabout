@@ -100,7 +100,6 @@ class PushNotificationIntegrationService {
         if (memberId == excludeUserId) continue;
 
         try {
-          final dateFormat = '${eventDate.day}/${eventDate.month}/${eventDate.year}';
           final notification = Notification(
             notificationId: '',
             userId: memberId,
@@ -346,4 +345,3 @@ class PushNotificationIntegrationService {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
-

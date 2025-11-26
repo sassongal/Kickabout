@@ -20,11 +20,11 @@ class EditGameResultDialog extends StatefulWidget {
   }) onSave;
 
   const EditGameResultDialog({
-    Key? key,
+    super.key,
     required this.game,
     required this.players,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<EditGameResultDialog> createState() => _EditGameResultDialogState();
@@ -353,7 +353,7 @@ class _EditGameResultDialogState extends State<EditGameResultDialog> {
                     Text('MVP', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _mvpPlayerId,
+                      initialValue: _mvpPlayerId,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'בחר MVP',

@@ -368,7 +368,7 @@ class CacheService {
       'persistent': {
         'hits': _persistentCacheHits,
         'misses': _persistentCacheMisses,
-        'hitRate': persistentHitRate.toStringAsFixed(2) + '%',
+        'hitRate': '${persistentHitRate.toStringAsFixed(2)}%',
         'initialized': _prefsInitialized,
       },
     };

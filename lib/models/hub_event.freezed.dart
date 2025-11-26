@@ -35,6 +35,11 @@ mixin _$HubEvent {
       throw _privateConstructorUsedError; // Players who registered
   String get status =>
       throw _privateConstructorUsedError; // upcoming, ongoing, completed, cancelled
+  bool get isStarted =>
+      throw _privateConstructorUsedError; // Explicit flag for in-progress session
+  @TimestampConverter()
+  DateTime? get startedAt =>
+      throw _privateConstructorUsedError; // When manager marked start
   String? get location => throw _privateConstructorUsedError;
   @NullableGeoPointConverter()
   GeoPoint? get locationPoint => throw _privateConstructorUsedError;
@@ -88,6 +93,8 @@ abstract class $HubEventCopyWith<$Res> {
       @TimestampConverter() DateTime updatedAt,
       List<String> registeredPlayerIds,
       String status,
+      bool isStarted,
+      @TimestampConverter() DateTime? startedAt,
       String? location,
       @NullableGeoPointConverter() GeoPoint? locationPoint,
       String? geohash,
@@ -128,6 +135,8 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
     Object? updatedAt = null,
     Object? registeredPlayerIds = null,
     Object? status = null,
+    Object? isStarted = null,
+    Object? startedAt = freezed,
     Object? location = freezed,
     Object? locationPoint = freezed,
     Object? geohash = freezed,
@@ -183,6 +192,14 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
+      isStarted: null == isStarted
+          ? _value.isStarted
+          : isStarted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      startedAt: freezed == startedAt
+          ? _value.startedAt
+          : startedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -258,6 +275,8 @@ abstract class _$$HubEventImplCopyWith<$Res>
       @TimestampConverter() DateTime updatedAt,
       List<String> registeredPlayerIds,
       String status,
+      bool isStarted,
+      @TimestampConverter() DateTime? startedAt,
       String? location,
       @NullableGeoPointConverter() GeoPoint? locationPoint,
       String? geohash,
@@ -296,6 +315,8 @@ class __$$HubEventImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? registeredPlayerIds = null,
     Object? status = null,
+    Object? isStarted = null,
+    Object? startedAt = freezed,
     Object? location = freezed,
     Object? locationPoint = freezed,
     Object? geohash = freezed,
@@ -351,6 +372,14 @@ class __$$HubEventImplCopyWithImpl<$Res>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
+      isStarted: null == isStarted
+          ? _value.isStarted
+          : isStarted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      startedAt: freezed == startedAt
+          ? _value.startedAt
+          : startedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -421,6 +450,8 @@ class _$HubEventImpl implements _HubEvent {
       @TimestampConverter() required this.updatedAt,
       final List<String> registeredPlayerIds = const [],
       this.status = 'upcoming',
+      this.isStarted = false,
+      @TimestampConverter() this.startedAt,
       this.location,
       @NullableGeoPointConverter() this.locationPoint,
       this.geohash,
@@ -476,6 +507,14 @@ class _$HubEventImpl implements _HubEvent {
   @JsonKey()
   final String status;
 // upcoming, ongoing, completed, cancelled
+  @override
+  @JsonKey()
+  final bool isStarted;
+// Explicit flag for in-progress session
+  @override
+  @TimestampConverter()
+  final DateTime? startedAt;
+// When manager marked start
   @override
   final String? location;
   @override
@@ -548,7 +587,7 @@ class _$HubEventImpl implements _HubEvent {
 
   @override
   String toString() {
-    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, isStarted: $isStarted, startedAt: $startedAt, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
   }
 
   @override
@@ -572,6 +611,10 @@ class _$HubEventImpl implements _HubEvent {
             const DeepCollectionEquality()
                 .equals(other._registeredPlayerIds, _registeredPlayerIds) &&
             (identical(other.status, status) || other.status == status) &&
+            (identical(other.isStarted, isStarted) ||
+                other.isStarted == isStarted) &&
+            (identical(other.startedAt, startedAt) ||
+                other.startedAt == startedAt) &&
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.locationPoint, locationPoint) ||
@@ -610,6 +653,8 @@ class _$HubEventImpl implements _HubEvent {
         updatedAt,
         const DeepCollectionEquality().hash(_registeredPlayerIds),
         status,
+        isStarted,
+        startedAt,
         location,
         locationPoint,
         geohash,
@@ -653,6 +698,8 @@ abstract class _HubEvent implements HubEvent {
       @TimestampConverter() required final DateTime updatedAt,
       final List<String> registeredPlayerIds,
       final String status,
+      final bool isStarted,
+      @TimestampConverter() final DateTime? startedAt,
       final String? location,
       @NullableGeoPointConverter() final GeoPoint? locationPoint,
       final String? geohash,
@@ -693,6 +740,11 @@ abstract class _HubEvent implements HubEvent {
   List<String> get registeredPlayerIds; // Players who registered
   @override
   String get status; // upcoming, ongoing, completed, cancelled
+  @override
+  bool get isStarted; // Explicit flag for in-progress session
+  @override
+  @TimestampConverter()
+  DateTime? get startedAt; // When manager marked start
   @override
   String? get location;
   @override

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
+import 'dart:math';
 
 /// Manual team builder with drag-and-drop functionality
 class ManualTeamBuilder extends ConsumerStatefulWidget {
@@ -268,6 +269,20 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     }
   }
 
+  void _shuffleAndDistribute() {
+    final shuffled = List<User>.from(_allPlayers)..shuffle(Random());
+    final newTeams = List.generate(widget.teamCount, (_) => <String>[]);
+    for (int i = 0; i < shuffled.length; i++) {
+      newTeams[i % widget.teamCount].add(shuffled[i].uid);
+    }
+
+    setState(() {
+      _teamPlayerIds = newTeams;
+    });
+    _notifyTeamsChanged();
+    _saveDraft();
+  }
+
   void _onPlayerDropped(String playerId, int targetTeamIndex) {
     setState(() {
       // Remove player from all teams
@@ -329,25 +344,39 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
 
     return Column(
       children: [
-        // Save button (only if no callback provided)
-        if (widget.onTeamsChanged == null)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _saveTeams,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(_isSaving ? 'שומר...' : 'שמור קבוצות'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _shuffleAndDistribute,
+                icon: const Icon(Icons.shuffle),
+                label: const Text('ערבב'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              if (widget.onTeamsChanged == null)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _saveTeams,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.save),
+                    label: Text(_isSaving ? 'שומר...' : 'שמור קבוצות'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+            ],
           ),
+        ),
 
         // Teams and unassigned players
         Expanded(
@@ -512,7 +541,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
           ),
           Expanded(
             child: DragTarget<String>(
-              onAccept: (playerId) => _onPlayerDropped(playerId, teamIndex),
+              onAcceptWithDetails: (details) =>
+                  _onPlayerDropped(details.data, teamIndex),
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   color: candidateData.isNotEmpty
@@ -640,4 +670,3 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   
   List<String> get teamNames => ['קבוצה א', 'קבוצה ב', 'קבוצה ג', 'קבוצה ד'];
 }
-

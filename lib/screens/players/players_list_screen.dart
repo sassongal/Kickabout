@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
@@ -30,10 +31,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
   String? _selectedPosition;
   double? _minRating;
 
-  // Store distances for each player (in meters)
   final Map<String, double> _playerDistances = {};
-
-  // Pagination state
   final ScrollController _scrollController = ScrollController();
   List<User> _allPlayers = [];
   List<User> _displayedPlayers = [];
@@ -67,7 +65,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       _isLoadingMore = true;
     });
 
-    // Simulate loading delay
     await Future.delayed(const Duration(milliseconds: 300));
 
     final nextIndex = _displayedPlayers.length;
@@ -90,15 +87,16 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
   @override
   Widget build(BuildContext context) {
     final locationService = ref.watch(locationServiceProvider);
+    final hubsRepo = ref.watch(hubsRepositoryProvider);
+    final currentUserId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
     final usersRepo = ref.watch(usersRepositoryProvider);
 
     return FuturisticScaffold(
       title: 'לוח שחקנים',
       actions: [
         IconButton(
-          icon: Icon(_showAvailableOnly
-              ? Icons.check_circle
-              : Icons.check_circle_outline),
+          icon: Icon(
+              _showAvailableOnly ? Icons.check_circle : Icons.check_circle_outline),
           onPressed: () {
             setState(() {
               _showAvailableOnly = !_showAvailableOnly;
@@ -109,7 +107,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       ],
       body: Column(
         children: [
-          // Search and filter bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -184,279 +181,312 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
               ],
             ),
           ),
-          // Players list
           Expanded(
-            child: FutureBuilder<List<User>>(
-              future: _getPlayers(usersRepo, locationService),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: 5,
-                    itemBuilder: (context, index) => const SkeletonPlayerCard(),
-                  );
-                }
+            child: FutureBuilder<List<Hub>>(
+              future: _getMyHubs(hubsRepo, currentUserId),
+              builder: (context, hubsSnapshot) {
+                final myHubs = hubsSnapshot.data ?? [];
 
-                if (snapshot.hasError) {
-                  return FuturisticEmptyState(
-                    icon: Icons.error_outline,
-                    title: 'שגיאה בטעינת שחקנים',
-                    message: ErrorHandlerService().handleException(
-                      snapshot.error,
-                      context: 'Players list screen',
-                    ),
-                  );
-                }
-
-                final allPlayers = snapshot.data ?? [];
-
-                // Initialize displayed players on first load or when data changes
-                if (_allPlayers.length != allPlayers.length ||
-                    (_allPlayers.isNotEmpty &&
-                        _allPlayers.first.uid != allPlayers.first.uid)) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {
-                        _allPlayers = allPlayers;
-                        _displayedPlayers = allPlayers.take(_pageSize).toList();
-                        _hasMore = allPlayers.length > _pageSize;
-                      });
-                    }
-                  });
-                }
-
-                // Use displayed players if available, otherwise use all players (first load)
-                final playersToShow = _displayedPlayers.isNotEmpty
-                    ? _displayedPlayers
-                    : allPlayers.take(_pageSize).toList();
-                final hasMoreToShow = _displayedPlayers.isNotEmpty
-                    ? _hasMore
-                    : allPlayers.length > _pageSize;
-
-                if (playersToShow.isEmpty && allPlayers.isEmpty) {
-                  return FuturisticEmptyState(
-                    icon: Icons.people_outline,
-                    title: 'אין שחקנים',
-                    message: 'לא נמצאו שחקנים התואמים לחיפוש',
-                  );
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: playersToShow.length + (hasMoreToShow ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    // Show loading indicator at the bottom
-                    if (index == playersToShow.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
+                return FutureBuilder<List<User>>(
+                  future: _getPlayers(usersRepo, locationService),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: 5,
+                        itemBuilder: (context, index) =>
+                            const SkeletonPlayerCard(),
                       );
                     }
-                    final player = playersToShow[index];
-                    final distance = _playerDistances[player.uid];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: FuturisticCard(
-                        onTap: () => context.push('/profile/${player.uid}'),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              // Avatar
-                              Stack(
+
+                    if (snapshot.hasError) {
+                      return FuturisticEmptyState(
+                        icon: Icons.error_outline,
+                        title: 'שגיאה בטעינת שחקנים',
+                        message: ErrorHandlerService().handleException(
+                          snapshot.error,
+                          context: 'Players list screen',
+                        ),
+                      );
+                    }
+
+                    final allPlayers = snapshot.data ?? [];
+
+                    if (_allPlayers.length != allPlayers.length ||
+                        (_allPlayers.isNotEmpty &&
+                            _allPlayers.first.uid != allPlayers.first.uid)) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _allPlayers = allPlayers;
+                            _displayedPlayers =
+                                allPlayers.take(_pageSize).toList();
+                            _hasMore = allPlayers.length > _pageSize;
+                          });
+                        }
+                      });
+                    }
+
+                    final playersToShow = _displayedPlayers.isNotEmpty
+                        ? _displayedPlayers
+                        : allPlayers.take(_pageSize).toList();
+                    final hasMoreToShow = _displayedPlayers.isNotEmpty
+                        ? _hasMore
+                        : allPlayers.length > _pageSize;
+
+                    if (playersToShow.isEmpty && allPlayers.isEmpty) {
+                      return const FuturisticEmptyState(
+                        icon: Icons.people_outline,
+                        title: 'אין שחקנים',
+                        message: 'לא נמצאו שחקנים התואמים לחיפוש',
+                      );
+                    }
+
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: playersToShow.length + (hasMoreToShow ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == playersToShow.length) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        final player = playersToShow[index];
+                        final distance = _playerDistances[player.uid];
+                        final sharedHubs = myHubs
+                            .where((hub) => player.hubIds.contains(hub.hubId))
+                            .toList();
+                        final managerHubCandidates = currentUserId == null
+                            ? <Hub>[]
+                            : sharedHubs.where((hub) {
+                                final role = hub.roles[currentUserId];
+                                return role == 'manager' ||
+                                    role == 'admin' ||
+                                    hub.createdBy == currentUserId;
+                              }).toList();
+                        final managerHub = managerHubCandidates.isNotEmpty
+                            ? managerHubCandidates.first
+                            : null;
+                        final managerRating = managerHub != null
+                            ? managerHub.managerRatings[player.uid]
+                            : null;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: FuturisticCard(
+                            onTap: () => context.push('/profile/${player.uid}'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
                                 children: [
-                                  PlayerAvatar(
-                                    user: player,
-                                    radius: 32,
-                                  ),
-                                  // Availability indicator
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      width: 16,
-                                      height: 16,
-                                      decoration: BoxDecoration(
-                                        color: _getAvailabilityColor(
-                                            player.availabilityStatus),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: FuturisticColors.background,
-                                          width: 2,
+                                  Stack(
+                                    children: [
+                                      PlayerAvatar(
+                                        user: player,
+                                        radius: 32,
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: _getAvailabilityColor(
+                                                player.availabilityStatus),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: FuturisticColors.background,
+                                              width: 2,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              const SizedBox(width: 16),
-                              // Player info
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      player.name,
-                                      style: FuturisticTypography.heading3,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Wrap(
-                                      spacing: 12,
-                                      runSpacing: 4,
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        if (player.city != null &&
-                                            player.city!.isNotEmpty)
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.location_city,
-                                                size: 14,
-                                                color: FuturisticColors
-                                                    .textTertiary,
+                                        Text(
+                                          player.name,
+                                          style: FuturisticTypography.heading3,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Wrap(
+                                          spacing: 12,
+                                          runSpacing: 4,
+                                          children: [
+                                            if (player.city != null &&
+                                                player.city!.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.location_city,
+                                                    size: 14,
+                                                    color: FuturisticColors
+                                                        .textTertiary,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    player.city!,
+                                                    style:
+                                                        FuturisticTypography
+                                                            .bodySmall,
+                                                  ),
+                                                ],
                                               ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                player.city!,
-                                                style: FuturisticTypography
-                                                    .bodySmall,
+                                            if (player
+                                                .preferredPosition.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.sports_soccer,
+                                                    size: 14,
+                                                    color: FuturisticColors
+                                                        .textTertiary,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    player.preferredPosition,
+                                                    style:
+                                                        FuturisticTypography
+                                                            .bodySmall,
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
-                                        if (player.preferredPosition.isNotEmpty)
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.sports_soccer,
-                                                size: 14,
-                                                color: FuturisticColors
-                                                    .textTertiary,
+                                            if (player.favoriteTeamId != null)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.favorite,
+                                                    size: 14,
+                                                    color:
+                                                        FuturisticColors.error,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'קבוצה אהודה',
+                                                    style:
+                                                        FuturisticTypography
+                                                            .bodySmall,
+                                                  ),
+                                                ],
                                               ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                player.preferredPosition,
-                                                style: FuturisticTypography
-                                                    .bodySmall,
-                                              ),
-                                            ],
-                                          ),
-                                        if (player.favoriteTeamId != null)
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.favorite,
-                                                size: 14,
-                                                color: FuturisticColors.error,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'קבוצה אהודה',
-                                                style: FuturisticTypography
-                                                    .bodySmall,
-                                              ),
-                                            ],
-                                          ),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.group,
+                                                  size: 14,
+                                                  color: FuturisticColors
+                                                      .textTertiary,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${player.hubIds.length} הובים',
+                                                  style:
+                                                      FuturisticTypography
+                                                          .bodySmall,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
                                         Row(
-                                          mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(
-                                              Icons.group,
+                                              Icons.event,
                                               size: 14,
                                               color:
                                                   FuturisticColors.textTertiary,
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              '${player.hubIds.length} הובים',
+                                              '${player.totalParticipations} משחקים',
                                               style: FuturisticTypography
                                                   .bodySmall,
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.star,
-                                          size: 14,
-                                          color: FuturisticColors.secondary,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'דירוג: ${player.currentRankScore.toStringAsFixed(1)}',
-                                          style: FuturisticTypography.bodySmall
-                                              .copyWith(
-                                            color: FuturisticColors.secondary,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Icon(
-                                          Icons.event,
-                                          size: 14,
-                                          color: FuturisticColors.textTertiary,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${player.totalParticipations} משחקים',
-                                          style: FuturisticTypography.bodySmall,
-                                        ),
-                                      ],
-                                    ),
-                                    // Distance display
-                                    if (distance != null) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.location_on,
-                                            size: 14,
-                                            color: FuturisticColors.primary,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            distance < 1000
-                                                ? 'מרחק: ${distance.toStringAsFixed(0)} מ\''
-                                                : 'מרחק: ${(distance / 1000).toStringAsFixed(1)} ק"מ',
-                                            style: FuturisticTypography
-                                                .bodySmall
-                                                .copyWith(
-                                              color: FuturisticColors.primary,
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                        if (managerRating != null ||
+                                            sharedHubs.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                managerRating != null
+                                                    ? Icons.shield_outlined
+                                                    : Icons.handshake,
+                                                size: 14,
+                                                color:
+                                                    FuturisticColors.primary,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  managerRating != null
+                                                      ? 'דירוג מנהל (${managerHub!.name}): ${managerRating.toStringAsFixed(1)}'
+                                                      : 'אתם יחד ב${sharedHubs.first.name}',
+                                                  style: FuturisticTypography
+                                                      .bodySmall
+                                                      .copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        FuturisticColors.primary,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              // Rating badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  gradient: FuturisticColors.primaryGradient,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  player.currentRankScore.toStringAsFixed(1),
-                                  style:
-                                      FuturisticTypography.labelMedium.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                        if (distance != null) ...[
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.location_on,
+                                                size: 14,
+                                                color:
+                                                    FuturisticColors.primary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                distance < 1000
+                                                    ? 'מרחק: ${distance.toStringAsFixed(0)} מ\''
+                                                    : 'מרחק: ${(distance / 1000).toStringAsFixed(1)} ק\"מ',
+                                                style:
+                                                    FuturisticTypography
+                                                        .bodySmall
+                                                        .copyWith(
+                                                  color: FuturisticColors
+                                                      .primary,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
                 );
@@ -468,31 +498,37 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
     );
   }
 
+  Future<List<Hub>> _getMyHubs(
+    HubsRepository hubsRepo,
+    String? currentUserId,
+  ) async {
+    if (currentUserId == null) return [];
+    try {
+      return await hubsRepo.getHubsByMember(currentUserId);
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<User>> _getPlayers(
     UsersRepository usersRepo,
     LocationService locationService,
   ) async {
     try {
-      // Get all users (in a real app, you'd want pagination)
-      // For now, we'll get users from nearby hubs or all users
       final position = await locationService.getCurrentLocation();
 
       List<User> players;
       if (position != null) {
-        // Get nearby available players
         players = await usersRepo.findAvailablePlayersNearby(
           latitude: position.latitude,
           longitude: position.longitude,
-          radiusKm: 50.0, // 50km radius
+          radiusKm: 50.0,
           limit: 100,
         );
       } else {
-        // Fallback: get all users (limited)
-        // Note: This is not ideal for production - you'd want pagination
         players = await usersRepo.getAllUsers(limit: 100);
       }
 
-      // Filter by search query
       if (_searchQuery.isNotEmpty) {
         players = players.where((player) {
           return player.name
@@ -508,34 +544,28 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
         }).toList();
       }
 
-      // Filter by availability
       if (_showAvailableOnly) {
         players =
             players.where((p) => p.availabilityStatus == 'available').toList();
       }
 
-      // Filter by city
       if (_selectedCity != null && _selectedCity!.isNotEmpty) {
         players = players.where((p) => p.city == _selectedCity).toList();
       }
 
-      // Filter by position
       if (_selectedPosition != null && _selectedPosition!.isNotEmpty) {
         players = players
             .where((p) => p.preferredPosition == _selectedPosition)
             .toList();
       }
 
-      // Filter by minimum rating
       if (_minRating != null) {
         players =
             players.where((p) => p.currentRankScore >= _minRating!).toList();
       }
 
-      // Calculate distances and sort
       _playerDistances.clear();
       if (position != null) {
-        // Calculate distance for each player with location
         for (final player in players) {
           if (player.location != null) {
             final distance = Geolocator.distanceBetween(
@@ -549,7 +579,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
         }
       }
 
-      // Sort
       switch (_sortBy) {
         case 'rating':
           players
@@ -560,20 +589,15 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
           break;
         case 'distance':
           if (position != null) {
-            // Sort by distance (closest first)
             players.sort((a, b) {
               final distA = _playerDistances[a.uid];
               final distB = _playerDistances[b.uid];
-
-              // Players with location come first
               if (distA == null && distB == null) return 0;
-              if (distA == null) return 1; // a goes to end
-              if (distB == null) return -1; // b goes to end
-
-              return distA.compareTo(distB); // Sort by distance ascending
+              if (distA == null) return 1;
+              if (distB == null) return -1;
+              return distA.compareTo(distB);
             });
           } else {
-            // If no location, sort by rating as fallback
             players.sort(
                 (a, b) => b.currentRankScore.compareTo(a.currentRankScore));
           }
@@ -581,7 +605,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       }
 
       return players;
-    } catch (e) {
+    } catch (_) {
       return [];
     }
   }
@@ -620,7 +644,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // City filter
                   DropdownButtonFormField<String>(
                     initialValue: _selectedCity,
                     decoration: const InputDecoration(
@@ -642,7 +665,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  // Position filter
                   DropdownButtonFormField<String>(
                     initialValue: _selectedPosition,
                     decoration: const InputDecoration(
@@ -664,7 +686,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  // Min rating filter
                   Text(
                       'דירוג מינימלי: ${_minRating?.toStringAsFixed(1) ?? "כל הדירוגים"}'),
                   Slider(

@@ -182,35 +182,6 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
     );
   }
 
-  Color _getStatusColor(GameStatus status, BuildContext context) {
-    switch (status) {
-      case GameStatus.completed:
-        return Colors.green;
-      case GameStatus.inProgress:
-        return Colors.blue;
-      case GameStatus.teamsFormed:
-        return Colors.orange;
-      case GameStatus.statsInput:
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusText(GameStatus status) {
-    switch (status) {
-      case GameStatus.teamSelection:
-        return 'בחירת קבוצות';
-      case GameStatus.teamsFormed:
-        return 'קבוצות נוצרו';
-      case GameStatus.inProgress:
-        return 'במהלך';
-      case GameStatus.completed:
-        return 'הושלם';
-      case GameStatus.statsInput:
-        return 'הזנת סטטיסטיקות';
-    }
-  }
 }
 
 /// Game card widget - displays game as bulletin board item

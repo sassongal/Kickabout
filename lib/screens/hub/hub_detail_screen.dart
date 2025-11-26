@@ -1197,14 +1197,11 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                     // Show role badge with proper display name
                     Chip(
                       label: Text(roleDisplayName),
-                      backgroundColor: roleColor != null
-                          ? roleColor!.withValues(alpha: 0.2)
-                          : Theme.of(context).colorScheme.primaryContainer,
+                      backgroundColor: roleColor.withValues(alpha: 0.2),
                       avatar: Icon(
                         roleIcon,
                         size: 16,
-                        color: roleColor ??
-                            Theme.of(context).colorScheme.onPrimaryContainer,
+                        color: roleColor,
                       ),
                     ),
                   ],
@@ -2029,11 +2026,11 @@ class _ContactManagerButton extends ConsumerWidget {
                   subtitle: Text(manager.phoneNumber!),
                   onTap: () => Navigator.pop(context, 'whatsapp'),
                 ),
-              if (manager.email != null && manager.email!.isNotEmpty)
+              if (manager.email.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.email, color: Colors.blue),
                   title: const Text('אימייל'),
-                  subtitle: Text(manager.email!),
+                  subtitle: Text(manager.email),
                   onTap: () => Navigator.pop(context, 'email'),
                 ),
             ],
@@ -2062,7 +2059,7 @@ class _ContactManagerButton extends ConsumerWidget {
             );
           }
         }
-      } else if (contactMethod == 'email' && manager.email != null) {
+      } else if (contactMethod == 'email') {
         // Open email
         final url = Uri.parse(
             'mailto:${manager.email}?subject=בקשה להצטרפות ל-${hub.name}');

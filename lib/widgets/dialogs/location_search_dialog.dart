@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/services/google_places_service.dart';
-import 'package:kickadoor/services/location_service.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

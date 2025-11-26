@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:kickadoor/utils/error_messages.dart';
-import 'package:kickadoor/core/constants.dart';
 
 /// Helper class for showing snackbars consistently
 class SnackbarHelper {

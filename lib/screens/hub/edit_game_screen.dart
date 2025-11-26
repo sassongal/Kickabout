@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/enums/event_type.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 
 /// Screen for editing/logging game data (score, goals, assists, MVP)
@@ -164,7 +163,6 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       // Get denormalized data for optimization
       final usersRepo = ref.read(usersRepositoryProvider);
       final venuesRepo = ref.read(venuesRepositoryProvider);
-      final eventsRepo2 = ref.read(hubEventsRepositoryProvider);
       
       // Get goal scorer names
       final goalScorerIds = _goalScorers.where((id) => _selectedPlayerIds.contains(id)).toList();
@@ -263,7 +261,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
         
         // Build story text
         final storyParts = <String>[];
-        storyParts.add('${creatorName} תיעד משחק');
+        storyParts.add('$creatorName תיעד משחק');
         if (_selectedEventId != null) {
           final event = _events.firstWhere((e) => e.eventId == _selectedEventId, orElse: () => _events.first);
           storyParts.add('במסגרת "${event.title}"');
@@ -364,7 +362,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _selectedEventId,
+                      initialValue: _selectedEventId,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'בחר אירוע',
@@ -560,7 +558,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _mvpPlayerId,
+                      initialValue: _mvpPlayerId,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'בחר MVP',
@@ -621,4 +619,3 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
     );
   }
 }
-

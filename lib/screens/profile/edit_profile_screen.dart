@@ -8,11 +8,9 @@ import 'package:kickadoor/widgets/loading_widget.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/services/storage_service.dart';
-import 'package:kickadoor/utils/geohash_utils.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/utils/city_utils.dart';
-import 'package:kickadoor/widgets/dialogs/location_search_dialog.dart';
 
 /// Edit profile screen
 class EditProfileScreen extends ConsumerStatefulWidget {

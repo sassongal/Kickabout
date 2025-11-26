@@ -1,6 +1,5 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:geolocator/geolocator.dart';
 
 /// Weather Service using Open-Meteo (Free API)
 /// Maps WMO weather codes to football context phrases

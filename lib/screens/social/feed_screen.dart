@@ -41,10 +41,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _onScroll() {
+    if (widget.hubId == null || widget.hubId!.isEmpty) return;
     if (_scrollController.position.extentAfter < 300) {
-      final feedState = ref.read(feedNotifierProvider(widget.hubId));
+      final feedState = ref.read(feedNotifierProvider(widget.hubId!));
       if (!feedState.isLoading && feedState.hasMore) {
-        ref.read(feedNotifierProvider(widget.hubId).notifier).fetchNextPage();
+        ref.read(feedNotifierProvider(widget.hubId!).notifier).fetchNextPage();
       }
     }
   }
@@ -103,7 +104,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         // If user has region, use regional feed; otherwise use hub feed
         final feedStream = userRegion != null && userRegion.isNotEmpty
             ? feedRepo.streamRegionalFeed(region: userRegion)
-            : feedRepo.watchFeed(widget.hubId);
+            : feedRepo.watchFeed(widget.hubId!);
         
         return AppScaffold(
           title: userRegion != null ? 'פיד אזורי ($userRegion)' : 'פיד פעילות',

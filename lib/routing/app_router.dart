@@ -567,7 +567,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => LazyRouteLoader(
             loader: feed_screen.loadLibrary(),
             builder: () {
-              final hubId = state.uri.queryParameters['hubId'];
+              final hubId = state.uri.queryParameters['hubId'] ?? '';
               return feed_screen.FeedScreen(hubId: hubId);
             }),
       ),

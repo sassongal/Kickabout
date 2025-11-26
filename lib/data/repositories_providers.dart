@@ -13,7 +13,6 @@ import 'package:kickadoor/services/scouting_service.dart';
 import 'package:kickadoor/services/google_places_service.dart';
 import 'package:kickadoor/services/custom_api_service.dart';
 import 'package:kickadoor/services/weather_service.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -517,4 +516,3 @@ final adminTasksProvider = StreamProvider<int>((ref) {
     return Stream.value(0);
   }
 });
-

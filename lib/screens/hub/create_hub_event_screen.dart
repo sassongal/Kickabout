@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/hub_event.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/services/push_notification_integration_service.dart';
 
 /// Create hub event screen
 class CreateHubEventScreen extends ConsumerStatefulWidget {
@@ -374,7 +372,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
 
               // Team Count
               DropdownButtonFormField<int>(
-                value: _teamCount,
+                initialValue: _teamCount,
                 decoration: const InputDecoration(
                   labelText: 'מספר קבוצות *',
                   border: OutlineInputBorder(),
@@ -397,7 +395,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
 
               // Game Type
               DropdownButtonFormField<String>(
-                value: _gameType,
+                initialValue: _gameType,
                 decoration: const InputDecoration(
                   labelText: 'סוג משחק (אופציונלי)',
                   border: OutlineInputBorder(),

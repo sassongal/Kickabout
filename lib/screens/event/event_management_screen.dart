@@ -519,7 +519,7 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
           children: [
             // Team A selection
             DropdownButtonFormField<String>(
-              value: _selectedTeamA,
+              initialValue: _selectedTeamA,
               decoration: const InputDecoration(
                 labelText: 'קבוצה א',
                 border: OutlineInputBorder(),
@@ -549,7 +549,7 @@ class _LogMatchDialogState extends State<_LogMatchDialog> {
             const SizedBox(height: 16),
             // Team B selection
             DropdownButtonFormField<String>(
-              value: _selectedTeamB,
+              initialValue: _selectedTeamB,
               decoration: const InputDecoration(
                 labelText: 'קבוצה ב',
                 border: OutlineInputBorder(),

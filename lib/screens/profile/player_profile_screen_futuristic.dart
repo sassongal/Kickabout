@@ -12,6 +12,7 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
+// ignore_for_file: unused_element
 
 /// Enhanced Player Profile Screen with Futuristic Design
 /// Features: Hero Section, Tabbed Interface, Full Statistics, Privacy Settings
@@ -44,6 +45,19 @@ class _PlayerProfileScreenFuturisticState
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  String _displayName(User user) {
+    final hasFirst = user.firstName != null && user.firstName!.isNotEmpty;
+    final hasLast = user.lastName != null && user.lastName!.isNotEmpty;
+    if (hasFirst || hasLast) {
+      return '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
+    }
+    if (user.name.isNotEmpty) return user.name;
+    if (user.displayName != null && user.displayName!.isNotEmpty) {
+      return user.displayName!;
+    }
+    return 'שחקן';
   }
 
   @override
@@ -282,14 +296,11 @@ class _PlayerProfileScreenFuturisticState
 
                   // Name & Position
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.name,
-                          // Use first + last when available
-                          // (fall back handled by displayName getter)
-                          user.displayName,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                          _displayName(user),
                           style: FuturisticTypography.heading2.copyWith(
                             color: Colors.white,
                           ),

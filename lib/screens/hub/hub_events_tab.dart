@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/hub_event.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
@@ -127,6 +126,10 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
 
                   return FuturisticCard(
                     margin: const EdgeInsets.only(bottom: 12),
+                    onTap: widget.isManager
+                        ? () => context.push(
+                            '/hubs/${widget.hubId}/events/${event.eventId}/manage')
+                        : null,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -480,10 +483,6 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                         ],
                       ),
                     ),
-                    onTap: widget.isManager
-                        ? () => context.push(
-                            '/hubs/${widget.hubId}/events/${event.eventId}/manage')
-                        : null,
                   );
                 },
               );

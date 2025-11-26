@@ -459,7 +459,11 @@ class _$HubImpl implements _Hub {
       final List<String> memberIds = const [],
       @TimestampMapConverter()
       final Map<String, Timestamp> memberJoinDates = const {},
-      final Map<String, dynamic> settings = const {'ratingMode': 'basic'},
+      final Map<String, dynamic> settings = const {
+        'ratingMode': 'basic',
+        'showManagerContactInfo': true,
+        'allowJoinRequests': true
+      },
       final Map<String, String> roles = const {},
       final Map<String, dynamic> permissions = const {},
       @NullableGeoPointConverter() this.location,

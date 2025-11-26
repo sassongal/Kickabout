@@ -11,7 +11,6 @@ import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/screens/hub/hub_invitations_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/utils/geohash_utils.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
@@ -263,7 +262,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                   // Manager contact visibility
                   Card(
                     child: SwitchListTile(
-                      title: const Text('הצגת פרטי מנהל'),
+                      title: const Text('הצג פרטי התקשרות של מנהל'),
                       subtitle: const Text(
                         'אפשר לשחקנים לראות פרטי קשר של מנהל ההאב כדי לפנות',
                       ),
@@ -333,8 +332,8 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                             await hubsRepo.updateHub(widget.hubId, {
                               'primaryVenueId': selectedVenue.venueId,
                               'primaryVenueLocation':
-                                  selectedVenue.location as GeoPoint,
-                              'location': selectedVenue.location as GeoPoint,
+                                  selectedVenue.location,
+                              'location': selectedVenue.location,
                               'geohash': geohash,
                             });
 

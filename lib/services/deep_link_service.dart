@@ -10,7 +10,7 @@ class DeepLinkService {
   DeepLinkService._internal();
 
   GoRouter? _router;
-  String? _pendingHubId; // Store hub ID for redirect after registration
+  String? _pendingHubId; // Stored hub id for redirect after auth
 
   /// Initialize with navigator key and router
   void initialize({
@@ -172,4 +172,3 @@ class DeepLinkService {
     }
   }
 }
-

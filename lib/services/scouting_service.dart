@@ -1,4 +1,3 @@
-import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kickadoor/config/env.dart';
@@ -201,15 +200,6 @@ class ScoutingService {
     }
   }
 
-  String _getPositionName(String position) {
-    const positionNames = {
-      'Goalkeeper': 'שוער',
-      'Defender': 'מגן',
-      'Midfielder': 'קשר',
-      'Forward': 'חלוץ',
-    };
-    return positionNames[position] ?? position;
-  }
 }
 
 /// Heavy computation function for isolate (must be top-level)
@@ -299,4 +289,3 @@ Map<String, dynamic> _computeScoutingResults(Map<String, dynamic> params) {
   
   return {'results': results};
 }
-

@@ -32,4 +32,4 @@ QuerySnapshot<Map<String, dynamic>> createMockQuerySnapshot({
   when(() => mock.size).thenReturn(docs.length);
   return mock;
 }
-
+// ignore_for_file: subtype_of_sealed_class

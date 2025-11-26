@@ -10,14 +10,12 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/futuristic/stats_dashboard.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kickadoor/scripts/generate_dummy_data.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kickadoor/widgets/dialogs/location_search_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -232,26 +230,6 @@ class _HomeScreenFuturisticFigmaState
 
                     // Weather & Vibe Widget (moved to top)
                     const HomeWeatherVibeWidget(),
-                    const SizedBox(height: 24),
-
-                    // Stats Dashboard (matching Figma)
-                    StreamBuilder<Gamification?>(
-                      stream: gamificationStream,
-                      builder: (context, snapshot) {
-                        final gamification = snapshot.data;
-                        if (gamification != null) {
-                          final stats = gamification.stats;
-                          return StatsDashboard(
-                            gamesPlayed: stats['gamesPlayed'] ?? 0,
-                            wins: stats['gamesWon'] ?? 0,
-                            averageRating: user?.currentRankScore ?? 5.0,
-                            goals: stats['goals'] ?? 0,
-                            assists: stats['assists'] ?? 0,
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
                     const SizedBox(height: 24),
 
                     // My Hubs section (simplified for Figma)
@@ -1533,9 +1511,18 @@ class _ProfileSummaryCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _AvatarWithStats(
-                user: user,
-                gamificationStream: gamificationStream,
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: FuturisticColors.primaryGradient,
+                ),
+                padding: const EdgeInsets.all(4),
+                child: PlayerAvatar(
+                  user: user,
+                  size: AvatarSize.lg,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -1543,40 +1530,28 @@ class _ProfileSummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user.displayName,
+                      user.displayName ?? user.name,
                       style: GoogleFonts.montserrat(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF212121),
                       ),
                     ),
-                    if (user.city != null && user.city!.isNotEmpty)
-                      Text(
-                        user.city!,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: const Color(0xFF757575),
-                        ),
-                      ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.star,
-                          size: 16,
-                          color: FuturisticColors.secondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          user.currentRankScore.toStringAsFixed(1),
+                    _InlineStatsRow(
+                      gamificationStream: gamificationStream,
+                    ),
+                    if (user.city != null && user.city!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          user.city!,
                           style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: FuturisticColors.secondary,
+                            fontSize: 12,
+                            color: const Color(0xFF757575),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
                   ],
                 ),
               ),
@@ -1619,115 +1594,67 @@ class _ProfileSummaryCard extends StatelessWidget {
   }
 }
 
-class _AvatarWithStats extends StatelessWidget {
-  final User user;
+class _InlineStatsRow extends StatelessWidget {
   final Stream<Gamification?> gamificationStream;
 
-  const _AvatarWithStats({
-    required this.user,
+  const _InlineStatsRow({
     required this.gamificationStream,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: FuturisticColors.primaryGradient,
-          ),
-          padding: const EdgeInsets.all(4),
-          child: PlayerAvatar(
-            user: user,
-            size: AvatarSize.lg,
-          ),
-        ),
-        Positioned(
-          bottom: 6,
-          right: 6,
-          child: _MiniStatCircle(
-            stream: gamificationStream,
-            label: 'משחקים',
-            valueBuilder: (g) => (g?.stats['gamesPlayed'] ?? 0).toString(),
-            color: FuturisticColors.secondary,
-          ),
-        ),
-        Positioned(
-          top: 4,
-          right: 0,
-          child: _MiniStatCircle(
-            stream: gamificationStream,
-            label: 'ניצחונות',
-            valueBuilder: (g) => (g?.stats['gamesWon'] ?? 0).toString(),
-            color: Colors.green,
-          ),
-        ),
-        Positioned(
-          top: 4,
-          left: 0,
-          child: _MiniStatCircle(
-            stream: gamificationStream,
-            label: 'שערים',
-            valueBuilder: (g) => (g?.stats['goals'] ?? 0).toString(),
-            color: FuturisticColors.accent,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MiniStatCircle extends StatelessWidget {
-  final Stream<Gamification?> stream;
-  final String label;
-  final String Function(Gamification?) valueBuilder;
-  final Color color;
-
-  const _MiniStatCircle({
-    required this.stream,
-    required this.label,
-    required this.valueBuilder,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return StreamBuilder<Gamification?>(
-      stream: stream,
+      stream: gamificationStream,
       builder: (context, snapshot) {
-        final value = valueBuilder(snapshot.data);
-        return Container(
-          width: 54,
-          height: 54,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: 0.15),
-            border: Border.all(color: color.withValues(alpha: 0.6)),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  style: FuturisticTypography.labelMedium
-                      .copyWith(color: color, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  label,
-                  style: FuturisticTypography.labelSmall.copyWith(
-                    color: color.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
+        final stats = snapshot.data?.stats ?? {};
+        return Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            _statBubble(
+              label: 'משחקים',
+              value: (stats['gamesPlayed'] ?? 0).toString(),
+              color: FuturisticColors.primary,
             ),
-          ),
+            _statBubble(
+              label: 'ניצחונות',
+              value: (stats['gamesWon'] ?? 0).toString(),
+              color: Colors.green,
+            ),
+          ],
         );
       },
+    );
+  }
+
+  Widget _statBubble({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: FuturisticTypography.labelMedium
+                .copyWith(color: color, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: FuturisticTypography.labelSmall
+                .copyWith(color: color.withValues(alpha: 0.8)),
+          ),
+        ],
+      ),
     );
   }
 }

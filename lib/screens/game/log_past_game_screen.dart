@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/hub_event.dart';
 import 'package:kickadoor/models/log_past_game_details.dart';
 import 'package:kickadoor/ui/team_builder/manual_team_builder.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
@@ -335,7 +334,7 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
           // Venue selector
           if (_venues.isNotEmpty)
             DropdownButtonFormField<String>(
-              value: _selectedVenueId,
+              initialValue: _selectedVenueId,
               decoration: const InputDecoration(
                 labelText: 'מגרש',
                 border: OutlineInputBorder(),
@@ -360,7 +359,7 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
           // Event selector
           if (_events.isNotEmpty)
             DropdownButtonFormField<String>(
-              value: _selectedEventId,
+              initialValue: _selectedEventId,
               decoration: const InputDecoration(
                 labelText: 'קישור לאירוע (אופציונלי)',
                 border: OutlineInputBorder(),

@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/routing/app_router.dart';
 
 /// Smoke test to ensure app initialization doesn't crash
 /// This is a minimal integration test that verifies the app can start
