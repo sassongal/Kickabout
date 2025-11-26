@@ -55,6 +55,8 @@ mixin _$User {
 // REMOVED: playingStyle - merged into preferredPosition
   int get totalParticipations =>
       throw _privateConstructorUsedError; // Total games played (for milestone badges)
+  int get gamesPlayed =>
+      throw _privateConstructorUsedError; // Compatibility field used throughout the app
   @NullableGeoPointConverter()
   GeoPoint? get location => throw _privateConstructorUsedError;
   String? get geohash => throw _privateConstructorUsedError;
@@ -63,7 +65,13 @@ mixin _$User {
 // Denormalized fields (updated by Cloud Functions, not written by client)
   int get followerCount =>
       throw _privateConstructorUsedError; // Denormalized: Count of followers (updated by onFollowCreated)
-// Privacy settings - control what data is visible in search and profile
+// Player Stats (denormalized from game participations)
+  int get wins => throw _privateConstructorUsedError;
+  int get losses => throw _privateConstructorUsedError;
+  int get draws => throw _privateConstructorUsedError;
+  int get goals => throw _privateConstructorUsedError;
+  int get assists =>
+      throw _privateConstructorUsedError; // Privacy settings - control what data is visible in search and profile
   Map<String, bool> get privacySettings => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
@@ -102,10 +110,16 @@ abstract class $UserCopyWith<$Res> {
       double currentRankScore,
       String preferredPosition,
       int totalParticipations,
+      int gamesPlayed,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       String? region,
       int followerCount,
+      int wins,
+      int losses,
+      int draws,
+      int goals,
+      int assists,
       Map<String, bool> privacySettings});
 }
 
@@ -145,10 +159,16 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? currentRankScore = null,
     Object? preferredPosition = null,
     Object? totalParticipations = null,
+    Object? gamesPlayed = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? region = freezed,
     Object? followerCount = null,
+    Object? wins = null,
+    Object? losses = null,
+    Object? draws = null,
+    Object? goals = null,
+    Object? assists = null,
     Object? privacySettings = null,
   }) {
     return _then(_value.copyWith(
@@ -236,6 +256,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
               as int,
+      gamesPlayed: null == gamesPlayed
+          ? _value.gamesPlayed
+          : gamesPlayed // ignore: cast_nullable_to_non_nullable
+              as int,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -251,6 +275,26 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
       followerCount: null == followerCount
           ? _value.followerCount
           : followerCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      wins: null == wins
+          ? _value.wins
+          : wins // ignore: cast_nullable_to_non_nullable
+              as int,
+      losses: null == losses
+          ? _value.losses
+          : losses // ignore: cast_nullable_to_non_nullable
+              as int,
+      draws: null == draws
+          ? _value.draws
+          : draws // ignore: cast_nullable_to_non_nullable
+              as int,
+      goals: null == goals
+          ? _value.goals
+          : goals // ignore: cast_nullable_to_non_nullable
+              as int,
+      assists: null == assists
+          ? _value.assists
+          : assists // ignore: cast_nullable_to_non_nullable
               as int,
       privacySettings: null == privacySettings
           ? _value.privacySettings
@@ -289,10 +333,16 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       double currentRankScore,
       String preferredPosition,
       int totalParticipations,
+      int gamesPlayed,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       String? region,
       int followerCount,
+      int wins,
+      int losses,
+      int draws,
+      int goals,
+      int assists,
       Map<String, bool> privacySettings});
 }
 
@@ -329,10 +379,16 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? currentRankScore = null,
     Object? preferredPosition = null,
     Object? totalParticipations = null,
+    Object? gamesPlayed = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? region = freezed,
     Object? followerCount = null,
+    Object? wins = null,
+    Object? losses = null,
+    Object? draws = null,
+    Object? goals = null,
+    Object? assists = null,
     Object? privacySettings = null,
   }) {
     return _then(_$UserImpl(
@@ -420,6 +476,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
               as int,
+      gamesPlayed: null == gamesPlayed
+          ? _value.gamesPlayed
+          : gamesPlayed // ignore: cast_nullable_to_non_nullable
+              as int,
       location: freezed == location
           ? _value.location
           : location // ignore: cast_nullable_to_non_nullable
@@ -435,6 +495,26 @@ class __$$UserImplCopyWithImpl<$Res>
       followerCount: null == followerCount
           ? _value.followerCount
           : followerCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      wins: null == wins
+          ? _value.wins
+          : wins // ignore: cast_nullable_to_non_nullable
+              as int,
+      losses: null == losses
+          ? _value.losses
+          : losses // ignore: cast_nullable_to_non_nullable
+              as int,
+      draws: null == draws
+          ? _value.draws
+          : draws // ignore: cast_nullable_to_non_nullable
+              as int,
+      goals: null == goals
+          ? _value.goals
+          : goals // ignore: cast_nullable_to_non_nullable
+              as int,
+      assists: null == assists
+          ? _value.assists
+          : assists // ignore: cast_nullable_to_non_nullable
               as int,
       privacySettings: null == privacySettings
           ? _value._privacySettings
@@ -469,10 +549,16 @@ class _$UserImpl implements _User {
       this.currentRankScore = 5.0,
       this.preferredPosition = 'Midfielder',
       this.totalParticipations = 0,
+      this.gamesPlayed = 0,
       @NullableGeoPointConverter() this.location,
       this.geohash,
       this.region,
       this.followerCount = 0,
+      this.wins = 0,
+      this.losses = 0,
+      this.draws = 0,
+      this.goals = 0,
+      this.assists = 0,
       final Map<String, bool> privacySettings = const {
         'hideFromSearch': false,
         'hideEmail': false,
@@ -557,6 +643,10 @@ class _$UserImpl implements _User {
   final int totalParticipations;
 // Total games played (for milestone badges)
   @override
+  @JsonKey()
+  final int gamesPlayed;
+// Compatibility field used throughout the app
+  @override
   @NullableGeoPointConverter()
   final GeoPoint? location;
   @override
@@ -569,9 +659,24 @@ class _$UserImpl implements _User {
   @JsonKey()
   final int followerCount;
 // Denormalized: Count of followers (updated by onFollowCreated)
+// Player Stats (denormalized from game participations)
+  @override
+  @JsonKey()
+  final int wins;
+  @override
+  @JsonKey()
+  final int losses;
+  @override
+  @JsonKey()
+  final int draws;
+  @override
+  @JsonKey()
+  final int goals;
+  @override
+  @JsonKey()
+  final int assists;
 // Privacy settings - control what data is visible in search and profile
   final Map<String, bool> _privacySettings;
-// Denormalized: Count of followers (updated by onFollowCreated)
 // Privacy settings - control what data is visible in search and profile
   @override
   @JsonKey()
@@ -583,7 +688,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, privacySettings: $privacySettings)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings)';
   }
 
   @override
@@ -628,12 +733,19 @@ class _$UserImpl implements _User {
                 other.preferredPosition == preferredPosition) &&
             (identical(other.totalParticipations, totalParticipations) ||
                 other.totalParticipations == totalParticipations) &&
+            (identical(other.gamesPlayed, gamesPlayed) ||
+                other.gamesPlayed == gamesPlayed) &&
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
             (identical(other.region, region) || other.region == region) &&
             (identical(other.followerCount, followerCount) ||
                 other.followerCount == followerCount) &&
+            (identical(other.wins, wins) || other.wins == wins) &&
+            (identical(other.losses, losses) || other.losses == losses) &&
+            (identical(other.draws, draws) || other.draws == draws) &&
+            (identical(other.goals, goals) || other.goals == goals) &&
+            (identical(other.assists, assists) || other.assists == assists) &&
             const DeepCollectionEquality()
                 .equals(other._privacySettings, _privacySettings));
   }
@@ -663,10 +775,16 @@ class _$UserImpl implements _User {
         currentRankScore,
         preferredPosition,
         totalParticipations,
+        gamesPlayed,
         location,
         geohash,
         region,
         followerCount,
+        wins,
+        losses,
+        draws,
+        goals,
+        assists,
         const DeepCollectionEquality().hash(_privacySettings)
       ]);
 
@@ -709,10 +827,16 @@ abstract class _User implements User {
       final double currentRankScore,
       final String preferredPosition,
       final int totalParticipations,
+      final int gamesPlayed,
       @NullableGeoPointConverter() final GeoPoint? location,
       final String? geohash,
       final String? region,
       final int followerCount,
+      final int wins,
+      final int losses,
+      final int draws,
+      final int goals,
+      final int assists,
       final Map<String, bool> privacySettings}) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
@@ -769,6 +893,8 @@ abstract class _User implements User {
   @override
   int get totalParticipations; // Total games played (for milestone badges)
   @override
+  int get gamesPlayed; // Compatibility field used throughout the app
+  @override
   @NullableGeoPointConverter()
   GeoPoint? get location;
   @override
@@ -778,7 +904,17 @@ abstract class _User implements User {
 // Denormalized fields (updated by Cloud Functions, not written by client)
   @override
   int get followerCount; // Denormalized: Count of followers (updated by onFollowCreated)
-// Privacy settings - control what data is visible in search and profile
+// Player Stats (denormalized from game participations)
+  @override
+  int get wins;
+  @override
+  int get losses;
+  @override
+  int get draws;
+  @override
+  int get goals;
+  @override
+  int get assists; // Privacy settings - control what data is visible in search and profile
   @override
   Map<String, bool> get privacySettings;
 

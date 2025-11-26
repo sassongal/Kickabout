@@ -33,10 +33,16 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       currentRankScore: (json['currentRankScore'] as num?)?.toDouble() ?? 5.0,
       preferredPosition: json['preferredPosition'] as String? ?? 'Midfielder',
       totalParticipations: (json['totalParticipations'] as num?)?.toInt() ?? 0,
+      gamesPlayed: (json['gamesPlayed'] as num?)?.toInt() ?? 0,
       location: const NullableGeoPointConverter().fromJson(json['location']),
       geohash: json['geohash'] as String?,
       region: json['region'] as String?,
       followerCount: (json['followerCount'] as num?)?.toInt() ?? 0,
+      wins: (json['wins'] as num?)?.toInt() ?? 0,
+      losses: (json['losses'] as num?)?.toInt() ?? 0,
+      draws: (json['draws'] as num?)?.toInt() ?? 0,
+      goals: (json['goals'] as num?)?.toInt() ?? 0,
+      assists: (json['assists'] as num?)?.toInt() ?? 0,
       privacySettings: (json['privacySettings'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, e as bool),
           ) ??
@@ -74,10 +80,16 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'currentRankScore': instance.currentRankScore,
       'preferredPosition': instance.preferredPosition,
       'totalParticipations': instance.totalParticipations,
+      'gamesPlayed': instance.gamesPlayed,
       'location': const NullableGeoPointConverter().toJson(instance.location),
       'geohash': instance.geohash,
       'region': instance.region,
       'followerCount': instance.followerCount,
+      'wins': instance.wins,
+      'losses': instance.losses,
+      'draws': instance.draws,
+      'goals': instance.goals,
+      'assists': instance.assists,
       'privacySettings': instance.privacySettings,
     };
 

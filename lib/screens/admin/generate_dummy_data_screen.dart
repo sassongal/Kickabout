@@ -12,51 +12,68 @@ class GenerateDummyDataScreen extends ConsumerStatefulWidget {
   const GenerateDummyDataScreen({super.key});
 
   @override
-  ConsumerState<GenerateDummyDataScreen> createState() => _GenerateDummyDataScreenState();
+  ConsumerState<GenerateDummyDataScreen> createState() =>
+      _GenerateDummyDataScreenState();
 }
 
-class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScreen> {
+class _GenerateDummyDataScreenState
+    extends ConsumerState<GenerateDummyDataScreen> {
   final _userCountController = TextEditingController(text: '30');
-  final _hubCountController = TextEditingController(text: '5');
+
+  final _targetHubIdController =
+      TextEditingController(text: '4E3bIBPVKdcx5Z1gKfCT');
+  final _targetEventIdController =
+      TextEditingController(text: 'OTd8UEnHI1jVVxsHYcrW');
+
   bool _isGenerating = false;
   String? _statusMessage;
 
   @override
   void dispose() {
     _userCountController.dispose();
-    _hubCountController.dispose();
+
+    _targetHubIdController.dispose();
+    _targetEventIdController.dispose();
     super.dispose();
   }
 
   Future<void> _generateData() async {
     final userCount = int.tryParse(_userCountController.text) ?? 30;
-    final hubCount = int.tryParse(_hubCountController.text) ?? 5;
+    final hubId = _targetHubIdController.text.trim();
+    final eventId = _targetEventIdController.text.trim();
 
-    if (userCount < 1 || hubCount < 1) {
-      SnackbarHelper.showError(context, 'נא להזין מספרים תקינים');
+    if (hubId.isEmpty) {
+      SnackbarHelper.showError(context, 'נא להזין מזהה Hub (ID) באזור למטה.');
+      return;
+    }
+    if (userCount < 1) {
+      SnackbarHelper.showError(context, 'נא להזין מספר שחקנים תקין.');
       return;
     }
 
     setState(() {
       _isGenerating = true;
-      _statusMessage = 'מתחיל ליצור נתוני דמה...';
+      _statusMessage =
+          'מוסיף $userCount שחקנים ל-Hub $hubId ורושם אותם לאירוע $eventId...';
     });
 
     try {
       final generator = DummyDataGenerator();
-      await generator.generateAll(
-        userCount: userCount,
-        hubCount: hubCount,
+      await generator.addPlayersToExistingHub(
+        hubId: hubId,
+        count: userCount,
+        eventId: eventId,
       );
 
       if (mounted) {
         setState(() {
           _isGenerating = false;
-          _statusMessage = '✅ נתוני דמה נוצרו בהצלחה!';
+          _statusMessage =
+              '✅ $userCount שחקנים נוספו בהצלחה ל-Hub ונרשמו לאירוע!';
         });
         SnackbarHelper.showSuccess(
           context,
-          'נוצרו $userCount שחקנים ו-$hubCount הובים',
+          'נוספו $userCount שחקנים ל-Hub ונרשמו לאירוע',
         );
       }
     } catch (e) {
@@ -114,7 +131,8 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
       if (mounted) {
         setState(() {
           _isGenerating = false;
-          _statusMessage = '✅ Hub "השדים האדומים" נוצר בהצלחה עם 25 שחקנים (18 ב-Hub)!';
+          _statusMessage =
+              '✅ Hub "השדים האדומים" נוצר בהצלחה עם 25 שחקנים (18 ב-Hub)!';
         });
         SnackbarHelper.showSuccess(
           context,
@@ -145,7 +163,8 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
       if (mounted) {
         setState(() {
           _isGenerating = false;
-          _statusMessage = '✅ תרחיש חיפה נוצר בהצלחה!\n• 30 שחקנים\n• 6 הובים במיקומים ספציפיים\n• כל Hub עם 5 שחקנים (1 מנהל, 4 שחקנים)';
+          _statusMessage =
+              '✅ תרחיש חיפה נוצר בהצלחה!\n• 30 שחקנים\n• 6 הובים במיקומים ספציפיים\n• כל Hub עם 5 שחקנים (1 מנהל, 4 שחקנים)';
         });
         SnackbarHelper.showSuccess(
           context,
@@ -223,7 +242,8 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
   Future<void> _generateComprehensiveData() async {
     setState(() {
       _isGenerating = true;
-      _statusMessage = 'מתחיל ליצור נתונים מקיפים (20 שחקנים, 3 הובים, 15 משחקי עבר)...';
+      _statusMessage =
+          'מתחיל ליצור נתונים מקיפים (20 שחקנים, 3 הובים, 15 משחקי עבר)...';
     });
 
     try {
@@ -233,7 +253,8 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
       if (mounted) {
         setState(() {
           _isGenerating = false;
-          _statusMessage = '✅ נתונים מקיפים נוצרו בהצלחה!\n• 20 שחקנים עם תמונות וסגנונות משחק\n• 3 הובים עם מנהלים\n• 15 משחקי עבר עם תוצאות וסטטיסטיקות';
+          _statusMessage =
+              '✅ נתונים מקיפים נוצרו בהצלחה!\n• 20 שחקנים עם תמונות וסגנונות משחק\n• 3 הובים עם מנהלים\n• 15 משחקי עבר עם תוצאות וסטטיסטיקות';
         });
         SnackbarHelper.showSuccess(
           context,
@@ -257,194 +278,198 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
       title: 'יצירת נתוני דמה',
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'יצירת נתוני דמה לאפליקציה',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'יצירת שחקנים והובים מחיפה והאיזור עם פעילות',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 32),
-            // User count
-            TextField(
-              controller: _userCountController,
-              decoration: const InputDecoration(
-                labelText: 'מספר שחקנים',
-                border: OutlineInputBorder(),
-                helperText: 'מספר השחקנים ליצירה',
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'יצירת נתוני דמה לאפליקציה',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            // Hub count
-            TextField(
-              controller: _hubCountController,
-              decoration: const InputDecoration(
-                labelText: 'מספר הובים',
-                border: OutlineInputBorder(),
-                helperText: 'מספר ההובים ליצירה',
+              const SizedBox(height: 8),
+              const Text(
+                'יצירת שחקנים והובים מחיפה והאיזור עם פעילות',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 32),
-            // Comprehensive data generation button (NEW - recommended)
-            Card(
-              color: Colors.blue.withValues(alpha: 0.1),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.blue[700]),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'מומלץ: נתונים מקיפים',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+              const SizedBox(height: 32),
+              Card(
+                color: Colors.blue.withValues(alpha: 0.1),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.group_add, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text(
+                            'הוספת שחקנים ל-Hub ואירוע',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _userCountController,
+                        decoration: const InputDecoration(
+                          labelText: 'מספר שחקנים ליצירה',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.person_add_alt_1),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'יוצר 20 שחקנים, 3 הובים, 15 משחקי עבר עם תוצאות וסטטיסטיקות',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 12),
-                    GradientButton(
-                      label: 'צור נתונים מקיפים',
-                      icon: Icons.auto_awesome,
-                      onPressed: _isGenerating ? null : _generateComprehensiveData,
-                      isLoading: _isGenerating,
-                      width: double.infinity,
-                    ),
-                  ],
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _targetHubIdController,
+                        decoration: const InputDecoration(
+                          labelText: 'Hub ID',
+                          hintText: 'הדבק כאן את המזהה של ה-Hub',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.hub),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _targetEventIdController,
+                        decoration: const InputDecoration(
+                          labelText: 'Event ID',
+                          hintText: 'הדבק כאן את מזהה האירוע',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.event),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      GradientButton(
+                        label: 'הוסף שחקנים והירשם לאירוע',
+                        icon: Icons.auto_awesome,
+                        onPressed: _isGenerating ? null : _generateData,
+                        isLoading: _isGenerating,
+                        width: double.infinity,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'אפשרויות נוספות:',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            // Generate button
-            GradientButton(
-              label: 'צור נתוני דמה (מותאם אישית)',
-              icon: Icons.tune,
-              onPressed: _isGenerating ? null : _generateData,
-              isLoading: _isGenerating,
-            ),
-            const SizedBox(height: 16),
-            // Generate real field hubs button
-            GradientButton(
-              label: 'צור Hubs במגרשים אמיתיים',
-              icon: Icons.stadium,
-              onPressed: _isGenerating ? null : _generateRealFieldHubs,
-              isLoading: _isGenerating,
-            ),
-            const SizedBox(height: 16),
-            // Generate Red Devils Hub button
-            GradientButton(
-              label: 'צור Hub "השדים האדומים" עם 25 שחקנים',
-              icon: Icons.people,
-              onPressed: _isGenerating ? null : _generateRedDevilsHub,
-              isLoading: _isGenerating,
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'תרחיש חיפה (מומלץ לבדיקות):',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'יוצר 30 שחקנים ו-6 הובים במיקומים ספציפיים בחיפה',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            GradientButton(
-              label: 'צור תרחיש חיפה',
-              icon: Icons.location_city,
-              onPressed: _isGenerating ? null : _generateHaifaScenario,
-              isLoading: _isGenerating,
-              width: double.infinity,
-              gradient: const LinearGradient(
-                colors: [Colors.green, Colors.greenAccent],
-              ),
-            ),
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'ניהול נתוני דמה:',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _isGenerating ? null : _deleteAllDummyData,
-              icon: const Icon(Icons.delete_forever),
-              label: const Text('מחק כל נתוני דמה'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-              ),
-            ),
-            if (_statusMessage != null) ...[
               const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text(
+                'אפשרויות נוספות:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              // Comprehensive data generation button (NEW - recommended)
+              GradientButton(
+                label: 'צור נתונים מקיפים (מומלץ)',
+                icon: Icons.star,
+                onPressed: _isGenerating ? null : _generateComprehensiveData,
+                isLoading: _isGenerating,
+              ),
+              const SizedBox(height: 16),
+              // Generate real field hubs button
+              GradientButton(
+                label: 'צור Hubs במגרשים אמיתיים',
+                icon: Icons.stadium,
+                onPressed: _isGenerating ? null : _generateRealFieldHubs,
+                isLoading: _isGenerating,
+              ),
+              const SizedBox(height: 16),
+              // Generate Red Devils Hub button
+              GradientButton(
+                label: 'צור Hub "השדים האדומים" עם 25 שחקנים',
+                icon: Icons.people,
+                onPressed: _isGenerating ? null : _generateRedDevilsHub,
+                isLoading: _isGenerating,
+              ),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text(
+                'תרחיש חיפה (מומלץ לבדיקות):',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'יוצר 30 שחקנים ו-6 הובים במיקומים ספציפיים בחיפה',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              GradientButton(
+                label: 'צור תרחיש חיפה',
+                icon: Icons.location_city,
+                onPressed: _isGenerating ? null : _generateHaifaScenario,
+                isLoading: _isGenerating,
+                width: double.infinity,
+                gradient: const LinearGradient(
+                  colors: [Colors.green, Colors.greenAccent],
                 ),
-                child: Text(
-                  _statusMessage!,
-                  style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 32),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text(
+                'ניהול נתוני דמה:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _isGenerating ? null : _deleteAllDummyData,
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('מחק כל נתוני דמה'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
                 ),
+              ),
+              if (_statusMessage != null) ...[
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _statusMessage!,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 32),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text(
+                'מה יווצר:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text('• שחקנים עם שמות ישראליים'),
+              const Text('• הובים מחיפה והאיזור'),
+              const Text('• משחקים (עבר ועתיד)'),
+              const Text('• פוסטים בפיד'),
+              const Text('• מיקומים גיאוגרפיים'),
+              const SizedBox(height: 32),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text(
+                'הגדרות מערכת:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              // Reset Onboarding button
+              GradientButton(
+                label: 'איפוס Onboarding (לצורך בדיקה)',
+                icon: Icons.refresh,
+                onPressed: _isGenerating ? null : _resetOnboarding,
+                isLoading: false,
               ),
             ],
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'מה יווצר:',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text('• שחקנים עם שמות ישראליים'),
-            const Text('• הובים מחיפה והאיזור'),
-            const Text('• משחקים (עבר ועתיד)'),
-            const Text('• פוסטים בפיד'),
-            const Text('• מיקומים גיאוגרפיים'),
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'הגדרות מערכת:',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            // Reset Onboarding button
-            GradientButton(
-              label: 'איפוס Onboarding (לצורך בדיקה)',
-              icon: Icons.refresh,
-              onPressed: _isGenerating ? null : _resetOnboarding,
-              isLoading: false,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -455,11 +480,11 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('onboarding_completed');
-      
+
       // Invalidate provider to force reload
       final container = ProviderScope.containerOf(context);
       container.invalidate(onboardingStatusProvider);
-      
+
       if (mounted) {
         SnackbarHelper.showSuccess(
           context,
@@ -473,4 +498,3 @@ class _GenerateDummyDataScreenState extends ConsumerState<GenerateDummyDataScree
     }
   }
 }
-

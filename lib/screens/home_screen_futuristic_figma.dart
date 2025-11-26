@@ -759,7 +759,7 @@ class _HomeScreenFuturisticFigmaState
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => _generateDummyData(context),
+                              onPressed: () => context.push('/admin/generate-dummy-data'),
                               icon: const Icon(Icons.science_outlined),
                               label: const Text('Generate Dummy Data (Dev)'),
                               style: OutlinedButton.styleFrom(
@@ -801,72 +801,7 @@ class _HomeScreenFuturisticFigmaState
     );
   }
 
-  Future<void> _generateDummyData(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('יצירת נתוני דמה'),
-        content: const Text(
-          'פעולה זו תיצור:\n'
-          '• 20 שחקנים\n'
-          '• 3 Hubs\n'
-          '• 15 משחקי עבר\n\n'
-          'האם להמשיך?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('ביטול'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: FuturisticColors.primary,
-            ),
-            child: const Text('צור נתוני דמה'),
-          ),
-        ],
-      ),
-    );
 
-    if (confirmed != true || !context.mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-
-    try {
-      final generator = DummyDataGenerator();
-      await generator.generateComprehensiveData();
-
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                '✅ נתוני דמה נוצרו בהצלחה! (20 שחקנים, 3 Hubs, 15 משחקים)'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ שגיאה ביצירת נתוני דמה: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
 
   /// Force Haifa location for emulator testing
   Future<void> _forceHaifaLocation(BuildContext context, String userId) async {

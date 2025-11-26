@@ -42,12 +42,20 @@ class User with _$User {
     // REMOVED: playingStyle - merged into preferredPosition
     @Default(0)
     int totalParticipations, // Total games played (for milestone badges)
+    @Default(0) int gamesPlayed, // Compatibility field used throughout the app
+
     @NullableGeoPointConverter() GeoPoint? location,
     String? geohash,
     String? region, // אזור: צפון, מרכז, דרום, ירושלים
     // Denormalized fields (updated by Cloud Functions, not written by client)
     @Default(0)
     int followerCount, // Denormalized: Count of followers (updated by onFollowCreated)
+    // Player Stats (denormalized from game participations)
+    @Default(0) int wins,
+    @Default(0) int losses,
+    @Default(0) int draws,
+    @Default(0) int goals,
+    @Default(0) int assists,
     // Privacy settings - control what data is visible in search and profile
     @Default({
       'hideFromSearch': false,

@@ -33,10 +33,8 @@ class VenuesRepository {
       return Stream.value(null);
     }
 
-    return _firestore
-        .doc(FirestorePaths.venue(venueId))
-        .snapshots()
-        .map((doc) => doc.exists
+    return _firestore.doc(FirestorePaths.venue(venueId)).snapshots().map(
+        (doc) => doc.exists
             ? Venue.fromJson({...doc.data()!, 'venueId': doc.id})
             : null);
   }
@@ -87,11 +85,11 @@ class VenuesRepository {
     try {
       final data = venue.toJson();
       data.remove('venueId'); // Remove venueId from data (it's the document ID)
-      
+
       final docRef = venue.venueId.isNotEmpty
           ? _firestore.doc(FirestorePaths.venue(venue.venueId))
           : _firestore.collection(FirestorePaths.venues()).doc();
-      
+
       await docRef.set(data);
       return docRef.id;
     } catch (e) {
@@ -139,12 +137,13 @@ class VenuesRepository {
 
     try {
       // Get geohash for the location
-      final centerGeohash = GeohashUtils.encode(latitude, longitude, precision: 7);
+      final centerGeohash =
+          GeohashUtils.encode(latitude, longitude, precision: 7);
       final neighbors = GeohashUtils.neighbors(centerGeohash);
 
       // Query venues in the geohash area
       final venues = <Venue>[];
-      
+
       for (final geohash in [centerGeohash, ...neighbors]) {
         final snapshot = await _firestore
             .collection(FirestorePaths.venues())
@@ -155,14 +154,15 @@ class VenuesRepository {
 
         for (final doc in snapshot.docs) {
           final venue = Venue.fromJson({...doc.data(), 'venueId': doc.id});
-          
+
           // Calculate distance
           final distance = Geolocator.distanceBetween(
-            latitude,
-            longitude,
-            venue.location.latitude,
-            venue.location.longitude,
-          ) / 1000; // Convert to km
+                latitude,
+                longitude,
+                venue.location.latitude,
+                venue.location.longitude,
+              ) /
+              1000; // Convert to km
 
           if (distance <= radiusKm) {
             venues.add(venue);
@@ -194,14 +194,14 @@ class VenuesRepository {
   }
 
   /// Search for football venues using Google Places API
-  /// 
+  ///
   /// This function uses Google Places Text Search API to find football fields
   /// and converts the results to Venue objects.
-  /// 
+  ///
   /// [latitude] - Optional center latitude for location-based search
   /// [longitude] - Optional center longitude for location-based search
   /// [radius] - Search radius in meters (default 50km)
-  /// 
+  ///
   /// Returns a list of Venue objects mapped from Google Places API results.
   Future<List<Venue>> searchFootballVenuesFromGooglePlaces({
     double? latitude,
@@ -211,7 +211,7 @@ class VenuesRepository {
     try {
       // Initialize Google Places Service (uses API key from Env.googleMapsApiKey)
       final placesService = GooglePlacesService();
-      
+
       // Call the search function
       final placeResults = await placesService.searchForFootballVenues(
         latitude: latitude,
@@ -253,18 +253,19 @@ class VenuesRepository {
 
       return venues;
     } catch (e) {
-      throw Exception('Failed to search football venues from Google Places: $e');
+      throw Exception(
+          'Failed to search football venues from Google Places: $e');
     }
   }
 
   /// Get or create venue from Google Place
-  /// 
+  ///
   /// This function implements a "get or create" pattern:
   /// - If a venue with the same googlePlaceId exists, return it
   /// - Otherwise, create a new venue in Firestore and return it
-  /// 
+  ///
   /// [venueFromGoogle] - Venue object created from Google Places API result
-  /// 
+  ///
   /// Returns the existing or newly created Venue with its Firestore ID
   Future<Venue> getOrCreateVenueFromGooglePlace(Venue venueFromGoogle) async {
     if (!Env.isFirebaseAvailable) {
@@ -272,7 +273,8 @@ class VenuesRepository {
     }
 
     // Validate that googlePlaceId exists
-    if (venueFromGoogle.googlePlaceId == null || venueFromGoogle.googlePlaceId!.isEmpty) {
+    if (venueFromGoogle.googlePlaceId == null ||
+        venueFromGoogle.googlePlaceId!.isEmpty) {
       throw Exception('Venue must have a googlePlaceId');
     }
 
@@ -293,7 +295,7 @@ class VenuesRepository {
       // If venue doesn't exist, create it
       final data = venueFromGoogle.toJson();
       data.remove('venueId'); // Remove venueId from data (it's the document ID)
-      
+
       // Ensure required fields are set
       data['hubCount'] = venueFromGoogle.hubCount;
       data['isPublic'] = venueFromGoogle.isPublic;
@@ -302,8 +304,9 @@ class VenuesRepository {
       data['updatedAt'] = FieldValue.serverTimestamp();
 
       // Add to Firestore collection
-      final docRef = await _firestore.collection(FirestorePaths.venues()).add(data);
-      
+      final docRef =
+          await _firestore.collection(FirestorePaths.venues()).add(data);
+
       // Return the newly created venue with its Firestore ID
       final createdData = await docRef.get();
       return Venue.fromJson({...createdData.data()!, 'venueId': docRef.id});
@@ -313,14 +316,14 @@ class VenuesRepository {
   }
 
   /// Link secondary venue to hub (not primary venue)
-  /// 
+  ///
   /// This function:
   /// - Adds the venueId to the hub's venueIds array
   /// - Increments the venue's hubCount by 1
-  /// 
+  ///
   /// Note: This function does NOT set the venue as primary.
   /// Use setHubPrimaryVenue in HubsRepository for primary venue.
-  /// 
+  ///
   /// [hubId] - ID of the hub to link the venue to
   /// [venueId] - ID of the venue to link
   Future<void> linkSecondaryVenueToHub(String hubId, String venueId) async {
@@ -370,7 +373,7 @@ class VenuesRepository {
   }
 
   /// Get all venues for map display
-  /// 
+  ///
   /// Returns a list of all active venues in the system.
   Future<List<Venue>> getVenuesForMap() async {
     if (!Env.isFirebaseAvailable) return [];
@@ -390,7 +393,7 @@ class VenuesRepository {
   }
 
   /// Get all hubs with primary venue location for map display
-  /// 
+  ///
   /// Returns a list of all hubs that have a primaryVenueLocation set.
   Future<List<Hub>> getHubsForMap() async {
     if (!Env.isFirebaseAvailable) return [];
@@ -410,20 +413,24 @@ class VenuesRepository {
   }
 
   /// Create manual venue (not from Google Places)
-  /// 
+  ///
   /// This function creates a new venue in Firestore with the provided data.
   /// The venue will NOT have a googlePlaceId (it's null).
-  /// 
+  ///
   /// [name] - Name of the venue (required)
   /// [address] - Human-readable address (optional)
   /// [location] - GeoPoint location (required)
+  /// [hubId] - Hub ID to associate with (optional)
+  /// [createdBy] - User ID who created this venue (optional)
   /// [isPublic] - Whether this is a public venue (default: true)
-  /// 
+  ///
   /// Returns the created Venue with its Firestore ID
   Future<Venue> createManualVenue({
     required String name,
     String? address,
     required GeoPoint location,
+    String? hubId,
+    String? createdBy,
     bool isPublic = true,
   }) async {
     if (!Env.isFirebaseAvailable) {
@@ -431,21 +438,10 @@ class VenuesRepository {
     }
 
     try {
-      // Get current user ID (if available)
-      String? createdBy;
-      try {
-        // Try to get current user from auth (if available in context)
-        // Note: In a real implementation, you might want to pass userId as parameter
-        // For now, we'll leave it null for manual venues
-        createdBy = null;
-      } catch (e) {
-        // Ignore - createdBy can be null
-      }
-
       // Create Venue object
       final venue = Venue(
         venueId: '', // Will be generated by Firestore
-        hubId: '', // Not assigned to a hub yet - can be set later
+        hubId: hubId ?? '', // Use provided hubId or empty string
         name: name,
         description: address,
         location: location,
@@ -459,7 +455,7 @@ class VenuesRepository {
         createdBy: createdBy,
         isActive: true,
         isMain: false,
-        hubCount: 0, // New venue, no hubs using it yet
+        hubCount: hubId != null ? 1 : 0, // If assigned to hub, count = 1
         isPublic: isPublic,
       );
 
@@ -468,7 +464,8 @@ class VenuesRepository {
       data.remove('venueId');
 
       // Add to Firestore
-      final docRef = await _firestore.collection(FirestorePaths.venues()).add(data);
+      final docRef =
+          await _firestore.collection(FirestorePaths.venues()).add(data);
 
       // Read the created document to get the full Venue with ID
       final createdDoc = await docRef.get();
@@ -478,4 +475,3 @@ class VenuesRepository {
     }
   }
 }
-

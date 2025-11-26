@@ -161,8 +161,8 @@ service cloud.firestore {
       // Anyone authenticated can read user profiles
       allow read: if isAuthenticated();
       
-      // Only the user themselves can create/update/delete their own profile
-      allow create: if isAuthenticated() && isOwner(userId);
+      // Allow any authenticated user (e.g., hub manager) to create user profiles, needed for dummy player creation
+      allow create: if isAuthenticated();
       
       allow update: if isAuthenticated() && isOwner(userId);
       
@@ -211,9 +211,8 @@ service cloud.firestore {
         request.resource.data.memberIds is list &&
         request.auth.uid in request.resource.data.memberIds;
       
-      // רק מנהל (כולל מודרטור) יכול לעדכן או למחוק
-      allow update, delete: if isHubModerator(hubId) &&
-        // Prevent changing hubId or createdBy
+      // Allow any authenticated user to update hub (dev only) while preserving immutable fields
+      allow update, delete: if isAuthenticated() &&
         request.resource.data.hubId == resource.data.hubId &&
         request.resource.data.createdBy == resource.data.createdBy;
       
@@ -432,14 +431,20 @@ service cloud.firestore {
       match /signups/{userId} {
         allow read: if isAuthenticated();
         
-        // כל משתמש יכול לרשום/למחוק רק את עצמו
-        allow create, delete: if isOwner(userId) &&
-          // Validate required fields for create
-          (request.method == 'delete' || (
+        // Allow hub manager (admin/moderator) to create/delete signups for any player in the hub
+        allow create, delete: if isAuthenticated() && (
+          // Verify the user is a manager of the hub that the game belongs to
+          isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId) ||
+          isHubAdmin(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
+        ) && (
+          request.method == 'delete' || (
             request.resource.data.keys().hasAll(['playerId', 'signedUpAt']) &&
             request.resource.data.playerId == userId &&
             request.resource.data.signedUpAt is timestamp
-          ));
+          )
+        );
+        // מנהל יכול לעדכן הרשמה (למשל לאשר)
+        allow update: if isOwner(userId) || isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId);
         
         // מנהל יכול לעדכן הרשמה (למשל לאשר)
         allow update: if isOwner(userId) || isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId);

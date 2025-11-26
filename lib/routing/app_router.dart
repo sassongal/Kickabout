@@ -16,6 +16,8 @@ import 'package:kickadoor/screens/hub/create_hub_event_screen.dart'
     deferred as create_hub_event_screen;
 import 'package:kickadoor/screens/hub/edit_hub_event_screen.dart'
     deferred as edit_hub_event_screen;
+import 'package:kickadoor/screens/events/event_management_screen.dart'
+    deferred as hub_event_management_screen;
 import 'package:kickadoor/screens/game/game_list_screen.dart'
     deferred as game_list_screen;
 import 'package:kickadoor/screens/game/create_game_screen.dart'
@@ -87,20 +89,25 @@ import 'package:kickadoor/screens/venue/venue_search_screen.dart'
     deferred as venue_search_screen;
 import 'package:kickadoor/screens/venue/create_manual_venue_screen.dart'
     deferred as create_manual_venue_screen;
+import 'package:kickadoor/screens/venues/discover_venues_screen.dart'
+    deferred as discover_venues_screen;
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
 import 'package:kickadoor/screens/onboarding/onboarding_screen.dart';
 import 'package:kickadoor/screens/game/log_past_game_screen.dart'
     deferred as log_past_game_screen;
-import 'package:kickadoor/screens/weather/weather_detail_screen.dart'
-    deferred as weather_detail_screen;
 import 'package:kickadoor/screens/activity/community_activity_feed_screen.dart'
     deferred as community_activity_feed_screen;
+import 'package:kickadoor/screens/game/game_recording_screen.dart'
+    deferred as game_recording_screen;
 import 'package:kickadoor/screens/event/event_management_screen.dart'
     deferred as event_management_screen;
 import 'package:kickadoor/screens/event/team_generator_config_screen.dart'
     deferred as team_generator_config_screen;
 import 'package:kickadoor/screens/event/team_generator_result_screen.dart'
     deferred as team_generator_result_screen;
+import 'package:kickadoor/screens/debug/create_dummy_players_screen.dart'
+    deferred as create_dummy_players_screen;
+
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -310,14 +317,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             loader: map_screen.loadLibrary(),
             builder: () => map_screen.MapScreen()),
       ),
+      // Game Recording
       GoRoute(
-        path: AppPaths.weatherDetail,
-        name: 'weatherDetail',
-        builder: (context, state) => LazyRouteLoader(
-            loader: weather_detail_screen.loadLibrary(),
-            builder: () => weather_detail_screen.WeatherDetailScreen()),
+        path: '/hub/:hubId/event/:eventId/record',
+        name: 'gameRecording',
+        builder: (context, state) {
+          final hubId = state.pathParameters['hubId']!;
+          final event = state.extra as HubEvent;
+          return LazyRouteLoader(
+            loader: game_recording_screen.loadLibrary(),
+            builder: () => game_recording_screen.GameRecordingScreen(
+              hubId: hubId,
+              event: event,
+            ),
+          );
+        },
       ),
-
       // Players Board
       GoRoute(
         path: AppPaths.playersBoard,
@@ -388,6 +403,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               final hubId = state.uri.queryParameters['hubId'];
               return game_calendar_screen.GameCalendarScreen(hubId: hubId);
             }),
+      ),
+
+      // Discover Venues (Main venues screen)
+      GoRoute(
+        path: '/venues/discover',
+        name: 'discoverVenues',
+        builder: (context, state) => LazyRouteLoader(
+            loader: discover_venues_screen.loadLibrary(),
+            builder: () => discover_venues_screen.DiscoverVenuesScreen()),
       ),
 
       // Venue Search
@@ -652,6 +676,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                     }),
               ),
               GoRoute(
+                path: 'events/:eventId/manage',
+                name: 'manageHubEvent',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: hub_event_management_screen.loadLibrary(),
+                    builder: () {
+                      final hubId = state.pathParameters['id']!;
+                      final eventId = state.pathParameters['eventId']!;
+                      return hub_event_management_screen.EventManagementScreen(
+                          hubId: hubId, eventId: eventId);
+                    }),
+              ),
+              GoRoute(
                 path: 'events/:eventId/log-game',
                 name: 'logGame',
                 builder: (context, state) => LazyRouteLoader(
@@ -795,6 +831,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                       final gameId = state.pathParameters['id']!;
                       return game_chat_screen.GameChatScreen(gameId: gameId);
                     }),
+              ),
+              // Debug route: Create Dummy Players
+              GoRoute(
+                path: '/debug/create-dummy-players',
+                name: 'createDummyPlayers',
+                builder: (context, state) => LazyRouteLoader(
+                  loader: create_dummy_players_screen.loadLibrary(),
+                  builder: () =>
+                      create_dummy_players_screen.CreateDummyPlayersScreen(),
+                ),
               ),
             ],
           ),

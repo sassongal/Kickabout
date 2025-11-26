@@ -18,6 +18,8 @@ import 'package:kickadoor/services/weather_service.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/logic/session_logic.dart';
 import 'package:kickadoor/widgets/loading_widget.dart';
+import 'package:kickadoor/services/game_management_service.dart';
+import 'package:kickadoor/widgets/dialogs/edit_game_result_dialog.dart';
 
 /// Game detail screen
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -468,6 +470,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         return _buildCompletedState(
           context,
           game,
+          role,
           confirmedSignups,
           usersRepo,
         );
@@ -749,6 +752,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   Widget _buildCompletedState(
     BuildContext context,
     Game game,
+    UserRole role,
     List<GameSignup> confirmedSignups,
     UsersRepository usersRepo,
   ) {
@@ -766,6 +770,20 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         if (game.teams.isNotEmpty) ...[
           _TeamsDisplayWidget(teams: game.teams, usersRepo: usersRepo),
           const SizedBox(height: 24),
+        ],
+
+        // Manager-only: Edit Result button
+        if (role == UserRole.admin) ...[
+          OutlinedButton.icon(
+            onPressed: () => _showEditResultDialog(context, game, usersRepo),
+            icon: const Icon(Icons.edit),
+            label: const Text('ערוך תוצאה'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: BorderSide(color: Colors.orange),
+            ),
+          ),
+          const SizedBox(height: 12),
         ],
 
         // View full statistics button
@@ -1044,6 +1062,64 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         );
       },
     );
+  }
+
+  /// Shows the edit result dialog for managers
+  Future<void> _showEditResultDialog(
+    BuildContext context,
+    Game game,
+    UsersRepository usersRepo,
+  ) async {
+    try {
+      // Fetch all players involved in the game (from both teams)
+      final allPlayerIds =
+          game.teams.expand((t) => t.playerIds).toSet().toList();
+      final players = await usersRepo.getUsers(allPlayerIds);
+
+      if (!mounted) return;
+
+      final service = GameManagementService();
+      // Capture ScaffoldMessenger before async gap
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      final result = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => EditGameResultDialog(
+          game: game,
+          players: players,
+          onSave: ({
+            required int teamAScore,
+            required int teamBScore,
+            required Map<String, int> goalScorerIds,
+            Map<String, int>? assistPlayerIds,
+            String? mvpPlayerId,
+          }) async {
+            await service.editGameResult(
+              gameId: game.gameId,
+              newTeamAScore: teamAScore,
+              newTeamBScore: teamBScore,
+              newGoalScorerIds: goalScorerIds,
+              newAssistPlayerIds: assistPlayerIds,
+              newMvpPlayerId: mvpPlayerId,
+            );
+          },
+        ),
+      );
+
+      // If edit was successful, show success message
+      if (result == true && mounted) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('התוצאה עודכנה בהצלחה')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בעדכון התוצאה: $e')),
+        );
+      }
+    }
   }
 }
 

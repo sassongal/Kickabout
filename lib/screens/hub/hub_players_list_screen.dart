@@ -8,6 +8,8 @@ import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
+import 'package:kickadoor/widgets/dialogs/merge_player_dialog.dart';
+import 'package:kickadoor/widgets/dialogs/set_player_rating_dialog.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -21,19 +23,20 @@ class HubPlayersListScreen extends ConsumerStatefulWidget {
   const HubPlayersListScreen({super.key, required this.hubId});
 
   @override
-  ConsumerState<HubPlayersListScreen> createState() => _HubPlayersListScreenState();
+  ConsumerState<HubPlayersListScreen> createState() =>
+      _HubPlayersListScreenState();
 }
 
 class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
   String _searchQuery = '';
   String _sortBy = 'rating'; // rating, name, position
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Manager Ratings Mode
   bool _isRatingMode = false;
   Map<String, double> _tempRatings = {}; // userId -> rating (1.0-7.0)
   bool _isSavingRatings = false;
-  
+
   // Pagination state
   final ScrollController _scrollController = ScrollController();
   List<User> _displayedUsers = [];
@@ -79,12 +82,13 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
       return;
     }
 
-    final allUsers = await ref.read(usersRepositoryProvider).getUsers(hub.memberIds);
+    final allUsers =
+        await ref.read(usersRepositoryProvider).getUsers(hub.memberIds);
     final filteredUsers = _filterAndSort(allUsers, hub);
-    
+
     final nextIndex = _displayedUsers.length;
     final endIndex = (nextIndex + _pageSize).clamp(0, filteredUsers.length);
-    
+
     if (nextIndex < filteredUsers.length) {
       setState(() {
         _displayedUsers.addAll(filteredUsers.sublist(nextIndex, endIndex));
@@ -128,21 +132,21 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
             return 0;
         }
       }
-      
+
       // Priority 1: Managers/Admins must appear at the very top
-      final isAManager = a.uid == hub.createdBy || 
-                         hub.roles[a.uid] == 'manager';
-      final isBManager = b.uid == hub.createdBy || 
-                         hub.roles[b.uid] == 'manager';
-      
+      final isAManager =
+          a.uid == hub.createdBy || hub.roles[a.uid] == 'manager';
+      final isBManager =
+          b.uid == hub.createdBy || hub.roles[b.uid] == 'manager';
+
       if (isAManager && !isBManager) return -1;
       if (!isAManager && isBManager) return 1;
-      
+
       // Priority 2: Sort by Tenure (Join Date) - older dates = higher on list
       if (isAManager == isBManager && hub.memberJoinDates.isNotEmpty) {
         final aJoinDate = hub.memberJoinDates[a.uid];
         final bJoinDate = hub.memberJoinDates[b.uid];
-        
+
         if (aJoinDate != null && bJoinDate != null) {
           // Older date = earlier in list (negative value)
           return aJoinDate.compareTo(bJoinDate);
@@ -152,7 +156,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
           return 1; // b has join date, a doesn't - b comes first
         }
       }
-      
+
       // Fallback to original sorting if no tenure data
       switch (_sortBy) {
         case 'rating':
@@ -196,14 +200,16 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
           final hub = hubSnapshot.data!;
           final isHubManager = currentUserId == hub.createdBy;
-          final hubPermissions = currentUserId != null 
+          final hubPermissions = currentUserId != null
               ? HubPermissions(hub: hub, userId: currentUserId)
               : null;
-          final canManageRatings = (hubPermissions?.isManager() ?? false) || 
-                                   (hubPermissions?.isModerator() ?? false);
-          
+          final canManageRatings = (hubPermissions?.isManager() ?? false) ||
+              (hubPermissions?.isModerator() ?? false);
+
           // Load existing ratings when entering rating mode
-          if (_isRatingMode && _tempRatings.isEmpty && hub.managerRatings.isNotEmpty) {
+          if (_isRatingMode &&
+              _tempRatings.isEmpty &&
+              hub.managerRatings.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 setState(() {
@@ -239,7 +245,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                       onPressed: () async {
                         final result = await showDialog<bool>(
                           context: context,
-                          builder: (context) => AddManualPlayerDialog(hubId: widget.hubId),
+                          builder: (context) =>
+                              AddManualPlayerDialog(hubId: widget.hubId),
                         );
                         if (result == true && mounted) {
                           // Refresh will happen automatically
@@ -299,11 +306,12 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
               final allUsers = snapshot.data ?? [];
               final filteredUsers = _filterAndSort(allUsers, hub);
-              
+
               // Initialize displayed users on first load or when data changes
-              if (_displayedUsers.isEmpty || 
+              if (_displayedUsers.isEmpty ||
                   _displayedUsers.length != filteredUsers.length ||
-                  (_displayedUsers.isNotEmpty && _displayedUsers.first.uid != filteredUsers.first.uid)) {
+                  (_displayedUsers.isNotEmpty &&
+                      _displayedUsers.first.uid != filteredUsers.first.uid)) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted) {
                     setState(() {
@@ -313,13 +321,13 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                   }
                 });
               }
-              
+
               // Use displayed users if available, otherwise use first page
-              final usersToShow = _displayedUsers.isNotEmpty 
-                  ? _displayedUsers 
+              final usersToShow = _displayedUsers.isNotEmpty
+                  ? _displayedUsers
                   : filteredUsers.take(_pageSize).toList();
-              final hasMoreToShow = _displayedUsers.isNotEmpty 
-                  ? _hasMore 
+              final hasMoreToShow = _displayedUsers.isNotEmpty
+                  ? _hasMore
                   : filteredUsers.length > _pageSize;
 
               return Column(
@@ -402,14 +410,16 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                               Expanded(
                                 child: SwitchListTile(
                                   title: const Text('מצב ניהול דירוגים'),
-                                  subtitle: const Text('דרג שחקנים (1-7) לשיפור חלוקת קבוצות'),
+                                  subtitle: const Text(
+                                      'דרג שחקנים (1-7) לשיפור חלוקת קבוצות'),
                                   value: _isRatingMode,
                                   onChanged: (value) {
                                     setState(() {
                                       _isRatingMode = value;
                                       if (value) {
                                         // Load existing ratings
-                                        _tempRatings = Map<String, double>.from(hub.managerRatings);
+                                        _tempRatings = Map<String, double>.from(
+                                            hub.managerRatings);
                                       } else {
                                         // Clear temp ratings when exiting mode
                                         _tempRatings.clear();
@@ -429,7 +439,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                   ? const SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     )
                                   : const Icon(Icons.save),
                               label: const Text('שמור דירוגים'),
@@ -448,7 +459,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                             onPressed: () async {
                               final result = await showDialog<bool>(
                                 context: context,
-                                builder: (context) => AddManualPlayerDialog(hubId: widget.hubId),
+                                builder: (context) =>
+                                    AddManualPlayerDialog(hubId: widget.hubId),
                               );
                               if (result == true && mounted) {
                                 // Refresh will happen automatically
@@ -459,6 +471,49 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: FuturisticColors.secondary,
                               foregroundColor: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Merge player button
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              // Get manual players
+                              final manualPlayers = allUsers
+                                  .where((u) => u.email.startsWith('manual_'))
+                                  .toList();
+
+                              if (manualPlayers.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                          Text('אין שחקנים ידניים למיזוג')),
+                                );
+                                return;
+                              }
+
+                              final result = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => MergePlayerDialog(
+                                  hubId: widget.hubId,
+                                  manualPlayers: manualPlayers,
+                                  usersRepo: usersRepo,
+                                ),
+                              );
+
+                              if (result == true && mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('השחקנים מוזגו בהצלחה!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.merge_type),
+                            label: const Text('מזג שחקן ידני'),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.orange),
+                              foregroundColor: Colors.orange,
                             ),
                           ),
                         ],
@@ -493,46 +548,59 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                         : ListView.builder(
                             controller: _scrollController,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: usersToShow.length + (hasMoreToShow ? 1 : 0),
+                            itemCount:
+                                usersToShow.length + (hasMoreToShow ? 1 : 0),
                             itemBuilder: (context, index) {
                               // Show loading indicator at the bottom
                               if (index == usersToShow.length) {
                                 return const Padding(
                                   padding: EdgeInsets.all(16.0),
-                                  child: Center(child: CircularProgressIndicator()),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
                                 );
                               }
                               final user = usersToShow[index];
-                              final isManualPlayer = user.email.startsWith('manual_');
+                              final isManualPlayer =
+                                  user.email.startsWith('manual_');
                               final isCreator = user.uid == hub.createdBy;
-                              final currentRating = _tempRatings[user.uid] ?? 
-                                                   hub.managerRatings[user.uid] ?? 
-                                                   user.currentRankScore.clamp(1.0, 7.0);
+                              final currentRating = _tempRatings[user.uid] ??
+                                  hub.managerRatings[user.uid] ??
+                                  user.currentRankScore.clamp(1.0, 7.0);
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: FuturisticCard(
-                                  onTap: _isRatingMode 
+                                  onTap: _isRatingMode
                                       ? null // Disable tap in rating mode
                                       : (isManualPlayer
                                           ? (isHubManager
                                               ? () async {
-                                                  final result = await showDialog<bool>(
+                                                  final result =
+                                                      await showDialog<bool>(
                                                     context: context,
-                                                    builder: (context) => EditManualPlayerDialog(
+                                                    builder: (context) =>
+                                                        EditManualPlayerDialog(
                                                       player: user,
                                                       hubId: widget.hubId,
                                                     ),
                                                   );
-                                                  if (result == true && mounted) {
+                                                  if (result == true &&
+                                                      mounted) {
                                                     // Refresh will happen automatically
                                                   }
                                                 }
                                               : null)
-                                          : () => context.push('/profile/${user.uid}')),
+                                          : () => context
+                                              .push('/profile/${user.uid}')),
                                   child: _isRatingMode
-                                      ? _buildRatingModeTile(user, currentRating, hub)
-                                      : _buildNormalModeTile(user, isManualPlayer, isCreator, isHubManager, hub),
+                                      ? _buildRatingModeTile(
+                                          user, currentRating, hub)
+                                      : _buildNormalModeTile(
+                                          user,
+                                          isManualPlayer,
+                                          isCreator,
+                                          isHubManager,
+                                          hub),
                                 ),
                               );
                             },
@@ -547,9 +615,32 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     );
   }
 
-  Widget _buildNormalModeTile(User user, bool isManualPlayer, bool isCreator, bool isHubManager, Hub hub) {
+  Widget _buildNormalModeTile(User user, bool isManualPlayer, bool isCreator,
+      bool isHubManager, Hub hub) {
+    // Get manager rating if it exists, otherwise use global rating
+    final managerRating = hub.managerRatings[user.uid];
+    final displayRating = managerRating ?? user.currentRankScore;
+    final hasManagerRating = managerRating != null;
+
     return ListTile(
       contentPadding: const EdgeInsets.all(12),
+      // Allow managers to tap to set rating
+      onTap: isHubManager
+          ? () async {
+              final result = await showDialog<bool>(
+                context: context,
+                builder: (context) => SetPlayerRatingDialog(
+                  hubId: widget.hubId,
+                  playerId: user.uid,
+                  playerName: user.name,
+                  currentRating: managerRating,
+                ),
+              );
+              if (result == true && mounted) {
+                // Refresh will happen automatically via stream
+              }
+            }
+          : null,
       leading: CircleAvatar(
         radius: 30,
         backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
@@ -655,16 +746,36 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
               Icon(
                 Icons.star,
                 size: 16,
-                color: FuturisticColors.warning,
+                color:
+                    hasManagerRating ? Colors.orange : FuturisticColors.warning,
               ),
               const SizedBox(width: 4),
               Text(
-                user.currentRankScore.toStringAsFixed(1),
+                displayRating.toStringAsFixed(1),
                 style: FuturisticTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: FuturisticColors.warning,
+                  color: hasManagerRating
+                      ? Colors.orange
+                      : FuturisticColors.warning,
                 ),
               ),
+              if (hasManagerRating) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.verified,
+                  size: 14,
+                  color: Colors.orange,
+                ),
+              ],
+              if (!hasManagerRating && isHubManager) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '(גלובלי)',
+                  style: FuturisticTypography.bodySmall.copyWith(
+                    color: FuturisticColors.textSecondary,
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -686,7 +797,12 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
               },
               tooltip: 'ערוך שחקן',
             )
-          : const Icon(Icons.chevron_left),
+          : isHubManager
+              ? Icon(
+                  Icons.chevron_left,
+                  color: FuturisticColors.primary,
+                )
+              : const Icon(Icons.chevron_left),
     );
   }
 
@@ -700,7 +816,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
+                backgroundColor:
+                    FuturisticColors.primary.withValues(alpha: 0.1),
                 backgroundImage: user.photoUrl != null
                     ? CachedNetworkImageProvider(user.photoUrl!)
                     : null,
@@ -800,7 +917,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      
+
       // Update hub with managerRatings
       await hubsRepo.updateHub(widget.hubId, {
         'managerRatings': _tempRatings,
@@ -813,7 +930,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Exit rating mode
         setState(() {
           _isRatingMode = false;
@@ -838,4 +955,3 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     }
   }
 }
-

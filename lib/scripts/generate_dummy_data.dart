@@ -14,6 +14,83 @@ class DummyDataGenerator {
   DummyDataGenerator({FirebaseFirestore? firestore})
       : firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// הוספת שחקנים מדומים ל-Hub קיים ספציפי
+  Future<void> addPlayersToExistingHub({
+    required String hubId,
+    int count = 10,
+    String? eventId,
+  }) async {
+    debugPrint('Generating $count players for Hub: $hubId...');
+    
+    // בדיקה שה-Hub קיים
+    final hubDoc = await firestore.doc(FirestorePaths.hub(hubId)).get();
+    if (!hubDoc.exists) {
+      throw Exception('Hub with ID $hubId not found!');
+    }
+
+    final newMemberIds = <String>[];
+    final batch = firestore.batch();
+
+    for (int i = 0; i < count; i++) {
+      // 1. יצירת משתמש חדש (ללא כתיבה מיידית כדי שנוכל להוסיף אותו ל-Batch עם ה-hubId)
+      final userId = firestore.collection('users').doc().id;
+      final firstName = firstNames[random.nextInt(firstNames.length)];
+      final lastName = lastNames[random.nextInt(lastNames.length)];
+      
+      final location = _randomCoordinateNearHaifa();
+      final geohash = GeohashUtils.encode(location.latitude, location.longitude);
+      
+      // שימוש בתמונה רנדומלית
+      final photoId = random.nextInt(99); 
+      final photoUrl = 'https://randomuser.me/api/portraits/men/$photoId.jpg';
+
+      final user = User(
+        uid: userId,
+        name: '$firstName $lastName',
+        email: '${firstName.toLowerCase()}.${lastName.toLowerCase()}.${random.nextInt(999)}@kickabout.local',
+        phoneNumber: '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
+        city: 'חיפה', // או עיר רנדומלית מהרשימה
+        preferredPosition: positions[random.nextInt(positions.length)],
+        availabilityStatus: 'available',
+        createdAt: DateTime.now(),
+        currentRankScore: 4.0 + random.nextDouble() * 2.0,
+        totalParticipations: 0,
+        location: location,
+        geohash: geohash,
+        photoUrl: photoUrl,
+        hubIds: [hubId], // הוספה ישירה של ה-Hub למשתמש
+      );
+
+      // הוספת יצירת המשתמש ל-Batch
+      batch.set(firestore.doc(FirestorePaths.user(userId)), user.toJson());
+      newMemberIds.add(userId);
+
+      // אם סופק eventId, רשום את השחקן גם לאירוע
+      if (eventId != null && eventId.isNotEmpty) {
+        final signup = GameSignup(
+          playerId: userId,
+          status: SignupStatus.confirmed,
+          signedUpAt: DateTime.now(),
+        );
+        batch.set(
+          firestore.doc(FirestorePaths.gameSignup(eventId, userId)),
+          signup.toJson(),
+        );
+      }
+    }
+
+    // 2. עדכון ה-Hub עם החברים החדשים
+    batch.update(firestore.doc(FirestorePaths.hub(hubId)), {
+      'memberIds': FieldValue.arrayUnion(newMemberIds),
+    });
+
+    await batch.commit();
+    debugPrint('✅ Successfully added ${newMemberIds.length} players to Hub $hubId');
+    if (eventId != null && eventId.isNotEmpty) {
+      debugPrint('✅ And registered them to Event $eventId');
+    }
+  }
+
   // Haifa area coordinates
   static const double haifaLat = 32.7940;
   static const double haifaLng = 34.9896;

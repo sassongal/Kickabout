@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/hub_event.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/services/cache_service.dart';
@@ -33,7 +32,8 @@ class HubEventsRepository {
   }
 
   /// Get all events for a hub (non-streaming) with caching and retry
-  Future<List<HubEvent>> getHubEvents(String hubId, {bool forceRefresh = false}) async {
+  Future<List<HubEvent>> getHubEvents(String hubId,
+      {bool forceRefresh = false}) async {
     if (!Env.isFirebaseAvailable) return [];
 
     return MonitoringService().trackOperation(
@@ -50,7 +50,8 @@ class HubEventsRepository {
                 .get();
 
             return snapshot.docs
-                .map((doc) => HubEvent.fromJson({...doc.data(), 'eventId': doc.id}))
+                .map((doc) =>
+                    HubEvent.fromJson({...doc.data(), 'eventId': doc.id}))
                 .toList();
           },
           config: RetryConfig.network,
@@ -71,19 +72,20 @@ class HubEventsRepository {
 
     try {
       final data = event.toJson();
-      
+
       // Generate document ID if not provided
-      final eventId = event.eventId.isNotEmpty 
-          ? event.eventId 
-          : _firestore.collection(FirestorePaths.hubs())
+      final eventId = event.eventId.isNotEmpty
+          ? event.eventId
+          : _firestore
+              .collection(FirestorePaths.hubs())
               .doc(event.hubId)
               .collection('events')
               .doc()
               .id;
-      
+
       // Keep eventId in data (required by Firestore rules)
       data['eventId'] = eventId;
-      
+
       // Create document with specific ID
       await _firestore
           .collection(FirestorePaths.hubs())
@@ -103,7 +105,8 @@ class HubEventsRepository {
   }
 
   /// Get a single hub event by ID with caching and retry
-  Future<HubEvent?> getHubEvent(String hubId, String eventId, {bool forceRefresh = false}) async {
+  Future<HubEvent?> getHubEvent(String hubId, String eventId,
+      {bool forceRefresh = false}) async {
     if (!Env.isFirebaseAvailable) {
       return null;
     }
@@ -137,8 +140,29 @@ class HubEventsRepository {
     );
   }
 
+  /// Stream a single hub event
+  Stream<HubEvent?> watchHubEvent(String hubId, String eventId) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value(null);
+    }
+
+    return _firestore
+        .collection(FirestorePaths.hubs())
+        .doc(hubId)
+        .collection('events')
+        .doc(eventId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) return null;
+      final data = doc.data();
+      if (data == null) return null;
+      return HubEvent.fromJson({...data, 'eventId': doc.id});
+    });
+  }
+
   /// Save teams for an event (for TeamMaker)
-  Future<void> saveTeamsForEvent(String hubId, String eventId, List<Team> teams) async {
+  Future<void> saveTeamsForEvent(
+      String hubId, String eventId, List<Team> teams) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
@@ -168,7 +192,8 @@ class HubEventsRepository {
   }
 
   /// Update a hub event
-  Future<void> updateHubEvent(String hubId, String eventId, Map<String, dynamic> updates) async {
+  Future<void> updateHubEvent(
+      String hubId, String eventId, Map<String, dynamic> updates) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
@@ -178,7 +203,8 @@ class HubEventsRepository {
       final convertedUpdates = <String, dynamic>{};
       for (final entry in updates.entries) {
         if (entry.value is DateTime) {
-          convertedUpdates[entry.key] = Timestamp.fromDate(entry.value as DateTime);
+          convertedUpdates[entry.key] =
+              Timestamp.fromDate(entry.value as DateTime);
         } else {
           convertedUpdates[entry.key] = entry.value;
         }
@@ -224,7 +250,8 @@ class HubEventsRepository {
   }
 
   /// Alias for backward compatibility
-  Future<void> updateEvent(String hubId, String eventId, Map<String, dynamic> updates) async {
+  Future<void> updateEvent(
+      String hubId, String eventId, Map<String, dynamic> updates) async {
     return updateHubEvent(hubId, eventId, updates);
   }
 
@@ -235,7 +262,8 @@ class HubEventsRepository {
 
   /// Register a player to an event
   /// Returns the new registration count after registration
-  Future<int> registerToEvent(String hubId, String eventId, String playerId) async {
+  Future<int> registerToEvent(
+      String hubId, String eventId, String playerId) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
@@ -248,25 +276,26 @@ class HubEventsRepository {
           .collection('events')
           .doc(eventId)
           .get();
-      
+
       if (!eventDoc.exists) {
         throw Exception('Event not found');
       }
-      
+
       final eventData = eventDoc.data()!;
-      final currentRegistered = List<String>.from(eventData['registeredPlayerIds'] ?? []);
+      final currentRegistered =
+          List<String>.from(eventData['registeredPlayerIds'] ?? []);
       final maxParticipants = eventData['maxParticipants'] as int? ?? 15;
-      
+
       // Check if already registered
       if (currentRegistered.contains(playerId)) {
         throw Exception('Already registered to this event');
       }
-      
+
       // Check if event is full
       if (currentRegistered.length >= maxParticipants) {
         throw Exception('Event is full');
       }
-      
+
       // Register the player
       await _firestore
           .collection(FirestorePaths.hubs())
@@ -277,11 +306,11 @@ class HubEventsRepository {
         'registeredPlayerIds': FieldValue.arrayUnion([playerId]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       // Invalidate cache for this event
       CacheService().clear(CacheKeys.event(hubId, eventId));
       CacheService().clear(CacheKeys.eventsByHub(hubId));
-      
+
       // Return the new count (current + 1)
       return currentRegistered.length + 1;
     } catch (e) {
@@ -290,7 +319,8 @@ class HubEventsRepository {
   }
 
   /// Unregister a player from an event
-  Future<void> unregisterFromEvent(String hubId, String eventId, String playerId) async {
+  Future<void> unregisterFromEvent(
+      String hubId, String eventId, String playerId) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
@@ -305,7 +335,7 @@ class HubEventsRepository {
         'registeredPlayerIds': FieldValue.arrayRemove([playerId]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       // Invalidate cache for this event
       CacheService().clear(CacheKeys.event(hubId, eventId));
       CacheService().clear(CacheKeys.eventsByHub(hubId));
@@ -335,7 +365,8 @@ class HubEventsRepository {
       Query query = _firestore
           .collectionGroup('events')
           .where('showInCommunityFeed', isEqualTo: true)
-          .where('status', whereIn: ['upcoming', 'ongoing']); // Filter in Firestore
+          .where('status',
+              whereIn: ['upcoming', 'ongoing']); // Filter in Firestore
 
       // Apply additional filters if possible
       if (hubId != null) {
@@ -345,50 +376,60 @@ class HubEventsRepository {
 
       return query
           .orderBy('eventDate', descending: false)
-          .limit(limit) // No need for limit * 2 - filtering is done in Firestore
+          .limit(
+              limit) // No need for limit * 2 - filtering is done in Firestore
           .snapshots()
           .map((snapshot) {
-            var events = snapshot.docs
-                .map((doc) {
-                  try {
-                    // Get hubId from document path: hubs/{hubId}/events/{eventId}
-                    final pathParts = doc.reference.path.split('/');
-                    final hubIdFromPath = pathParts.length >= 2 ? pathParts[1] : null;
-                    
-                    final docData = doc.data() as Map<String, dynamic>?;
-                    if (docData == null) return null;
-                    
-                    return HubEvent.fromJson({
-                      ...docData,
-                      'eventId': doc.id,
-                      'hubId': hubIdFromPath ?? '',
-                    });
-                  } catch (e) {
-                    debugPrint('Error parsing event: $e');
-                    return null;
-                  }
-                })
-                .whereType<HubEvent>()
-                .toList();
+        var events = snapshot.docs
+            .map((doc) {
+              try {
+                // Get hubId from document path: hubs/{hubId}/events/{eventId}
+                final pathParts = doc.reference.path.split('/');
+                final hubIdFromPath =
+                    pathParts.length >= 2 ? pathParts[1] : null;
 
-            // Apply filters that can't be done in Firestore (collection group limitations)
-            if (hubId != null) {
-              events = events.where((e) => e.hubId == hubId).toList();
-            }
-            
-            if (startDate != null) {
-              events = events.where((e) => e.eventDate.isAfter(startDate) || e.eventDate.isAtSameMomentAs(startDate)).toList();
-            }
-            
-            if (endDate != null) {
-              events = events.where((e) => e.eventDate.isBefore(endDate) || e.eventDate.isAtSameMomentAs(endDate)).toList();
-            }
+                final docData = doc.data() as Map<String, dynamic>?;
+                if (docData == null) return null;
 
-            // Sort again after filtering (should already be sorted, but ensure)
-            events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+                return HubEvent.fromJson({
+                  ...docData,
+                  'eventId': doc.id,
+                  'hubId': hubIdFromPath ?? '',
+                });
+              } catch (e) {
+                debugPrint('Error parsing event: $e');
+                return null;
+              }
+            })
+            .whereType<HubEvent>()
+            .toList();
 
-            return events;
-          });
+        // Apply filters that can't be done in Firestore (collection group limitations)
+        if (hubId != null) {
+          events = events.where((e) => e.hubId == hubId).toList();
+        }
+
+        if (startDate != null) {
+          events = events
+              .where((e) =>
+                  e.eventDate.isAfter(startDate) ||
+                  e.eventDate.isAtSameMomentAs(startDate))
+              .toList();
+        }
+
+        if (endDate != null) {
+          events = events
+              .where((e) =>
+                  e.eventDate.isBefore(endDate) ||
+                  e.eventDate.isAtSameMomentAs(endDate))
+              .toList();
+        }
+
+        // Sort again after filtering (should already be sorted, but ensure)
+        events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+
+        return events;
+      });
     } catch (e) {
       debugPrint('Error in watchPublicEvents: $e');
       return Stream.value([]);

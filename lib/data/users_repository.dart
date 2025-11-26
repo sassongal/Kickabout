@@ -301,4 +301,47 @@ class UsersRepository {
       return [];
     }
   }
+
+  /// Search for users by name, email, or phone.
+  /// This is a basic implementation and can be slow on large datasets.
+  /// For production, consider using a dedicated search service like Algolia or Typesense.
+  Future<List<User>> searchUsers(String query, {int limit = 10}) async {
+    if (!Env.isFirebaseAvailable || query.trim().isEmpty) {
+      return [];
+    }
+
+    final lowerCaseQuery = query.toLowerCase();
+
+    try {
+      // Since Firestore doesn't support full-text search on multiple fields,
+      // we perform a few separate queries and merge the results.
+
+      // Query by name (prefix search)
+      final nameQuery = _firestore
+          .collection(FirestorePaths.users())
+          .where('name', isGreaterThanOrEqualTo: lowerCaseQuery)
+          .where('name', isLessThanOrEqualTo: '$lowerCaseQuery\uf8ff')
+          .limit(limit);
+
+      // Query by email (exact match)
+      final emailQuery = _firestore
+          .collection(FirestorePaths.users())
+          .where('email', isEqualTo: lowerCaseQuery)
+          .limit(1);
+
+      // Execute queries in parallel
+      final results = await Future.wait([nameQuery.get(), emailQuery.get()]);
+
+      final users = <String, User>{}; // Use a map to avoid duplicates
+      for (final snapshot in results) {
+        for (final doc in snapshot.docs) {
+          users[doc.id] = User.fromJson({...doc.data(), 'uid': doc.id});
+        }
+      }
+      return users.values.toList();
+    } catch (e) {
+      debugPrint('Error searching users: $e');
+      return [];
+    }
+  }
 }

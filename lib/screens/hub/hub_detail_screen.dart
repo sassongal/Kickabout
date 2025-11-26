@@ -22,7 +22,6 @@ import 'package:kickadoor/widgets/optimized_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/screens/venue/venue_search_screen.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -34,13 +33,15 @@ class HubDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<HubDetailScreen> createState() => _HubDetailScreenState();
 }
 
-class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTickerProviderStateMixin {
+class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this); // Removed Members tab
+    _tabController =
+        TabController(length: 4, vsync: this); // Removed Members tab
   }
 
   @override
@@ -91,13 +92,13 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                 context: 'Hub detail screen - hub loading',
               ),
               action: ElevatedButton.icon(
-              onPressed: () {
-                // Retry by rebuilding - trigger rebuild via key change
-                // For ConsumerWidget, we can't use setState, so we'll just show the error
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('נסה שוב'),
-            ),
+                onPressed: () {
+                  // Retry by rebuilding - trigger rebuild via key change
+                  // For ConsumerWidget, we can't use setState, so we'll just show the error
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('נסה שוב'),
+              ),
             ),
           );
         }
@@ -110,9 +111,11 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
           );
         }
 
-        final isMember = currentUserId != null && hub.memberIds.contains(currentUserId);
+        final isMember =
+            currentUserId != null && hub.memberIds.contains(currentUserId);
         // Check if join requests are enabled
-        final joinRequestsEnabled = hub.settings['joinRequestsEnabled'] as bool? ?? true;
+        final joinRequestsEnabled =
+            hub.settings['joinRequestsEnabled'] as bool? ?? true;
 
         // If not a member, show non-member view
         if (!isMember && currentUserId != null) {
@@ -138,7 +141,8 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
               title: hub.name,
               floatingActionButton: isAdminRole
                   ? FloatingActionButton.extended(
-                      onPressed: () => context.push('/games/create?hubId=${widget.hubId}'),
+                      onPressed: () =>
+                          context.push('/games/create?hubId=${widget.hubId}'),
                       icon: const Icon(Icons.add),
                       label: const Text('צור משחק'),
                       backgroundColor: Theme.of(context).colorScheme.primary,
@@ -156,309 +160,388 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
                             margin: const EdgeInsets.all(8),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                          // User role badge (compact, top left)
-                          if (currentUserId != null) ...[
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Builder(
-                                  builder: (context) {
-                                    final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
-                                    final roleName = hubPermissions.getRoleDisplayName();
-                                    return Chip(
-                                      label: Text(roleName),
-                                      avatar: Icon(
-                                        roleName == 'מנהל' 
-                                          ? Icons.admin_panel_settings
-                                          : roleName == 'מנחה'
-                                            ? Icons.shield
-                                            : Icons.person,
-                                        size: 16,
-                                      ),
-                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                      labelStyle: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                      ),
-                                    );
-                                  },
-                                ),
-                                // Hub creation date (compact, top right)
-                                Text(
-                                  'נוצר: ${DateFormat('dd/MM/yyyy', 'he').format(hub.createdAt)}',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                          // Compact member count
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.group,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${hub.memberIds.length} משתתפים',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                      // Command Center - Compact Header (for managers)
-                      if (isAdminRole) ...[
-                        // Row 1: Top Actions (Manager Mode Toggle + IconButtons)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Manager Mode Toggle (left)
-                            Switch(
-                              value: false, // TODO: Implement manager mode state
-                              onChanged: (value) {
-                                // TODO: Implement manager mode toggle
-                              },
-                              activeColor: Theme.of(context).colorScheme.primary,
-                            ),
-                            // Right: Compact IconButtons
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Requests badge (Manager only)
-                                StreamBuilder<QuerySnapshot>(
-                                  stream: FirebaseFirestore.instance
-                                      .collection('hubs')
-                                      .doc(widget.hubId)
-                                      .collection('requests')
-                                      .where('status', isEqualTo: 'pending')
-                                      .snapshots(),
-                                  builder: (context, snapshot) {
-                                    final pendingCount = snapshot.data?.docs.length ?? 0;
-                                    return Stack(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // User role badge (compact, top left)
+                                  if (currentUserId != null) ...[
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.inbox, size: 20),
-                                          tooltip: 'בקשות הצטרפות',
-                                          onPressed: () => context.push('/hubs/${hub.hubId}/requests'),
-                                          color: Colors.orange,
+                                        Builder(
+                                          builder: (context) {
+                                            final hubPermissions =
+                                                HubPermissions(
+                                                    hub: hub,
+                                                    userId: currentUserId);
+                                            final roleName = hubPermissions
+                                                .getRoleDisplayName();
+                                            return Chip(
+                                              label: Text(roleName),
+                                              avatar: Icon(
+                                                roleName == 'מנהל'
+                                                    ? Icons.admin_panel_settings
+                                                    : roleName == 'מנחה'
+                                                        ? Icons.shield
+                                                        : Icons.person,
+                                                size: 16,
+                                              ),
+                                              backgroundColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .primaryContainer,
+                                              labelStyle: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onPrimaryContainer,
+                                              ),
+                                            );
+                                          },
                                         ),
-                                        if (pendingCount > 0)
-                                          Positioned(
-                                            right: 8,
-                                            top: 8,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: const BoxDecoration(
-                                                color: Colors.red,
-                                                shape: BoxShape.circle,
+                                        // Hub creation date (compact, top right)
+                                        Text(
+                                          'נוצר: ${DateFormat('dd/MM/yyyy', 'he').format(hub.createdAt)}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                                fontSize: 11,
                                               ),
-                                              constraints: const BoxConstraints(
-                                                minWidth: 16,
-                                                minHeight: 16,
-                                              ),
-                                              child: Text(
-                                                pendingCount > 9 ? '9+' : '$pendingCount',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                  // Compact member count
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.group,
+                                        size: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${hub.memberIds.length} משתתפים',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              fontSize: 12,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Command Center - Compact Header (for managers)
+                                  if (isAdminRole) ...[
+                                    // Row 1: Top Actions (Manager Mode Toggle + IconButtons)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Manager Mode Toggle (left)
+                                        Switch(
+                                          value:
+                                              false, // TODO: Implement manager mode state
+                                          onChanged: (value) {
+                                            // TODO: Implement manager mode toggle
+                                          },
+                                          activeThumbColor: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                        ),
+                                        // Right: Compact IconButtons
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Requests badge (Manager only)
+                                            StreamBuilder<QuerySnapshot>(
+                                              stream: FirebaseFirestore.instance
+                                                  .collection('hubs')
+                                                  .doc(widget.hubId)
+                                                  .collection('requests')
+                                                  .where('status',
+                                                      isEqualTo: 'pending')
+                                                  .snapshots(),
+                                              builder: (context, snapshot) {
+                                                final pendingCount = snapshot
+                                                        .data?.docs.length ??
+                                                    0;
+                                                return Stack(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: const Icon(
+                                                          Icons.inbox,
+                                                          size: 20),
+                                                      tooltip: 'בקשות הצטרפות',
+                                                      onPressed: () => context.push(
+                                                          '/hubs/${hub.hubId}/requests'),
+                                                      color: Colors.orange,
+                                                    ),
+                                                    if (pendingCount > 0)
+                                                      Positioned(
+                                                        right: 8,
+                                                        top: 8,
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .all(4),
+                                                          decoration:
+                                                              const BoxDecoration(
+                                                            color: Colors.red,
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                          constraints:
+                                                              const BoxConstraints(
+                                                            minWidth: 16,
+                                                            minHeight: 16,
+                                                          ),
+                                                          child: Text(
+                                                            pendingCount > 9
+                                                                ? '9+'
+                                                                : '$pendingCount',
+                                                            style:
+                                                                const TextStyle(
+                                                              color:
+                                                                  Colors.white,
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            ),
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                );
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.share,
+                                                  size: 20),
+                                              tooltip: 'שתף ב-WhatsApp',
+                                              onPressed: () =>
+                                                  _shareHubOnWhatsApp(hub),
+                                              color: Colors.green,
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.visibility,
+                                                  size: 20),
+                                              tooltip: 'סקאוטינג',
+                                              onPressed: () => context.push(
+                                                  '/hubs/${hub.hubId}/scouting'),
+                                              color: Colors.blue,
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.analytics,
+                                                  size: 20),
+                                              tooltip: 'אנליטיקס',
+                                              onPressed: () {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('בקרוב'),
+                                                    duration:
+                                                        Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              },
+                                              color: Colors.purple,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Row 2: Management Buttons (Settings & Roles)
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            onPressed: () => context.push(
+                                                '/hubs/${hub.hubId}/settings'),
+                                            icon: const Icon(Icons.settings,
+                                                size: 18),
+                                            label: const Text('הגדרות'),
+                                            style: OutlinedButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 8),
+                                              minimumSize: const Size(0, 36),
                                             ),
                                           ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            onPressed: () => context.push(
+                                                '/hubs/${hub.hubId}/manage-roles'),
+                                            icon: const Icon(
+                                                Icons.admin_panel_settings,
+                                                size: 18),
+                                            label: const Text('תפקידים'),
+                                            style: OutlinedButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 8),
+                                              minimumSize: const Size(0, 36),
+                                            ),
+                                          ),
+                                        ),
                                       ],
-                                    );
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.share, size: 20),
-                                  tooltip: 'שתף ב-WhatsApp',
-                                  onPressed: () => _shareHubOnWhatsApp(hub),
-                                  color: Colors.green,
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.visibility, size: 20),
-                                  tooltip: 'סקאוטינג',
-                                  onPressed: () => context.push('/hubs/${hub.hubId}/scouting'),
-                                  color: Colors.blue,
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.analytics, size: 20),
-                                  tooltip: 'אנליטיקס',
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('בקרוב'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  },
-                                  color: Colors.purple,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Row 2: Management Buttons (Settings & Roles)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => context.push('/hubs/${hub.hubId}/settings'),
-                                icon: const Icon(Icons.settings, size: 18),
-                                label: const Text('הגדרות'),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  minimumSize: const Size(0, 36),
-                                ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Row 3: Home Venue
+                                    _HomeVenueSelector(
+                                      hubId: widget.hubId,
+                                      hub: hub,
+                                      venuesRepo: venuesRepo,
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => context.push('/hubs/${hub.hubId}/manage-roles'),
-                                icon: const Icon(Icons.admin_panel_settings, size: 18),
-                                label: const Text('תפקידים'),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  minimumSize: const Size(0, 36),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Row 3: Home Venue
-                        _HomeVenueSelector(
-                          hubId: widget.hubId,
-                          hub: hub,
-                          venuesRepo: venuesRepo,
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+                          ),
                           // Venues list (compact) - outside Card
-                          _VenuesList(hubId: widget.hubId, venuesRepo: venuesRepo),
+                          _VenuesList(
+                              hubId: widget.hubId, venuesRepo: venuesRepo),
                           // Regular member actions
-                          if (!isAdminRole && currentUserId != null && isMember) ...[
+                          if (!isAdminRole &&
+                              currentUserId != null &&
+                              isMember) ...[
                             const SizedBox(height: 8),
                             ElevatedButton.icon(
-                              onPressed: () => _toggleMembership(context, ref, hub, isMember),
+                              onPressed: () => _toggleMembership(
+                                  context, ref, hub, isMember),
                               icon: const Icon(Icons.exit_to_app, size: 18),
                               label: const Text('עזוב Hub'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.error,
-                                foregroundColor: Theme.of(context).colorScheme.onError,
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.error,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onError,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                               ),
                             ),
                           ],
                         ],
                       ),
                     ),
-                  // Hub Members button (compact)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: ElevatedButton.icon(
-                        onPressed: () => context.push('/hubs/${hub.hubId}/players'),
-                        icon: const Icon(Icons.groups_3, size: 20),
-                        label: Text(
-                          'חברי ההאב (${hub.memberIds.length})',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Share and Rules buttons (compact)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: Row(
-                        children: [
-                          // Share on WhatsApp button
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _shareHubOnWhatsApp(hub),
-                              icon: const Icon(Icons.share, size: 16),
-                              label: const Text('שתף'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                            ),
+                    // Hub Members button (compact)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              context.push('/hubs/${hub.hubId}/players'),
+                          icon: const Icon(Icons.groups_3, size: 20),
+                          label: Text(
+                            'חברי ההאב (${hub.memberIds.length})',
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.bold),
                           ),
-                          // Rules button (if rules exist)
-                          if (hub.hubRules != null && hub.hubRules!.isNotEmpty) ...[
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: () => context.push('/hubs/${hub.hubId}/rules'),
-                              icon: const Icon(Icons.rule, size: 16),
-                              label: const Text('חוקים'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Share and Rules buttons (compact)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        child: Row(
+                          children: [
+                            // Share on WhatsApp button
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _shareHubOnWhatsApp(hub),
+                                icon: const Icon(Icons.share, size: 16),
+                                label: const Text('שתף'),
+                                style: OutlinedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                ),
                               ),
                             ),
+                            // Rules button (if rules exist)
+                            if (hub.hubRules != null &&
+                                hub.hubRules!.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              OutlinedButton.icon(
+                                onPressed: () =>
+                                    context.push('/hubs/${hub.hubId}/rules'),
+                                icon: const Icon(Icons.rule, size: 16),
+                                label: const Text('חוקים'),
+                                style: OutlinedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                  // TabBar (pinned)
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _SliverAppBarDelegate(
-                      TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        tabs: const [
-                          Tab(icon: Icon(Icons.event), text: 'אירועים'),
-                          Tab(icon: Icon(Icons.chat), text: 'צ\'אט'),
-                          Tab(icon: Icon(Icons.feed), text: 'פיד'),
-                          Tab(icon: Icon(Icons.sports_soccer), text: 'משחקים'),
-                        ],
+                    // TabBar (pinned)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverAppBarDelegate(
+                        TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          tabs: const [
+                            Tab(icon: Icon(Icons.event), text: 'אירועים'),
+                            Tab(icon: Icon(Icons.chat), text: 'צ\'אט'),
+                            Tab(icon: Icon(Icons.feed), text: 'פיד'),
+                            Tab(
+                                icon: Icon(Icons.sports_soccer),
+                                text: 'משחקים'),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ];
-              },
-              body: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Events tab (first)
-                  HubEventsTab(
-                    hubId: widget.hubId,
-                    hub: hub,
-                    isManager: isAdminRole,
-                  ),
-                  // Chat tab (second)
-                  HubChatScreen(hubId: widget.hubId),
-                  // Feed tab (third)
-                  FeedScreen(hubId: widget.hubId),
-                  // Games tab (fourth)
-                  _GamesTab(hubId: widget.hubId),
-                ],
-              ),
+                  ];
+                },
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Events tab (first)
+                    HubEventsTab(
+                      hubId: widget.hubId,
+                      hub: hub,
+                      isManager: isAdminRole,
+                    ),
+                    // Chat tab (second)
+                    HubChatScreen(hubId: widget.hubId),
+                    // Feed tab (third)
+                    FeedScreen(hubId: widget.hubId),
+                    // Games tab (fourth)
+                    _GamesTab(hubId: widget.hubId),
+                  ],
+                ),
               ),
             );
           },
@@ -483,14 +566,16 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
     try {
       // Generate deep link
       final deepLink = 'kickabout://hub/${hub.hubId}';
-      final webLink = 'https://kickabout.app/hub/${hub.hubId}'; // Fallback web link
-      
-      final message = 'בוא לשחק איתנו ב-${hub.name}!\nהצטרף כאן: $webLink\n\n$deepLink';
-      
+      final webLink =
+          'https://kickabout.app/hub/${hub.hubId}'; // Fallback web link
+
+      final message =
+          'בוא לשחק איתנו ב-${hub.name}!\nהצטרף כאן: $webLink\n\n$deepLink';
+
       final uri = Uri.parse(
         'https://wa.me/?text=${Uri.encodeComponent(message)}',
       );
-      
+
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
@@ -538,7 +623,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         }
       } else {
         await hubsRepo.addMember(widget.hubId, currentUserId);
-        
+
         // Log analytics
         try {
           final analytics = AnalyticsService();
@@ -546,7 +631,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
         } catch (e) {
           debugPrint('Failed to log analytics: $e');
         }
-        
+
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('הצטרפת ל-Hub')),
@@ -561,7 +646,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen> with SingleTi
       }
     }
   }
-
 }
 
 /// Games tab widget
@@ -575,7 +659,6 @@ class _GamesTab extends ConsumerStatefulWidget {
 }
 
 class _GamesTabState extends ConsumerState<_GamesTab> {
-
   @override
   Widget build(BuildContext context) {
     final gamesRepo = ref.watch(gamesRepositoryProvider);
@@ -603,7 +686,7 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
               snapshot.error,
               context: 'Hub detail - games tab',
             ),
-              action: ElevatedButton.icon(
+            action: ElevatedButton.icon(
               onPressed: () {
                 // Retry by rebuilding - trigger rebuild via key change
                 // For ConsumerWidget, we can't use setState, so we'll just show the error
@@ -617,7 +700,8 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
         final games = snapshot.data ?? [];
         final currentUserId = ref.watch(currentUserIdProvider);
         final hubPermissionsAsync = currentUserId != null
-            ? ref.watch(hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId)))
+            ? ref.watch(hubPermissionsProvider(
+                (hubId: widget.hubId, userId: currentUserId)))
             : null;
         final hubPermissions = hubPermissionsAsync?.valueOrNull;
         final canCreateGames = hubPermissions?.canCreateGames() ?? false;
@@ -629,11 +713,13 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: ElevatedButton.icon(
-                  onPressed: () => context.push('/hubs/${widget.hubId}/log-past-game'),
+                  onPressed: () =>
+                      context.push('/hubs/${widget.hubId}/log-past-game'),
                   icon: const Icon(Icons.add),
                   label: const Text('תיעוד משחק'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
@@ -641,25 +727,29 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
             Expanded(
               child: games.isEmpty
                   ? FuturisticEmptyState(
-            icon: Icons.sports_soccer,
-            title: 'אין משחקים עדיין',
+                      icon: Icons.sports_soccer,
+                      title: 'אין משחקים עדיין',
                       message: canCreateGames
                           ? 'תעד משחק חדש כדי להתחיל'
                           : 'אין משחקים להצגה',
                     )
                   : ListView.builder(
-          itemCount: games.length,
-          padding: const EdgeInsets.all(8),
-          itemBuilder: (context, index) {
-            final game = games[index];
+                      itemCount: games.length,
+                      padding: const EdgeInsets.all(8),
+                      itemBuilder: (context, index) {
+                        final game = games[index];
                         final isCompleted = game.status == GameStatus.completed;
-                        final canEdit = currentUserId == game.createdBy || canCreateGames;
-                        
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: ListTile(
+                        final canEdit =
+                            currentUserId == game.createdBy || canCreateGames;
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          child: ListTile(
                             leading: Icon(
-                              isCompleted ? Icons.check_circle : Icons.sports_soccer,
+                              isCompleted
+                                  ? Icons.check_circle
+                                  : Icons.sports_soccer,
                               color: isCompleted ? Colors.green : null,
                             ),
                             title: Text(
@@ -668,10 +758,13 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
-                                  Text('תוצאה: ${game.legacyTeamAScore} - ${game.legacyTeamBScore}'),
+                                if (game.legacyTeamAScore != null &&
+                                    game.legacyTeamBScore != null)
+                                  Text(
+                                      'תוצאה: ${game.legacyTeamAScore} - ${game.legacyTeamBScore}'),
                                 if (game.eventId != null)
-                                  Text('אירוע: ${game.eventId}', style: const TextStyle(fontSize: 12)),
+                                  Text('אירוע: ${game.eventId}',
+                                      style: const TextStyle(fontSize: 12)),
                               ],
                             ),
                             trailing: Row(
@@ -680,16 +773,17 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
                                 if (canEdit)
                                   IconButton(
                                     icon: const Icon(Icons.edit, size: 20),
-                                    onPressed: () => context.push('/hubs/${widget.hubId}/games/${game.gameId}/edit'),
+                                    onPressed: () => context.push(
+                                        '/hubs/${widget.hubId}/games/${game.gameId}/edit'),
                                     tooltip: 'ערוך משחק',
                                   ),
                                 const Icon(Icons.chevron_left),
                               ],
                             ),
-                onTap: () => context.push('/games/${game.gameId}'),
-              ),
-            );
-          },
+                            onTap: () => context.push('/games/${game.gameId}'),
+                          ),
+                        );
+                      },
                     ),
             ),
           ],
@@ -704,13 +798,10 @@ class _MembersTab extends ConsumerStatefulWidget {
   final String hubId;
   final Hub hub;
   final UsersRepository usersRepo;
-  final VoidCallback? onViewAll;
-
   const _MembersTab({
     required this.hubId,
     required this.hub,
     required this.usersRepo,
-    this.onViewAll,
   });
 
   @override
@@ -754,10 +845,10 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final allUsers = await widget.usersRepo.getUsers(widget.hub.memberIds);
-    
+
     final nextIndex = _displayedUsers.length;
     final endIndex = (nextIndex + _pageSize).clamp(0, allUsers.length);
-    
+
     if (nextIndex < allUsers.length) {
       setState(() {
         _displayedUsers.addAll(allUsers.sublist(nextIndex, endIndex));
@@ -778,14 +869,14 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
     final isHubManager = currentUserId == widget.hub.createdBy;
     final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
     final isAdmin = roleAsync.valueOrNull == UserRole.admin;
-    
+
     // Check if user is manager/admin (creator or has admin role)
     final isManagerOrAdmin = isHubManager || isAdmin;
 
     return Column(
       children: [
         // Header with view all button
-        if (widget.hub.memberIds.isNotEmpty && widget.onViewAll != null)
+        if (widget.hub.memberIds.isNotEmpty)
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -796,7 +887,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton.icon(
-                  onPressed: widget.onViewAll,
+                  onPressed: () =>
+                      context.push('/hubs/${widget.hub.hubId}/players'),
                   icon: const Icon(Icons.arrow_forward),
                   label: const Text('צפה בכולם'),
                 ),
@@ -811,7 +903,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
               onPressed: () async {
                 final result = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AddManualPlayerDialog(hubId: widget.hubId),
+                  builder: (context) =>
+                      AddManualPlayerDialog(hubId: widget.hubId),
                 );
                 if (result == true && context.mounted) {
                   // Refresh will happen automatically via StreamBuilder
@@ -848,7 +941,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
     // Debug: Log memberIds to help diagnose issues
     debugPrint('🔍 Members Tab - hub.memberIds: ${widget.hub.memberIds}');
-    debugPrint('🔍 Members Tab - memberIds.length: ${widget.hub.memberIds.length}');
+    debugPrint(
+        '🔍 Members Tab - memberIds.length: ${widget.hub.memberIds.length}');
 
     return FutureBuilder<List<User>>(
       future: widget.usersRepo.getUsers(widget.hub.memberIds),
@@ -872,7 +966,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
               snapshot.error,
               context: 'Hub detail screen - members loading',
             ),
-              action: ElevatedButton.icon(
+            action: ElevatedButton.icon(
               onPressed: () {
                 // Retry by rebuilding - trigger rebuild via key change
                 // For ConsumerWidget, we can't use setState, so we'll just show the error
@@ -883,12 +977,13 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
           );
         }
 
-        final allUsers = snapshot.data ?? [];
-        
+        final allUsers = snapshot.data!;
+
         // Initialize displayed users on first load or when data changes
-        if (_displayedUsers.isEmpty || 
+        if (_displayedUsers.isEmpty ||
             _displayedUsers.length != allUsers.length ||
-            (_displayedUsers.isNotEmpty && _displayedUsers.first.uid != allUsers.first.uid)) {
+            (_displayedUsers.isNotEmpty &&
+                _displayedUsers.first.uid != allUsers.first.uid)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               setState(() {
@@ -898,24 +993,27 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
             }
           });
         }
-        
+
         // Use displayed users if available, otherwise use first page
-        final usersToShow = _displayedUsers.isNotEmpty 
-            ? _displayedUsers 
+        final usersToShow = _displayedUsers.isNotEmpty
+            ? _displayedUsers
             : allUsers.take(_pageSize).toList();
-        final hasMoreToShow = _displayedUsers.isNotEmpty 
-            ? _hasMore 
-            : allUsers.length > _pageSize;
-        
+        final hasMoreToShow =
+            _displayedUsers.isNotEmpty ? _hasMore : allUsers.length > _pageSize;
+
         // Debug: Log users found
         debugPrint('🔍 Members Tab - users found: ${allUsers.length}');
-        if (usersToShow.isEmpty && allUsers.isEmpty && widget.hub.memberIds.isNotEmpty) {
+        if (usersToShow.isEmpty &&
+            allUsers.isEmpty &&
+            widget.hub.memberIds.isNotEmpty) {
           // If memberIds exist but no users found, show error with more info
-          debugPrint('⚠️ Members Tab - memberIds exist but no users found. memberIds: ${widget.hub.memberIds}');
+          debugPrint(
+              '⚠️ Members Tab - memberIds exist but no users found. memberIds: ${widget.hub.memberIds}');
           return FuturisticEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת חברים',
-            message: 'נמצאו ${widget.hub.memberIds.length} חברים ברשימה, אך לא ניתן לטעון את הפרטים שלהם',
+            message:
+                'נמצאו ${widget.hub.memberIds.length} חברים ברשימה, אך לא ניתן לטעון את הפרטים שלהם',
             action: ElevatedButton.icon(
               onPressed: () {
                 // Force rebuild by invalidating provider
@@ -926,7 +1024,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
             ),
           );
         }
-        
+
         if (usersToShow.isEmpty && allUsers.isEmpty) {
           return FuturisticEmptyState(
             icon: Icons.people_outline,
@@ -942,38 +1040,45 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
         return ListView.builder(
           controller: _scrollController,
-          itemCount: displayUsers.length + (limit != null && usersToShow.length > limit ? 1 : 0) + (hasMoreToShow && limit == null ? 1 : 0),
+          itemCount: displayUsers.length +
+              (limit != null && usersToShow.length > limit ? 1 : 0) +
+              (hasMoreToShow && limit == null ? 1 : 0),
           padding: const EdgeInsets.all(8),
           itemBuilder: (context, index) {
             // Show "view all" button if limit is set
-            if (limit != null && usersToShow.length > limit && index == displayUsers.length) {
+            if (limit != null &&
+                usersToShow.length > limit &&
+                index == displayUsers.length) {
               return Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Center(
                   child: TextButton.icon(
-                    onPressed: widget.onViewAll,
+                    onPressed: () =>
+                        context.push('/hubs/${widget.hub.hubId}/players'),
                     icon: const Icon(Icons.arrow_forward),
                     label: Text('צפה ב-${usersToShow.length - limit} נוספים'),
                   ),
                 ),
               );
             }
-            
+
             // Show loading indicator at the bottom if pagination is active
-            if (limit == null && hasMoreToShow && index == displayUsers.length) {
+            if (limit == null &&
+                hasMoreToShow &&
+                index == displayUsers.length) {
               return const Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Center(child: CircularProgressIndicator()),
               );
             }
-            
+
             final user = displayUsers[index];
             final isManualPlayer = user.email.startsWith('manual_');
-            
+
             // Get first and last name - prefer firstName/lastName if available, otherwise split name
             String firstName;
             String lastName = '';
-            
+
             if (user.firstName != null && user.firstName!.isNotEmpty) {
               firstName = user.firstName!;
             } else if (user.name.isNotEmpty && user.name.contains(' ')) {
@@ -986,25 +1091,27 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
               firstName = user.name.isNotEmpty ? user.name : 'משתמש לא ידוע';
               lastName = '';
             }
-            
+
             if (user.lastName != null && user.lastName!.isNotEmpty) {
               lastName = user.lastName!;
             }
-            
+
             // Get user role in hub
-            final hubPermissions = HubPermissions(hub: widget.hub, userId: user.uid);
+            final hubPermissions =
+                HubPermissions(hub: widget.hub, userId: user.uid);
             String roleDisplayName;
             IconData roleIcon;
             Color? roleColor;
-            
+
             try {
               final role = hubPermissions.userRole;
               roleDisplayName = role.displayName;
-              
+
               // Determine if user is "שחקן משפיע" (influential player)
               // Based on: high rank score (>= 7.0) or many participations (>= 10)
-              final isInfluential = user.currentRankScore >= 7.0 || user.totalParticipations >= 10;
-              
+              final isInfluential = user.currentRankScore >= 7.0 ||
+                  user.totalParticipations >= 10;
+
               if (role == HubRole.manager) {
                 roleIcon = Icons.admin_panel_settings;
                 roleColor = Colors.blue;
@@ -1028,16 +1135,18 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
               roleColor = Colors.grey;
               roleDisplayName = 'שחקן רגיל';
             }
-            
+
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: ListTile(
                 leading: CircleAvatar(
                   radius: 28,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
-                      ? NetworkImage(user.photoUrl!)
-                      : null,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  backgroundImage:
+                      user.photoUrl != null && user.photoUrl!.isNotEmpty
+                          ? NetworkImage(user.photoUrl!)
+                          : null,
                   child: user.photoUrl == null || user.photoUrl!.isEmpty
                       ? Text(
                           // Use initials from firstName/lastName or name
@@ -1049,7 +1158,9 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                                       ? firstName[0]
                                       : '?',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                           ),
@@ -1059,7 +1170,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                 title: Text(
                   firstName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                 ),
                 subtitle: Column(
@@ -1074,8 +1185,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                       Text(
                         'שחקן ידני - ללא אפליקציה',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
                       ),
                   ],
                 ),
@@ -1102,13 +1213,14 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                     // Show role badge with proper display name
                     Chip(
                       label: Text(roleDisplayName),
-                      backgroundColor: roleColor != null 
+                      backgroundColor: roleColor != null
                           ? roleColor!.withValues(alpha: 0.2)
                           : Theme.of(context).colorScheme.primaryContainer,
                       avatar: Icon(
                         roleIcon,
                         size: 16,
-                        color: roleColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
+                        color: roleColor ??
+                            Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                     ),
                   ],
@@ -1160,27 +1272,46 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
 
   Future<void> _selectHomeVenue() async {
     setState(() => _isLoading = true);
-    
+
     try {
-      // Navigate to venue search/selection screen with selectMode
-      final selectedVenue = await Navigator.push<Venue?>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => VenueSearchScreen(
-            hubId: widget.hubId,
-            selectMode: true,
-          ),
-        ),
-      );
-      
-      if (selectedVenue != null && mounted) {
+      // Navigate to discover venues screen
+      final result = await context.push<dynamic>('/venues/discover');
+
+      if (result != null && mounted) {
         final hubsRepo = ref.read(hubsRepositoryProvider);
-        await hubsRepo.updateHub(widget.hubId, {
-          'mainVenueId': selectedVenue.venueId,
-          'primaryVenueId': selectedVenue.venueId,
-          'primaryVenueLocation': selectedVenue.location,
-        });
-        
+        final currentUserId = ref.read(currentUserIdProvider);
+
+        if (result is Venue) {
+          // Existing venue selected
+          await hubsRepo.updateHub(widget.hubId, {
+            'mainVenueId': result.venueId,
+            'primaryVenueId': result.venueId,
+            'primaryVenueLocation': result.location,
+          });
+        } else if (result is Map<String, dynamic>) {
+          // Manual location selected
+          final location = result['location'] as GeoPoint;
+          final name = result['name'] as String? ?? 'מגרש הבית';
+
+          // Create venue first
+          final venuesRepo = widget.venuesRepo;
+          final newVenue = await venuesRepo.createManualVenue(
+            name: name,
+            address: result['address'] as String?,
+            location: location,
+            hubId: widget.hubId,
+            createdBy: currentUserId,
+            isPublic: false, // Hub's private venue
+          );
+
+          // Update hub with new venue
+          await hubsRepo.updateHub(widget.hubId, {
+            'mainVenueId': newVenue.venueId,
+            'primaryVenueId': newVenue.venueId,
+            'primaryVenueLocation': location,
+          });
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1214,7 +1345,7 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
           : Future.value(null),
       builder: (context, snapshot) {
         final homeVenue = snapshot.data;
-        
+
         return Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1234,17 +1365,27 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
                       Text(
                         'מגרש בית',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       Text(
-                        homeVenue != null
-                            ? homeVenue.name
-                            : 'לא נבחר',
-                        style: Theme.of(context).textTheme.bodySmall,
+                        homeVenue != null ? homeVenue.name : 'לא נבחר',
+                        style: Theme.of(context).textTheme.bodyMedium,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (homeVenue?.address != null)
+                        Text(
+                          homeVenue!.address!,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),
@@ -1258,7 +1399,8 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
                   IconButton(
                     icon: const Icon(Icons.edit, size: 18),
                     onPressed: _selectHomeVenue,
-                    tooltip: homeVenue != null ? 'ערוך מגרש בית' : 'בחר מגרש בית',
+                    tooltip:
+                        homeVenue != null ? 'ערוך מגרש בית' : 'בחר מגרש בית',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -1309,8 +1451,8 @@ class _VenuesList extends ConsumerWidget {
                   child: Text(
                     'שגיאה בטעינת מגרשים',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                   ),
                 ),
               ],
@@ -1328,14 +1470,20 @@ class _VenuesList extends ConsumerWidget {
                 Icon(
                   Icons.location_off,
                   size: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'אין מגרשים רשומים',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
+                      ),
                 ),
               ],
             ),
@@ -1356,40 +1504,50 @@ class _VenuesList extends ConsumerWidget {
                 Text(
                   'מגרשים (${venues.length})',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             ...venues.map((venue) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          venue.name,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (venue.address != null && venue.address!.isNotEmpty)
-                          Text(
-                            venue.address ?? '',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              venue.name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                             ),
-                          ),
-                      ],
-                    ),
+                            if (venue.address != null &&
+                                venue.address!.isNotEmpty)
+                              Text(
+                                venue.address ?? '',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.7),
+                                    ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                )),
           ],
         );
       },
@@ -1429,7 +1587,7 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
 
   Future<void> _showJoinRequestDialog(BuildContext context) async {
     final messageController = TextEditingController();
-    
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1459,12 +1617,12 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
         ],
       ),
     );
-    
+
     if (result == true) {
       _messageController.text = messageController.text;
       await _sendJoinRequest();
     }
-    
+
     messageController.dispose();
   }
 
@@ -1478,7 +1636,7 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
     }
 
     final message = _messageController.text.trim();
-    
+
     setState(() {
       _isSubmitting = true;
     });
@@ -1487,16 +1645,16 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
       final notificationsRepo = ref.read(notificationsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
       final firestore = FirebaseFirestore.instance;
-      
+
       // Get current user for notification
       final requestingUser = await usersRepo.getUser(currentUserId);
       if (requestingUser == null) {
         throw Exception('לא ניתן למצוא את פרטי המשתמש');
       }
-      
+
       // Get hub manager (creator)
       final managerId = widget.hub.createdBy;
-      
+
       // 1. Save join request to Firestore: hubs/{hubId}/requests/{userId}
       await firestore
           .collection('hubs')
@@ -1512,14 +1670,14 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
         'userName': requestingUser.name,
         'userPhotoUrl': requestingUser.photoUrl,
       });
-      
+
       // 2. Create notification for hub manager
       final notification = app_models.Notification(
         notificationId: '', // Will be generated by createNotification
         userId: managerId,
         type: 'join_request',
         title: 'בקשת הצטרפות ל-${widget.hub.name}',
-        body: message.isNotEmpty 
+        body: message.isNotEmpty
             ? '${requestingUser.name} מבקש להצטרף: $message'
             : '${requestingUser.name} מבקש להצטרף להאב',
         read: false,
@@ -1530,9 +1688,9 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
           'requestId': currentUserId, // Use userId as requestId
         },
       );
-      
+
       await notificationsRepo.createNotification(notification);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1600,19 +1758,19 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
                   ),
           ),
           const SizedBox(height: 24),
-          
+
           // Hub name
           Center(
             child: Text(
               widget.hub.name,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
               textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Number of participants
           Card(
             child: Padding(
@@ -1634,9 +1792,10 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Description
-          if (widget.hub.description != null && widget.hub.description!.isNotEmpty) ...[
+          if (widget.hub.description != null &&
+              widget.hub.description!.isNotEmpty) ...[
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -1648,14 +1807,14 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
             ),
             const SizedBox(height: 16),
           ],
-          
+
           // Contact Manager button
           _ContactManagerButton(
             hub: widget.hub,
             usersRepo: widget.usersRepo,
           ),
           const SizedBox(height: 16),
-          
+
           // Venues list
           Card(
             child: Padding(
@@ -1666,8 +1825,8 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
                   Text(
                     'מגרשים',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 12),
                   StreamBuilder<List<Venue>>(
@@ -1676,17 +1835,18 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-                      
+
                       final venues = snapshot.data ?? [];
                       if (venues.isEmpty) {
                         return Text(
                           'אין מגרשים רשומים',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                         );
                       }
-                      
+
                       return Column(
                         children: venues.map((venue) {
                           return Padding(
@@ -1701,20 +1861,28 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         venue.name,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                       ),
-                                      if (venue.address != null && venue.address!.isNotEmpty)
+                                      if (venue.address != null &&
+                                          venue.address!.isNotEmpty)
                                         Text(
                                           venue.address ?? '',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Colors.grey[600],
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Colors.grey[600],
+                                              ),
                                         ),
                                     ],
                                   ),
@@ -1731,7 +1899,7 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Join request section
           if (widget.joinRequestsEnabled) ...[
             // If hub is private, show "Request to Join" button that opens a dialog
@@ -1739,7 +1907,9 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : () => _showJoinRequestDialog(context),
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => _showJoinRequestDialog(context),
                   icon: _isSubmitting
                       ? const SizedBox(
                           width: 20,
@@ -1783,10 +1953,12 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.send),
-                          label: Text(_isSubmitting ? 'שולח...' : 'שלח בקשת הצטרפות'),
+                          label: Text(
+                              _isSubmitting ? 'שולח...' : 'שלח בקשת הצטרפות'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -1812,9 +1984,10 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
                     Expanded(
                       child: Text(
                         'האב סגור',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.grey[700],
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.grey[700],
+                                ),
                       ),
                     ),
                   ],
@@ -1851,6 +2024,7 @@ class _ContactManagerButton extends ConsumerWidget {
         return;
       }
 
+      if (!context.mounted) return;
       // Show dialog with contact options
       final contactMethod = await showDialog<String>(
         context: context,
@@ -1859,7 +2033,8 @@ class _ContactManagerButton extends ConsumerWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (manager.phoneNumber != null && manager.phoneNumber!.isNotEmpty)
+              if (manager.phoneNumber != null &&
+                  manager.phoneNumber!.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.phone, color: Colors.green),
                   title: const Text('WhatsApp'),
@@ -1901,7 +2076,8 @@ class _ContactManagerButton extends ConsumerWidget {
         }
       } else if (contactMethod == 'email' && manager.email != null) {
         // Open email
-        final url = Uri.parse('mailto:${manager.email}?subject=בקשה להצטרפות ל-${hub.name}');
+        final url = Uri.parse(
+            'mailto:${manager.email}?subject=בקשה להצטרפות ל-${hub.name}');
         if (await canLaunchUrl(url)) {
           await launchUrl(url, mode: LaunchMode.externalApplication);
         } else {
@@ -1932,8 +2108,8 @@ class _ContactManagerButton extends ConsumerWidget {
             Text(
               'צור קשר עם מנהל ההאב',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -1954,58 +2130,6 @@ class _ContactManagerButton extends ConsumerWidget {
   }
 }
 
-/// Rules tab widget - displays hub rules (read-only)
-class _RulesTab extends StatelessWidget {
-  final Hub hub;
-
-  const _RulesTab({required this.hub});
-
-  @override
-  Widget build(BuildContext context) {
-    if (hub.hubRules == null || hub.hubRules!.isEmpty) {
-      return FuturisticEmptyState(
-        icon: Icons.rule,
-        title: 'אין חוקים מוגדרים',
-        message: 'מנהל ה-Hub עדיין לא הגדיר חוקים',
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.rule,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'חוקי האב',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                hub.hubRules ?? '',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// SliverAppBarDelegate for TabBar in NestedScrollView
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
@@ -2019,7 +2143,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: tabBar,
