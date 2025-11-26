@@ -27,7 +27,20 @@ class HubEventsRepository {
         .orderBy('eventDate', descending: false)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => HubEvent.fromJson({...doc.data(), 'eventId': doc.id}))
+            .map((doc) {
+              try {
+                final data = doc.data();
+                // Ensure hubId is present (it might be missing in subcollection documents)
+                if (!data.containsKey('hubId')) {
+                  data['hubId'] = hubId;
+                }
+                return HubEvent.fromJson({...data, 'eventId': doc.id});
+              } catch (e) {
+                debugPrint('Error parsing HubEvent ${doc.id}: $e');
+                return null;
+              }
+            })
+            .whereType<HubEvent>()
             .toList());
   }
 
@@ -50,8 +63,19 @@ class HubEventsRepository {
                 .get();
 
             return snapshot.docs
-                .map((doc) =>
-                    HubEvent.fromJson({...doc.data(), 'eventId': doc.id}))
+                .map((doc) {
+                  try {
+                    final data = doc.data();
+                    if (!data.containsKey('hubId')) {
+                      data['hubId'] = hubId;
+                    }
+                    return HubEvent.fromJson({...data, 'eventId': doc.id});
+                  } catch (e) {
+                    debugPrint('Error parsing HubEvent ${doc.id}: $e');
+                    return null;
+                  }
+                })
+                .whereType<HubEvent>()
                 .toList();
           },
           config: RetryConfig.network,

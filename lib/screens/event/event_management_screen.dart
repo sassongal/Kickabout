@@ -152,6 +152,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+
     if (_isLoading) {
       return AppScaffold(
         title: 'ניהול אירוע',
@@ -191,21 +193,31 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                             ),
                           ),
                         ),
-                        if (_event!.status == 'ongoing')
-                          Container(
+                        Builder(builder: (context) {
+                          final start =
+                              _event!.startedAt ?? _event!.eventDate;
+                          final end = start.add(const Duration(hours: 5));
+                          final isHappening =
+                              _event!.isStarted && now.isBefore(end);
+
+                          if (!isHappening) return const SizedBox.shrink();
+
+                          return Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.2),
+                              color: Colors.green.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Text(
-                              'מתקיים',
+                              'מתרחש',
                               style: TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
+                          );
+                        }),
                       ],
                     ),
                     const SizedBox(height: 8),

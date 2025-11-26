@@ -50,17 +50,10 @@ class FuturisticBottomNavBar extends ConsumerWidget {
                 ),
                 _NavItem(
                   icon: Icons.message_rounded,
-                  label: 'פיד',
+                  label: 'קהילה',
                   route: '/feed',
                   currentRoute: currentRoute,
                   onTap: () => context.go('/feed'),
-                ),
-                _NavItem(
-                  icon: Icons.group_rounded,
-                  label: 'HUBS',
-                  route: '/hubs-board',
-                  currentRoute: currentRoute,
-                  onTap: () => context.go('/hubs-board'),
                 ),
                 _NavItem(
                   icon: Icons.map_rounded,
@@ -152,4 +145,3 @@ class _NavItem extends StatelessWidget {
     );
   }
 }
-

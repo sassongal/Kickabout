@@ -115,7 +115,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
             currentUserId != null && hub.memberIds.contains(currentUserId);
         // Check if join requests are enabled
         final joinRequestsEnabled =
-            hub.settings['joinRequestsEnabled'] as bool? ?? true;
+            hub.settings['allowJoinRequests'] as bool? ?? true;
 
         // If not a member, show non-member view
         if (!isMember && currentUserId != null) {
@@ -344,22 +344,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                               onPressed: () => context.push(
                                                   '/hubs/${hub.hubId}/scouting'),
                                               color: Colors.blue,
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.analytics,
-                                                  size: 20),
-                                              tooltip: 'אנליטיקס',
-                                              onPressed: () {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('בקרוב'),
-                                                    duration:
-                                                        Duration(seconds: 2),
-                                                  ),
-                                                );
-                                              },
-                                              color: Colors.purple,
                                             ),
                                           ],
                                         ),
@@ -1722,6 +1706,8 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
   @override
   Widget build(BuildContext context) {
     final venuesStream = widget.venuesRepo.watchVenuesByHub(widget.hubId);
+    final showManagerContact =
+        widget.hub.settings['showManagerContactInfo'] as bool? ?? true;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1809,11 +1795,13 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
           ],
 
           // Contact Manager button
-          _ContactManagerButton(
-            hub: widget.hub,
-            usersRepo: widget.usersRepo,
-          ),
-          const SizedBox(height: 16),
+          if (showManagerContact) ...[
+            _ContactManagerButton(
+              hub: widget.hub,
+              usersRepo: widget.usersRepo,
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Venues list
           Card(

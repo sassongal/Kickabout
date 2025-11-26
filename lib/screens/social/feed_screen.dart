@@ -15,9 +15,9 @@ import 'package:kickadoor/services/error_handler_service.dart';
 
 /// Feed screen - shows activity feed for a hub
 class FeedScreen extends ConsumerStatefulWidget {
-  final String hubId;
+  final String? hubId;
 
-  const FeedScreen({super.key, required this.hubId});
+  const FeedScreen({super.key, this.hubId});
 
   @override
   ConsumerState<FeedScreen> createState() => _FeedScreenState();
@@ -53,6 +53,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
+
+    if (widget.hubId == null || widget.hubId!.isEmpty) {
+      return const AppScaffold(
+        title: 'קהילה',
+        showBottomNav: true,
+        forceBottomNav: true,
+        body: Center(
+          child: Text('פיד קהילתי בקרוב'),
+        ),
+      );
+    }
     
     if (currentUserId == null) {
       return AppScaffold(
@@ -390,4 +401,3 @@ class _PostCard extends ConsumerWidget {
     }
   }
 }
-

@@ -28,7 +28,7 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
-  
+
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   int? _teamCount;
@@ -42,7 +42,17 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
   HubEvent? _event;
   Hub? _hub;
 
-  final List<String> _gameTypes = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
+  final List<String> _gameTypes = [
+    '3v3',
+    '4v4',
+    '5v5',
+    '6v6',
+    '7v7',
+    '8v8',
+    '9v9',
+    '10v10',
+    '11v11'
+  ];
 
   @override
   void initState() {
@@ -54,15 +64,16 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
     try {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      
-      final event = await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
+
+      final event =
+          await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
       final hub = await hubsRepo.getHub(widget.hubId);
-      
+
       if (mounted) {
         setState(() {
           _event = event;
           _hub = hub;
-          
+
           if (event != null) {
             _titleController.text = event.title;
             _descriptionController.text = event.description ?? '';
@@ -76,7 +87,7 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
             _notifyMembers = event.notifyMembers;
             _showInCommunityFeed = event.showInCommunityFeed;
           }
-          
+
           _isLoadingData = false;
         });
       }
@@ -100,13 +111,37 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
   }
 
   Future<void> _selectDate() async {
+    // Create "today" object without time to avoid comparison issues
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // The date shown when opening the calendar: either existing date or tomorrow by default
+    final initialDate = _selectedDate ?? today.add(const Duration(days: 1));
+
+    // Fix: firstDate must be the earlier of today or the selected date
+    // This prevents crashes if the event date is in the past
+    DateTime firstDate = today;
+    if (_selectedDate != null) {
+      final selectedDateOnly = DateTime(
+          _selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+      if (selectedDateOnly.isBefore(today)) {
+        firstDate = selectedDateOnly;
+      }
+    }
+
+    // Safety check: ensure firstDate is never after initialDate
+    if (firstDate.isAfter(initialDate)) {
+      firstDate = initialDate;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now(), // Can't select past dates
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: today.add(const Duration(days: 365)),
       locale: const Locale('he'),
     );
+
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
@@ -129,7 +164,8 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
   Future<void> _showDurationPicker() async {
     final result = await showDialog<int>(
       context: context,
-      builder: (context) => _DurationPickerDialog(initialValue: _durationMinutes ?? 12),
+      builder: (context) =>
+          _DurationPickerDialog(initialValue: _durationMinutes ?? 12),
     );
     if (result != null) {
       setState(() {
@@ -141,7 +177,8 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
   Future<void> _showParticipantsPicker() async {
     final result = await showDialog<int>(
       context: context,
-      builder: (context) => _ParticipantsPickerDialog(initialValue: _maxParticipants ?? 15),
+      builder: (context) =>
+          _ParticipantsPickerDialog(initialValue: _maxParticipants ?? 15),
     );
     if (result != null) {
       setState(() {
@@ -191,7 +228,7 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
       }
 
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-      
+
       await hubEventsRepo.updateHubEvent(
         widget.hubId,
         widget.eventId,
@@ -235,7 +272,8 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('מחיקת אירוע'),
-        content: const Text('האם אתה בטוח שברצונך למחוק את האירוע? פעולה זו לא ניתנת לביטול.'),
+        content: const Text(
+            'האם אתה בטוח שברצונך למחוק את האירוע? פעולה זו לא ניתנת לביטול.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -476,11 +514,12 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               const SizedBox(height: 8),
-              
+
               // Show in Community Feed
               CheckboxListTile(
                 title: const Text('להעלות ללוח אירועים הקהילתי?'),
-                subtitle: const Text('האירוע יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
+                subtitle: const Text(
+                    'האירוע יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
                 value: _showInCommunityFeed,
                 onChanged: (value) {
                   setState(() {
@@ -568,7 +607,8 @@ class _DurationPickerDialogState extends State<_DurationPickerDialog> {
                   '$value דקות',
                   style: TextStyle(
                     fontSize: isSelected ? 20 : 16,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? Theme.of(context).primaryColor : null,
                   ),
                 ),
@@ -599,7 +639,8 @@ class _ParticipantsPickerDialog extends StatefulWidget {
   const _ParticipantsPickerDialog({required this.initialValue});
 
   @override
-  State<_ParticipantsPickerDialog> createState() => _ParticipantsPickerDialogState();
+  State<_ParticipantsPickerDialog> createState() =>
+      _ParticipantsPickerDialogState();
 }
 
 class _ParticipantsPickerDialogState extends State<_ParticipantsPickerDialog> {
@@ -647,7 +688,8 @@ class _ParticipantsPickerDialogState extends State<_ParticipantsPickerDialog> {
                   '$value משתתפים',
                   style: TextStyle(
                     fontSize: isSelected ? 20 : 16,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? Theme.of(context).primaryColor : null,
                   ),
                 ),
@@ -670,4 +712,3 @@ class _ParticipantsPickerDialogState extends State<_ParticipantsPickerDialog> {
     );
   }
 }
-

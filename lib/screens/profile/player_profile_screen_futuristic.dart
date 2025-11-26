@@ -287,6 +287,9 @@ class _PlayerProfileScreenFuturisticState
                       children: [
                         Text(
                           user.name,
+                          // Use first + last when available
+                          // (fall back handled by displayName getter)
+                          user.displayName,
                           style: FuturisticTypography.heading2.copyWith(
                             color: Colors.white,
                           ),

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/utils/geohash_utils.dart';
@@ -21,7 +22,7 @@ class DummyDataGenerator {
     String? eventId,
   }) async {
     debugPrint('Generating $count players for Hub: $hubId...');
-    
+
     // בדיקה שה-Hub קיים
     final hubDoc = await firestore.doc(FirestorePaths.hub(hubId)).get();
     if (!hubDoc.exists) {
@@ -36,19 +37,22 @@ class DummyDataGenerator {
       final userId = firestore.collection('users').doc().id;
       final firstName = firstNames[random.nextInt(firstNames.length)];
       final lastName = lastNames[random.nextInt(lastNames.length)];
-      
+
       final location = _randomCoordinateNearHaifa();
-      final geohash = GeohashUtils.encode(location.latitude, location.longitude);
-      
+      final geohash =
+          GeohashUtils.encode(location.latitude, location.longitude);
+
       // שימוש בתמונה רנדומלית
-      final photoId = random.nextInt(99); 
+      final photoId = random.nextInt(99);
       final photoUrl = 'https://randomuser.me/api/portraits/men/$photoId.jpg';
 
       final user = User(
         uid: userId,
         name: '$firstName $lastName',
-        email: '${firstName.toLowerCase()}.${lastName.toLowerCase()}.${random.nextInt(999)}@kickabout.local',
-        phoneNumber: '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
+        email:
+            '${firstName.toLowerCase()}.${lastName.toLowerCase()}.${random.nextInt(999)}@kickabout.local',
+        phoneNumber:
+            '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
         city: 'חיפה', // או עיר רנדומלית מהרשימה
         preferredPosition: positions[random.nextInt(positions.length)],
         availabilityStatus: 'available',
@@ -85,7 +89,8 @@ class DummyDataGenerator {
     });
 
     await batch.commit();
-    debugPrint('✅ Successfully added ${newMemberIds.length} players to Hub $hubId');
+    debugPrint(
+        '✅ Successfully added ${newMemberIds.length} players to Hub $hubId');
     if (eventId != null && eventId.isNotEmpty) {
       debugPrint('✅ And registered them to Event $eventId');
     }
@@ -532,6 +537,8 @@ class DummyDataGenerator {
   Future<void> generateRedDevilsHub() async {
     print('👹 Generating "השדים האדומים" Hub with 25 players...');
 
+    final batch = firestore.batch();
+
     // Create hub first to get hubId
     final hubId = firestore.collection('hubs').doc().id;
     final hubLocation = GeoPoint(32.8000, 34.9800); // גן דניאל area
@@ -640,20 +647,26 @@ class DummyDataGenerator {
         hubIds: i < 18 ? [hubId] : [], // First 18 are in the hub
       );
 
-      await firestore.doc(FirestorePaths.user(userId)).set(user.toJson());
+      batch.set(firestore.doc(FirestorePaths.user(userId)), user.toJson());
       userIds.add(userId);
-      print('✅ Created player ${i + 1}/25: ${playerNames[i]}');
+      print('✅ Added player to batch ${i + 1}/25: ${playerNames[i]}');
     }
 
     // Create "השדים האדומים" Hub with first 18 players
     final hubMemberIds = userIds.take(18).toList();
+
+    // Add current user if available
+    final currentUser = auth.FirebaseAuth.instance.currentUser;
+    if (currentUser != null && !hubMemberIds.contains(currentUser.uid)) {
+      hubMemberIds.insert(0, currentUser.uid);
+    }
 
     final hub = Hub(
       hubId: hubId,
       name: 'השדים האדומים',
       description:
           'קבוצת כדורגל פעילה וחזקה מחיפה. משחקים קבועים במגרש גן דניאל. קבוצה תחרותית עם מסורת ארוכה.',
-      createdBy: hubMemberIds[0],
+      createdBy: currentUser?.uid ?? hubMemberIds[0],
       memberIds: hubMemberIds,
       createdAt: DateTime.now().subtract(const Duration(days: 180)),
       location: hubLocation,
@@ -664,7 +677,11 @@ class DummyDataGenerator {
       },
     );
 
-    await firestore.doc(FirestorePaths.hub(hubId)).set(hub.toJson());
+    batch.set(firestore.doc(FirestorePaths.hub(hubId)), hub.toJson());
+
+    // Commit all users and hub in one batch
+    await batch.commit();
+    print('✅ Committed batch with 25 users and 1 hub');
 
     // Generate games for this hub
     await _generateGamesForHub(hubId, hubMemberIds, hubLocation);
@@ -685,6 +702,9 @@ class DummyDataGenerator {
 
     // Step 1: Generate 20 users with Israeli names, photos, and playing styles
     print('\n👥 Step 1: Generating 20 users...');
+    final userBatch = firestore.batch();
+    // Use local batch variable for users
+    final batch = userBatch;
     final userIds = <String>[];
 
     for (int i = 0; i < 20; i++) {
@@ -725,13 +745,16 @@ class DummyDataGenerator {
         region: regions[random.nextInt(regions.length)], // Add random region
       );
 
-      await firestore.doc(FirestorePaths.user(userId)).set(user.toJson());
+      batch.set(firestore.doc(FirestorePaths.user(userId)), user.toJson());
       userIds.add(userId);
 
       if ((i + 1) % 5 == 0) {
-        print('✅ Generated ${i + 1}/20 users');
+        print('✅ Prepared ${i + 1}/20 users for batch');
       }
     }
+
+    await batch.commit();
+    print('✅ Committed batch with 20 users');
 
     // Step 2: Create 3 hubs with names
     print('\n🏟️ Step 2: Creating 3 hubs...');
@@ -772,11 +795,22 @@ class DummyDataGenerator {
 
       final hubId = firestore.collection('hubs').doc().id;
 
+      // Add current user to the first hub as manager
+      final currentUser = auth.FirebaseAuth.instance.currentUser;
+      String creatorId = managerId;
+
+      if (i == 0 && currentUser != null) {
+        if (!hubMemberIds.contains(currentUser.uid)) {
+          hubMemberIds.insert(0, currentUser.uid);
+        }
+        creatorId = currentUser.uid;
+      }
+
       final hub = Hub(
         hubId: hubId,
         name: hubNames[i],
         description: hubDescriptions[i],
-        createdBy: managerId,
+        createdBy: creatorId,
         memberIds: hubMemberIds,
         createdAt: DateTime.now().subtract(Duration(days: 180 + i * 30)),
         location: hubLocation,

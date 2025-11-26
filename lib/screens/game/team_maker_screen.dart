@@ -15,7 +15,7 @@ import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Premium team maker screen with advanced UI
-class TeamMakerScreen extends ConsumerWidget {
+class TeamMakerScreen extends ConsumerStatefulWidget {
   final String gameId; // Can be gameId or eventId
   final bool isEvent; // If true, gameId is actually an eventId
   final String? hubId; // Required if isEvent == true
@@ -28,9 +28,16 @@ class TeamMakerScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeamMakerScreen> createState() => _TeamMakerScreenState();
+}
+
+class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
+  bool _shownNotEnoughDialog = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (isEvent) {
+    if (widget.isEvent) {
       return _buildForEvent(context, ref, l10n);
     } else {
       return _buildForGame(context, ref, l10n);
@@ -39,7 +46,7 @@ class TeamMakerScreen extends ConsumerWidget {
 
   Widget _buildForEvent(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    if (hubId == null) {
+    if (widget.hubId == null) {
       return FuturisticScaffold(
         title: l10n.teamFormation,
         body: Center(child: Text(l10n.errorMissingHubId)),
@@ -51,7 +58,7 @@ class TeamMakerScreen extends ConsumerWidget {
     return FuturisticScaffold(
       title: 'יוצר כוחות',
       body: FutureBuilder<HubEvent?>(
-        future: hubEventsRepo.getHubEvent(hubId!, gameId),
+        future: hubEventsRepo.getHubEvent(widget.hubId!, widget.gameId),
         builder: (context, eventSnapshot) {
           if (eventSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -76,7 +83,7 @@ class TeamMakerScreen extends ConsumerWidget {
           }
 
           // Check admin permissions
-          final roleAsync = ref.watch(hubRoleProvider(hubId!));
+          final roleAsync = ref.watch(hubRoleProvider(widget.hubId!));
           return roleAsync.when(
             data: (role) {
               if (role != UserRole.admin) {
@@ -105,6 +112,29 @@ class TeamMakerScreen extends ConsumerWidget {
 
               if (registeredPlayerIds.length <
                   event.teamCount * AppConstants.minPlayersPerTeam) {
+                if (!_shownNotEnoughDialog) {
+                  _shownNotEnoughDialog = true;
+                  Future.microtask(() async {
+                    await showDialog<void>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(l10n.notEnoughRegisteredPlayers),
+                        content: Text(
+                          '${l10n.requiredPlayersCount(event.teamCount * AppConstants.minPlayersPerTeam)}\n${l10n.registeredPlayerCount(registeredPlayerIds.length)}',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              context.pop();
+                            },
+                            child: const Text('אוקיי'),
+                          ),
+                        ],
+                      ),
+                    );
+                  });
+                }
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -139,9 +169,9 @@ class TeamMakerScreen extends ConsumerWidget {
               return PremiumTeamBuilder(
                 playerIds: registeredPlayerIds,
                 teamCount: event.teamCount,
-                hubId: hubId!,
+                hubId: widget.hubId!,
                 isEvent: true,
-                eventId: gameId,
+                eventId: widget.gameId,
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),

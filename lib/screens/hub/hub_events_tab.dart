@@ -12,6 +12,7 @@ import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Hub Events Tab - shows events and allows registration
 class HubEventsTab extends ConsumerStatefulWidget {
@@ -31,8 +32,6 @@ class HubEventsTab extends ConsumerStatefulWidget {
 }
 
 class _HubEventsTabState extends ConsumerState<HubEventsTab> {
-  final Set<String> _startedEventIds = {};
-
   @override
   Widget build(BuildContext context) {
     final hubEventsRepo = ref.watch(hubEventsRepositoryProvider);
@@ -117,9 +116,14 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                 itemCount: events.length,
                 itemBuilder: (context, index) {
                   final event = events[index];
+                  final startTime = event.startedAt ?? event.eventDate;
+                  final happeningWindowEnd =
+                      startTime.add(const Duration(hours: 5));
+                  final isHappeningNow =
+                      event.isStarted && DateTime.now().isBefore(happeningWindowEnd);
                   final isRegistered = currentUserId != null &&
                       event.registeredPlayerIds.contains(currentUserId);
-                  final isPast = event.eventDate.isBefore(DateTime.now());
+                  final isPast = DateTime.now().isAfter(happeningWindowEnd);
 
                   return FuturisticCard(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -140,7 +144,13 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                   ),
                                 ),
                               ),
-                              if (isPast)
+                              if (isHappeningNow)
+                                _StatusPill(
+                                  label: 'מתרחש',
+                                  color: Colors.green,
+                                  pulse: true,
+                                )
+                              else if (isPast)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
@@ -234,10 +244,10 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                   color: FuturisticColors.textSecondary,
                                 ),
                               ),
-                              if (event.registeredPlayerIds.length >=
+                          if (event.registeredPlayerIds.length >=
                                   event.maxParticipants) ...[
-                                const SizedBox(width: 8),
-                                Container(
+                            const SizedBox(width: 8),
+                            Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
@@ -300,23 +310,60 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                           const SizedBox(height: 16),
                           // Event Started Logic (Manager Only)
                           if (widget.isManager &&
-                              !event.eventDate.isAfter(DateTime.now())) ...[
+                              !isPast) ...[
                             SwitchListTile(
                               title: const Text('האירוע התחיל'),
-                              value: _startedEventIds.contains(event.eventId),
-                              onChanged: (value) {
-                                setState(() {
-                                  if (value) {
-                                    _startedEventIds.add(event.eventId);
-                                  } else {
-                                    _startedEventIds.remove(event.eventId);
+                              value: event.isStarted,
+                              onChanged: (value) async {
+                                if (value == event.isStarted) return;
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('אישור התחלת אירוע'),
+                                    content: const Text(
+                                        'האם אתה בטוח שהאירוע התחיל?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('ביטול'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('אישור'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm != true) return;
+
+                                try {
+                                  final eventsRepo =
+                                      ref.read(hubEventsRepositoryProvider);
+                                  await eventsRepo.updateHubEvent(
+                                    widget.hubId,
+                                    event.eventId,
+                                    {
+                                      'isStarted': value,
+                                      'status': value ? 'ongoing' : 'upcoming',
+                                      if (value)
+                                        'startedAt':
+                                            FieldValue.serverTimestamp(),
+                                    },
+                                  );
+                                } catch (e) {
+                                  if (mounted) {
+                                    SnackbarHelper.showError(
+                                        context, 'שגיאה בעדכון אירוע: $e');
                                   }
-                                });
+                                }
                               },
                               secondary: const Icon(Icons.timer),
                               contentPadding: EdgeInsets.zero,
                             ),
-                            if (_startedEventIds.contains(event.eventId)) ...[
+                            if (event.isStarted) ...[
                               const SizedBox(height: 8),
                               SizedBox(
                                 width: double.infinity,
@@ -374,9 +421,9 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                     padding: const EdgeInsets.only(right: 8),
                                     child: ElevatedButton.icon(
                                       onPressed: () => context.push(
-                                          '/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
-                                      icon: const Icon(Icons.group, size: 18),
-                                      label: const Text('צור קבוצות'),
+                                        '/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
+                                  icon: const Icon(Icons.group, size: 18),
+                                  label: const Text('צור קבוצות'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
                                             FuturisticColors.primary,
@@ -614,6 +661,71 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
         SnackbarHelper.showErrorFromException(context, e);
       }
     }
+  }
+}
+
+class _StatusPill extends StatefulWidget {
+  final String label;
+  final Color color;
+  final bool pulse;
+
+  const _StatusPill({
+    required this.label,
+    required this.color,
+    this.pulse = false,
+  });
+
+  @override
+  State<_StatusPill> createState() => _StatusPillState();
+}
+
+class _StatusPillState extends State<_StatusPill>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+      lowerBound: 0.85,
+      upperBound: 1.05,
+    );
+    if (widget.pulse) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: widget.color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        widget.label,
+        style: FuturisticTypography.labelSmall.copyWith(
+          color: widget.color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+
+    if (!widget.pulse) return pill;
+
+    return ScaleTransition(
+      scale: _controller,
+      child: pill,
+    );
   }
 }
 

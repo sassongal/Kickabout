@@ -234,11 +234,11 @@ class UsersRepository {
     if (!Env.isFirebaseAvailable) return [];
 
     try {
-      // Query users with availability status 'available' or 'busy'
+      // Query users with availability status 'available' only
       final query = _firestore
           .collection(FirestorePaths.users())
-          .where('availabilityStatus', whereIn: ['available', 'busy']).limit(
-              50); // Get more to filter by distance
+          .where('availabilityStatus', isEqualTo: 'available')
+          .limit(50); // Get more to filter by distance
 
       final snapshot = await query.get();
 

@@ -73,18 +73,21 @@ class User with _$User {
 
 /// Extension to add displayName getter to User
 extension UserDisplayName on User {
-  /// Get display name - prioritizes custom displayName, then firstName + lastName, falls back to name
+  /// Get display name - prioritizes firstName + lastName, then name, then optional custom nickname
   String get displayName {
-    // 1. Prioritize custom displayName if set
+    final hasFirst = firstName != null && firstName!.isNotEmpty;
+    final hasLast = lastName != null && lastName!.isNotEmpty;
+
+    if (hasFirst && hasLast) return '$firstName $lastName';
+    if (hasFirst) return firstName!;
+    if (hasLast) return lastName!;
+
+    // Fall back to canonical name, then optional custom nickname
+    if (name.isNotEmpty) return name;
     if (this.displayName != null && this.displayName!.isNotEmpty) {
       return this.displayName!;
     }
-    // 2. Try firstName + lastName
-    if (firstName != null && lastName != null) {
-      return '$firstName $lastName';
-    }
-    // 3. Fall back to generic name
-    return name;
+    return 'שחקן';
   }
 }
 

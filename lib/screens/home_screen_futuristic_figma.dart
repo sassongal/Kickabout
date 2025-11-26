@@ -145,81 +145,26 @@ class _HomeScreenFuturisticFigmaState
                     _buildAdminTasksCard(context, currentUserId),
                     const SizedBox(height: 16),
 
-                    // User Profile Card (matching Figma design)
+                    // User Profile Card (compact with inline performance)
                     if (user != null) ...[
-                      FuturisticCard(
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                // Avatar
-                                PlayerAvatar(
-                                  user: user,
-                                  size: AvatarSize.lg,
-                                ),
-                                const SizedBox(width: 16),
-                                // Name and city ONLY (Rating removed)
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        user.name, // השם המלא כפי שמוגדר
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF212121),
-                                        ),
-                                      ),
-                                      if (user.city != null)
-                                        Text(
-                                          user.city!,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            color: const Color(0xFF757575),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                // REMOVED: The Column with currentRankScore
-                              ],
-                            ),
-                            const Divider(height: 24),
-                            // Availability toggle
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'זמין למשחקים',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: const Color(0xFF757575),
-                                  ),
-                                ),
-                                Switch(
-                                  value: user.availabilityStatus == 'available',
-                                  onChanged: (value) {
-                                    ref
-                                        .read(usersRepositoryProvider)
-                                        .updateUser(
-                                      currentUserId,
-                                      {
-                                        'availabilityStatus':
-                                            value ? 'available' : 'notAvailable'
-                                      },
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      _ProfileSummaryCard(
+                        user: user,
+                        currentUserId: currentUserId,
+                        gamificationStream: gamificationStream,
+                        onPerformanceTap: () =>
+                            context.push('/profile/$currentUserId/performance'),
+                        onAvailabilityChanged: (value) {
+                          ref.read(usersRepositoryProvider).updateUser(
+                            currentUserId,
+                            {
+                              'availabilityStatus':
+                                  value ? 'available' : 'notAvailable'
+                            },
+                          );
+                        },
                       ),
-                      const SizedBox(height: 16), // Reduced space
+                      const SizedBox(height: 16),
 
-                      // כותרת קטנה לפעולות מהירות (אופציונלי, אפשר גם להוריד לגמרי)
                       Text(
                         'פעולות מהירות',
                         style: FuturisticTypography.bodySmall
@@ -1561,6 +1506,228 @@ class _QuickActionButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfileSummaryCard extends StatelessWidget {
+  final User user;
+  final String currentUserId;
+  final Stream<Gamification?> gamificationStream;
+  final VoidCallback onPerformanceTap;
+  final ValueChanged<bool> onAvailabilityChanged;
+
+  const _ProfileSummaryCard({
+    required this.user,
+    required this.currentUserId,
+    required this.gamificationStream,
+    required this.onPerformanceTap,
+    required this.onAvailabilityChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FuturisticCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _AvatarWithStats(
+                user: user,
+                gamificationStream: gamificationStream,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.displayName,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF212121),
+                      ),
+                    ),
+                    if (user.city != null && user.city!.isNotEmpty)
+                      Text(
+                        user.city!,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: const Color(0xFF757575),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          size: 16,
+                          color: FuturisticColors.secondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          user.currentRankScore.toStringAsFixed(1),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: FuturisticColors.secondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onPerformanceTap,
+                  icon: const Icon(Icons.analytics_outlined),
+                  label: const Text('ביצועים'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'זמין למשחקים',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: const Color(0xFF757575),
+                      ),
+                    ),
+                    Switch(
+                      value: user.availabilityStatus == 'available',
+                      onChanged: onAvailabilityChanged,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvatarWithStats extends StatelessWidget {
+  final User user;
+  final Stream<Gamification?> gamificationStream;
+
+  const _AvatarWithStats({
+    required this.user,
+    required this.gamificationStream,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: FuturisticColors.primaryGradient,
+          ),
+          padding: const EdgeInsets.all(4),
+          child: PlayerAvatar(
+            user: user,
+            size: AvatarSize.lg,
+          ),
+        ),
+        Positioned(
+          bottom: 6,
+          right: 6,
+          child: _MiniStatCircle(
+            stream: gamificationStream,
+            label: 'משחקים',
+            valueBuilder: (g) => (g?.stats['gamesPlayed'] ?? 0).toString(),
+            color: FuturisticColors.secondary,
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 0,
+          child: _MiniStatCircle(
+            stream: gamificationStream,
+            label: 'ניצחונות',
+            valueBuilder: (g) => (g?.stats['gamesWon'] ?? 0).toString(),
+            color: Colors.green,
+          ),
+        ),
+        Positioned(
+          top: 4,
+          left: 0,
+          child: _MiniStatCircle(
+            stream: gamificationStream,
+            label: 'שערים',
+            valueBuilder: (g) => (g?.stats['goals'] ?? 0).toString(),
+            color: FuturisticColors.accent,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStatCircle extends StatelessWidget {
+  final Stream<Gamification?> stream;
+  final String label;
+  final String Function(Gamification?) valueBuilder;
+  final Color color;
+
+  const _MiniStatCircle({
+    required this.stream,
+    required this.label,
+    required this.valueBuilder,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Gamification?>(
+      stream: stream,
+      builder: (context, snapshot) {
+        final value = valueBuilder(snapshot.data);
+        return Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withValues(alpha: 0.15),
+            border: Border.all(color: color.withValues(alpha: 0.6)),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: FuturisticTypography.labelMedium
+                      .copyWith(color: color, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  label,
+                  style: FuturisticTypography.labelSmall.copyWith(
+                    color: color.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

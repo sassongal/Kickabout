@@ -23,6 +23,8 @@ class HubEvent with _$HubEvent {
     @TimestampConverter() required DateTime updatedAt,
     @Default([]) List<String> registeredPlayerIds, // Players who registered
     @Default('upcoming') String status, // upcoming, ongoing, completed, cancelled
+    @Default(false) bool isStarted, // Explicit flag for in-progress session
+    @TimestampConverter() DateTime? startedAt, // When manager marked start
     String? location,
     @NullableGeoPointConverter() GeoPoint? locationPoint,
     String? geohash,
@@ -43,4 +45,3 @@ class HubEvent with _$HubEvent {
 
   factory HubEvent.fromJson(Map<String, dynamic> json) => _$HubEventFromJson(json);
 }
-

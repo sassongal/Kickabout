@@ -38,7 +38,7 @@ class _GradientButtonState extends State<GradientButton>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    
+
     _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
@@ -53,7 +53,7 @@ class _GradientButtonState extends State<GradientButton>
   @override
   Widget build(BuildContext context) {
     final gradient = widget.gradient ?? FuturisticColors.primaryGradient;
-    
+
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
@@ -80,7 +80,8 @@ class _GradientButtonState extends State<GradientButton>
               onTap: widget.isLoading ? null : widget.onPressed,
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -91,7 +92,8 @@ class _GradientButtonState extends State<GradientButton>
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     else if (widget.iconWidget != null) ...[
@@ -101,16 +103,18 @@ class _GradientButtonState extends State<GradientButton>
                         child: widget.iconWidget,
                       ),
                       const SizedBox(width: 8),
-                    ]
-                    else if (widget.icon != null) ...[
+                    ] else if (widget.icon != null) ...[
                       Icon(widget.icon, size: 20, color: Colors.white),
                       const SizedBox(width: 8),
                     ],
-                    Text(
-                      widget.label.toUpperCase(),
-                      style: FuturisticTypography.labelLarge.copyWith(
-                        color: Colors.white,
-                        letterSpacing: 1.2,
+                    Flexible(
+                      child: Text(
+                        widget.label.toUpperCase(),
+                        style: FuturisticTypography.labelLarge.copyWith(
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -123,4 +127,3 @@ class _GradientButtonState extends State<GradientButton>
     );
   }
 }
-

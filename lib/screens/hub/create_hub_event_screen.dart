@@ -57,6 +57,20 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
         setState(() {
           _hub = hub;
         });
+        // Pre-fill location with hub primary venue if available
+        if (hub?.primaryVenueId != null &&
+            hub!.primaryVenueId!.isNotEmpty &&
+            _locationController.text.isEmpty) {
+          try {
+            final venuesRepo = ref.read(venuesRepositoryProvider);
+            final primaryVenue =
+                await venuesRepo.getVenue(hub.primaryVenueId!);
+            _locationController.text =
+                primaryVenue?.name ?? hub.primaryVenueId!;
+          } catch (_) {
+            _locationController.text = hub.primaryVenueId!;
+          }
+        }
       }
     } catch (e) {
       debugPrint('Failed to load hub: $e');
@@ -637,4 +651,3 @@ class _ParticipantsPickerDialogState extends State<_ParticipantsPickerDialog> {
     );
   }
 }
-

@@ -54,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingPage(
       title: 'הרשאות',
-      description: 'אנחנו זקוקים להרשאות כדי לספק לך חוויה מיטבית',
+      description: 'מבקשים עכשיו התראות ומיקום; מצלמה תתבקש רק כשצריך בזמן שימוש',
       icon: Icons.security,
       color: Colors.orange,
       isPermissionsPage: true,
@@ -68,12 +68,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _nextPage() async {
-    // If on permissions page, only request notification permission
-    // Other permissions will be requested Just-in-Time when needed
-    if (_currentPage == _pages.length - 2 && _pages[_currentPage].isPermissionsPage == true) {
+    // If on permissions page, request upfront permissions once (notifications + location).
+    // Camera and other sensors remain just-in-time when needed.
+    if (_currentPage == _pages.length - 2 &&
+        _pages[_currentPage].isPermissionsPage == true) {
       await _requestNotificationPermission();
+      await _requestLocationPermission();
     }
-    
+
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -84,13 +86,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  /// Request only notification permission during onboarding
-  /// Other permissions (location, camera) will be requested Just-in-Time when needed
+  /// Request notification permission during onboarding
+  /// Location is also requested once here; camera stays JIT
   Future<void> _requestNotificationPermission() async {
     try {
-      // Only request notification permission here
-      // This is the only permission that makes sense to request upfront
-      // as it's needed for game reminders and messages
       final notificationStatus = await Permission.notification.request();
       if (notificationStatus.isDenied) {
         debugPrint('Notification permission denied');
@@ -100,24 +99,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _skipOnboarding() {
-    _completeOnboarding();
+  /// Request location permission once during onboarding so discovery/maps work out of the box.
+  /// If denied, flows will fall back to manual city entry later.
+  Future<void> _requestLocationPermission() async {
+    try {
+      final locationStatus = await Permission.locationWhenInUse.request();
+      if (locationStatus.isDenied) {
+        debugPrint('Location permission denied');
+      } else if (locationStatus.isPermanentlyDenied) {
+        debugPrint('Location permission permanently denied');
+      }
+    } catch (e) {
+      debugPrint('Error requesting location permission: $e');
+    }
   }
 
   Future<void> _completeOnboarding() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarding_completed', true);
-      
+
       // Invalidate the provider to force it to reload with the new value
       if (mounted) {
         try {
           final container = ProviderScope.containerOf(context);
           container.invalidate(onboardingStatusProvider);
-          
+
           // Wait longer for provider to reload and state to update
           await Future.delayed(const Duration(milliseconds: 300));
-          
+
           // Use Future.microtask to ensure navigation happens after state update
           // This ensures the router sees the updated onboarding status
           Future.microtask(() {
@@ -130,7 +140,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Fallback: navigate directly after a delay
           await Future.delayed(const Duration(milliseconds: 200));
           if (mounted) {
-        context.go('/');
+            context.go('/');
           }
         }
       }
@@ -140,7 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         // Even if saving fails, try to navigate after a delay
         await Future.delayed(const Duration(milliseconds: 200));
         if (mounted) {
-        context.go('/');
+          context.go('/');
         }
       }
     }
@@ -149,7 +159,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final isLastPage = _currentPage == _pages.length - 1;
-    
+
     // Figma design: No AppBar, Skip button top-left, content centered
     return Scaffold(
       backgroundColor: FuturisticColors.background,
@@ -160,26 +170,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Skip button (only if not last page)
-              if (!isLastPage)
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TextButton(
-                      onPressed: _skipOnboarding,
-                      child: Text(
-                        'דלג',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: FuturisticColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
               // Page view
               Expanded(
                 child: PageView.builder(
@@ -197,10 +187,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
 
               const Spacer(),
-              
+
               // Bottom Section (Page indicators + Button)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Column(
                   children: [
                     // Page indicator (Figma style)
@@ -222,7 +213,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Next/Get Started button
                     GradientButton(
                       label: isLastPage ? 'התחל' : 'הבא',
@@ -317,50 +308,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           const SizedBox(height: 32), // Add top padding
-            // Icon
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    page.color,
-                    page.color.withValues(alpha: 0.7),
-                  ],
-                ),
-              ),
-              child: Icon(
-                page.icon,
-                size: 60,
-                color: Colors.white,
+          // Icon
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  page.color,
+                  page.color.withValues(alpha: 0.7),
+                ],
               ),
             ),
-            const SizedBox(height: 48),
-
-            // Title
-            Text(
-              page.title,
-              style: FuturisticTypography.techHeadline.copyWith(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+            child: Icon(
+              page.icon,
+              size: 60,
+              color: Colors.white,
             ),
-            const SizedBox(height: 24),
+          ),
+          const SizedBox(height: 48),
 
-            // Description
-            Text(
-              page.description,
-              style: FuturisticTypography.bodyLarge.copyWith(
-                fontSize: 18,
-                color: FuturisticColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
+          // Title
+          Text(
+            page.title,
+            style: FuturisticTypography.techHeadline.copyWith(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 32),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
 
-            // Permissions list (Figma style: FuturisticCard with icons)
+          // Description
+          Text(
+            page.description,
+            style: FuturisticTypography.bodyLarge.copyWith(
+              fontSize: 18,
+              color: FuturisticColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+
+          // Permissions list (Figma style: FuturisticCard with icons)
             Column(
               children: [
                 _buildPermissionItem(
@@ -373,21 +364,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 _buildPermissionItem(
                   Icons.location_on,
                   'מיקום',
-                  'יידרש בעת שימוש במפה או חיפוש הובים',
-                  isRequested: false,
+                  'מבוקש עכשיו כדי להראות משחקים/הובים לידך (אפשר לדלג)',
+                  isRequested: true,
                 ),
                 const SizedBox(height: 12),
                 _buildPermissionItem(
                   Icons.camera_alt,
                   'מצלמה',
-                  'יידרש בעת צילום תמונות במשחקים',
-                  isRequested: false,
-                ),
-              ],
-            ),
-            const SizedBox(height: 48), // Add spacing at bottom for better scroll
-          ],
-        ),
+                'יידרש בעת צילום תמונות במשחקים',
+                isRequested: false,
+              ),
+            ],
+          ),
+          const SizedBox(height: 48), // Add spacing at bottom for better scroll
+        ],
+      ),
     );
   }
 
@@ -443,8 +434,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Check icon (green if requested)
           Icon(
             Icons.check,
-            color: isRequested 
-                ? FuturisticColors.secondary 
+            color: isRequested
+                ? FuturisticColors.secondary
                 : FuturisticColors.textTertiary,
             size: 20,
           ),
@@ -452,7 +443,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
-
 }
 
 class OnboardingPage {
@@ -470,4 +460,3 @@ class OnboardingPage {
     this.isPermissionsPage = false,
   });
 }
-

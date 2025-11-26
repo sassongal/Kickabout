@@ -454,15 +454,19 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Text(
-                                        team.color ?? team.name,
-                                        style: FuturisticTypography.bodyLarge
-                                            .copyWith(
-                                          fontWeight: FontWeight.bold,
+                                      Flexible(
+                                        child: Text(
+                                          team.color ?? team.name,
+                                          style: FuturisticTypography.bodyLarge
+                                              .copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(width: 8),
                                   Text(
                                     '$wins ניצחונות',
                                     style: FuturisticTypography.heading2,
@@ -544,9 +548,12 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    match.teamAColor,
-                                    style: FuturisticTypography.bodyMedium,
+                                  Flexible(
+                                    child: Text(
+                                      match.teamAColor,
+                                      style: FuturisticTypography.bodyMedium,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
@@ -568,9 +575,12 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                     style: FuturisticTypography.heading2,
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    match.teamBColor,
-                                    style: FuturisticTypography.bodyMedium,
+                                  Flexible(
+                                    child: Text(
+                                      match.teamBColor,
+                                      style: FuturisticTypography.bodyMedium,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
                                   Container(

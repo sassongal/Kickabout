@@ -7,6 +7,7 @@ import 'package:kickadoor/widgets/futuristic/offline_indicator.dart';
 class AppScaffold extends StatelessWidget {
   final String title;
   final Widget body;
+  final bool forceBottomNav;
   final List<Widget>? actions;
   final Widget? floatingActionButton;
   final bool showBackButton;
@@ -16,6 +17,7 @@ class AppScaffold extends StatelessWidget {
     super.key,
     required this.title,
     required this.body,
+    this.forceBottomNav = false,
     this.actions,
     this.floatingActionButton,
     this.showBackButton = true,
@@ -39,10 +41,9 @@ class AppScaffold extends StatelessWidget {
         ],
       ),
       floatingActionButton: floatingActionButton,
-      bottomNavigationBar: showBottomNav
+      bottomNavigationBar: showBottomNav || forceBottomNav
           ? FuturisticBottomNavBar(currentRoute: currentRoute)
           : null,
     );
   }
 }
-

@@ -10,6 +10,8 @@ import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/screens/hub/hub_invitations_screen.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
@@ -245,6 +247,34 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                   ),
                   const SizedBox(height: 8),
 
+                  // Allow Join Requests
+                  Card(
+                    child: SwitchListTile(
+                      title: const Text('אפשר בקשות הצטרפות'),
+                      subtitle: const Text(
+                          'אם כבוי, לא ניתן לשלוח בקשות הצטרפות להאב'),
+                      value: settings['allowJoinRequests'] as bool? ?? true,
+                      onChanged: (value) =>
+                          _updateSetting('allowJoinRequests', value),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Manager contact visibility
+                  Card(
+                    child: SwitchListTile(
+                      title: const Text('הצגת פרטי מנהל'),
+                      subtitle: const Text(
+                        'אפשר לשחקנים לראות פרטי קשר של מנהל ההאב כדי לפנות',
+                      ),
+                      value:
+                          settings['showManagerContactInfo'] as bool? ?? true,
+                      onChanged: (value) =>
+                          _updateSetting('showManagerContactInfo', value),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
                   // Notifications
                   Card(
                     child: SwitchListTile(
@@ -286,8 +316,44 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                       title: Text(l10n.manageVenues),
                       subtitle: Text(l10n.manageVenuesDescription),
                       trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () => context.push(
-                          '/venues/search?hubId=${widget.hubId}&select=true'),
+                      onTap: () async {
+                        final selectedVenue = await context.push<Venue?>(
+                          '/venues/search?hubId=${widget.hubId}&select=true',
+                        );
+
+                        if (selectedVenue != null) {
+                          try {
+                            final hubsRepo = ref.read(hubsRepositoryProvider);
+                            final geohash = GeohashUtils.encode(
+                              selectedVenue.location.latitude,
+                              selectedVenue.location.longitude,
+                              precision: 8,
+                            );
+
+                            await hubsRepo.updateHub(widget.hubId, {
+                              'primaryVenueId': selectedVenue.venueId,
+                              'primaryVenueLocation':
+                                  selectedVenue.location as GeoPoint,
+                              'location': selectedVenue.location as GeoPoint,
+                              'geohash': geohash,
+                            });
+
+                            if (mounted) {
+                              SnackbarHelper.showSuccess(
+                                context,
+                                'עודכן מגרש הבית של ההאב',
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              SnackbarHelper.showError(
+                                context,
+                                'שגיאה בעדכון מגרש הבית: $e',
+                              );
+                            }
+                          }
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(height: 8),

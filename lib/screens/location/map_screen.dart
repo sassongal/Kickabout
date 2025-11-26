@@ -555,8 +555,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
 
         for (final hub in hubs) {
-          // Add hub marker - use mainVenueId location if available, otherwise use hub.location
-          GeoPoint? hubLocation = hub.location;
+          // Add hub marker - prefer primary venue location, then legacy location, then main venue
+          GeoPoint? hubLocation = hub.primaryVenueLocation ?? hub.location;
           
           // If hub has mainVenueId but no location, get location from main venue
           if (hubLocation == null && hub.mainVenueId != null && hub.mainVenueId!.isNotEmpty) {
@@ -1185,4 +1185,3 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     super.dispose();
   }
 }
-

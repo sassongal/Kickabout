@@ -29,7 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  bool _isAnonymousLoading = false;
+
   bool _obscurePassword = true;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -41,11 +41,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
-    
+
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-    
+
     // Only start animation if not on Web (to prevent rendering issues)
     if (!kIsWeb) {
       _pulseController.repeat(reverse: true);
@@ -53,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       // On Web, just set to a static value to avoid rendering loops
       _pulseController.value = 1.0;
     }
-    
+
     // Auto-login in debug mode (only on emulator/device, not Web)
     if (kDebugMode && !kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -61,17 +61,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       });
     }
   }
-  
+
   /// Auto-login with configured email in debug mode
   Future<void> _autoLogin() async {
     if (!Env.isFirebaseAvailable || !Env.isAutoLoginEnabled) return;
-    
+
     // Check if widget is still mounted before starting
     if (!mounted) return;
-    
+
     try {
       final authService = ref.read(authServiceProvider);
-      
+
       // Check if already logged in
       final currentUser = authService.currentUser;
       if (currentUser != null) {
@@ -82,33 +82,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           // Check mounted after async operation
           if (!mounted) return;
         } else {
-          debugPrint('✅ Already logged in as: ${currentUser.email ?? currentUser.uid}');
+          debugPrint(
+              '✅ Already logged in as: ${currentUser.email ?? currentUser.uid}');
           return;
         }
       }
-      
+
       // Try to sign in with email/password
       debugPrint('🔐 Attempting auto-login with ${Env.autoLoginEmail}...');
-      
+
       try {
         await authService.signInWithEmailAndPassword(
           Env.autoLoginEmail!,
           Env.autoLoginPassword!,
         );
-        
+
         // Check mounted before navigation
         if (!mounted || !context.mounted) {
           debugPrint('⚠️ Widget unmounted before navigation');
           return;
         }
-        
+
         debugPrint('✅ Auto-login successful!');
-        
+
         // Navigate to home (router will handle onboarding if needed)
         await _navigateToEditProfile();
       } on FirebaseAuthException catch (e) {
         if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-          debugPrint('⚠️ Auto-login failed: Invalid credentials. Please check Env.autoLoginEmail and Env.autoLoginPassword');
+          debugPrint(
+              '⚠️ Auto-login failed: Invalid credentials. Please check Env.autoLoginEmail and Env.autoLoginPassword');
         } else {
           debugPrint('⚠️ Auto-login failed: ${e.code} - ${e.message}');
         }
@@ -129,48 +131,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _passwordController.dispose();
     _pulseController.dispose();
     super.dispose();
-  }
-
-  Future<void> _signInAnonymously() async {
-    if (!Env.isFirebaseAvailable) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Firebase not available');
-      }
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() => _isAnonymousLoading = true);
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      final userCredential = await authService.signInAnonymously();
-
-      if (userCredential.user == null) {
-        throw Exception('התחברות נכשלה - לא התקבל משתמש');
-      }
-
-      // Log analytics
-      try {
-        final analytics = AnalyticsService();
-        await analytics.logLogin(loginMethod: 'anonymous');
-      } catch (e) {
-        debugPrint('Failed to log analytics: $e');
-      }
-
-      if (mounted) {
-        await _navigateToEditProfile();
-      }
-    } catch (e) {
-      if (mounted) {
-        final errorMessage = e.toString().replaceAll('Exception: ', '');
-        SnackbarHelper.showError(context, errorMessage);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isAnonymousLoading = false);
-      }
-    }
   }
 
   Future<void> _signInWithEmailPassword() async {
@@ -212,63 +172,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    if (!Env.isFirebaseAvailable) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Firebase not available');
-      }
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      final userCredential = await authService.signInWithGoogle();
-
-      if (userCredential.user == null) {
-        throw Exception('התחברות נכשלה - לא התקבל משתמש');
-      }
-
-      // Log analytics
-      try {
-        final analytics = AnalyticsService();
-        await analytics.logLogin(loginMethod: 'google');
-      } catch (e) {
-        debugPrint('Failed to log analytics: $e');
-      }
-
-      if (mounted) {
-        await _navigateToEditProfile();
-      }
-    } catch (e) {
-      if (mounted) {
-        final errorString = e.toString().toLowerCase();
-        String errorMessage;
-        
-        if (errorString.contains('canceled') || 
-            errorString.contains('cancelled') ||
-            errorString.contains('בוטלה')) {
-          // Silent failure for user cancellation - don't show error
-          errorMessage = 'התחברות בוטלה';
-          // Don't show snackbar for cancellation
-          debugPrint('Google sign in canceled by user');
-        } else {
-          errorMessage = e.toString().replaceAll('Exception: ', '');
-          if (errorMessage.isEmpty || errorMessage == 'null') {
-            errorMessage = 'התחברות עם Google נכשלה';
-          }
-          SnackbarHelper.showError(context, errorMessage);
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
   /// Navigates to the edit‑profile screen, creating a minimal user document if needed.
   Future<void> _navigateToEditProfile() async {
     final authService = ref.read(authServiceProvider);
@@ -299,45 +202,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     context.push('/profile/$uid/edit');
   }
 
-        Future<void> _signInWithApple() async {
-    if (!Env.isFirebaseAvailable) {
-      SnackbarHelper.showError(context, 'Firebase not available');
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      await authService.signInWithApple();
-
-      // Log analytics
-      try {
-        final analytics = AnalyticsService();
-        await analytics.logLogin(loginMethod: 'apple');
-      } catch (e) {
-        debugPrint('Failed to log analytics: $e');
-      }
-
-      if (mounted) {
-        await _navigateToEditProfile();
-      }
-    } catch (e) {
-      if (mounted) {
-        final errorMessage = e.toString().contains('only available')
-            ? 'התחברות עם Apple זמינה רק ב-iOS'
-            : 'התחברות עם Apple נכשלה: $e';
-        SnackbarHelper.showError(context, errorMessage);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-
   Future<void> _showPasswordResetDialog(BuildContext context) async {
     final emailController = TextEditingController(text: _emailController.text);
 
@@ -348,7 +212,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('הזן את כתובת האימייל שלך ונשלח לך קישור לאיפוס הסיסמה.'),
+            const Text(
+                'הזן את כתובת האימייל שלך ונשלח לך קישור לאיפוס הסיסמה.'),
             const SizedBox(height: 16),
             TextField(
               controller: emailController,
@@ -414,7 +279,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   padding: const EdgeInsets.all(24),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - 48, // Account for padding
+                      minHeight:
+                          constraints.maxHeight - 48, // Account for padding
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -441,7 +307,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         Text(
                           'ברוכים הבאים',
                           style: FuturisticTypography.techHeadline.copyWith(
@@ -455,65 +321,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         ),
                         const SizedBox(height: 48),
 
-                        // One-tap sign-in buttons
-                        GradientButton(
-                          label: 'המשך כאורח',
-                          icon: Icons.person_outline,
-                          onPressed: _isAnonymousLoading ? null : _signInAnonymously,
-                          isLoading: _isAnonymousLoading,
-                          width: double.infinity,
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        GradientButton(
-                          label: 'התחבר עם Google',
-                          icon: Icons.g_mobiledata,
-                          onPressed: _isLoading ? null : _signInWithGoogle,
-                          isLoading: _isLoading,
-                          gradient: FuturisticColors.accentGradient,
-                          width: double.infinity,
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        GradientButton(
-                          label: 'התחבר עם Apple',
-                          icon: Icons.apple,
-                          onPressed: _isLoading ? null : _signInWithApple,
-                          isLoading: _isLoading,
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black,
-                              Colors.grey[800]!,
-                            ],
-                          ),
-                          width: double.infinity,
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Divider
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Divider(
-                                color: FuturisticColors.surfaceVariant,
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'או',
-                                style: FuturisticTypography.labelMedium,
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(
-                                color: FuturisticColors.surfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
                         // Email/Password form
                         FuturisticCard(
                           child: Form(
@@ -523,7 +330,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               children: [
                                 Text(
                                   'אימייל וסיסמה',
-                                  style: FuturisticTypography.techHeadline.copyWith(
+                                  style: FuturisticTypography.techHeadline
+                                      .copyWith(
                                     fontSize: 14,
                                   ),
                                 ),
@@ -577,13 +385,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 GradientButton(
                                   label: 'התחבר',
                                   icon: Icons.login,
-                                  onPressed: _isLoading ? null : _signInWithEmailPassword,
+                                  onPressed: _isLoading
+                                      ? null
+                                      : _signInWithEmailPassword,
                                   isLoading: _isLoading,
                                   width: double.infinity,
                                 ),
                                 const SizedBox(height: 12),
                                 TextButton(
-                                  onPressed: _isLoading ? null : () => _showPasswordResetDialog(context),
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _showPasswordResetDialog(context),
                                   child: Text(
                                     'שכחת סיסמה?',
                                     style: FuturisticTypography.labelMedium,
@@ -594,7 +406,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Register link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -626,4 +438,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 }
-

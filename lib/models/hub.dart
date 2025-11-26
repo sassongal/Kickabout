@@ -18,7 +18,12 @@ class Hub with _$Hub {
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> memberIds,
     @Default({}) @TimestampMapConverter() Map<String, Timestamp> memberJoinDates, // userId -> join date timestamp
-    @Default({'ratingMode': 'basic'}) Map<String, dynamic> settings,
+    @Default({
+      'ratingMode': 'basic',
+      'showManagerContactInfo': true,
+      'allowJoinRequests': true,
+    })
+    Map<String, dynamic> settings,
     @Default({}) Map<String, String> roles, // userId -> role (manager, moderator, member)
     @Default({}) Map<String, dynamic> permissions, // Custom permissions: {canCreateEvents: [userId1, userId2], canCreatePosts: [userId1, userId2]}
     @NullableGeoPointConverter() GeoPoint? location, // Primary location (deprecated, use venues)
@@ -56,4 +61,3 @@ class HubConverter implements JsonConverter<Hub, Map<String, dynamic>> {
   @override
   Map<String, dynamic> toJson(Hub object) => object.toJson();
 }
-

@@ -2,7 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:kickadoor/routing/app_paths.dart';
 import 'package:kickadoor/routing/go_router_refresh_stream.dart';
 import 'package:kickadoor/utils/performance_utils.dart';
@@ -34,6 +34,8 @@ import 'package:kickadoor/screens/profile/edit_profile_screen.dart'
     deferred as edit_profile_screen;
 import 'package:kickadoor/screens/profile/privacy_settings_screen.dart'
     deferred as privacy_settings_screen;
+import 'package:kickadoor/screens/profile/performance_breakdown_screen.dart'
+    deferred as performance_breakdown_screen;
 import 'package:kickadoor/screens/location/discover_hubs_screen.dart'
     deferred as discover_hubs_screen;
 import 'package:kickadoor/screens/location/map_screen.dart'
@@ -51,6 +53,7 @@ import 'package:kickadoor/screens/social/feed_screen.dart'
 import 'package:kickadoor/screens/home_screen_futuristic_figma.dart';
 import 'package:kickadoor/screens/game/game_chat_screen.dart'
     deferred as game_chat_screen;
+
 import 'package:kickadoor/screens/social/messages_list_screen.dart'
     deferred as messages_list_screen;
 import 'package:kickadoor/screens/social/private_chat_screen.dart'
@@ -489,17 +492,13 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Event Management routes
       GoRoute(
-        path: '/events/:eventId/manage',
+        path: '/hubs/:hubId/events/:eventId/manage',
         name: 'eventManagement',
         builder: (context, state) => LazyRouteLoader(
             loader: event_management_screen.loadLibrary(),
             builder: () {
               final eventId = state.pathParameters['eventId']!;
-              final extra = state.extra as Map<String, dynamic>?;
-              final hubId = extra?['hubId'] as String?;
-              if (hubId == null) {
-                throw Exception('hubId is required for event management');
-              }
+              final hubId = state.pathParameters['hubId']!;
               return event_management_screen.EventManagementScreen(
                 hubId: hubId,
                 eventId: eventId,
@@ -513,11 +512,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 loader: team_generator_config_screen.loadLibrary(),
                 builder: () {
                   final eventId = state.pathParameters['eventId']!;
-                  final extra = state.extra as Map<String, dynamic>?;
-                  final hubId = extra?['hubId'] as String?;
-                  if (hubId == null) {
-                    throw Exception('hubId is required for team generator');
-                  }
+                  final hubId = state.pathParameters['hubId']!;
                   return team_generator_config_screen.TeamGeneratorConfigScreen(
                     hubId: hubId,
                     eventId: eventId,
@@ -573,10 +568,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             loader: feed_screen.loadLibrary(),
             builder: () {
               final hubId = state.uri.queryParameters['hubId'];
-              if (hubId == null || hubId.isEmpty) {
-                // If no hubId, redirect to hubs list
-                return const HubListScreen();
-              }
               return feed_screen.FeedScreen(hubId: hubId);
             }),
       ),
@@ -878,6 +869,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                   final userId = state.pathParameters['uid']!;
                   return privacy_settings_screen.PrivacySettingsScreen(
                       userId: userId);
+                }),
+          ),
+          GoRoute(
+            path: 'performance',
+            name: 'performanceBreakdown',
+            builder: (context, state) => LazyRouteLoader(
+                loader: performance_breakdown_screen.loadLibrary(),
+                builder: () {
+                  final userId = state.pathParameters['uid']!;
+                  return performance_breakdown_screen
+                      .PerformanceBreakdownScreen(userId: userId);
                 }),
           ),
           GoRoute(
