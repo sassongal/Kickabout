@@ -534,6 +534,186 @@ exports.onCommentCreated = onDocumentCreated(
     },
 );
 
+// --- Recruiting Posts: Regional Duplication + Notifications ---
+exports.onRecruitingPostCreated = onDocumentCreated(
+    'hubs/{hubId}/feed/posts/items/{postId}',
+    async (event) => {
+      const post = event.data.data();
+      const postId = event.params.postId;
+      const hubId = event.params.hubId;
+
+      // Only process recruiting posts
+      if (post.type !== 'hub_recruiting') return;
+
+      info(`Recruiting post ${postId} created in hub ${hubId}. Creating regional feed post...`);
+
+      try {
+        // Get hub data
+        const hubDoc = await db.collection('hubs').doc(hubId).get();
+        if (!hubDoc.exists) return;
+
+        const hubData = hubDoc.data();
+        const region = hubData.region;
+
+        if (!region) {
+          info('Hub has no region, skipping regional feed post');
+          return;
+        }
+
+        // Create regional feed post
+        const regionalPostRef = db.collection('feedPosts').doc();
+        await regionalPostRef.set({
+          postId: regionalPostRef.id,
+          hubId: hubId,
+          hubName: hubData.name,
+          hubLogoUrl: hubData.logoUrl || null,
+          type: 'hub_recruiting',
+          content: post.content,
+          photoUrls: post.photoUrls || [],
+          createdAt: post.createdAt,
+          authorId: post.authorId,
+          authorName: post.authorName || null,
+          authorPhotoUrl: post.authorPhotoUrl || null,
+          region: region,
+          gameId: post.gameId || null,
+          eventId: post.eventId || null,
+          isUrgent: post.isUrgent || false,
+          recruitingUntil: post.recruitingUntil || null,
+          neededPlayers: post.neededPlayers || 0,
+          likeCount: 0,
+          commentCount: 0,
+        });
+
+        info(`Created regional feed post ${regionalPostRef.id} for recruiting post ${postId}`);
+
+        // Optional: Send notifications to nearby players
+        const usersSnapshot = await db.collection('users')
+            .where('region', '==', region)
+            .where('isActive', '==', true)
+            .limit(100)
+            .get();
+
+        const tokens = [];
+        for (const userDoc of usersSnapshot.docs) {
+          const userId = userDoc.id;
+
+          // Skip hub members
+          if (hubData.memberIds && hubData.memberIds.includes(userId)) continue;
+
+          try {
+            const tokenDoc = await db
+                .collection('users')
+                .doc(userId)
+                .collection('fcm_tokens')
+                .doc('tokens')
+                .get();
+
+            if (tokenDoc.exists) {
+              const tokenData = tokenDoc.data();
+              const userTokens = tokenData?.tokens || [];
+              if (Array.isArray(userTokens) && userTokens.length > 0) {
+                tokens.push(...userTokens);
+              }
+            }
+          } catch (error) {
+            info(`Failed to get FCM token for user ${userId}: ${error}`);
+          }
+        }
+
+        if (tokens.length > 0) {
+          const uniqueTokens = [...new Set(tokens)];
+
+          const message = {
+            notification: {
+              title: `⚽ ${hubData.name} מחפש שחקנים!`,
+              body: post.content || 'לחץ לפרטים נוספים',
+            },
+            tokens: uniqueTokens,
+            data: {
+              type: 'hub_recruiting',
+              postId: regionalPostRef.id,
+              hubId: hubId,
+            },
+          };
+
+          await messaging.sendEachForMulticast(message);
+          info(`Sent recruiting notification to ${uniqueTokens.length} users in region ${region}`);
+        }
+      } catch (error) {
+        info(`Error creating regional feed post for recruiting post ${postId}:`, error);
+      }
+    },
+);
+
+// --- Contact Messages: Notify Hub Managers ---
+exports.onContactMessageCreated = onDocumentCreated(
+    'hubs/{hubId}/contactMessages/{messageId}',
+    async (event) => {
+      const message = event.data.data();
+      const hubId = event.params.hubId;
+      const messageId = event.params.messageId;
+
+      info(`New contact message ${messageId} in hub ${hubId} from ${message.senderId}`);
+
+      try {
+        // Get hub data
+        const hubDoc = await db.collection('hubs').doc(hubId).get();
+        if (!hubDoc.exists) return;
+
+        const hubData = hubDoc.data();
+        const creatorId = hubData.createdBy;
+
+        // Get all hub admins/managers
+        const managerIds = [creatorId];
+        if (hubData.roles) {
+          Object.entries(hubData.roles).forEach(([userId, role]) => {
+            if (role === 'admin' || role === 'manager') {
+              managerIds.push(userId);
+            }
+          });
+        }
+
+        // Send notification to all managers
+        for (const managerId of [...new Set(managerIds)]) {
+          try {
+            const tokenDoc = await db
+                .collection('users')
+                .doc(managerId)
+                .collection('fcm_tokens')
+                .doc('tokens')
+                .get();
+
+            if (!tokenDoc.exists) continue;
+
+            const tokenData = tokenDoc.data();
+            const userTokens = tokenData?.tokens || [];
+            if (!Array.isArray(userTokens) || userTokens.length === 0) continue;
+
+            const notification = {
+              notification: {
+                title: `💬 הודעה חדשה מ-${message.senderName || 'שחקן'}`,
+                body: (message.message || '').substring(0, 100),
+              },
+              tokens: userTokens,
+              data: {
+                type: 'contact_message',
+                hubId: hubId,
+                messageId: messageId,
+              },
+            };
+
+            await messaging.sendEachForMulticast(notification);
+            info(`Sent contact message notification to manager ${managerId}`);
+          } catch (error) {
+            info(`Error sending notification to manager ${managerId}: ${error}`);
+          }
+        }
+      } catch (error) {
+        info(`Error sending contact message notification: ${error}`);
+      }
+    },
+);
+
 exports.onFollowCreated = onDocumentCreated(
     'users/{followedId}/followers/{followerId}',
     async (event) => {

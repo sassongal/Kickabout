@@ -7,10 +7,11 @@ import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart' hide Notification;
 import 'package:kickadoor/models/notification.dart' as app_models;
-import 'package:kickadoor/screens/social/feed_screen.dart';
 import 'package:kickadoor/screens/social/hub_chat_screen.dart';
 import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
 import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
@@ -41,7 +42,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
   void initState() {
     super.initState();
     _tabController =
-        TabController(length: 4, vsync: this); // Removed Members tab
+        TabController(length: 3, vsync: this); // Removed Members and Feed tabs
   }
 
   @override
@@ -137,18 +138,13 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
         return roleAsync.when(
           data: (role) {
             final isAdminRole = role == UserRole.admin;
+            final hubPermissions = currentUserId != null
+                ? HubPermissions(hub: hub, userId: currentUserId)
+                : null;
             return AppScaffold(
               title: hub.name,
-              floatingActionButton: isAdminRole
-                  ? FloatingActionButton.extended(
-                      onPressed: () =>
-                          context.push('/games/create?hubId=${widget.hubId}'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('צור משחק'),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    )
-                  : null,
+              floatingActionButton:
+                  isAdminRole ? _HubAdminSpeedDial(hubId: widget.hubId) : null,
               body: NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
                   return [
@@ -345,6 +341,39 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                   '/hubs/${hub.hubId}/scouting'),
                                               color: Colors.blue,
                                             ),
+                                            IconButton(
+                                              icon: const Icon(Icons.analytics,
+                                                  size: 20),
+                                              tooltip: 'ניתוח',
+                                              onPressed: () => context.push(
+                                                  '/hubs/${hub.hubId}/analytics'),
+                                              color: Colors.purple,
+                                            ),
+                                            if (hubPermissions
+                                                    ?.canCreatePosts() ??
+                                                false)
+                                              Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                        Icons.person_search),
+                                                    color: Colors.orange,
+                                                    iconSize: 28,
+                                                    onPressed: () =>
+                                                        context.push(
+                                                            '/hubs/${hub.hubId}/create-recruiting-post'),
+                                                    tooltip: 'מחפש שחקנים',
+                                                  ),
+                                                  const Text(
+                                                    'מחפש שחקנים',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.orange,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                           ],
                                         ),
                                       ],
@@ -499,7 +528,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                           tabs: const [
                             Tab(icon: Icon(Icons.event), text: 'אירועים'),
                             Tab(icon: Icon(Icons.chat), text: 'צ\'אט'),
-                            Tab(icon: Icon(Icons.feed), text: 'פיד'),
                             Tab(
                                 icon: Icon(Icons.sports_soccer),
                                 text: 'משחקים'),
@@ -520,9 +548,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                     ),
                     // Chat tab (second)
                     HubChatScreen(hubId: widget.hubId),
-                    // Feed tab (third)
-                    FeedScreen(hubId: widget.hubId),
-                    // Games tab (fourth)
+                    // Games tab (third)
                     _GamesTab(hubId: widget.hubId),
                   ],
                 ),
@@ -692,6 +718,106 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
 
         return Column(
           children: [
+            // Coming Soon Placeholder - Futuristic Design
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Theme.of(context).colorScheme.primaryContainer,
+                    Theme.of(context).colorScheme.secondaryContainer,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.3),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Neon Icon
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.2),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.sports_soccer,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Title
+                  Text(
+                    'Games Schedule',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  // "Coming Soon" badge
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Coming Soon',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Subtext
+                  Text(
+                    'Track all hub matches and stats here',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer
+                              .withValues(alpha: 0.7),
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
             // Add game log button (for authorized users)
             if (canCreateGames)
               Padding(
@@ -1264,10 +1390,18 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
 
         if (result is Venue) {
           // Existing venue selected
+          final geohash = GeohashUtils.encode(
+            result.location.latitude,
+            result.location.longitude,
+            precision: 8,
+          );
+
           await hubsRepo.updateHub(widget.hubId, {
             'mainVenueId': result.venueId,
             'primaryVenueId': result.venueId,
             'primaryVenueLocation': result.location,
+            'location': result.location,
+            'geohash': geohash,
           });
         } else if (result is Map<String, dynamic>) {
           // Manual location selected
@@ -1286,10 +1420,18 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
           );
 
           // Update hub with new venue
+          final geohash = GeohashUtils.encode(
+            location.latitude,
+            location.longitude,
+            precision: 8,
+          );
+
           await hubsRepo.updateHub(widget.hubId, {
             'mainVenueId': newVenue.venueId,
             'primaryVenueId': newVenue.venueId,
             'primaryVenueLocation': location,
+            'location': location,
+            'geohash': geohash,
           });
         }
 
@@ -2139,5 +2281,69 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
     return tabBar != oldDelegate.tabBar;
+  }
+}
+
+class _HubAdminSpeedDial extends StatelessWidget {
+  final String hubId;
+
+  const _HubAdminSpeedDial({required this.hubId});
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+
+    return SpeedDial(
+      icon: Icons.add,
+      activeIcon: Icons.close,
+      backgroundColor: primaryColor,
+      foregroundColor: onPrimaryColor,
+      spacing: 12,
+      spaceBetweenChildren: 8,
+      overlayColor: Colors.black,
+      overlayOpacity: 0.5,
+      children: [
+        SpeedDialChild(
+          child: const Icon(Icons.event, color: Colors.black),
+          backgroundColor: const Color(0xFFFF6B35), // Vibrant orange
+          foregroundColor: Colors.black,
+          label: 'צור אירוע',
+          labelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          labelBackgroundColor: Colors.black87,
+          onTap: () => context.push('/hubs/$hubId/events/create'),
+        ),
+        SpeedDialChild(
+          child: const Icon(Icons.sports_soccer, color: Colors.black),
+          backgroundColor: const Color(0xFF00D9FF), // Neon cyan
+          foregroundColor: Colors.black,
+          label: 'צור משחק',
+          labelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          labelBackgroundColor: Colors.black87,
+          onTap: () => context.push('/games/create?hubId=$hubId'),
+        ),
+        SpeedDialChild(
+          child: const Icon(Icons.person_search, color: Colors.black),
+          backgroundColor: const Color(0xFF39FF14), // Neon green
+          foregroundColor: Colors.black,
+          label: 'חפש שחקנים',
+          labelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          labelBackgroundColor: Colors.black87,
+          onTap: () => context.push('/hubs/$hubId/scouting'),
+        ),
+      ],
+    );
   }
 }

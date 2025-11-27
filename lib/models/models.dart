@@ -22,4 +22,4 @@ export 'enums/signup_status.dart';
 export 'enums/event_type.dart';
 export 'converters/timestamp_converter.dart';
 export 'converters/geopoint_converter.dart';
-
+export 'contact_message.dart';

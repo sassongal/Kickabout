@@ -44,6 +44,8 @@ mixin _$HubEvent {
   @NullableGeoPointConverter()
   GeoPoint? get locationPoint => throw _privateConstructorUsedError;
   String? get geohash => throw _privateConstructorUsedError;
+  String? get venueId =>
+      throw _privateConstructorUsedError; // Reference to venue
   int get teamCount =>
       throw _privateConstructorUsedError; // Number of teams (default: 3)
   String? get gameType =>
@@ -98,6 +100,7 @@ abstract class $HubEventCopyWith<$Res> {
       String? location,
       @NullableGeoPointConverter() GeoPoint? locationPoint,
       String? geohash,
+      String? venueId,
       int teamCount,
       String? gameType,
       int? durationMinutes,
@@ -140,6 +143,7 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
     Object? location = freezed,
     Object? locationPoint = freezed,
     Object? geohash = freezed,
+    Object? venueId = freezed,
     Object? teamCount = null,
     Object? gameType = freezed,
     Object? durationMinutes = freezed,
@@ -212,6 +216,10 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
           ? _value.geohash
           : geohash // ignore: cast_nullable_to_non_nullable
               as String?,
+      venueId: freezed == venueId
+          ? _value.venueId
+          : venueId // ignore: cast_nullable_to_non_nullable
+              as String?,
       teamCount: null == teamCount
           ? _value.teamCount
           : teamCount // ignore: cast_nullable_to_non_nullable
@@ -280,6 +288,7 @@ abstract class _$$HubEventImplCopyWith<$Res>
       String? location,
       @NullableGeoPointConverter() GeoPoint? locationPoint,
       String? geohash,
+      String? venueId,
       int teamCount,
       String? gameType,
       int? durationMinutes,
@@ -320,6 +329,7 @@ class __$$HubEventImplCopyWithImpl<$Res>
     Object? location = freezed,
     Object? locationPoint = freezed,
     Object? geohash = freezed,
+    Object? venueId = freezed,
     Object? teamCount = null,
     Object? gameType = freezed,
     Object? durationMinutes = freezed,
@@ -392,6 +402,10 @@ class __$$HubEventImplCopyWithImpl<$Res>
           ? _value.geohash
           : geohash // ignore: cast_nullable_to_non_nullable
               as String?,
+      venueId: freezed == venueId
+          ? _value.venueId
+          : venueId // ignore: cast_nullable_to_non_nullable
+              as String?,
       teamCount: null == teamCount
           ? _value.teamCount
           : teamCount // ignore: cast_nullable_to_non_nullable
@@ -455,6 +469,7 @@ class _$HubEventImpl implements _HubEvent {
       this.location,
       @NullableGeoPointConverter() this.locationPoint,
       this.geohash,
+      this.venueId,
       this.teamCount = 3,
       this.gameType,
       this.durationMinutes,
@@ -523,6 +538,9 @@ class _$HubEventImpl implements _HubEvent {
   @override
   final String? geohash;
   @override
+  final String? venueId;
+// Reference to venue
+  @override
   @JsonKey()
   final int teamCount;
 // Number of teams (default: 3)
@@ -587,7 +605,7 @@ class _$HubEventImpl implements _HubEvent {
 
   @override
   String toString() {
-    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, isStarted: $isStarted, startedAt: $startedAt, location: $location, locationPoint: $locationPoint, geohash: $geohash, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, isStarted: $isStarted, startedAt: $startedAt, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
   }
 
   @override
@@ -620,6 +638,7 @@ class _$HubEventImpl implements _HubEvent {
             (identical(other.locationPoint, locationPoint) ||
                 other.locationPoint == locationPoint) &&
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
+            (identical(other.venueId, venueId) || other.venueId == venueId) &&
             (identical(other.teamCount, teamCount) ||
                 other.teamCount == teamCount) &&
             (identical(other.gameType, gameType) ||
@@ -658,6 +677,7 @@ class _$HubEventImpl implements _HubEvent {
         location,
         locationPoint,
         geohash,
+        venueId,
         teamCount,
         gameType,
         durationMinutes,
@@ -703,6 +723,7 @@ abstract class _HubEvent implements HubEvent {
       final String? location,
       @NullableGeoPointConverter() final GeoPoint? locationPoint,
       final String? geohash,
+      final String? venueId,
       final int teamCount,
       final String? gameType,
       final int? durationMinutes,
@@ -752,6 +773,8 @@ abstract class _HubEvent implements HubEvent {
   GeoPoint? get locationPoint;
   @override
   String? get geohash;
+  @override
+  String? get venueId; // Reference to venue
   @override
   int get teamCount; // Number of teams (default: 3)
   @override

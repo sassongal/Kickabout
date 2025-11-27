@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:kickadoor/routing/app_paths.dart';
 import 'package:kickadoor/routing/go_router_refresh_stream.dart';
 import 'package:kickadoor/utils/performance_utils.dart';
-import 'package:kickadoor/screens/auth/login_screen.dart';
-import 'package:kickadoor/screens/auth/register_screen.dart';
+import 'package:kickadoor/screens/auth/auth_screen.dart';
+import 'package:kickadoor/screens/welcome/welcome_screen.dart';
+import 'package:kickadoor/screens/profile/profile_setup_wizard.dart';
 import 'package:kickadoor/screens/hub/hub_list_screen.dart';
 import 'package:kickadoor/screens/hub/create_hub_screen.dart';
 import 'package:kickadoor/screens/hub/hub_detail_screen.dart'
@@ -36,6 +37,8 @@ import 'package:kickadoor/screens/profile/privacy_settings_screen.dart'
     deferred as privacy_settings_screen;
 import 'package:kickadoor/screens/profile/performance_breakdown_screen.dart'
     deferred as performance_breakdown_screen;
+import 'package:kickadoor/screens/profile/hub_stats_screen.dart'
+    deferred as hub_stats_screen;
 import 'package:kickadoor/screens/location/discover_hubs_screen.dart'
     deferred as discover_hubs_screen;
 import 'package:kickadoor/screens/location/map_screen.dart'
@@ -48,8 +51,6 @@ import 'package:kickadoor/screens/social/following_screen.dart'
     deferred as following_screen;
 import 'package:kickadoor/screens/social/followers_screen.dart'
     deferred as followers_screen;
-import 'package:kickadoor/screens/social/feed_screen.dart'
-    deferred as feed_screen;
 import 'package:kickadoor/screens/home_screen_futuristic_figma.dart';
 import 'package:kickadoor/screens/game/game_chat_screen.dart'
     deferred as game_chat_screen;
@@ -95,9 +96,12 @@ import 'package:kickadoor/screens/venue/create_manual_venue_screen.dart'
 import 'package:kickadoor/screens/venues/discover_venues_screen.dart'
     deferred as discover_venues_screen;
 import 'package:kickadoor/screens/location/map_picker_screen.dart';
-import 'package:kickadoor/screens/onboarding/onboarding_screen.dart';
 import 'package:kickadoor/screens/game/log_past_game_screen.dart'
     deferred as log_past_game_screen;
+import 'package:kickadoor/screens/hub/hub_analytics_screen.dart'
+    deferred as hub_analytics_screen;
+import 'package:kickadoor/screens/social/create_recruiting_post_screen.dart'
+    deferred as create_recruiting_post_screen;
 import 'package:kickadoor/screens/activity/community_activity_feed_screen.dart'
     deferred as community_activity_feed_screen;
 import 'package:kickadoor/screens/game/game_recording_screen.dart'
@@ -137,17 +141,6 @@ final currentUserProvider = StreamProvider<User?>((ref) {
   );
 });
 
-/// Onboarding status provider - loads once and caches the value
-final onboardingStatusProvider = FutureProvider<bool>((ref) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('onboarding_completed') ?? false;
-  } catch (e) {
-    debugPrint('Failed to load onboarding status: $e');
-    return false; // Default to not completed if error
-  }
-});
-
 /// Helper widget for lazy loading routes.
 class LazyRouteLoader extends StatefulWidget {
   final Future<void> loader;
@@ -180,37 +173,34 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final authService = ref.watch(authServiceProvider);
 
-  // Pre-load onboarding status to cache it before redirect runs
-  ref.read(onboardingStatusProvider);
+  final currentUserAsync = ref.watch(currentUserProvider);
 
   return GoRouter(
     debugLogDiagnostics: PerformanceUtils.isDebugMode,
-    initialLocation: AppPaths.auth,
+    initialLocation: AppPaths.splash,
     refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
     // Optimize navigation performance
     restorationScopeId: 'app_router',
-    redirect: (context, state) {
+    redirect: (context, state) async {
       try {
-        // Check if auth state is still loading - if so, allow auth/register screens
+        // Check if auth state is still loading - if so, allow auth/welcome/splash
         if (authState.isLoading) {
-          // If going to auth/register/splash, allow it (they will show loading state)
           if (state.matchedLocation == AppPaths.auth ||
-              state.matchedLocation == AppPaths.register ||
+              state.matchedLocation == AppPaths.welcome ||
               state.matchedLocation == AppPaths.splash) {
             return null;
           }
           // Otherwise, redirect to auth while loading
-          return AppPaths.auth;
+          return AppPaths.splash;
         }
 
         // Wait for auth state to be available
         final authValue = authState.valueOrNull;
-        final isAuthenticated = authValue != null;
+        final isAuthenticated =
+            authValue != null && !authService.isAnonymous;
 
-        final isGoingToAuth = state.matchedLocation == AppPaths.auth ||
-            state.matchedLocation == AppPaths.register;
-        final isGoingToOnboarding =
-            state.matchedLocation == AppPaths.onboarding;
+        final isGoingToAuth = state.matchedLocation == AppPaths.auth;
+        final isGoingToWelcome = state.matchedLocation == AppPaths.welcome;
         final isGoingToSplash = state.matchedLocation == AppPaths.splash;
 
         // Allow splash screen
@@ -218,48 +208,32 @@ final routerProvider = Provider<GoRouter>((ref) {
           return null;
         }
 
-        // Check if user is anonymous - if so, redirect to auth immediately
-        if (isAuthenticated) {
-          final authService = ref.read(authServiceProvider);
-          if (authService.isAnonymous) {
-            authService.signOut().then((_) {
-              debugPrint('�� Router: Signed out anonymous user');
-            }).catchError((e) {
-              debugPrint('⚠️ Router: Error signing out anonymous user: $e');
-            });
-            return AppPaths.auth;
-          }
+        // Welcome flow (first-time only)
+        final prefs = await SharedPreferences.getInstance();
+        final hasSeenWelcome = prefs.getBool('has_seen_welcome') ?? false;
+        if (!hasSeenWelcome && !isGoingToWelcome) {
+          return AppPaths.welcome;
         }
 
-        // If not authenticated and not going to auth/onboarding/splash, redirect to auth
+        // If not authenticated and not going to auth/welcome/splash, redirect to auth
         if (!isAuthenticated &&
             !isGoingToAuth &&
-            !isGoingToOnboarding &&
+            !isGoingToWelcome &&
             !isGoingToSplash) {
           return AppPaths.auth;
         }
 
-        // Check onboarding status (only for authenticated non-anonymous users)
-        if (isAuthenticated && !isGoingToOnboarding && !isGoingToSplash) {
-          final onboardingStatus = ref.read(onboardingStatusProvider);
-
-          // If still loading, don't redirect (allow navigation to proceed)
-          if (onboardingStatus.isLoading) {
-            return null;
-          }
-
-          // Handle async loading state
-          if (onboardingStatus.hasValue) {
-            final onboardingCompleted = onboardingStatus.value ?? false;
-
-            if (!onboardingCompleted) {
-              return AppPaths.onboarding;
-            }
+        // Profile completion check
+        if (isAuthenticated && !isGoingToSplash) {
+          final user = currentUserAsync.valueOrNull;
+          final isProfileComplete = user?.isProfileComplete ?? false;
+          if (!isProfileComplete &&
+              state.matchedLocation != AppPaths.profileSetup) {
+            return AppPaths.profileSetup;
           }
         }
 
         // If authenticated (non-anonymous) and going to auth, redirect to home
-        // Allow access to register screen even if authenticated (e.g. to create new account)
         if (isAuthenticated && state.matchedLocation == AppPaths.auth) {
           return AppPaths.home;
         }
@@ -279,23 +253,36 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
 
-      // Onboarding route
+      // Welcome
       GoRoute(
-        path: '/onboarding',
-        name: 'onboarding',
-        builder: (context, state) => const OnboardingScreen(),
+        path: '/welcome',
+        name: 'welcome',
+        builder: (context, state) => const WelcomeScreen(),
       ),
 
       // Auth routes
       GoRoute(
         path: '/auth',
         name: 'auth',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => const AuthScreen(),
       ),
+      // Legacy register path -> auth screen
       GoRoute(
         path: '/register',
         name: 'register',
-        builder: (context, state) => const RegisterScreen(),
+        builder: (context, state) => const AuthScreen(),
+      ),
+      // Legacy onboarding path -> welcome
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const WelcomeScreen(),
+      ),
+
+      GoRoute(
+        path: '/profile/setup',
+        name: 'profileSetup',
+        builder: (context, state) => const ProfileSetupWizard(),
       ),
 
       // Home route - Futuristic Dashboard
@@ -560,17 +547,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: () => leaderboard_screen.LeaderboardScreen()),
       ),
 
-      // Feed route - requires hubId as query parameter
-      GoRoute(
-        path: '/feed',
-        name: 'feed',
-        builder: (context, state) => LazyRouteLoader(
-            loader: feed_screen.loadLibrary(),
-            builder: () {
-              final hubId = state.uri.queryParameters['hubId'] ?? '';
-              return feed_screen.FeedScreen(hubId: hubId);
-            }),
-      ),
       // Hub routes
       GoRoute(
         path: AppPaths.hubs,
@@ -769,6 +745,28 @@ final routerProvider = Provider<GoRouter>((ref) {
                           hubId: hubId, gameId: gameId);
                     }),
               ),
+              GoRoute(
+                path: 'analytics',
+                name: 'hubAnalytics',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: hub_analytics_screen.loadLibrary(),
+                    builder: () {
+                      final hubId = state.pathParameters['id']!;
+                      return hub_analytics_screen.HubAnalyticsScreen(
+                          hubId: hubId);
+                    }),
+              ),
+              GoRoute(
+                path: 'create-recruiting-post',
+                name: 'createRecruitingPost',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: create_recruiting_post_screen.loadLibrary(),
+                    builder: () {
+                      final hubId = state.pathParameters['id']!;
+                      return create_recruiting_post_screen
+                          .CreateRecruitingPostScreen(hubId: hubId);
+                    }),
+              ),
             ],
           ),
         ],
@@ -900,6 +898,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: () {
                   final userId = state.pathParameters['uid']!;
                   return followers_screen.FollowersScreen(userId: userId);
+                }),
+          ),
+          GoRoute(
+            path: 'hub-stats/:hubId',
+            name: 'hubStats',
+            builder: (context, state) => LazyRouteLoader(
+                loader: hub_stats_screen.loadLibrary(),
+                builder: () {
+                  final playerId = state.pathParameters['uid']!;
+                  final hubId = state.pathParameters['hubId']!;
+                  return hub_stats_screen.HubStatsScreen(
+                      hubId: hubId, playerId: playerId);
                 }),
           ),
         ],

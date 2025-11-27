@@ -682,7 +682,8 @@ class _HomeScreenFuturisticFigmaState
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => context.push('/admin/generate-dummy-data'),
+                              onPressed: () =>
+                                  context.push('/admin/generate-dummy-data'),
                               icon: const Icon(Icons.science_outlined),
                               label: const Text('Generate Dummy Data (Dev)'),
                               style: OutlinedButton.styleFrom(
@@ -723,8 +724,6 @@ class _HomeScreenFuturisticFigmaState
       },
     );
   }
-
-
 
   /// Force Haifa location for emulator testing
   Future<void> _forceHaifaLocation(BuildContext context, String userId) async {
@@ -1620,6 +1619,11 @@ class _InlineStatsRow extends StatelessWidget {
               label: 'ניצחונות',
               value: (stats['gamesWon'] ?? 0).toString(),
               color: Colors.green,
+            ),
+            _statBubble(
+              label: 'שערים',
+              value: (stats['goals'] ?? 0).toString(),
+              color: Colors.orange,
             ),
           ],
         );

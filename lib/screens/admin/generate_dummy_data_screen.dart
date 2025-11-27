@@ -5,7 +5,6 @@ import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
 import 'package:kickadoor/scripts/generate_dummy_data.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kickadoor/routing/app_router.dart';
 
 /// Screen for generating dummy data (admin only)
 class GenerateDummyDataScreen extends ConsumerStatefulWidget {
@@ -475,25 +474,22 @@ class _GenerateDummyDataScreenState
     );
   }
 
-  /// Reset onboarding status - useful for testing
+  /// Reset welcome/onboarding status - useful for testing
   Future<void> _resetOnboarding() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('onboarding_completed');
-
-      // Invalidate provider to force reload
-      final container = ProviderScope.containerOf(context);
-      container.invalidate(onboardingStatusProvider);
+      await prefs.remove('onboarding_completed'); // legacy
+      await prefs.remove('has_seen_welcome'); // new flow
 
       if (mounted) {
         SnackbarHelper.showSuccess(
           context,
-          '✅ Onboarding אופס! בפעם הבאה שתריץ את האפליקציה, ה-onboarding יוצג שוב.',
+          '✅ Welcome אופס! בפעם הבאה שתריץ את האפליקציה, מסך הפתיחה יוצג שוב.',
         );
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה באיפוס Onboarding: $e');
+        SnackbarHelper.showError(context, 'שגיאה באיפוס Welcome: $e');
       }
     }
   }

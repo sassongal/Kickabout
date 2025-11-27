@@ -12,17 +12,28 @@ class FeedPost with _$FeedPost {
     required String postId,
     required String hubId,
     required String authorId,
-    required String type, // 'game' | 'achievement' | 'rating' | 'post' | 'game_created'
+    required String
+        type, // 'game' | 'achievement' | 'rating' | 'post' | 'game_created' | 'hub_recruiting'
     String? content,
     String? text, // Alternative to content (used by onGameCreated)
     String? gameId,
+    String? eventId, // For recruiting posts linked to events
     String? achievementId,
+    // Recruiting post fields
+    @Default(false) bool isUrgent, // Show "דחוף" badge
+    @NullableTimestampConverter()
+    DateTime? recruitingUntil, // Deadline for recruiting
+    @Default(0) int neededPlayers, // How many players needed
     @Default([]) List<String> likes,
     @Default(0) int likeCount, // Denormalized count for sorting
-    @Default(0) int commentCount, // Denormalized: Count of comments (Cloud Function writes this)
+    @Default(0)
+    int commentCount, // Denormalized: Count of comments (Cloud Function writes this)
     // Note: commentsCount is kept for backward compatibility. Prefer using commentCount.
-    @Default(0) int commentsCount, // Legacy alias - maps to commentCount in Firestore
-    @Default([]) List<String> comments, // Legacy: Array of comment IDs (deprecated, use subcollection)
+    @Default(0)
+    int commentsCount, // Legacy alias - maps to commentCount in Firestore
+    @Default([])
+    List<String>
+        comments, // Legacy: Array of comment IDs (deprecated, use subcollection)
     @Default([]) List<String> photoUrls, // URLs of photos/videos in the post
     @TimestampConverter() required DateTime createdAt,
     // Denormalized fields for efficient display (no need to fetch hub/user)
@@ -34,6 +45,6 @@ class FeedPost with _$FeedPost {
     String? region, // אזור: צפון, מרכז, דרום, ירושלים (לסינון פיד אזורי)
   }) = _FeedPost;
 
-  factory FeedPost.fromJson(Map<String, dynamic> json) => _$FeedPostFromJson(json);
+  factory FeedPost.fromJson(Map<String, dynamic> json) =>
+      _$FeedPostFromJson(json);
 }
-

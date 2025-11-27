@@ -62,7 +62,8 @@ mixin _$User {
   String? get geohash => throw _privateConstructorUsedError;
   String? get region =>
       throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים
-// Denormalized fields (updated by Cloud Functions, not written by client)
+  bool get isProfileComplete =>
+      throw _privateConstructorUsedError; // Denormalized fields (updated by Cloud Functions, not written by client)
   int get followerCount =>
       throw _privateConstructorUsedError; // Denormalized: Count of followers (updated by onFollowCreated)
 // Player Stats (denormalized from game participations)
@@ -114,6 +115,7 @@ abstract class $UserCopyWith<$Res> {
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       String? region,
+      bool isProfileComplete,
       int followerCount,
       int wins,
       int losses,
@@ -163,6 +165,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? location = freezed,
     Object? geohash = freezed,
     Object? region = freezed,
+    Object? isProfileComplete = null,
     Object? followerCount = null,
     Object? wins = null,
     Object? losses = null,
@@ -272,6 +275,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      isProfileComplete: null == isProfileComplete
+          ? _value.isProfileComplete
+          : isProfileComplete // ignore: cast_nullable_to_non_nullable
+              as bool,
       followerCount: null == followerCount
           ? _value.followerCount
           : followerCount // ignore: cast_nullable_to_non_nullable
@@ -337,6 +344,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       String? region,
+      bool isProfileComplete,
       int followerCount,
       int wins,
       int losses,
@@ -383,6 +391,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? location = freezed,
     Object? geohash = freezed,
     Object? region = freezed,
+    Object? isProfileComplete = null,
     Object? followerCount = null,
     Object? wins = null,
     Object? losses = null,
@@ -492,6 +501,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      isProfileComplete: null == isProfileComplete
+          ? _value.isProfileComplete
+          : isProfileComplete // ignore: cast_nullable_to_non_nullable
+              as bool,
       followerCount: null == followerCount
           ? _value.followerCount
           : followerCount // ignore: cast_nullable_to_non_nullable
@@ -553,6 +566,7 @@ class _$UserImpl implements _User {
       @NullableGeoPointConverter() this.location,
       this.geohash,
       this.region,
+      this.isProfileComplete = false,
       this.followerCount = 0,
       this.wins = 0,
       this.losses = 0,
@@ -654,6 +668,9 @@ class _$UserImpl implements _User {
   @override
   final String? region;
 // אזור: צפון, מרכז, דרום, ירושלים
+  @override
+  @JsonKey()
+  final bool isProfileComplete;
 // Denormalized fields (updated by Cloud Functions, not written by client)
   @override
   @JsonKey()
@@ -688,7 +705,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings)';
   }
 
   @override
@@ -739,6 +756,8 @@ class _$UserImpl implements _User {
                 other.location == location) &&
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
             (identical(other.region, region) || other.region == region) &&
+            (identical(other.isProfileComplete, isProfileComplete) ||
+                other.isProfileComplete == isProfileComplete) &&
             (identical(other.followerCount, followerCount) ||
                 other.followerCount == followerCount) &&
             (identical(other.wins, wins) || other.wins == wins) &&
@@ -779,6 +798,7 @@ class _$UserImpl implements _User {
         location,
         geohash,
         region,
+        isProfileComplete,
         followerCount,
         wins,
         losses,
@@ -831,6 +851,7 @@ abstract class _User implements User {
       @NullableGeoPointConverter() final GeoPoint? location,
       final String? geohash,
       final String? region,
+      final bool isProfileComplete,
       final int followerCount,
       final int wins,
       final int losses,
@@ -901,7 +922,9 @@ abstract class _User implements User {
   String? get geohash;
   @override
   String? get region; // אזור: צפון, מרכז, דרום, ירושלים
-// Denormalized fields (updated by Cloud Functions, not written by client)
+  @override
+  bool
+      get isProfileComplete; // Denormalized fields (updated by Cloud Functions, not written by client)
   @override
   int get followerCount; // Denormalized: Count of followers (updated by onFollowCreated)
 // Player Stats (denormalized from game participations)

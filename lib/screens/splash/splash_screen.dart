@@ -26,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Ball trajectory animation
     _ballController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 1500),
     );
     
     // Logo scale animation
@@ -53,17 +53,21 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _startAnimations() async {
     // Start ball animation
-    _ballController.forward();
+    if (mounted) {
+      _ballController.forward();
+    }
     
     // Wait for ball to reach center, then show logo
-    await Future.delayed(const Duration(milliseconds: 1000));
-    _logoController.forward();
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      _logoController.forward();
+    }
     
     // Navigate after animations complete (shorter delay for better UX)
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (mounted) {
-      // Navigate to auth screen (router will handle redirects)
-      context.go('/auth');
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (mounted && context.mounted) {
+      // Navigate to welcome screen (router will handle redirects)
+      context.go('/welcome');
     }
   }
 
@@ -93,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen>
             animation: _logoScale,
             builder: (context, child) {
               return Opacity(
-                opacity: _logoScale.value,
+                opacity: _logoScale.value.clamp(0.0, 1.0), // Clamp to valid range
                 child: Image.asset(
                   AppAssets.splashLoading,
                   fit: BoxFit.cover,
@@ -132,4 +136,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-

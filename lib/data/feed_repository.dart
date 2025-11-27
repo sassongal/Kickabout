@@ -24,20 +24,25 @@ class FeedRepository {
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Stream feed posts for a hub (for real-time updates)
-  Stream<List<FeedPost>> watchFeed(String hubId) {
+  Stream<List<FeedPost>> watchFeed(String hubId, {String? postType}) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
     }
 
-    return _firestore
+    Query<Map<String, dynamic>> query = _firestore
         .collection('hubs')
         .doc(hubId)
         .collection('feed')
         .doc('posts')
         .collection('items')
         .orderBy('createdAt', descending: true)
-        .limit(50)
-        .snapshots()
+        .limit(50);
+
+    if (postType != null) {
+      query = query.where('type', isEqualTo: postType);
+    }
+
+    return query.snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => FeedPost.fromJson({...doc.data(), 'postId': doc.id}))
             .toList());
@@ -46,7 +51,7 @@ class FeedRepository {
   /// Stream regional feed posts (from feedPosts root collection)
   /// Filters by region and last 24 hours (or last 20 items)
   /// Optimized for bulletin board display
-  Stream<List<FeedPost>> streamRegionalFeed({String? region}) {
+  Stream<List<FeedPost>> streamRegionalFeed({String? region, String? postType}) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
     }
@@ -55,7 +60,7 @@ class FeedRepository {
     final now = DateTime.now();
     final twentyFourHoursAgo = now.subtract(const Duration(hours: 24));
 
-    Query query = _firestore.collection('feedPosts');
+    Query<Map<String, dynamic>> query = _firestore.collection('feedPosts');
 
     // Filter by region if provided (required for composite index)
     if (region != null && region.isNotEmpty) {
@@ -65,6 +70,10 @@ class FeedRepository {
     } else {
       // If no region, just filter by time
       query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
+    }
+
+    if (postType != null) {
+      query = query.where('type', isEqualTo: postType);
     }
 
     // Order by createdAt descending and limit to 20 items
@@ -261,4 +270,3 @@ class FeedRepository {
     }
   }
 }
-

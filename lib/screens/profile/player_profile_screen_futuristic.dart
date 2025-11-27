@@ -37,8 +37,8 @@ class _PlayerProfileScreenFuturisticState
   @override
   void initState() {
     super.initState();
-    // Simplified: Only 2 tabs - Overview and Games (removed Statistics and Ratings tabs)
-    _tabController = TabController(length: 2, vsync: this);
+    // Simplified: 3 tabs - Overview, Games, Hubs
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -67,6 +67,7 @@ class _PlayerProfileScreenFuturisticState
     final usersRepo = ref.read(usersRepositoryProvider);
     // Removed: ratingsRepo - no longer needed (ratings tab removed)
     final gamesRepo = ref.read(gamesRepositoryProvider);
+    final hubsRepo = ref.read(hubsRepositoryProvider);
     final followRepo = ref.read(followRepositoryProvider);
     final gamificationRepo = ref.read(gamificationRepositoryProvider);
 
@@ -134,9 +135,8 @@ class _PlayerProfileScreenFuturisticState
           return Column(
             children: [
               // Anonymous User Banner (if viewing own profile as anonymous)
-              if (isOwnProfile && isAnonymous)
-                _buildAnonymousBanner(context),
-              
+              if (isOwnProfile && isAnonymous) _buildAnonymousBanner(context),
+
               // Hero Section
               _buildHeroSection(
                 context,
@@ -162,6 +162,7 @@ class _PlayerProfileScreenFuturisticState
                   tabs: const [
                     Tab(text: 'סקירה', icon: Icon(Icons.dashboard)),
                     Tab(text: 'משחקים', icon: Icon(Icons.sports_soccer)),
+                    Tab(text: 'האבים', icon: Icon(Icons.group_work)),
                   ],
                 ),
               ),
@@ -180,6 +181,11 @@ class _PlayerProfileScreenFuturisticState
                       context,
                       user,
                       gamesRepo,
+                    ),
+                    _buildHubsTab(
+                      context,
+                      user,
+                      hubsRepo,
                     ),
                   ],
                 ),
@@ -296,10 +302,10 @@ class _PlayerProfileScreenFuturisticState
 
                   // Name & Position
                   Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
                           _displayName(user),
                           style: FuturisticTypography.heading2.copyWith(
                             color: Colors.white,
@@ -373,7 +379,8 @@ class _PlayerProfileScreenFuturisticState
                             icon: const Icon(Icons.login),
                             label: const Text('התחבר כדי לשלוח הודעה'),
                             style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.2),
                               foregroundColor: Colors.white,
                               side: const BorderSide(color: Colors.white),
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -385,13 +392,14 @@ class _PlayerProfileScreenFuturisticState
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('נא להתחבר כדי לשלוח הודעה'),
+                                      content:
+                                          Text('נא להתחבר כדי לשלוח הודעה'),
                                     ),
                                   );
                                 }
                                 return;
                               }
-                              
+
                               try {
                                 final privateMessagesRepo = ref.read(
                                   privateMessagesRepositoryProvider,
@@ -401,7 +409,7 @@ class _PlayerProfileScreenFuturisticState
                                   currentUserId,
                                   widget.playerId,
                                 );
-                                
+
                                 if (context.mounted) {
                                   context.go('/messages/$conversationId');
                                 }
@@ -443,7 +451,8 @@ class _PlayerProfileScreenFuturisticState
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('נא להתחבר כדי לעקוב אחרי שחקנים'),
+                                      content: Text(
+                                          'נא להתחבר כדי לעקוב אחרי שחקנים'),
                                     ),
                                   );
                                 }
@@ -508,7 +517,7 @@ class _PlayerProfileScreenFuturisticState
                         },
                       ),
                     ),
-                  
+
                   // Anonymous user message for follow button
                   if (!isOwnProfile && isAnonymous)
                     Expanded(
@@ -691,8 +700,9 @@ class _PlayerProfileScreenFuturisticState
                 final stats = gamification.stats;
                 final gamesPlayed = stats['gamesPlayed'] ?? 0;
                 final goals = stats['goals'] ?? 0;
-                final mvpCount = stats['mvp'] ?? 0; // MVP count from stats (if available)
-                
+                final mvpCount =
+                    stats['mvp'] ?? 0; // MVP count from stats (if available)
+
                 return Column(
                   children: [
                     // Big Counters Row
@@ -730,7 +740,7 @@ class _PlayerProfileScreenFuturisticState
                       ],
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Badges Strip
                     _buildBadgesStrip(context, gamification),
                   ],
@@ -822,7 +832,8 @@ class _PlayerProfileScreenFuturisticState
                     size: 18,
                     color: FuturisticColors.primary,
                   ),
-                  backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
+                  backgroundColor:
+                      FuturisticColors.primary.withValues(alpha: 0.1),
                 );
               }).toList(),
             ),
@@ -1118,7 +1129,13 @@ class _PlayerProfileScreenFuturisticState
     // Simplified: No points/levels, just show stats
     // Progress is based on games played (for milestone badges)
     final gamesPlayed = gamification.stats['gamesPlayed'] ?? 0;
-    final nextMilestone = gamesPlayed < 10 ? 10 : gamesPlayed < 50 ? 50 : gamesPlayed < 100 ? 100 : 100;
+    final nextMilestone = gamesPlayed < 10
+        ? 10
+        : gamesPlayed < 50
+            ? 50
+            : gamesPlayed < 100
+                ? 100
+                : 100;
     final progress = nextMilestone > 0 ? gamesPlayed / nextMilestone : 0.0;
 
     return FuturisticCard(
@@ -1228,7 +1245,7 @@ class _PlayerProfileScreenFuturisticState
               ),
               const SizedBox(height: 4),
               Text(
-                gamesPlayed < 10 
+                gamesPlayed < 10
                     ? '${10 - gamesPlayed} משחקים עד ה-milestone הבא'
                     : gamesPlayed < 50
                         ? '${50 - gamesPlayed} משחקים עד ה-milestone הבא'
@@ -1594,6 +1611,98 @@ class _PlayerProfileScreenFuturisticState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHubsTab(
+    BuildContext context,
+    User user,
+    HubsRepository hubsRepo,
+  ) {
+    return StreamBuilder<List<Hub>>(
+      stream: hubsRepo.watchHubsByMember(user.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const FuturisticLoadingState(message: 'טוען האבים...');
+        }
+
+        if (snapshot.hasError) {
+          return FuturisticEmptyState(
+            icon: Icons.error_outline,
+            title: 'שגיאה בטעינת האבים',
+            message: snapshot.error.toString(),
+          );
+        }
+
+        final hubs = snapshot.data ?? [];
+
+        if (hubs.isEmpty) {
+          return FuturisticEmptyState(
+            icon: Icons.group_off,
+            title: 'אין האבים',
+            message: 'השחקן לא חבר באף האב',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: hubs.length,
+          itemBuilder: (context, index) {
+            final hub = hubs[index];
+            return FuturisticCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              onTap: () => context.push(
+                '/profile/${user.uid}/hub-stats/${hub.hubId}',
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Hero(
+                      tag: 'hub_avatar_${hub.hubId}',
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor:
+                            FuturisticColors.primary.withOpacity(0.2),
+                        child: Icon(
+                          Icons.group,
+                          color: FuturisticColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hub.name,
+                            style: FuturisticTypography.heading3,
+                          ),
+                          if (hub.description != null &&
+                              hub.description!.isNotEmpty)
+                            Text(
+                              hub.description!,
+                              style: FuturisticTypography.bodySmall.copyWith(
+                                color: FuturisticColors.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_left,
+                      color: FuturisticColors.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

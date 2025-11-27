@@ -15,7 +15,12 @@ _$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
       content: json['content'] as String?,
       text: json['text'] as String?,
       gameId: json['gameId'] as String?,
+      eventId: json['eventId'] as String?,
       achievementId: json['achievementId'] as String?,
+      isUrgent: json['isUrgent'] as bool? ?? false,
+      recruitingUntil:
+          const NullableTimestampConverter().fromJson(json['recruitingUntil']),
+      neededPlayers: (json['neededPlayers'] as num?)?.toInt() ?? 0,
       likes:
           (json['likes'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
@@ -49,7 +54,12 @@ Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
       'content': instance.content,
       'text': instance.text,
       'gameId': instance.gameId,
+      'eventId': instance.eventId,
       'achievementId': instance.achievementId,
+      'isUrgent': instance.isUrgent,
+      'recruitingUntil':
+          const NullableTimestampConverter().toJson(instance.recruitingUntil),
+      'neededPlayers': instance.neededPlayers,
       'likes': instance.likes,
       'likeCount': instance.likeCount,
       'commentCount': instance.commentCount,

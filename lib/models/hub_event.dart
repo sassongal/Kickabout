@@ -22,26 +22,38 @@ class HubEvent with _$HubEvent {
     @TimestampConverter() required DateTime createdAt,
     @TimestampConverter() required DateTime updatedAt,
     @Default([]) List<String> registeredPlayerIds, // Players who registered
-    @Default('upcoming') String status, // upcoming, ongoing, completed, cancelled
+    @Default('upcoming')
+    String status, // upcoming, ongoing, completed, cancelled
     @Default(false) bool isStarted, // Explicit flag for in-progress session
     @TimestampConverter() DateTime? startedAt, // When manager marked start
     String? location,
     @NullableGeoPointConverter() GeoPoint? locationPoint,
     String? geohash,
+    String? venueId, // Reference to venue
     @Default(3) int teamCount, // Number of teams (default: 3)
     String? gameType, // 3v3, 4v4, 5v5, 6v6, 7v7, 8v8, 9v9, 10v10, 11v11
     int? durationMinutes, // Game duration in minutes (default: 12)
-    @Default(15) int maxParticipants, // Maximum number of participants (default: 15, required)
-    @Default(false) bool notifyMembers, // Send notification to all hub members when event is created
-    @Default(false) bool showInCommunityFeed, // Show this event in the community activity feed
+    @Default(15)
+    int maxParticipants, // Maximum number of participants (default: 15, required)
+    @Default(false)
+    bool
+        notifyMembers, // Send notification to all hub members when event is created
+    @Default(false)
+    bool showInCommunityFeed, // Show this event in the community activity feed
     // Teams planned for this event (manager-only, saved when using TeamMaker)
-    @Default([]) List<Team> teams, // Teams planned for this event (manager-only)
+    @Default([])
+    List<Team> teams, // Teams planned for this event (manager-only)
     // Multi-match session support
-    @Default([]) List<MatchResult> matches, // List of individual match outcomes within this event
-    @Default({}) Map<String, int> aggregateWins, // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
+    @Default([])
+    List<MatchResult>
+        matches, // List of individual match outcomes within this event
+    @Default({})
+    Map<String, int>
+        aggregateWins, // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
     // Reference to Game if event was converted to game
     String? gameId, // If event was converted to game, reference it
   }) = _HubEvent;
 
-  factory HubEvent.fromJson(Map<String, dynamic> json) => _$HubEventFromJson(json);
+  factory HubEvent.fromJson(Map<String, dynamic> json) =>
+      _$HubEventFromJson(json);
 }

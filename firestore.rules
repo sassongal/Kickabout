@@ -157,10 +157,13 @@ service cloud.firestore {
         request.resource.data.createdAt is timestamp &&
         request.resource.data.memberIds is list;
 
-      allow update, delete: if isHubAdmin(hubId) &&
+      // Allow update by hub admins, but preserve critical immutable fields
+      allow update: if isHubAdmin(hubId) &&
         request.resource.data.hubId == resource.data.hubId &&
         request.resource.data.createdBy == resource.data.createdBy &&
         request.resource.data.createdAt == resource.data.createdAt;
+      
+      allow delete: if isHubAdmin(hubId);
 
       // Join Requests
       match /requests/{userId} {

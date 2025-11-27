@@ -24,12 +24,21 @@ mixin _$FeedPost {
   String get hubId => throw _privateConstructorUsedError;
   String get authorId => throw _privateConstructorUsedError;
   String get type =>
-      throw _privateConstructorUsedError; // 'game' | 'achievement' | 'rating' | 'post' | 'game_created'
+      throw _privateConstructorUsedError; // 'game' | 'achievement' | 'rating' | 'post' | 'game_created' | 'hub_recruiting'
   String? get content => throw _privateConstructorUsedError;
   String? get text =>
       throw _privateConstructorUsedError; // Alternative to content (used by onGameCreated)
   String? get gameId => throw _privateConstructorUsedError;
-  String? get achievementId => throw _privateConstructorUsedError;
+  String? get eventId =>
+      throw _privateConstructorUsedError; // For recruiting posts linked to events
+  String? get achievementId =>
+      throw _privateConstructorUsedError; // Recruiting post fields
+  bool get isUrgent => throw _privateConstructorUsedError; // Show "דחוף" badge
+  @NullableTimestampConverter()
+  DateTime? get recruitingUntil =>
+      throw _privateConstructorUsedError; // Deadline for recruiting
+  int get neededPlayers =>
+      throw _privateConstructorUsedError; // How many players needed
   List<String> get likes => throw _privateConstructorUsedError;
   int get likeCount =>
       throw _privateConstructorUsedError; // Denormalized count for sorting
@@ -80,7 +89,11 @@ abstract class $FeedPostCopyWith<$Res> {
       String? content,
       String? text,
       String? gameId,
+      String? eventId,
       String? achievementId,
+      bool isUrgent,
+      @NullableTimestampConverter() DateTime? recruitingUntil,
+      int neededPlayers,
       List<String> likes,
       int likeCount,
       int commentCount,
@@ -118,7 +131,11 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
     Object? content = freezed,
     Object? text = freezed,
     Object? gameId = freezed,
+    Object? eventId = freezed,
     Object? achievementId = freezed,
+    Object? isUrgent = null,
+    Object? recruitingUntil = freezed,
+    Object? neededPlayers = null,
     Object? likes = null,
     Object? likeCount = null,
     Object? commentCount = null,
@@ -162,10 +179,26 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
           ? _value.gameId
           : gameId // ignore: cast_nullable_to_non_nullable
               as String?,
+      eventId: freezed == eventId
+          ? _value.eventId
+          : eventId // ignore: cast_nullable_to_non_nullable
+              as String?,
       achievementId: freezed == achievementId
           ? _value.achievementId
           : achievementId // ignore: cast_nullable_to_non_nullable
               as String?,
+      isUrgent: null == isUrgent
+          ? _value.isUrgent
+          : isUrgent // ignore: cast_nullable_to_non_nullable
+              as bool,
+      recruitingUntil: freezed == recruitingUntil
+          ? _value.recruitingUntil
+          : recruitingUntil // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      neededPlayers: null == neededPlayers
+          ? _value.neededPlayers
+          : neededPlayers // ignore: cast_nullable_to_non_nullable
+              as int,
       likes: null == likes
           ? _value.likes
           : likes // ignore: cast_nullable_to_non_nullable
@@ -238,7 +271,11 @@ abstract class _$$FeedPostImplCopyWith<$Res>
       String? content,
       String? text,
       String? gameId,
+      String? eventId,
       String? achievementId,
+      bool isUrgent,
+      @NullableTimestampConverter() DateTime? recruitingUntil,
+      int neededPlayers,
       List<String> likes,
       int likeCount,
       int commentCount,
@@ -274,7 +311,11 @@ class __$$FeedPostImplCopyWithImpl<$Res>
     Object? content = freezed,
     Object? text = freezed,
     Object? gameId = freezed,
+    Object? eventId = freezed,
     Object? achievementId = freezed,
+    Object? isUrgent = null,
+    Object? recruitingUntil = freezed,
+    Object? neededPlayers = null,
     Object? likes = null,
     Object? likeCount = null,
     Object? commentCount = null,
@@ -318,10 +359,26 @@ class __$$FeedPostImplCopyWithImpl<$Res>
           ? _value.gameId
           : gameId // ignore: cast_nullable_to_non_nullable
               as String?,
+      eventId: freezed == eventId
+          ? _value.eventId
+          : eventId // ignore: cast_nullable_to_non_nullable
+              as String?,
       achievementId: freezed == achievementId
           ? _value.achievementId
           : achievementId // ignore: cast_nullable_to_non_nullable
               as String?,
+      isUrgent: null == isUrgent
+          ? _value.isUrgent
+          : isUrgent // ignore: cast_nullable_to_non_nullable
+              as bool,
+      recruitingUntil: freezed == recruitingUntil
+          ? _value.recruitingUntil
+          : recruitingUntil // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      neededPlayers: null == neededPlayers
+          ? _value.neededPlayers
+          : neededPlayers // ignore: cast_nullable_to_non_nullable
+              as int,
       likes: null == likes
           ? _value._likes
           : likes // ignore: cast_nullable_to_non_nullable
@@ -389,7 +446,11 @@ class _$FeedPostImpl implements _FeedPost {
       this.content,
       this.text,
       this.gameId,
+      this.eventId,
       this.achievementId,
+      this.isUrgent = false,
+      @NullableTimestampConverter() this.recruitingUntil,
+      this.neededPlayers = 0,
       final List<String> likes = const [],
       this.likeCount = 0,
       this.commentCount = 0,
@@ -418,7 +479,7 @@ class _$FeedPostImpl implements _FeedPost {
   final String authorId;
   @override
   final String type;
-// 'game' | 'achievement' | 'rating' | 'post' | 'game_created'
+// 'game' | 'achievement' | 'rating' | 'post' | 'game_created' | 'hub_recruiting'
   @override
   final String? content;
   @override
@@ -427,8 +488,25 @@ class _$FeedPostImpl implements _FeedPost {
   @override
   final String? gameId;
   @override
+  final String? eventId;
+// For recruiting posts linked to events
+  @override
   final String? achievementId;
+// Recruiting post fields
+  @override
+  @JsonKey()
+  final bool isUrgent;
+// Show "דחוף" badge
+  @override
+  @NullableTimestampConverter()
+  final DateTime? recruitingUntil;
+// Deadline for recruiting
+  @override
+  @JsonKey()
+  final int neededPlayers;
+// How many players needed
   final List<String> _likes;
+// How many players needed
   @override
   @JsonKey()
   List<String> get likes {
@@ -496,7 +574,7 @@ class _$FeedPostImpl implements _FeedPost {
 
   @override
   String toString() {
-    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, text: $text, gameId: $gameId, achievementId: $achievementId, likes: $likes, likeCount: $likeCount, commentCount: $commentCount, commentsCount: $commentsCount, comments: $comments, photoUrls: $photoUrls, createdAt: $createdAt, hubName: $hubName, hubLogoUrl: $hubLogoUrl, authorName: $authorName, authorPhotoUrl: $authorPhotoUrl, entityId: $entityId, region: $region)';
+    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, text: $text, gameId: $gameId, eventId: $eventId, achievementId: $achievementId, isUrgent: $isUrgent, recruitingUntil: $recruitingUntil, neededPlayers: $neededPlayers, likes: $likes, likeCount: $likeCount, commentCount: $commentCount, commentsCount: $commentsCount, comments: $comments, photoUrls: $photoUrls, createdAt: $createdAt, hubName: $hubName, hubLogoUrl: $hubLogoUrl, authorName: $authorName, authorPhotoUrl: $authorPhotoUrl, entityId: $entityId, region: $region)';
   }
 
   @override
@@ -512,8 +590,15 @@ class _$FeedPostImpl implements _FeedPost {
             (identical(other.content, content) || other.content == content) &&
             (identical(other.text, text) || other.text == text) &&
             (identical(other.gameId, gameId) || other.gameId == gameId) &&
+            (identical(other.eventId, eventId) || other.eventId == eventId) &&
             (identical(other.achievementId, achievementId) ||
                 other.achievementId == achievementId) &&
+            (identical(other.isUrgent, isUrgent) ||
+                other.isUrgent == isUrgent) &&
+            (identical(other.recruitingUntil, recruitingUntil) ||
+                other.recruitingUntil == recruitingUntil) &&
+            (identical(other.neededPlayers, neededPlayers) ||
+                other.neededPlayers == neededPlayers) &&
             const DeepCollectionEquality().equals(other._likes, _likes) &&
             (identical(other.likeCount, likeCount) ||
                 other.likeCount == likeCount) &&
@@ -549,7 +634,11 @@ class _$FeedPostImpl implements _FeedPost {
         content,
         text,
         gameId,
+        eventId,
         achievementId,
+        isUrgent,
+        recruitingUntil,
+        neededPlayers,
         const DeepCollectionEquality().hash(_likes),
         likeCount,
         commentCount,
@@ -590,7 +679,11 @@ abstract class _FeedPost implements FeedPost {
       final String? content,
       final String? text,
       final String? gameId,
+      final String? eventId,
       final String? achievementId,
+      final bool isUrgent,
+      @NullableTimestampConverter() final DateTime? recruitingUntil,
+      final int neededPlayers,
       final List<String> likes,
       final int likeCount,
       final int commentCount,
@@ -616,7 +709,7 @@ abstract class _FeedPost implements FeedPost {
   String get authorId;
   @override
   String
-      get type; // 'game' | 'achievement' | 'rating' | 'post' | 'game_created'
+      get type; // 'game' | 'achievement' | 'rating' | 'post' | 'game_created' | 'hub_recruiting'
   @override
   String? get content;
   @override
@@ -624,7 +717,16 @@ abstract class _FeedPost implements FeedPost {
   @override
   String? get gameId;
   @override
-  String? get achievementId;
+  String? get eventId; // For recruiting posts linked to events
+  @override
+  String? get achievementId; // Recruiting post fields
+  @override
+  bool get isUrgent; // Show "דחוף" badge
+  @override
+  @NullableTimestampConverter()
+  DateTime? get recruitingUntil; // Deadline for recruiting
+  @override
+  int get neededPlayers; // How many players needed
   @override
   List<String> get likes;
   @override

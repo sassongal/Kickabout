@@ -118,8 +118,8 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                   final startTime = event.startedAt ?? event.eventDate;
                   final happeningWindowEnd =
                       startTime.add(const Duration(hours: 5));
-                  final isHappeningNow =
-                      event.isStarted && DateTime.now().isBefore(happeningWindowEnd);
+                  final isHappeningNow = event.isStarted &&
+                      DateTime.now().isBefore(happeningWindowEnd);
                   final isRegistered = currentUserId != null &&
                       event.registeredPlayerIds.contains(currentUserId);
                   final isPast = DateTime.now().isAfter(happeningWindowEnd);
@@ -247,10 +247,10 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                   color: FuturisticColors.textSecondary,
                                 ),
                               ),
-                          if (event.registeredPlayerIds.length >=
+                              if (event.registeredPlayerIds.length >=
                                   event.maxParticipants) ...[
-                            const SizedBox(width: 8),
-                            Container(
+                                const SizedBox(width: 8),
+                                Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
@@ -312,8 +312,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                           ],
                           const SizedBox(height: 16),
                           // Event Started Logic (Manager Only)
-                          if (widget.isManager &&
-                              !isPast) ...[
+                          if (widget.isManager && !isPast) ...[
                             SwitchListTile(
                               title: const Text('האירוע התחיל'),
                               value: event.isStarted,
@@ -424,9 +423,9 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                     padding: const EdgeInsets.only(right: 8),
                                     child: ElevatedButton.icon(
                                       onPressed: () => context.push(
-                                        '/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
-                                  icon: const Icon(Icons.group, size: 18),
-                                  label: const Text('צור קבוצות'),
+                                          '/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
+                                      icon: const Icon(Icons.group, size: 18),
+                                      label: const Text('צור קבוצות'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
                                             FuturisticColors.primary,
@@ -457,7 +456,26 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                       ),
                                     ),
                                   ),
-                                // Edit button
+                                // Edit Event button (if not started)
+                                if (!event.isStarted && !isPast)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => context.push(
+                                          '/hubs/${widget.hubId}/events/${event.eventId}/edit'),
+                                      icon: const Icon(Icons.edit_calendar,
+                                          size: 18),
+                                      label: const Text('ערוך פרטים'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            FuturisticColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
+                                // Manage button
                                 ElevatedButton.icon(
                                   onPressed: () => context.push(
                                       '/hubs/${widget.hubId}/events/${event.eventId}/manage'),

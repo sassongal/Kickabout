@@ -211,6 +211,69 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('מחיקת חשבון'),
+        content: const Text(
+            'האם אתה בטוח שברצונך למחוק את החשבון? פעולה זו אינה הפיכה ותמחק את כל הנתונים שלך.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('מחק חשבון'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      final usersRepo = ref.read(usersRepositoryProvider);
+
+      // Delete user data from Firestore
+      await usersRepo.deleteUser(widget.userId);
+
+      // Delete user account
+      await authService.deleteAccount();
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'החשבון נמחק בהצלחה');
+        context.go('/auth');
+      }
+    } catch (e) {
+      if (mounted) {
+        // Handle requires-recent-login error
+        if (e.toString().contains('requires-recent-login')) {
+          SnackbarHelper.showError(
+              context, 'נא להתחבר מחדש כדי למחוק את החשבון');
+        } else {
+          SnackbarHelper.showErrorFromException(context, e);
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   // Dummy provider for demonstration. Replace with your actual provider.
   // You likely have this in your providers file, e.g., `data/repositories_providers.dart`
   // It should be a FutureProvider or StreamProvider that fetches a user.
@@ -397,6 +460,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   label: Text(_isLoading ? 'שומר...' : 'שמור שינויים'),
                   style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16)),
+                ),
+                const SizedBox(height: 32),
+
+                // Delete Account
+                TextButton.icon(
+                  onPressed: _isLoading ? null : _deleteAccount,
+                  icon: const Icon(Icons.delete_forever),
+                  label: const Text('מחק חשבון'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
               ],
             ),

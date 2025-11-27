@@ -7,6 +7,7 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/utils/geohash_utils.dart';
 
 /// Create hub event screen
 class CreateHubEventScreen extends ConsumerStatefulWidget {
@@ -20,14 +21,15 @@ class CreateHubEventScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CreateHubEventScreen> createState() => _CreateHubEventScreenState();
+  ConsumerState<CreateHubEventScreen> createState() =>
+      _CreateHubEventScreenState();
 }
 
 class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _locationController = TextEditingController();
-  
+
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = TimeOfDay.now();
   int _teamCount = 3; // Default: 3 teams
@@ -36,10 +38,22 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   int _maxParticipants = 15; // Default: 15, required
   bool _notifyMembers = false;
   bool _showInCommunityFeed = false;
+
   bool _isLoading = false;
   Hub? _hub;
+  Venue? _selectedVenue;
 
-  final List<String> _gameTypes = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
+  final List<String> _gameTypes = [
+    '3v3',
+    '4v4',
+    '5v5',
+    '6v6',
+    '7v7',
+    '8v8',
+    '9v9',
+    '10v10',
+    '11v11'
+  ];
 
   @override
   void initState() {
@@ -61,10 +75,13 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
             _locationController.text.isEmpty) {
           try {
             final venuesRepo = ref.read(venuesRepositoryProvider);
-            final primaryVenue =
-                await venuesRepo.getVenue(hub.primaryVenueId!);
-            _locationController.text =
-                primaryVenue?.name ?? hub.primaryVenueId!;
+            final primaryVenue = await venuesRepo.getVenue(hub.primaryVenueId!);
+            if (primaryVenue != null) {
+              _selectedVenue = primaryVenue;
+              _locationController.text = primaryVenue.name;
+            } else {
+              _locationController.text = hub.primaryVenueId!;
+            }
           } catch (_) {
             _locationController.text = hub.primaryVenueId!;
           }
@@ -112,7 +129,8 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   Future<void> _showDurationPicker() async {
     final result = await showDialog<int>(
       context: context,
-      builder: (context) => _DurationPickerDialog(initialValue: _durationMinutes),
+      builder: (context) =>
+          _DurationPickerDialog(initialValue: _durationMinutes),
     );
     if (result != null) {
       setState(() {
@@ -124,11 +142,25 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   Future<void> _showParticipantsPicker() async {
     final result = await showDialog<int>(
       context: context,
-      builder: (context) => _ParticipantsPickerDialog(initialValue: _maxParticipants),
+      builder: (context) =>
+          _ParticipantsPickerDialog(initialValue: _maxParticipants),
     );
     if (result != null) {
       setState(() {
         _maxParticipants = result;
+      });
+    }
+  }
+
+  Future<void> _selectVenue() async {
+    final selectedVenue = await context.push<Venue?>(
+      '/venues/search?hubId=${widget.hubId}&select=true',
+    );
+
+    if (selectedVenue != null) {
+      setState(() {
+        _selectedVenue = selectedVenue;
+        _locationController.text = selectedVenue.name;
       });
     }
   }
@@ -177,9 +209,15 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
         title: _titleController.text.trim(),
         description: null, // Description field removed
         eventDate: eventDate,
+        venueId: _selectedVenue?.venueId,
         location: _locationController.text.trim().isEmpty
             ? null
             : _locationController.text.trim(),
+        locationPoint: _selectedVenue?.location,
+        geohash: _selectedVenue != null
+            ? GeohashUtils.encode(_selectedVenue!.location.latitude,
+                _selectedVenue!.location.longitude)
+            : null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         teamCount: _teamCount,
@@ -196,10 +234,11 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
       // Send notifications if requested
       if (_notifyMembers) {
         try {
-          final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
+          final pushIntegration =
+              ref.read(pushNotificationIntegrationServiceProvider);
           final usersRepo = ref.read(usersRepositoryProvider);
           final currentUser = await usersRepo.getUser(currentUserId);
-          
+
           await pushIntegration.notifyNewEvent(
             eventId: eventId,
             hubId: widget.hubId,
@@ -234,9 +273,9 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   Future<List<String>> _getManagerNames() async {
     final managers = <String>[];
     final usersRepo = ref.read(usersRepositoryProvider);
-    
+
     if (_hub == null) return managers;
-    
+
     // Add creator
     try {
       final creator = await usersRepo.getUser(_hub!.createdBy);
@@ -280,12 +319,13 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
             const Text('רק מנהל ההאב מוגדר כיכול לבצע פעולה זו.'),
             if (managerNames.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text('מנהלי ההאב:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('מנהלי ההאב:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               ...managerNames.map((name) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('• $name'),
-              )),
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('• $name'),
+                  )),
             ],
           ],
         ),
@@ -333,13 +373,17 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ),
               const SizedBox(height: 16),
 
-
               // Location
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'מיקום (אופציונלי)',
-                  border: OutlineInputBorder(),
+              ListTile(
+                title: const Text('מיקום *'),
+                subtitle: Text(_locationController.text.isNotEmpty
+                    ? _locationController.text
+                    : 'בחר מיקום'),
+                trailing: const Icon(Icons.place),
+                onTap: _selectVenue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
               const SizedBox(height: 16),
@@ -347,7 +391,8 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               // Date
               ListTile(
                 title: const Text('תאריך *'),
-                subtitle: Text(DateFormat('dd/MM/yyyy', 'he').format(_selectedDate)),
+                subtitle:
+                    Text(DateFormat('dd/MM/yyyy', 'he').format(_selectedDate)),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: _selectDate,
                 shape: RoundedRectangleBorder(
@@ -453,11 +498,12 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               const SizedBox(height: 8),
-              
+
               // Show in Community Feed
               CheckboxListTile(
                 title: const Text('להעלות ללוח אירועים הקהילתי?'),
-                subtitle: const Text('האירוע יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
+                subtitle: const Text(
+                    'האירוע יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
                 value: _showInCommunityFeed,
                 onChanged: (value) {
                   setState(() {
@@ -546,7 +592,8 @@ class _DurationPickerDialogState extends State<_DurationPickerDialog> {
                   '$value דקות',
                   style: TextStyle(
                     fontSize: isSelected ? 20 : 16,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? Theme.of(context).primaryColor : null,
                   ),
                 ),
@@ -577,7 +624,8 @@ class _ParticipantsPickerDialog extends StatefulWidget {
   const _ParticipantsPickerDialog({required this.initialValue});
 
   @override
-  State<_ParticipantsPickerDialog> createState() => _ParticipantsPickerDialogState();
+  State<_ParticipantsPickerDialog> createState() =>
+      _ParticipantsPickerDialogState();
 }
 
 class _ParticipantsPickerDialogState extends State<_ParticipantsPickerDialog> {
@@ -626,7 +674,8 @@ class _ParticipantsPickerDialogState extends State<_ParticipantsPickerDialog> {
                   '$value משתתפים',
                   style: TextStyle(
                     fontSize: isSelected ? 20 : 16,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? Theme.of(context).primaryColor : null,
                   ),
                 ),

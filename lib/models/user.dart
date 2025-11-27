@@ -47,6 +47,7 @@ class User with _$User {
     @NullableGeoPointConverter() GeoPoint? location,
     String? geohash,
     String? region, // אזור: צפון, מרכז, דרום, ירושלים
+    @Default(false) bool isProfileComplete,
     // Denormalized fields (updated by Cloud Functions, not written by client)
     @Default(0)
     int followerCount, // Denormalized: Count of followers (updated by onFollowCreated)

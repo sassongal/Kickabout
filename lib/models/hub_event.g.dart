@@ -31,6 +31,7 @@ _$HubEventImpl _$$HubEventImplFromJson(Map<String, dynamic> json) =>
       locationPoint:
           const NullableGeoPointConverter().fromJson(json['locationPoint']),
       geohash: json['geohash'] as String?,
+      venueId: json['venueId'] as String?,
       teamCount: (json['teamCount'] as num?)?.toInt() ?? 3,
       gameType: json['gameType'] as String?,
       durationMinutes: (json['durationMinutes'] as num?)?.toInt(),
@@ -71,6 +72,7 @@ Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
       'locationPoint':
           const NullableGeoPointConverter().toJson(instance.locationPoint),
       'geohash': instance.geohash,
+      'venueId': instance.venueId,
       'teamCount': instance.teamCount,
       'gameType': instance.gameType,
       'durationMinutes': instance.durationMinutes,

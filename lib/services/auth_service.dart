@@ -9,8 +9,7 @@ import 'package:kickadoor/config/env.dart';
 class AuthService {
   final FirebaseAuth _auth;
 
-  AuthService({FirebaseAuth? auth})
-      : _auth = auth ?? FirebaseAuth.instance;
+  AuthService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
 
   /// Get current user
   User? get currentUser => _auth.currentUser;
@@ -35,24 +34,26 @@ class AuthService {
   /// Sign in anonymously
   Future<UserCredential> signInAnonymously() async {
     if (!Env.isFirebaseAvailable) {
-      debugPrint('❌ Anonymous sign in failed: Firebase not available (limited mode)');
+      debugPrint(
+          '❌ Anonymous sign in failed: Firebase not available (limited mode)');
       throw Exception('Firebase not available');
     }
-    
+
     try {
       debugPrint('🔐 Attempting anonymous sign in...');
-      
+
       final result = await _auth.signInAnonymously();
-      
+
       if (result.user == null) {
         throw Exception('Anonymous sign in returned null user');
       }
-      
+
       debugPrint('✅ Anonymous sign in successful: ${result.user?.uid}');
       return result;
     } on FirebaseAuthException catch (e) {
-      debugPrint('❌ Anonymous sign in failed (FirebaseAuthException): ${e.code} - ${e.message}');
-      
+      debugPrint(
+          '❌ Anonymous sign in failed (FirebaseAuthException): ${e.code} - ${e.message}');
+
       // Provide user-friendly error messages
       String errorMessage;
       switch (e.code) {
@@ -100,7 +101,8 @@ class AuthService {
     String password,
   ) async {
     if (!Env.isFirebaseAvailable) {
-      debugPrint('❌ User registration failed: Firebase not available (limited mode)');
+      debugPrint(
+          '❌ User registration failed: Firebase not available (limited mode)');
       throw Exception('Firebase not available');
     }
     try {
@@ -152,10 +154,10 @@ class AuthService {
 
     try {
       debugPrint('🔐 Attempting Google sign in...');
-      
+
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      
+
       if (googleUser == null) {
         // User canceled the sign-in
         debugPrint('⚠️ Google sign in canceled by user');
@@ -163,7 +165,8 @@ class AuthService {
       }
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -178,18 +181,19 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       // Handle Web-specific popup errors gracefully
       if (kIsWeb) {
-        if (e.code == 'auth/popup-closed-by-user' || 
+        if (e.code == 'auth/popup-closed-by-user' ||
             e.code == 'auth/cancelled-popup-request' ||
             e.code == 'auth/popup-blocked') {
           debugPrint('⚠️ Google sign in popup closed/blocked by user');
           throw Exception('התחברות בוטלה');
         }
       }
-      debugPrint('❌ Google sign in failed (FirebaseAuthException): ${e.code} - ${e.message}');
+      debugPrint(
+          '❌ Google sign in failed (FirebaseAuthException): ${e.code} - ${e.message}');
       rethrow;
     } catch (e) {
       // Handle GoogleSignIn cancellation (especially on Web)
-      if (e.toString().contains('canceled') || 
+      if (e.toString().contains('canceled') ||
           e.toString().contains('cancelled') ||
           e.toString().contains('popup')) {
         debugPrint('⚠️ Google sign in canceled: $e');
@@ -214,7 +218,7 @@ class AuthService {
 
     try {
       debugPrint('🔐 Attempting Apple sign in...');
-      
+
       // Request credential for the currently signed in Apple account
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
@@ -238,10 +242,24 @@ class AuthService {
       rethrow;
     }
   }
+
+  /// Delete current user account
+  Future<void> deleteAccount() async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+    try {
+      await _auth.currentUser?.delete();
+      debugPrint('✅ User account deleted successfully');
+    } catch (e) {
+      debugPrint('❌ User account deletion failed: $e');
+      rethrow;
+    }
+  }
+
   /// Dispose resources
   void dispose() {
     // No internal resources to dispose currently
     // This method is kept for consistency and future use
   }
 }
-
