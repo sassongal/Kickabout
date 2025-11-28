@@ -25,6 +25,7 @@ class CreateGameScreen extends ConsumerStatefulWidget {
 class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
+  final _locationFocusNode = FocusNode();
 
   String? _selectedHubId;
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
@@ -56,6 +57,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   @override
   void dispose() {
     _locationController.dispose();
+    _locationFocusNode.dispose();
     _gameEndConditionController.dispose();
     super.dispose();
   }
@@ -683,16 +685,102 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       ),
                       const SizedBox(height: 8),
                       // Text location field (legacy support)
-                      TextFormField(
-                        controller: _locationController,
-                        decoration: const InputDecoration(
-                          labelText: 'כתובת או שם מגרש',
-                          hintText: 'חפש מגרש קהילתי/פרטי/ציבורי שאפשר לשחק בו',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.location_on),
-                          helperText: 'הקלד שם/כתובת כדי ששחקנים יוכלו לנווט לשם',
-                        ),
-                        textInputAction: TextInputAction.done,
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return RawAutocomplete<Venue>(
+                            textEditingController: _locationController,
+                            focusNode: _locationFocusNode,
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) async {
+                              if (textEditingValue.text.length < 2) {
+                                return const Iterable<Venue>.empty();
+                              }
+                              return await ref
+                                  .read(venuesRepositoryProvider)
+                                  .searchVenuesCombined(textEditingValue.text);
+                            },
+                            displayStringForOption: (Venue option) =>
+                                option.name,
+                            onSelected: (Venue selection) async {
+                              Venue venue = selection;
+                              // If it's a Google result (empty ID), save it
+                              if (venue.venueId.isEmpty) {
+                                try {
+                                  venue = await ref
+                                      .read(venuesRepositoryProvider)
+                                      .getOrCreateVenueFromGooglePlace(
+                                          selection);
+                                } catch (e) {
+                                  debugPrint('Error creating venue: $e');
+                                }
+                              }
+
+                              setState(() {
+                                _selectedLocation = venue.location;
+                                _locationAddress = venue.address ?? venue.name;
+                                _locationController.text = venue.name;
+                              });
+                              // Unfocus to close keyboard
+                              _locationFocusNode.unfocus();
+                            },
+                            optionsViewBuilder: (BuildContext context,
+                                AutocompleteOnSelected<Venue> onSelected,
+                                Iterable<Venue> options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4.0,
+                                  child: SizedBox(
+                                    width: constraints.maxWidth,
+                                    height: 200.0,
+                                    child: ListView.builder(
+                                      padding: EdgeInsets.zero,
+                                      itemCount: options.length,
+                                      itemBuilder:
+                                          (BuildContext context, int index) {
+                                        final Venue option =
+                                            options.elementAt(index);
+                                        return ListTile(
+                                          leading: Icon(
+                                            option.venueId.isNotEmpty
+                                                ? Icons.verified
+                                                : Icons.map,
+                                            color: option.venueId.isNotEmpty
+                                                ? Colors.blue
+                                                : Colors.grey,
+                                          ),
+                                          title: Text(option.name),
+                                          subtitle: Text(option.address ?? ''),
+                                          onTap: () => onSelected(option),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            fieldViewBuilder: (BuildContext context,
+                                TextEditingController textEditingController,
+                                FocusNode focusNode,
+                                VoidCallback onFieldSubmitted) {
+                              return TextFormField(
+                                controller: textEditingController,
+                                focusNode: focusNode,
+                                decoration: const InputDecoration(
+                                  labelText: 'כתובת או שם מגרש',
+                                  hintText: 'חפש מגרש קהילתי/פרטי/ציבורי...',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.search),
+                                  helperText:
+                                      'הקלד שם/כתובת כדי ששחקנים יוכלו לנווט לשם',
+                                ),
+                                onFieldSubmitted: (String value) {
+                                  onFieldSubmitted();
+                                },
+                              );
+                            },
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                       // Geographic location

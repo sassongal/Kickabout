@@ -56,7 +56,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _loadCustomIcons();
     _loadCurrentLocation();
   }
-  
+
   /// Ensure location permission is granted before trying to get location
   /// This is a backup in case user navigated directly to map
   Future<void> _ensureLocationPermission() async {
@@ -70,12 +70,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Check current permission status
       LocationPermission permission = await Geolocator.checkPermission();
-      
+
       if (permission == LocationPermission.denied) {
         // Request permission
         debugPrint('📍 Map screen: Requesting location permission...');
         permission = await Geolocator.requestPermission();
-        
+
         if (permission == LocationPermission.denied) {
           debugPrint('⚠️ Map screen: Location permission denied by user');
           return;
@@ -83,11 +83,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
 
       if (permission == LocationPermission.deniedForever) {
-        debugPrint('⚠️ Map screen: Location permission denied forever. User needs to enable in settings.');
+        debugPrint(
+            '⚠️ Map screen: Location permission denied forever. User needs to enable in settings.');
         return;
       }
 
-      if (permission == LocationPermission.whileInUse || 
+      if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         debugPrint('✅ Map screen: Location permission granted');
       }
@@ -117,15 +118,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         const Duration(seconds: 5),
         onTimeout: () {
           debugPrint('⚠️ Timeout loading custom icons - using default markers');
-          throw TimeoutException('Loading icons timeout', const Duration(seconds: 5));
+          throw TimeoutException(
+              'Loading icons timeout', const Duration(seconds: 5));
         },
       );
-      
+
       final icons = await iconsFuture;
       _venuePublicIcon = icons[0];
       _venueRentalIcon = icons[1];
       _hubMarkerIcon = icons[2];
-      
+
       setState(() {
         _iconsLoaded = true;
       });
@@ -143,7 +145,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // First, ensure we have location permission
       // This is a backup in case user navigated directly to map without going through home screen
       await _ensureLocationPermission();
-      
+
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -160,7 +162,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Check permission status
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied || 
+      if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         debugPrint('⚠️ Location permission denied');
         if (mounted) {
@@ -172,18 +174,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
         return;
       }
-      
+
       final locationService = ref.read(locationServiceProvider);
-      
+
       // Load location in background to avoid blocking UI
-      final position = await locationService.getCurrentLocation()
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              debugPrint('⚠️ Location timeout');
-              return null;
-            },
-          );
+      final position = await locationService.getCurrentLocation().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('⚠️ Location timeout');
+          return null;
+        },
+      );
 
       if (position != null) {
         if (mounted) {
@@ -201,16 +202,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         // If no location, check if we have manual location saved
         final prefs = await SharedPreferences.getInstance();
         final manualCity = prefs.getString('manual_location_city');
-        
+
         if (manualCity != null && manualCity.isNotEmpty) {
           // Try to get location from saved manual city
-          final manualPosition = await locationService.getLocationFromAddress(manualCity);
+          final manualPosition =
+              await locationService.getLocationFromAddress(manualCity);
           if (manualPosition != null && mounted) {
             setState(() {
               _currentPosition = manualPosition;
             });
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _mapController != null && _currentPosition != null) {
+              if (mounted &&
+                  _mapController != null &&
+                  _currentPosition != null) {
                 _updateMapCamera();
               }
             });
@@ -231,7 +235,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           }
         }
       }
-      
+
       // Load markers in background - don't block UI
       // Use unawaited to allow UI to continue rendering
       _loadMarkersInBackground();
@@ -267,7 +271,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         await _loadMarkers().timeout(
           const Duration(seconds: 15),
           onTimeout: () {
-            debugPrint('⚠️ Overall timeout loading markers - showing map anyway');
+            debugPrint(
+                '⚠️ Overall timeout loading markers - showing map anyway');
             if (mounted) {
               setState(() {
                 _isLoading = false;
@@ -283,10 +288,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           });
         }
       }
-      
+
       if (mounted) {
         SnackbarHelper.showError(
-          context, 
+          context,
           'שגיאה בקבלת מיקום. המפה תוצג במיקום ברירת מחדל (ירושלים).',
         );
       }
@@ -327,7 +332,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Show dialog for manual location entry
   Future<void> _showManualLocationDialog() async {
     final cityController = TextEditingController();
-    
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -378,45 +383,45 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     try {
       final locationService = ref.read(locationServiceProvider);
       final position = await locationService.getLocationFromAddress(city);
-      
+
       if (position != null) {
         // Save to preferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('manual_location_city', city);
         await prefs.setBool('location_permission_skipped', true);
-        
+
         // Save to user profile in Firestore
         final auth = firebase_auth.FirebaseAuth.instance;
         final user = auth.currentUser;
-        
+
         if (user != null) {
           final firestore = FirebaseFirestore.instance;
           final userRef = firestore.collection('users').doc(user.uid);
-          
+
           final geohash = locationService.generateGeohash(
             position.latitude,
             position.longitude,
           );
-          
+
           // Determine region from city
           String? region;
-          if (city.contains('חיפה') || 
-              city.contains('קריית') || 
+          if (city.contains('חיפה') ||
+              city.contains('קריית') ||
               city.contains('נשר') ||
               city.contains('טירת')) {
             region = 'צפון';
-          } else if (city.contains('תל אביב') || 
-                     city.contains('רמת גן') ||
-                     city.contains('גבעתיים')) {
+          } else if (city.contains('תל אביב') ||
+              city.contains('רמת גן') ||
+              city.contains('גבעתיים')) {
             region = 'מרכז';
           } else if (city.contains('באר שבע') ||
-                     city.contains('אשדוד') ||
-                     city.contains('אשקלון')) {
+              city.contains('אשדוד') ||
+              city.contains('אשקלון')) {
             region = 'דרום';
           } else if (city.contains('ירושלים')) {
             region = 'ירושלים';
           }
-          
+
           await userRef.update({
             'location': GeoPoint(position.latitude, position.longitude),
             'geohash': geohash,
@@ -424,7 +429,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             if (region != null) 'region': region,
           });
         }
-        
+
         // Update map position
         if (mounted) {
           setState(() {
@@ -435,12 +440,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               _updateMapCamera();
             }
           });
-          
+
           SnackbarHelper.showSuccess(context, 'מיקום נשמר: $city');
         }
       } else {
         if (mounted) {
-          SnackbarHelper.showError(context, 'לא ניתן למצוא את המיקום. נסה שוב.');
+          SnackbarHelper.showError(
+              context, 'לא ניתן למצוא את המיקום. נסה שוב.');
           _setDefaultLocation();
         }
       }
@@ -475,7 +481,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         debugPrint('⚠️ Timeout waiting for icons: $e');
       }
     }
-    
+
     // Load markers with timeout - don't block UI
     try {
       await _loadMarkers().timeout(
@@ -499,6 +505,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  void _showVenueDetails(Venue venue) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _VenueDetailsSheet(venue: venue),
+    );
+  }
+
   Future<void> _loadMarkers() async {
     final markers = <Marker>{};
 
@@ -509,7 +524,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           await _loadGooglePlacesVenues(markers).timeout(
             const Duration(seconds: 10),
             onTimeout: () {
-              debugPrint('⚠️ Timeout loading Google Places venues - continuing without them');
+              debugPrint(
+                  '⚠️ Timeout loading Google Places venues - continuing without them');
               // Continue loading other markers even if Google Places fails
             },
           );
@@ -523,16 +539,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (_selectedFilter == 'all' || _selectedFilter == 'hubs') {
         final hubsRepo = ref.read(hubsRepositoryProvider);
         final venuesRepo = ref.read(venuesRepositoryProvider);
-        
+
         // Get all hubs (or nearby if we have location)
         List<Hub> hubs = <Hub>[];
         try {
           if (_currentPosition != null) {
-            hubs = await hubsRepo.findHubsNearby(
+            hubs = await hubsRepo
+                .findHubsNearby(
               latitude: _currentPosition!.latitude,
               longitude: _currentPosition!.longitude,
               radiusKm: 50.0, // 50km radius
-            ).timeout(
+            )
+                .timeout(
               const Duration(seconds: 10),
               onTimeout: () {
                 debugPrint('⚠️ Timeout finding nearby hubs');
@@ -557,9 +575,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         for (final hub in hubs) {
           // Add hub marker - prefer primary venue location, then legacy location, then main venue
           GeoPoint? hubLocation = hub.primaryVenueLocation ?? hub.location;
-          
+
           // If hub has mainVenueId but no location, get location from main venue
-          if (hubLocation == null && hub.mainVenueId != null && hub.mainVenueId!.isNotEmpty) {
+          if (hubLocation == null &&
+              hub.mainVenueId != null &&
+              hub.mainVenueId!.isNotEmpty) {
             try {
               final mainVenue = await venuesRepo.getVenue(hub.mainVenueId!);
               if (mainVenue != null) {
@@ -569,7 +589,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               debugPrint('Error loading main venue for hub ${hub.hubId}: $e');
             }
           }
-          
+
           if (hubLocation != null) {
             markers.add(
               Marker(
@@ -582,9 +602,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   title: hub.name,
                   snippet: hub.description ?? '${hub.memberIds.length} חברים',
                 ),
-                icon: _hubMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueBlue,
-                ),
+                icon: _hubMarkerIcon ??
+                    BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueBlue,
+                    ),
                 onTap: () {
                   context.push('/hubs/${hub.hubId}');
                 },
@@ -607,12 +628,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     title: venue.name,
                     snippet: '${hub.name} - ${venue.address ?? "מגרש"}',
                   ),
-                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueOrange, // Orange for venues
-                  ),
-                  onTap: () {
-                    context.push('/hubs/${hub.hubId}');
-                  },
+                  icon: venue.isPublic
+                      ? (_venuePublicIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueGreen,
+                          ))
+                      : (_venueRentalIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueOrange,
+                          )),
+                  onTap: () => _showVenueDetails(venue),
                 ),
               );
             }
@@ -653,15 +678,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 title: venue.name,
                 snippet: venue.address ?? 'מגרש',
               ),
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueOrange,
-              ),
-              onTap: () {
-                // Navigate to hub that owns this venue
-                if (venue.hubId.isNotEmpty) {
-                  context.push('/hubs/${venue.hubId}');
-                }
-              },
+              icon: venue.isPublic
+                  ? (_venuePublicIcon ??
+                      BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueGreen,
+                      ))
+                  : (_venueRentalIcon ??
+                      BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueOrange,
+                      )),
+              onTap: () => _showVenueDetails(venue),
             ),
           );
         }
@@ -675,7 +701,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         if (currentUserId != null) {
           final hubsRepo = ref.read(hubsRepositoryProvider);
           final userHubs = await hubsRepo.getHubsByMember(currentUserId);
-          
+
           for (final hub in userHubs) {
             final games = await gamesRepo.getGamesByHub(hub.hubId);
             for (final game in games) {
@@ -683,17 +709,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 // If we have current position, filter by distance
                 if (_currentPosition != null) {
                   final distance = Geolocator.distanceBetween(
-                    _currentPosition!.latitude,
-                    _currentPosition!.longitude,
-                    game.locationPoint!.latitude,
-                    game.locationPoint!.longitude,
-                  ) / 1000;
+                        _currentPosition!.latitude,
+                        _currentPosition!.longitude,
+                        game.locationPoint!.latitude,
+                        game.locationPoint!.longitude,
+                      ) /
+                      1000;
 
                   if (distance > 50.0) continue;
                 }
-                
-                final dateFormat = '${game.gameDate.day}/${game.gameDate.month}';
-                final timeFormat = '${game.gameDate.hour}:${game.gameDate.minute.toString().padLeft(2, '0')}';
+
+                final dateFormat =
+                    '${game.gameDate.day}/${game.gameDate.month}';
+                final timeFormat =
+                    '${game.gameDate.hour}:${game.gameDate.minute.toString().padLeft(2, '0')}';
                 markers.add(
                   Marker(
                     markerId: MarkerId('game_${game.gameId}'),
@@ -781,7 +810,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                   _currentPosition!.latitude,
                                   _currentPosition!.longitude,
                                 )
-                              : const LatLng(31.7683, 35.2137), // Default to Jerusalem
+                              : const LatLng(
+                                  31.7683, 35.2137), // Default to Jerusalem
                           zoom: 13.0,
                         ),
                         markers: _markers,
@@ -795,7 +825,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           // Update camera to current position after controller is ready
                           if (_currentPosition != null) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (_mapController != null && _currentPosition != null) {
+                              if (_mapController != null &&
+                                  _currentPosition != null) {
                                 _updateMapCamera();
                               }
                             });
@@ -857,21 +888,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     try {
       debugPrint('🗺️ Starting to load Google Places venues...');
       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      
+
       // Build query based on location
       String query = 'מגרש כדורגל בישראל';
       Map<String, dynamic> callData = {'query': query};
-      
+
       if (_currentPosition != null) {
         callData['lat'] = _currentPosition!.latitude;
         callData['lng'] = _currentPosition!.longitude;
-        debugPrint('📍 Searching venues near: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}');
+        debugPrint(
+            '📍 Searching venues near: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}');
       }
 
       debugPrint('📞 Calling searchVenues Cloud Function...');
-      final result = await functions.httpsCallable('searchVenues').call(callData);
+      final result =
+          await functions.httpsCallable('searchVenues').call(callData);
       debugPrint('✅ searchVenues returned successfully');
-      
+
       final data = result.data as Map<String, dynamic>;
       final results = data['results'] as List<dynamic>?;
 
@@ -887,20 +920,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             // Determine icon based on venueType
             final venueType = place['venueType'] as String? ?? 'unknown';
             BitmapDescriptor icon;
-            
+
             if (venueType == 'rental' && _venueRentalIcon != null) {
               icon = _venueRentalIcon!;
-            } else if ((venueType == 'public' || venueType == 'school') && _venuePublicIcon != null) {
+            } else if ((venueType == 'public' || venueType == 'school') &&
+                _venuePublicIcon != null) {
               icon = _venuePublicIcon!;
             } else {
               // Fallback to default marker
               icon = BitmapDescriptor.defaultMarkerWithHue(
-                venueType == 'rental' 
-                  ? BitmapDescriptor.hueOrange 
-                  : BitmapDescriptor.hueGreen,
+                venueType == 'rental'
+                    ? BitmapDescriptor.hueOrange
+                    : BitmapDescriptor.hueGreen,
               );
             }
-            
+
             markers.add(
               Marker(
                 markerId: MarkerId('google_place_$placeId'),
@@ -910,11 +944,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ),
                 infoWindow: InfoWindow(
                   title: name,
-                  snippet: venueType == 'rental' 
-                    ? 'מגרש להשכרה - לחץ לפרטים'
-                    : venueType == 'school'
-                      ? 'מגרש בית ספר - לחץ לפרטים'
-                      : 'מגרש ציבורי - לחץ לפרטים',
+                  snippet: venueType == 'rental'
+                      ? 'מגרש להשכרה - לחץ לפרטים'
+                      : venueType == 'school'
+                          ? 'מגרש בית ספר - לחץ לפרטים'
+                          : 'מגרש ציבורי - לחץ לפרטים',
                 ),
                 icon: icon,
                 onTap: () => _onVenueMarkerTapped(placeId),
@@ -947,7 +981,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     try {
       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      
+
       // Call both functions in parallel
       final detailsCall = functions.httpsCallable('getPlaceDetails').call({
         'placeId': placeId,
@@ -960,7 +994,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       final detailsData = results[0].data as Map<String, dynamic>;
       final hubsData = results[1].data;
-      
+
       final Map<String, dynamic> placeDetails = Map<String, dynamic>.from(
         detailsData['result'] as Map<String, dynamic>,
       );
@@ -991,7 +1025,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final name = placeDetails['name'] as String? ?? 'מגרש';
     final address = placeDetails['formatted_address'] as String?;
     final phone = placeDetails['formatted_phone_number'] as String?;
-    
+
     // Note: Google Places Photo API requires API key and photo_reference
     // For now, we'll skip displaying photos directly (would need backend endpoint)
     // In production, you could create a Cloud Function that returns photo URLs
@@ -1021,7 +1055,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Content
               Expanded(
                 child: SingleChildScrollView(
@@ -1040,17 +1074,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           color: FuturisticColors.textSecondary,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Name
                       Text(
                         name,
                         style: FuturisticTypography.heading2,
                       ),
-                      
+
                       const SizedBox(height: 12),
-                      
+
                       // Address
                       if (address != null && address.isNotEmpty) ...[
                         Row(
@@ -1071,7 +1105,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         ),
                         const SizedBox(height: 12),
                       ],
-                      
+
                       // Phone
                       if (phone != null && phone.isNotEmpty) ...[
                         Row(
@@ -1090,7 +1124,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         ),
                         const SizedBox(height: 24),
                       ],
-                      
+
                       // Hubs section
                       if (hubs.isNotEmpty) ...[
                         Divider(color: FuturisticColors.surfaceVariant),
@@ -1109,7 +1143,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             final hubId = hub['hubId'] as String;
                             final hubName = hub['name'] as String? ?? 'האב';
                             final logoUrl = hub['logoUrl'] as String?;
-                            
+
                             return FuturisticCard(
                               margin: const EdgeInsets.only(bottom: 8),
                               onTap: () {
@@ -1123,7 +1157,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                         radius: 24,
                                       )
                                     : CircleAvatar(
-                                        backgroundColor: FuturisticColors.primary,
+                                        backgroundColor:
+                                            FuturisticColors.primary,
                                         radius: 24,
                                         child: Text(
                                           hubName[0].toUpperCase(),
@@ -1183,5 +1218,235 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
     super.dispose();
+  }
+}
+
+class _VenueDetailsSheet extends ConsumerStatefulWidget {
+  final Venue venue;
+
+  const _VenueDetailsSheet({required this.venue});
+
+  @override
+  ConsumerState<_VenueDetailsSheet> createState() => _VenueDetailsSheetState();
+}
+
+class _VenueDetailsSheetState extends ConsumerState<_VenueDetailsSheet> {
+  late Venue _venue;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _venue = widget.venue;
+  }
+
+  Future<void> _updateVenueField(String field, dynamic value) async {
+    setState(() => _isUpdating = true);
+    try {
+      await ref.read(venuesRepositoryProvider).updateVenue(
+        _venue.venueId,
+        {field: value},
+      );
+
+      // Update local state
+      setState(() {
+        if (field == 'surfaceType') {
+          _venue = _venue.copyWith(surfaceType: value as String);
+        } else if (field == 'amenities') {
+          _venue = _venue.copyWith(amenities: value as List<String>);
+        } else if (field == 'isPublic') {
+          _venue = _venue.copyWith(isPublic: value as bool);
+        }
+      });
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'עודכן בהצלחה!');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בעדכון: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdating = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _venue.name,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _venue.address ?? 'כתובת לא ידועה',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color:
+                      _venue.isPublic ? Colors.green[100] : Colors.orange[100],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _venue.isPublic ? 'ציבורי' : 'להשכרה',
+                  style: TextStyle(
+                    color: _venue.isPublic
+                        ? Colors.green[800]
+                        : Colors.orange[800],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Surface Type
+          const Text('סוג משטח:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              _buildChoiceChip('דשא', 'grass', _venue.surfaceType == 'grass',
+                  (selected) {
+                if (selected) _updateVenueField('surfaceType', 'grass');
+              }),
+              _buildChoiceChip(
+                  'סינטטי', 'artificial', _venue.surfaceType == 'artificial',
+                  (selected) {
+                if (selected) _updateVenueField('surfaceType', 'artificial');
+              }),
+              _buildChoiceChip(
+                  'אספלט/בטון', 'concrete', _venue.surfaceType == 'concrete',
+                  (selected) {
+                if (selected) _updateVenueField('surfaceType', 'concrete');
+              }),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Amenities
+          const Text('מתקנים:', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              _buildFilterChip('תאורה', _venue.amenities.contains('lights'),
+                  (selected) {
+                final newAmenities = List<String>.from(_venue.amenities);
+                if (selected) {
+                  newAmenities.add('lights');
+                } else {
+                  newAmenities.remove('lights');
+                }
+                _updateVenueField('amenities', newAmenities);
+              }),
+              _buildFilterChip('חניה', _venue.amenities.contains('parking'),
+                  (selected) {
+                final newAmenities = List<String>.from(_venue.amenities);
+                if (selected) {
+                  newAmenities.add('parking');
+                } else {
+                  newAmenities.remove('parking');
+                }
+                _updateVenueField('amenities', newAmenities);
+              }),
+              _buildFilterChip('ברזייה', _venue.amenities.contains('water'),
+                  (selected) {
+                final newAmenities = List<String>.from(_venue.amenities);
+                if (selected) {
+                  newAmenities.add('water');
+                } else {
+                  newAmenities.remove('water');
+                }
+                _updateVenueField('amenities', newAmenities);
+              }),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Public/Rental Toggle (Crowdsourcing)
+          const Text('עדכן סטטוס:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('האם המגרש ציבורי?'),
+              const SizedBox(width: 8),
+              Switch(
+                value: _venue.isPublic,
+                onChanged: (value) => _updateVenueField('isPublic', value),
+              ),
+            ],
+          ),
+
+          if (_isUpdating)
+            const Padding(
+              padding: EdgeInsets.only(top: 16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoiceChip(
+      String label, String value, bool selected, Function(bool) onSelected) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
+      selectedColor: FuturisticColors.primary.withOpacity(0.2),
+      labelStyle: TextStyle(
+        color: selected ? FuturisticColors.primary : Colors.black,
+        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(
+      String label, bool selected, Function(bool) onSelected) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
+      selectedColor: FuturisticColors.primary.withOpacity(0.2),
+      checkmarkColor: FuturisticColors.primary,
+      labelStyle: TextStyle(
+        color: selected ? FuturisticColors.primary : Colors.black,
+        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
   }
 }

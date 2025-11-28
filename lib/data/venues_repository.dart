@@ -474,4 +474,95 @@ class VenuesRepository {
       throw Exception('Failed to create manual venue: $e');
     }
   }
+
+  /// Search venues from both Firestore and Google Places
+  ///
+  /// This method performs a hybrid search:
+  /// 1. Searches Firestore for existing venues matching the name
+  /// 2. Searches Google Places for venues
+  /// 3. Merges results, prioritizing verified Firestore venues
+  /// 4. Dedupes based on googlePlaceId
+  Future<List<Venue>> searchVenuesCombined(String query) async {
+    if (query.length < 2) return [];
+
+    try {
+      // Get current location for better relevance
+      double lat = 32.0853; // Default to Tel Aviv
+      double lng = 34.7818;
+
+      try {
+        // Try to get current location, but don't block if it fails or takes too long
+        final position = await Geolocator.getCurrentPosition()
+            .timeout(const Duration(seconds: 2));
+        lat = position.latitude;
+        lng = position.longitude;
+      } catch (e) {
+        // Ignore location errors, use default
+      }
+
+      // 1. Search Firestore (concurrently)
+      // Note: This requires an index on 'name'
+      // We use the startAt/endAt pattern for prefix search
+      final firestoreFuture = _firestore
+          .collection(FirestorePaths.venues())
+          .where('isActive', isEqualTo: true)
+          .where('name', isGreaterThanOrEqualTo: query)
+          .where('name', isLessThanOrEqualTo: '$query\uf8ff')
+          .limit(10)
+          .get();
+
+      // 2. Search Google Places (concurrently)
+      final googlePlacesService = GooglePlacesService();
+      final googleFuture = googlePlacesService.searchVenues(
+        query: query,
+        latitude: lat,
+        longitude: lng,
+        radius: 50000, // 50km search radius
+      );
+
+      // Wait for both results
+      final results = await Future.wait([
+        firestoreFuture,
+        googleFuture.catchError(
+            (_) => <PlaceResult>[]), // Handle Google errors gracefully
+      ]);
+
+      final firestoreSnapshot = results[0] as QuerySnapshot;
+      final googleResults = results[1] as List<PlaceResult>;
+
+      final venues = <Venue>[];
+      final existingGooglePlaceIds = <String>{};
+
+      // Process Firestore results first (Priority)
+      for (final doc in firestoreSnapshot.docs) {
+        try {
+          final venue = Venue.fromJson(
+              {...doc.data() as Map<String, dynamic>, 'venueId': doc.id});
+          venues.add(venue);
+          if (venue.googlePlaceId != null && venue.googlePlaceId!.isNotEmpty) {
+            existingGooglePlaceIds.add(venue.googlePlaceId!);
+          }
+        } catch (e) {
+          // Skip invalid documents
+        }
+      }
+
+      // Process Google results
+      for (final place in googleResults) {
+        // Skip if we already have this venue from Firestore
+        if (existingGooglePlaceIds.contains(place.placeId)) {
+          continue;
+        }
+
+        // Convert to temporary Venue object
+        // Note: These venues have empty venueId until saved
+        venues.add(place.toVenue(hubId: ''));
+      }
+
+      return venues;
+    } catch (e) {
+      // If everything fails, return empty list
+      return [];
+    }
+  }
 }
