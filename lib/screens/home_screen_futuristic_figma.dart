@@ -140,6 +140,10 @@ class _HomeScreenFuturisticFigmaState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Weather strip at top
+                    const HomeWeatherVibeWidget(),
+                    const SizedBox(height: 16),
+
                     // Admin Tasks Card (if user is admin)
                     _buildAdminTasksCard(context, currentUserId),
                     const SizedBox(height: 16),
@@ -152,7 +156,30 @@ class _HomeScreenFuturisticFigmaState
                         gamificationStream: gamificationStream,
                         onPerformanceTap: () =>
                             context.push('/profile/$currentUserId/performance'),
+                        performanceSnippet: Row(
+                          children: [
+                            const Icon(Icons.analytics_outlined,
+                                size: 16, color: Colors.orange),
+                            const SizedBox(width: 6),
+                            Text(
+                              'משחקים: ${user.gamesPlayed} | השתתפויות: ${user.totalParticipations}',
+                              style: GoogleFonts.inter(
+                                  fontSize: 12, color: Colors.orange[800]),
+                            ),
+                          ],
+                        ),
                         onAvailabilityChanged: (value) async {
+                          if (currentUserId == null) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('יש להתחבר כדי לעדכן זמינות'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
+                          }
                           try {
                             // Update availability status without triggering navigation
                             await ref.read(usersRepositoryProvider).updateUser(
@@ -258,10 +285,6 @@ class _HomeScreenFuturisticFigmaState
                       ),
                       const SizedBox(height: 16), // Reduced space
                     ],
-
-                    // Weather & Vibe Widget (moved to top)
-                    const HomeWeatherVibeWidget(),
-                    const SizedBox(height: 24),
 
                     // My Hubs section (simplified for Figma)
                     StreamBuilder<List<Hub>>(
@@ -1161,7 +1184,7 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
 
         return FuturisticCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          onTap: () => context.push('/weather'),
+          onTap: () => context.push(AppPaths.weatherDetail),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1523,6 +1546,7 @@ class _ProfileSummaryCard extends StatelessWidget {
   final String currentUserId;
   final Stream<Gamification?> gamificationStream;
   final VoidCallback onPerformanceTap;
+  final Widget? performanceSnippet;
   final Future<void> Function(bool) onAvailabilityChanged;
 
   const _ProfileSummaryCard({
@@ -1530,6 +1554,7 @@ class _ProfileSummaryCard extends StatelessWidget {
     required this.currentUserId,
     required this.gamificationStream,
     required this.onPerformanceTap,
+    this.performanceSnippet,
     required this.onAvailabilityChanged,
   });
 
@@ -1618,6 +1643,10 @@ class _ProfileSummaryCard extends StatelessWidget {
               ),
             ],
           ),
+          if (performanceSnippet != null) ...[
+            const SizedBox(height: 8),
+            performanceSnippet!,
+          ],
         ],
       ),
     );

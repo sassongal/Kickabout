@@ -17,14 +17,28 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/hubs/$(hubId)).data;
     }
 
+    function getRole(hub) {
+      return (hub.roles != null && request.auth.uid in hub.roles)
+        ? hub.roles[request.auth.uid]
+        : null;
+    }
+
     // Robust hub admin check (manager/admin/creator)
     function isHubAdmin(hubId) {
       let hub = getHubData(hubId);
       return isAuthenticated() && (
         hub.createdBy == request.auth.uid ||
-        (hub.roles != null &&
-         request.auth.uid in hub.roles &&
-         hub.roles[request.auth.uid] in ['admin', 'manager'])
+        (getRole(hub) in ['manager'])
+      );
+    }
+
+    // Manager or Moderator
+    function isHubManagerOrModerator(hubId) {
+      let hub = getHubData(hubId);
+      let role = getRole(hub);
+      return isAuthenticated() && (
+        hub.createdBy == request.auth.uid ||
+        role in ['manager', 'moderator']
       );
     }
 
@@ -42,8 +56,24 @@ service cloud.firestore {
       let hub = getHubData(hubId);
       return isAuthenticated() && (
         hub.createdBy == request.auth.uid ||
-        (hub.roles != null && request.auth.uid in hub.roles && hub.roles[request.auth.uid] in ['manager', 'moderator', 'admin'])
+        (getRole(hub) in ['manager', 'moderator'])
       );
+    }
+
+    function canManageGames(hubId) {
+      return isHubManagerOrModerator(hubId);
+    }
+
+    function canManageRoles(hubId) {
+      return isHubManagerOrModerator(hubId);
+    }
+
+    function canModerateContent(hubId) {
+      return isHubManagerOrModerator(hubId);
+    }
+
+    function canHandleRequests(hubId) {
+      return isHubManagerOrModerator(hubId);
     }
 
     // Check permission to create events
@@ -75,13 +105,10 @@ service cloud.firestore {
     // Schema Validation Functions
     // ============================================
     function isValidGame(game) {
-      return game.keys().hasAll(['gameId', 'createdBy', 'hubId', 'gameDate', 'createdAt', 'updatedAt']) &&
-        game.gameId is string &&
+      return game.keys().hasAll(['createdBy', 'hubId', 'gameDate']) &&
         game.createdBy is string &&
         game.hubId is string &&
         game.gameDate is timestamp &&
-        game.createdAt is timestamp &&
-        game.updatedAt is timestamp &&
         (!('teamCount' in game) || (game.teamCount is int && game.teamCount >= 2 && game.teamCount <= 6)) &&
         (!('teamAScore' in game) || (game.teamAScore is int && game.teamAScore >= 0)) &&
         (!('teamBScore' in game) || (game.teamBScore is int && game.teamBScore >= 0)) &&
@@ -158,23 +185,23 @@ service cloud.firestore {
         request.resource.data.memberIds is list;
 
       // Allow update by hub admins, but preserve critical immutable fields
-      allow update: if isHubAdmin(hubId) &&
+      allow update: if canHandleRequests(hubId) &&
         request.resource.data.hubId == resource.data.hubId &&
         request.resource.data.createdBy == resource.data.createdBy &&
         request.resource.data.createdAt == resource.data.createdAt;
       
-      allow delete: if isHubAdmin(hubId);
+      allow delete: if canHandleRequests(hubId);
 
       // Join Requests
       match /requests/{userId} {
-        allow read: if isAuthenticated() && isHubAdmin(hubId);
+        allow read: if isAuthenticated() && canHandleRequests(hubId);
         allow create: if isAuthenticated() && isOwner(userId) &&
           request.resource.data.keys().hasAll(['userId', 'hubId', 'status', 'createdAt']) &&
           request.resource.data.userId == userId &&
           request.resource.data.hubId == hubId &&
           request.resource.data.status == 'pending' &&
           request.resource.data.createdAt is timestamp;
-        allow update, delete: if isHubAdmin(hubId) &&
+        allow update, delete: if canHandleRequests(hubId) &&
           request.resource.data.userId == resource.data.userId &&
           request.resource.data.hubId == resource.data.hubId;
       }
@@ -189,16 +216,14 @@ service cloud.firestore {
           request.resource.data.authorId == request.auth.uid &&
           request.resource.data.createdAt is timestamp &&
           (!('text' in request.resource.data) ||
-           request.resource.data.text is string &&
-           request.resource.data.text.size() > 0);
-           request.resource.data.text is string &&
-           request.resource.data.text.size() > 0);
-        allow update: if (isHubAdmin(hubId) || request.auth.uid == resource.data.authorId) &&
+           (request.resource.data.text is string &&
+            request.resource.data.text.size() > 0));
+        allow update: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) &&
           request.resource.data.postId == resource.data.postId &&
           request.resource.data.hubId == resource.data.hubId &&
           request.resource.data.authorId == resource.data.authorId &&
           request.resource.data.createdAt == resource.data.createdAt;
-        allow delete: if isHubModerator(hubId) || request.auth.uid == resource.data.authorId;
+        allow delete: if canModerateContent(hubId) || request.auth.uid == resource.data.authorId;
 
         match /comments/{commentId} {
           allow read: if isAuthenticated();
@@ -209,15 +234,13 @@ service cloud.firestore {
             request.resource.data.hubId == hubId &&
             request.resource.data.authorId == request.auth.uid &&
             request.resource.data.createdAt is timestamp;
-            request.resource.data.authorId == request.auth.uid &&
-            request.resource.data.createdAt is timestamp;
-          allow update: if (isHubAdmin(hubId) || request.auth.uid == resource.data.authorId) &&
+          allow update: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) &&
             request.resource.data.commentId == resource.data.commentId &&
             request.resource.data.postId == resource.data.postId &&
             request.resource.data.hubId == resource.data.hubId &&
             request.resource.data.authorId == resource.data.authorId &&
             request.resource.data.createdAt == resource.data.createdAt;
-          allow delete: if isHubModerator(hubId) || request.auth.uid == resource.data.authorId;
+          allow delete: if canModerateContent(hubId) || request.auth.uid == resource.data.authorId;
         }
       }
 
@@ -281,14 +304,18 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read: if isAuthenticated();
 
-      allow create: if isHubMember(request.resource.data.hubId) &&
+      allow create: if (
+        (request.resource.data.hubId == '' && isAuthenticated()) ||
+        canManageGames(request.resource.data.hubId)
+      ) &&
         isValidGame(request.resource.data) &&
-        request.resource.data.gameId == gameId &&
         request.resource.data.createdBy == request.auth.uid;
 
-      allow update: if (isHubModerator(resource.data.hubId) || resource.data.createdBy == request.auth.uid) &&
+      allow update: if (
+        (resource.data.hubId == '' && resource.data.createdBy == request.auth.uid) ||
+        canManageGames(resource.data.hubId)
+      ) &&
         isValidGame(request.resource.data) &&
-        request.resource.data.gameId == resource.data.gameId &&
         request.resource.data.createdBy == resource.data.createdBy &&
         request.resource.data.hubId == resource.data.hubId &&
         (!('status' in request.resource.data) ||
@@ -300,7 +327,8 @@ service cloud.firestore {
         (!('aggregateWins' in request.resource.data) || isHubAdmin(resource.data.hubId)) &&
         (!('matches' in request.resource.data) || isHubAdmin(resource.data.hubId));
 
-      allow delete: if isHubModerator(resource.data.hubId) || resource.data.createdBy == request.auth.uid;
+      allow delete: if (resource.data.hubId == '' && resource.data.createdBy == request.auth.uid) ||
+        canManageGames(resource.data.hubId);
 
       // Signups
       match /signups/{userId} {

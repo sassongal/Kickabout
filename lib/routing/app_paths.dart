@@ -18,6 +18,7 @@ class AppPaths {
   // Players
   static const String playersBoard = '/players';
   static const String playersMap = '/players/map';
+  static const String community = '/community';
 
   // Hubs
   static const String hubsBoard = '/hubs-board';

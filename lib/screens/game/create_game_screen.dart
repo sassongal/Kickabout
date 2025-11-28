@@ -39,7 +39,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   String? _recurrencePattern; // 'weekly', 'biweekly', 'monthly'
   DateTime? _recurrenceEndDate;
   // Game rules fields
-  final _durationController = TextEditingController();
+  int _durationMinutes = 8;
   final _gameEndConditionController = TextEditingController();
 
   @override
@@ -56,7 +56,6 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   @override
   void dispose() {
     _locationController.dispose();
-    _durationController.dispose();
     _gameEndConditionController.dispose();
     super.dispose();
   }
@@ -153,13 +152,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   }
 
   Future<void> _createGame() async {
-    if (_selectedHubId == null) {
-      if (!_formKey.currentState!.validate()) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('נא לבחור הוב')),
-      );
-      return;
-    }
+    // Hub is optional; validate form fields regardless
     if (!_formKey.currentState!.validate()) return;
 
     final currentUserId = ref.read(currentUserIdProvider);
@@ -185,8 +178,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       return;
     }
 
-    // Store selectedHubId in local variable after null check
-    final selectedHubId = _selectedHubId!;
+    final selectedHubId = _selectedHubId ?? '';
 
     setState(() => _isLoading = true);
 
@@ -211,9 +203,11 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         );
       }
 
-      // Get hub to copy region
+      // Get hub to copy region (optional)
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(selectedHubId);
+      final hub = selectedHubId.isNotEmpty
+          ? await hubsRepo.getHub(selectedHubId)
+          : null;
       final hubRegion = hub?.region;
 
       final game = Game(
@@ -233,9 +227,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         isRecurring: _isRecurring,
         recurrencePattern: _recurrencePattern,
         recurrenceEndDate: _recurrenceEndDate,
-        durationInMinutes: _durationController.text.trim().isNotEmpty
-            ? int.tryParse(_durationController.text.trim())
-            : null,
+        durationInMinutes: _durationMinutes == 0 ? null : _durationMinutes,
         gameEndCondition: _gameEndConditionController.text.trim().isNotEmpty
             ? _gameEndConditionController.text.trim()
             : null,
@@ -266,31 +258,32 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         debugPrint('Failed to schedule game reminders: $e');
       }
 
-      // Create feed post
-      try {
-        final feedRepo = ref.read(feedRepositoryProvider);
-        final feedPost = FeedPost(
-          postId: '',
-          hubId: selectedHubId,
-          authorId: currentUserId,
-          type: 'game',
-          gameId: gameId,
-          createdAt: DateTime.now(),
-        );
-        await feedRepo.createPost(feedPost);
-      } catch (e) {
-        // Log error but don't fail game creation
-        debugPrint('Failed to create feed post: $e');
+      // Create feed post (hub-based only)
+      if (selectedHubId.isNotEmpty) {
+        try {
+          final feedRepo = ref.read(feedRepositoryProvider);
+          final feedPost = FeedPost(
+            postId: '',
+            hubId: selectedHubId,
+            authorId: currentUserId,
+            type: 'game',
+            gameId: gameId,
+            createdAt: DateTime.now(),
+          );
+          await feedRepo.createPost(feedPost);
+        } catch (e) {
+          debugPrint('Failed to create feed post: $e');
+        }
       }
 
-      // Create notifications for hub members (using integration service)
-      try {
-        final pushIntegration =
-            ref.read(pushNotificationIntegrationServiceProvider);
-        final usersRepo = ref.read(usersRepositoryProvider);
-        final currentUser = await usersRepo.getUser(currentUserId);
+      // Create notifications for hub members (only if hub exists)
+      if (hub != null) {
+        try {
+          final pushIntegration =
+              ref.read(pushNotificationIntegrationServiceProvider);
+          final usersRepo = ref.read(usersRepositoryProvider);
+          final currentUser = await usersRepo.getUser(currentUserId);
 
-        if (hub != null) {
           await pushIntegration.notifyNewGame(
             gameId: gameId,
             hubId: selectedHubId,
@@ -299,10 +292,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
             memberIds: hub.memberIds,
             excludeUserId: currentUserId,
           );
+        } catch (e) {
+          debugPrint('Failed to create notifications: $e');
         }
-      } catch (e) {
-        // Log error but don't fail game creation
-        debugPrint('Failed to create notifications: $e');
       }
 
       // Call Cloud Function to notify hub members
@@ -321,14 +313,16 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         final gameTime =
             DateFormat('dd MMMM yyyy, HH:mm', 'he').format(gameDate);
 
-        await notifyFunction.call({
-          'hubId': selectedHubId,
-          'gameId': gameId,
-          'gameTitle': 'משחק חדש',
-          'gameTime': gameTime,
-        });
+        if (selectedHubId.isNotEmpty) {
+          await notifyFunction.call({
+            'hubId': selectedHubId,
+            'gameId': gameId,
+            'gameTitle': 'משחק חדש',
+            'gameTime': gameTime,
+          });
 
-        debugPrint('✅ Notified hub members via Cloud Function');
+          debugPrint('✅ Notified hub members via Cloud Function');
+        }
       } catch (e) {
         // Log error but don't fail game creation
         debugPrint('⚠️ Failed to call notifyHubOnNewGame: $e');
@@ -337,7 +331,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       // Log analytics
       try {
         final analytics = AnalyticsService();
-        await analytics.logGameCreated(hubId: selectedHubId);
+        if (selectedHubId.isNotEmpty) {
+          await analytics.logGameCreated(hubId: selectedHubId);
+        }
       } catch (e) {
         debugPrint('Failed to log analytics: $e');
       }
@@ -435,8 +431,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Hub selection (only show if hubId not provided)
-              if (_selectedHubId == null)
+              // Hub selection (optional)
+              if (_selectedHubId == null) ...[
                 StreamBuilder<List<Hub>>(
                   stream: hubsStream,
                   builder: (context, snapshot) {
@@ -446,59 +442,37 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
                     final hubs = snapshot.data ?? [];
 
-                    if (hubs.isEmpty) {
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.warning, color: Colors.orange),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'אין הובס. צור הוב לפני יצירת משחק.',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return DropdownButtonFormField<String>(
-                      initialValue: _selectedHubId,
+                    return DropdownButtonFormField<String?>(
+                      value: _selectedHubId,
                       decoration: const InputDecoration(
-                        labelText: 'הוב',
+                        labelText: 'הוב (אופציונלי)',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.group),
                       ),
-                      items: hubs
-                          .map((hub) => DropdownMenuItem<String>(
-                                value: hub.hubId,
-                                child: Text(hub.name),
-                              ))
-                          .toList(),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('ללא Hub'),
+                        ),
+                        ...hubs.map((hub) => DropdownMenuItem<String?>(
+                              value: hub.hubId,
+                              child: Text(hub.name),
+                            ))
+                      ],
                       onChanged: (value) {
-                        setState(() => _selectedHubId = value);
-                        // Load default venue when hub changes
+                        setState(() {
+                          _selectedHubId = value;
+                        });
                         if (value != null) {
                           _loadDefaultVenue(value);
                         }
                       },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'נא לבחור הוב';
-                        }
-                        return null;
-                      },
+                      validator: (_) => null, // optional
                     );
                   },
                 ),
-              if (_selectedHubId == null) const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 16),
 
               // Date selection
@@ -584,7 +558,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       ),
                       if (_isRecurring) ...[
                         const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
+                        DropdownButtonFormField<String?>(
                           initialValue: _recurrencePattern,
                           decoration: const InputDecoration(
                             labelText: 'תדירות',
@@ -653,23 +627,34 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _durationController,
+                      DropdownButtonFormField<int>(
+                        value: _durationMinutes,
                         decoration: const InputDecoration(
                           labelText: 'משך המשחק (דקות)',
-                          hintText: 'למשל: 90',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.timer),
-                          helperText: 'השאר ריק אם אין הגבלת זמן',
+                          helperText: 'בחר משך משחק, ברירת המחדל 8 דקות',
                         ),
-                        keyboardType: TextInputType.number,
+                        items: const [
+                          DropdownMenuItem(value: 8, child: Text('8 דקות')),
+                          DropdownMenuItem(value: 10, child: Text('10 דקות')),
+                          DropdownMenuItem(value: 12, child: Text('12 דקות')),
+                          DropdownMenuItem(value: 15, child: Text('15 דקות')),
+                          DropdownMenuItem(value: 20, child: Text('20 דקות')),
+                          DropdownMenuItem(value: 30, child: Text('30 דקות')),
+                          DropdownMenuItem(value: 0, child: Text('ללא הגבלה')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) setState(() => _durationMinutes = v);
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _gameEndConditionController,
                         decoration: const InputDecoration(
                           labelText: 'תנאי סיום',
-                          hintText: 'למשל: "ראשון ל-5 שערים" או "הגבלת זמן"',
+                          hintText:
+                              'לדוגמה: משחק עד 2, תיקו → הארכה של 2 דקות, המנצח נשאר',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.flag),
                           helperText: 'תיאור תנאי סיום המשחק',
@@ -701,10 +686,11 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       TextFormField(
                         controller: _locationController,
                         decoration: const InputDecoration(
-                          labelText: 'כתובת או שם מקום',
-                          hintText: 'הכנס מיקום המשחק',
+                          labelText: 'כתובת או שם מגרש',
+                          hintText: 'חפש מגרש קהילתי/פרטי/ציבורי שאפשר לשחק בו',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.location_on),
+                          helperText: 'הקלד שם/כתובת כדי ששחקנים יוכלו לנווט לשם',
                         ),
                         textInputAction: TextInputAction.done,
                       ),

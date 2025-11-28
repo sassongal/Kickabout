@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart'; // Still needed for unused chart functions (can be removed later)
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
@@ -329,36 +328,6 @@ class _PlayerProfileScreenFuturisticState
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Rating Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getRatingColor(user.currentRankScore)
-                                .withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                user.currentRankScore.toStringAsFixed(1),
-                                style: FuturisticTypography.labelLarge.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -691,7 +660,7 @@ class _PlayerProfileScreenFuturisticState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Big Counters: Games Played, Goals, MVP
+          // Big Counters: Games Played, Goals, Assists, MVP
           StreamBuilder<Gamification?>(
             stream: gamificationStream,
             builder: (context, snapshot) {
@@ -700,42 +669,44 @@ class _PlayerProfileScreenFuturisticState
                 final stats = gamification.stats;
                 final gamesPlayed = stats['gamesPlayed'] ?? 0;
                 final goals = stats['goals'] ?? 0;
+                final assists = stats['assists'] ?? 0;
                 final mvpCount =
                     stats['mvp'] ?? 0; // MVP count from stats (if available)
 
                 return Column(
                   children: [
                     // Big Counters Row
-                    Row(
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
                       children: [
-                        Expanded(
-                          child: _buildBigCounter(
-                            context,
-                            'משחקים',
-                            gamesPlayed.toString(),
-                            Icons.sports_soccer,
-                            FuturisticColors.primary,
-                          ),
+                        _buildBigCounter(
+                          context,
+                          'משחקים',
+                          gamesPlayed.toString(),
+                          Icons.sports_soccer,
+                          FuturisticColors.primary,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildBigCounter(
-                            context,
-                            'שערים',
-                            goals.toString(),
-                            Icons.sports_soccer,
-                            FuturisticColors.secondary,
-                          ),
+                        _buildBigCounter(
+                          context,
+                          'שערים',
+                          goals.toString(),
+                          Icons.sports_soccer,
+                          FuturisticColors.secondary,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildBigCounter(
-                            context,
-                            'MVP',
-                            mvpCount.toString(),
-                            Icons.star,
-                            Colors.amber,
-                          ),
+                        _buildBigCounter(
+                          context,
+                          'בישולים',
+                          assists.toString(),
+                          Icons.assistant,
+                          Colors.purple,
+                        ),
+                        _buildBigCounter(
+                          context,
+                          'MVP',
+                          mvpCount.toString(),
+                          Icons.star,
+                          Colors.amber,
                         ),
                       ],
                     ),
@@ -749,8 +720,185 @@ class _PlayerProfileScreenFuturisticState
               return const SizedBox.shrink();
             },
           ),
+
+          const SizedBox(height: 24),
+
+          // Player meta info card (no rating)
+          FuturisticCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'פרטי שחקן',
+                  style: FuturisticTypography.labelLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    _buildInfoChip(
+                      Icons.location_on_outlined,
+                      user.city != null && user.city!.isNotEmpty
+                          ? user.city!
+                          : 'עיר לא עודכנה',
+                      FuturisticColors.textSecondary,
+                    ),
+                    _buildInfoChip(
+                      Icons.map_outlined,
+                      user.region != null && user.region!.isNotEmpty
+                          ? user.region!
+                          : 'אזור לא עודכן',
+                      FuturisticColors.textSecondary,
+                    ),
+                    _buildInfoChip(
+                      Icons.sports,
+                      user.preferredPosition,
+                      FuturisticColors.textSecondary,
+                    ),
+                    _buildInfoChip(
+                      Icons.wifi_tethering,
+                      user.availabilityStatus == 'available'
+                          ? 'זמין למשחקים'
+                          : 'לא זמין למשחקים',
+                      FuturisticColors.textSecondary,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Placeholder for future insights (removed rating charts)
+          FuturisticCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ביצועים אחרונים',
+                  style: FuturisticTypography.labelLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'מידע אנליטי מפורט יתווסף בהמשך. בינתיים תוכל לראות סיכום כללי ומידע בסיסי.',
+                  style: FuturisticTypography.bodySmall.copyWith(
+                    color: FuturisticColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGamesTab(
+    BuildContext context,
+    User user,
+    GamesRepository gamesRepo,
+  ) {
+    final gamesStream = gamesRepo.watchGamesByCreator(user.uid);
+
+    return StreamBuilder<List<Game>>(
+      stream: gamesStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const FuturisticLoadingState(message: 'טוען משחקים...');
+        }
+
+        if (snapshot.hasError) {
+          return FuturisticEmptyState(
+            icon: Icons.error_outline,
+            title: 'שגיאה בטעינת משחקים',
+            message: snapshot.error.toString(),
+            action: ElevatedButton.icon(
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh),
+              label: const Text('נסה שוב'),
+            ),
+          );
+        }
+
+        final games = snapshot.data ?? [];
+        if (games.isEmpty) {
+          return FuturisticEmptyState(
+            icon: Icons.sports_soccer,
+            title: 'אין משחקים',
+            message: 'עדיין לא יצרת או שיחקת משחקים',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: games.length,
+          itemBuilder: (context, index) {
+            final game = games[index];
+            final statusText = game.status.toString().split('.').last;
+            return FuturisticCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              onTap: () => context.push('/games/${game.gameId}'),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: FuturisticColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.sports_soccer, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat('dd/MM/yyyy').format(game.gameDate),
+                          style: FuturisticTypography.labelLarge.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          game.venueName ?? game.location ?? 'מיקום לא ידוע',
+                          style: FuturisticTypography.bodySmall.copyWith(
+                            color: FuturisticColors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        statusText,
+                        style: FuturisticTypography.bodySmall.copyWith(
+                          color: FuturisticColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        game.hubName ?? 'משחק פרטי',
+                        style: FuturisticTypography.labelSmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -881,459 +1029,6 @@ class _PlayerProfileScreenFuturisticState
     }
   }
 
-  Widget _buildStatisticsTab(
-    BuildContext context,
-    User user,
-    Stream<Gamification?> gamificationStream,
-    List<RatingSnapshot> history,
-  ) {
-    final privacy = user.privacySettings;
-    if (privacy['hideStats'] ?? false) {
-      return Center(
-        child: FuturisticEmptyState(
-          icon: Icons.privacy_tip,
-          title: 'סטטיסטיקות מוסתרות',
-          message: 'השחקן בחר להסתיר את הסטטיסטיקות שלו',
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: StreamBuilder<Gamification?>(
-        stream: gamificationStream,
-        builder: (context, snapshot) {
-          final gamification = snapshot.data;
-          if (gamification == null) {
-            return const FuturisticLoadingState(message: 'טוען סטטיסטיקות...');
-          }
-
-          final stats = gamification.stats;
-          final gamesPlayed = stats['gamesPlayed'] ?? 0;
-          final wins = stats['gamesWon'] ?? 0;
-          final goals = stats['goals'] ?? 0;
-          final assists = stats['assists'] ?? 0;
-          final saves = stats['saves'] ?? 0;
-          final winRate = gamesPlayed > 0 ? (wins / gamesPlayed * 100) : 0.0;
-          final goalsPerGame = gamesPlayed > 0 ? (goals / gamesPlayed) : 0.0;
-          final assistsPerGame =
-              gamesPlayed > 0 ? (assists / gamesPlayed) : 0.0;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Detailed Stats Grid
-              FuturisticCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'סטטיסטיקות מפורטות',
-                      style: FuturisticTypography.techHeadline,
-                    ),
-                    const SizedBox(height: 16),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.5,
-                      children: [
-                        _buildStatCard(
-                          'משחקים',
-                          '$gamesPlayed',
-                          Icons.sports_soccer,
-                          FuturisticColors.primary,
-                        ),
-                        _buildStatCard(
-                          'ניצחונות',
-                          '$wins',
-                          Icons.emoji_events,
-                          FuturisticColors.success,
-                        ),
-                        _buildStatCard(
-                          'שערים',
-                          '$goals',
-                          Icons.sports_soccer,
-                          FuturisticColors.accent,
-                        ),
-                        _buildStatCard(
-                          'אסיסטים',
-                          '$assists',
-                          Icons.assistant,
-                          FuturisticColors.warning,
-                        ),
-                        if (saves > 0)
-                          _buildStatCard(
-                            'הצלות',
-                            '$saves',
-                            Icons.save,
-                            FuturisticColors.info,
-                          ),
-                        _buildStatCard(
-                          'אחוז ניצחונות',
-                          '${winRate.toStringAsFixed(1)}%',
-                          Icons.trending_up,
-                          FuturisticColors.secondary,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Averages Card
-              FuturisticCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ממוצעים',
-                      style: FuturisticTypography.techHeadline,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildAverageCard(
-                          'שערים למשחק',
-                          goalsPerGame.toStringAsFixed(2),
-                          Icons.sports_soccer,
-                        ),
-                        _buildAverageCard(
-                          'אסיסטים למשחק',
-                          assistsPerGame.toStringAsFixed(2),
-                          Icons.assistant,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildRatingsTab(
-    BuildContext context,
-    User user,
-    List<RatingSnapshot> history,
-  ) {
-    final privacy = user.privacySettings;
-    if (privacy['hideRatings'] ?? false) {
-      return Center(
-        child: FuturisticEmptyState(
-          icon: Icons.privacy_tip,
-          title: 'דירוגים מוסתרים',
-          message: 'השחקן בחר להסתיר את הדירוגים שלו',
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (history.isNotEmpty) ...[
-            // Rating History Chart
-            FuturisticCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'היסטוריית דירוגים',
-                    style: FuturisticTypography.techHeadline,
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 200,
-                    child: _buildRatingChart(history),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Skills Radar Chart
-            FuturisticCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'השוואת יכולות',
-                    style: FuturisticTypography.techHeadline,
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 250,
-                    child: _buildSkillsRadarChart(history.last),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Trend Indicators
-            _buildTrendIndicators(history),
-          ] else
-            FuturisticEmptyState(
-              icon: Icons.trending_up,
-              title: 'אין דירוגים',
-              message: 'עדיין לא התקבלו דירוגים עבור שחקן זה',
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGamesTab(
-    BuildContext context,
-    User user,
-    GamesRepository gamesRepo,
-  ) {
-    final privacy = user.privacySettings;
-    if (privacy['hideStats'] ?? false) {
-      return Center(
-        child: FuturisticEmptyState(
-          icon: Icons.privacy_tip,
-          title: 'משחקים מוסתרים',
-          message: 'השחקן בחר להסתיר את המשחקים שלו',
-        ),
-      );
-    }
-
-    // Simplified: Show message for now
-    // TODO: In future, can fetch games from games collection filtered by player
-    return Center(
-      child: FuturisticEmptyState(
-        icon: Icons.sports_soccer,
-        title: 'רשימת משחקים',
-        message: 'רשימת המשחקים תוצג כאן בקרוב',
-      ),
-    );
-  }
-
-  Widget _buildGamificationCard(
-    BuildContext context,
-    Gamification gamification,
-  ) {
-    // Simplified: No points/levels, just show stats
-    // Progress is based on games played (for milestone badges)
-    final gamesPlayed = gamification.stats['gamesPlayed'] ?? 0;
-    final nextMilestone = gamesPlayed < 10
-        ? 10
-        : gamesPlayed < 50
-            ? 50
-            : gamesPlayed < 100
-                ? 100
-                : 100;
-    final progress = nextMilestone > 0 ? gamesPlayed / nextMilestone : 0.0;
-
-    return FuturisticCard(
-      showGlow: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.emoji_events,
-                color: FuturisticColors.warning,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'גיימיפיקציה',
-                style: FuturisticTypography.techHeadline,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '${gamification.points}',
-                      style: FuturisticTypography.heading2.copyWith(
-                        color: FuturisticColors.warning,
-                      ),
-                    ),
-                    Text(
-                      'נקודות',
-                      style: FuturisticTypography.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 50,
-                color: FuturisticColors.surfaceVariant,
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: FuturisticColors.primary,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Level ${gamification.level}',
-                        style: FuturisticTypography.labelLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'רמה',
-                      style: FuturisticTypography.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Progress to next level
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'לעבר רמה ${gamification.level + 1}',
-                    style: FuturisticTypography.bodySmall,
-                  ),
-                  Text(
-                    '${(progress * 100).toStringAsFixed(0)}%',
-                    style: FuturisticTypography.bodySmall.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: FuturisticColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: progress.clamp(0.0, 1.0),
-                backgroundColor: FuturisticColors.surfaceVariant,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  FuturisticColors.primary,
-                ),
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                gamesPlayed < 10
-                    ? '${10 - gamesPlayed} משחקים עד ה-milestone הבא'
-                    : gamesPlayed < 50
-                        ? '${50 - gamesPlayed} משחקים עד ה-milestone הבא'
-                        : gamesPlayed < 100
-                            ? '${100 - gamesPlayed} משחקים עד ה-milestone הבא'
-                            : 'השגת את כל ה-milestones!',
-                style: FuturisticTypography.bodySmall,
-              ),
-            ],
-          ),
-          if (gamification.badges.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Divider(color: FuturisticColors.surfaceVariant),
-            const SizedBox(height: 12),
-            Text(
-              'תגים',
-              style: FuturisticTypography.labelLarge.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: gamification.badges.map((badge) {
-                return Chip(
-                  avatar: Icon(
-                    Icons.star,
-                    size: 18,
-                    color: FuturisticColors.warning,
-                  ),
-                  label: Text(badge),
-                  backgroundColor:
-                      FuturisticColors.warning.withValues(alpha: 0.1),
-                  side: BorderSide(
-                      color: FuturisticColors.warning.withValues(alpha: 0.3)),
-                );
-              }).toList(),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCurrentRatingCard(BuildContext context, User user) {
-    return FuturisticCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'דירוג נוכחי',
-            style: FuturisticTypography.techHeadline,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                user.currentRankScore.toStringAsFixed(1),
-                style: FuturisticTypography.heading1.copyWith(
-                  color: _getRatingColor(user.currentRankScore),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '/ 10',
-                style: FuturisticTypography.heading3.copyWith(
-                  color: FuturisticColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          LinearProgressIndicator(
-            value: user.currentRankScore / 10,
-            backgroundColor: FuturisticColors.surfaceVariant,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              _getRatingColor(user.currentRankScore),
-            ),
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStatCard(
     String label,
     String value,
@@ -1391,228 +1086,8 @@ class _PlayerProfileScreenFuturisticState
     );
   }
 
-  Widget _buildRatingChart(List<RatingSnapshot> history) {
-    final recentHistory = history.take(10).toList().reversed.toList();
-    if (recentHistory.isEmpty) {
-      return Center(
-        child: Text(
-          'אין נתונים להצגה',
-          style: FuturisticTypography.bodyMedium,
-        ),
-      );
-    }
 
-    final ratings = recentHistory.map((snapshot) {
-      return (snapshot.defense +
-              snapshot.passing +
-              snapshot.shooting +
-              snapshot.dribbling +
-              snapshot.physical +
-              snapshot.leadership +
-              snapshot.teamPlay +
-              snapshot.consistency) /
-          8.0;
-    }).toList();
-
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(show: true),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) {
-                return Text(
-                  value.toStringAsFixed(1),
-                  style: FuturisticTypography.bodySmall,
-                );
-              },
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() >= recentHistory.length) {
-                  return const Text('');
-                }
-                final index = value.toInt();
-                final date = recentHistory[index].submittedAt;
-                return Text(
-                  DateFormat('dd/MM').format(date),
-                  style: FuturisticTypography.bodySmall,
-                );
-              },
-            ),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-        ),
-        borderData: FlBorderData(show: true),
-        lineBarsData: [
-          LineChartBarData(
-            spots: ratings.asMap().entries.map((entry) {
-              return FlSpot(entry.key.toDouble(), entry.value);
-            }).toList(),
-            isCurved: true,
-            color: FuturisticColors.primary,
-            barWidth: 3,
-            dotData: FlDotData(show: true),
-            belowBarData: BarAreaData(show: false),
-          ),
-        ],
-        minY: 0,
-        maxY: 10,
-      ),
-    );
-  }
-
-  Widget _buildSkillsRadarChart(RatingSnapshot snapshot) {
-    final skills = [
-      ('הגנה', snapshot.defense),
-      ('מסירות', snapshot.passing),
-      ('בעיטות', snapshot.shooting),
-      ('כדרור', snapshot.dribbling),
-      ('פיזי', snapshot.physical),
-      ('מנהיגות', snapshot.leadership),
-      ('משחק קבוצתי', snapshot.teamPlay),
-      ('עקביות', snapshot.consistency),
-    ];
-
-    return RadarChart(
-      RadarChartData(
-        dataSets: [
-          RadarDataSet(
-            fillColor: FuturisticColors.primary.withValues(alpha: 0.2),
-            borderColor: FuturisticColors.primary,
-            borderWidth: 2,
-            dataEntries: skills.map((s) => RadarEntry(value: s.$2)).toList(),
-          ),
-        ],
-        tickCount: 5,
-        ticksTextStyle: FuturisticTypography.bodySmall,
-        tickBorderData: BorderSide(color: FuturisticColors.surfaceVariant),
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(
-            color: FuturisticColors.surfaceVariant,
-            width: 2,
-          ),
-        ),
-        radarBackgroundColor: FuturisticColors.background,
-        radarBorderData: BorderSide(
-          color: FuturisticColors.surfaceVariant,
-          width: 1,
-        ),
-        titleTextStyle: FuturisticTypography.labelMedium.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
-        getTitle: (index, angle) {
-          return RadarChartTitle(
-            text: skills[index].$1,
-            angle: angle,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTrendIndicators(List<RatingSnapshot> history) {
-    if (history.length < 2) {
-      return const SizedBox.shrink();
-    }
-
-    final recent = history.take(5).toList();
-    final older = history.skip(5).take(5).toList();
-
-    if (older.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final recentAvg = recent
-            .map((s) =>
-                (s.defense +
-                    s.passing +
-                    s.shooting +
-                    s.dribbling +
-                    s.physical +
-                    s.leadership +
-                    s.teamPlay +
-                    s.consistency) /
-                8.0)
-            .reduce((a, b) => a + b) /
-        recent.length;
-
-    final olderAvg = older
-            .map((s) =>
-                (s.defense +
-                    s.passing +
-                    s.shooting +
-                    s.dribbling +
-                    s.physical +
-                    s.leadership +
-                    s.teamPlay +
-                    s.consistency) /
-                8.0)
-            .reduce((a, b) => a + b) /
-        older.length;
-
-    final trend = recentAvg - olderAvg;
-
-    return FuturisticCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'ניתוח מגמות',
-            style: FuturisticTypography.techHeadline,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildTrendCard(
-                'מגמה',
-                trend > 0.1
-                    ? 'משתפר'
-                    : trend < -0.1
-                        ? 'יורד'
-                        : 'יציב',
-                trend > 0.1
-                    ? FuturisticColors.success
-                    : trend < -0.1
-                        ? FuturisticColors.error
-                        : FuturisticColors.textSecondary,
-                Icons.trending_up,
-              ),
-              _buildTrendCard(
-                'שינוי',
-                '${trend > 0 ? "+" : ""}${trend.toStringAsFixed(1)}',
-                trend > 0
-                    ? FuturisticColors.success
-                    : trend < 0
-                        ? FuturisticColors.error
-                        : FuturisticColors.textSecondary,
-                Icons.arrow_upward,
-              ),
-              _buildTrendCard(
-                'ממוצע אחרון',
-                recentAvg.toStringAsFixed(1),
-                _getRatingColor(recentAvg),
-                Icons.star,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // Rating components removed
 
   Widget _buildHubsTab(
     BuildContext context,
@@ -1706,35 +1181,4 @@ class _PlayerProfileScreenFuturisticState
     );
   }
 
-  Widget _buildTrendCard(
-    String label,
-    String value,
-    Color color,
-    IconData icon,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: FuturisticTypography.heading3.copyWith(
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: FuturisticTypography.bodySmall,
-        ),
-      ],
-    );
-  }
-
-  Color _getRatingColor(double rating) {
-    if (rating >= 8) return FuturisticColors.success;
-    if (rating >= 6) return FuturisticColors.primary;
-    if (rating >= 4) return FuturisticColors.warning;
-    return FuturisticColors.error;
-  }
 }

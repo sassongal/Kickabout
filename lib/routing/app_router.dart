@@ -105,6 +105,7 @@ import 'package:kickadoor/screens/social/create_recruiting_post_screen.dart'
     deferred as create_recruiting_post_screen;
 import 'package:kickadoor/screens/activity/community_activity_feed_screen.dart'
     deferred as community_activity_feed_screen;
+import 'package:kickadoor/screens/weather/weather_detail_screen.dart';
 import 'package:kickadoor/screens/game/game_recording_screen.dart'
     deferred as game_recording_screen;
 import 'package:kickadoor/screens/event/event_management_screen.dart'
@@ -184,63 +185,54 @@ final routerProvider = Provider<GoRouter>((ref) {
     restorationScopeId: 'app_router',
     redirect: (context, state) async {
       try {
-        // Check if auth state is still loading - if so, allow auth/welcome/splash
+        final path = state.matchedLocation;
+
+        // Always allow splash
+        if (path == AppPaths.splash) return null;
+
+        // Auth state loading: allow auth/welcome/splash, otherwise stay put
         if (authState.isLoading) {
-          if (state.matchedLocation == AppPaths.auth ||
-              state.matchedLocation == AppPaths.welcome ||
-              state.matchedLocation == AppPaths.splash) {
-            return null;
-          }
-          // Otherwise, redirect to auth while loading
+          if (path == AppPaths.auth || path == AppPaths.welcome) return null;
           return AppPaths.splash;
         }
 
-        // Wait for auth state to be available
         final authValue = authState.valueOrNull;
-        final isAuthenticated = authValue != null && !authService.isAnonymous;
+        final cachedUserId = authService.currentUserId;
+        final isAuthenticated = authValue != null || cachedUserId != null;
 
-        final isGoingToAuth = state.matchedLocation == AppPaths.auth;
-        final isGoingToWelcome = state.matchedLocation == AppPaths.welcome;
-        final isGoingToSplash = state.matchedLocation == AppPaths.splash;
-
-        // Allow splash screen
-        if (isGoingToSplash) {
+        final currentUserAsync = ref.watch(currentUserProvider);
+        if (currentUserAsync.isLoading) {
+          // Avoid bouncing while user data is loading
           return null;
         }
 
-        // Welcome flow (first-time only) - only for unauthenticated users
-        final prefs = await SharedPreferences.getInstance();
-        final hasSeenWelcome = prefs.getBool('has_seen_welcome') ?? false;
-        if (!isAuthenticated && !hasSeenWelcome && !isGoingToWelcome) {
-          return AppPaths.welcome;
-        }
-
-        // If not authenticated and not going to auth/welcome/splash, redirect to auth
-        if (!isAuthenticated &&
-            !isGoingToAuth &&
-            !isGoingToWelcome &&
-            !isGoingToSplash) {
+        // Welcome flow only for unauthenticated users
+        if (!isAuthenticated) {
+          final prefs = await SharedPreferences.getInstance();
+          final hasSeenWelcome = prefs.getBool('has_seen_welcome') ?? false;
+          if (!hasSeenWelcome && path != AppPaths.welcome) {
+            return AppPaths.welcome;
+          }
+          if (path == AppPaths.auth || path == AppPaths.welcome) {
+            return null;
+          }
           return AppPaths.auth;
         }
 
-        // Profile completion check
-        if (isAuthenticated && !isGoingToSplash) {
-          final user = currentUserAsync.valueOrNull;
-          final isProfileComplete = user?.isProfileComplete ?? false;
-          if (!isProfileComplete &&
-              state.matchedLocation != AppPaths.profileSetup) {
-            return AppPaths.profileSetup;
-          }
+        // Authenticated: enforce profile setup once
+        final user = currentUserAsync.valueOrNull;
+        final isProfileComplete = user?.isProfileComplete ?? false;
+        if (!isProfileComplete && path != AppPaths.profileSetup) {
+          return AppPaths.profileSetup;
         }
 
-        // If authenticated (non-anonymous) and going to auth, redirect to home
-        if (isAuthenticated && state.matchedLocation == AppPaths.auth) {
+        // Prevent going back to auth/welcome when already authenticated
+        if (path == AppPaths.auth || path == AppPaths.welcome) {
           return AppPaths.home;
         }
 
-        return null; // No redirect
+        return null;
       } catch (e) {
-        // If redirect fails, go to auth screen
         debugPrint('Router redirect error: $e');
         return AppPaths.auth;
       }
@@ -387,6 +379,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             loader: community_activity_feed_screen.loadLibrary(),
             builder: () =>
                 community_activity_feed_screen.CommunityActivityFeedScreen()),
+      ),
+      GoRoute(
+        path: AppPaths.weatherDetail,
+        name: 'weatherDetail',
+        builder: (context, state) => const WeatherDetailScreen(),
       ),
 
       // Game Calendar

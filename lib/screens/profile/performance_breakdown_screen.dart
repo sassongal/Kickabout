@@ -8,6 +8,7 @@ import 'package:kickadoor/widgets/futuristic/empty_state.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:intl/intl.dart';
 
 /// Performance breakdown by hub for a player
 class PerformanceBreakdownScreen extends ConsumerStatefulWidget {
@@ -46,8 +47,12 @@ class _PerformanceBreakdownScreenState
         int wins = 0;
         int goals = 0;
         int assists = 0;
+        DateTime? lastGameDate;
 
         for (final game in myGames) {
+          // Track most recent game date
+          lastGameDate = _maxDate(lastGameDate, game.gameDate);
+
           // Find user's team
           String? myTeamColor;
           for (final team in game.teams) {
@@ -83,12 +88,19 @@ class _PerformanceBreakdownScreenState
           wins: wins,
           goals: goals,
           assists: assists,
+          lastGameDate: lastGameDate,
         ));
       } catch (_) {
         // Skip hub if fetching fails
       }
     }
     return results;
+  }
+
+  DateTime? _maxDate(DateTime? a, DateTime? b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a.isAfter(b) ? a : b;
   }
 
   @override
@@ -123,14 +135,50 @@ class _PerformanceBreakdownScreenState
               icon: Icons.sports_soccer,
               title: 'אין נתונים',
               message: 'לא נמצאו משחקים עבור הובים שלך',
+              action: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/games/create'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('צור משחק'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push('/discover'),
+                    icon: const Icon(Icons.group_add),
+                    label: const Text('הצטרף להאב'),
+                  ),
+                ],
+              ),
             );
           }
 
+          final totalGames =
+              hubs.fold<int>(0, (sum, h) => sum + h.gamesPlayed);
+          final totalWins = hubs.fold<int>(0, (sum, h) => sum + h.wins);
+          final totalGoals = hubs.fold<int>(0, (sum, h) => sum + h.goals);
+          final totalAssists = hubs.fold<int>(0, (sum, h) => sum + h.assists);
+          final winRate =
+              totalGames == 0 ? 0.0 : (totalWins / totalGames * 100);
+          final lastGameDate = hubs.fold<DateTime?>(
+              null, (acc, h) => _maxDate(acc, h.lastGameDate));
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: hubs.length,
+            itemCount: hubs.length + 1,
             itemBuilder: (context, index) {
-              final item = hubs[index];
+              if (index == 0) {
+                return _SummaryCard(
+                  totalGames: totalGames,
+                  totalWins: totalWins,
+                  totalGoals: totalGoals,
+                  totalAssists: totalAssists,
+                  winRate: winRate,
+                  lastGameDate: lastGameDate,
+                );
+              }
+              final item = hubs[index - 1];
               return FuturisticCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 onTap: () => context.push('/hubs/${item.hub.hubId}'),
@@ -156,28 +204,33 @@ class _PerformanceBreakdownScreenState
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
                             children: [
                               _StatBadge(
                                   label: 'משחקים',
                                   value: item.gamesPlayed.toString(),
                                   color: Colors.blue),
-                              const SizedBox(width: 8),
                               _StatBadge(
                                   label: 'ניצחונות',
                                   value: item.wins.toString(),
                                   color: Colors.green),
-                              const SizedBox(width: 8),
                               _StatBadge(
                                   label: 'שערים',
                                   value: item.goals.toString(),
                                   color: Colors.orange),
-                              const SizedBox(width: 8),
                               _StatBadge(
                                   label: 'בישולים',
                                   value: item.assists.toString(),
                                   color: Colors.purple),
                             ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'ניצחונות/משחקים: ${item.wins}/${item.gamesPlayed}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -189,6 +242,64 @@ class _PerformanceBreakdownScreenState
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  final int totalGames;
+  final int totalWins;
+  final int totalGoals;
+  final int totalAssists;
+  final double winRate;
+  final DateTime? lastGameDate;
+
+  const _SummaryCard({
+    required this.totalGames,
+    required this.totalWins,
+    required this.totalGoals,
+    required this.totalAssists,
+    required this.winRate,
+    required this.lastGameDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FuturisticCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'סיכום ביצועים',
+            style: FuturisticTypography.labelLarge.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _StatBadge(label: 'משחקים', value: '$totalGames', color: Colors.blue),
+              _StatBadge(label: 'ניצחונות', value: '$totalWins', color: Colors.green),
+              _StatBadge(label: 'שערים', value: '$totalGoals', color: Colors.orange),
+              _StatBadge(label: 'בישולים', value: '$totalAssists', color: Colors.purple),
+              _StatBadge(
+                  label: 'אחוז ניצחונות',
+                  value: '${winRate.toStringAsFixed(1)}%',
+                  color: Colors.teal),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            lastGameDate != null
+                ? 'משחק אחרון: ${DateFormat('dd/MM/yy').format(lastGameDate!)}'
+                : 'אין משחקים קודמים',
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -245,6 +356,7 @@ class _HubPerformance {
   final int wins;
   final int goals;
   final int assists;
+  final DateTime? lastGameDate;
 
   _HubPerformance({
     required this.hub,
@@ -252,5 +364,6 @@ class _HubPerformance {
     required this.wins,
     required this.goals,
     required this.assists,
+    required this.lastGameDate,
   });
 }
