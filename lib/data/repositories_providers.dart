@@ -35,7 +35,8 @@ final signupsRepositoryProvider = Provider<SignupsRepository>((ref) {
   return SignupsRepository(firestore: ref.watch(firestoreProvider));
 });
 
-final favoriteTeamsRepositoryProvider = Provider<FavoriteTeamsRepository>((ref) {
+final favoriteTeamsRepositoryProvider =
+    Provider<FavoriteTeamsRepository>((ref) {
   return FavoriteTeamsRepository(ref.watch(firestoreProvider));
 });
 
@@ -78,7 +79,8 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return ChatRepository(firestore: ref.watch(firestoreProvider));
 });
 
-final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) {
+final notificationsRepositoryProvider =
+    Provider<NotificationsRepository>((ref) {
   return NotificationsRepository(firestore: ref.watch(firestoreProvider));
 });
 
@@ -90,7 +92,8 @@ final leaderboardRepositoryProvider = Provider<LeaderboardRepository>((ref) {
   return LeaderboardRepository(firestore: ref.watch(firestoreProvider));
 });
 
-final privateMessagesRepositoryProvider = Provider<PrivateMessagesRepository>((ref) {
+final privateMessagesRepositoryProvider =
+    Provider<PrivateMessagesRepository>((ref) {
   return PrivateMessagesRepository(firestore: ref.watch(firestoreProvider));
 });
 
@@ -112,7 +115,8 @@ final weatherServiceProvider = Provider<WeatherService>((ref) {
 });
 
 /// Push notification service provider
-final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+final pushNotificationServiceProvider =
+    Provider<PushNotificationService>((ref) {
   return PushNotificationService();
 });
 
@@ -122,7 +126,8 @@ final gameReminderServiceProvider = Provider<GameReminderService>((ref) {
 });
 
 /// Push notification integration service provider
-final pushNotificationIntegrationServiceProvider = Provider<PushNotificationIntegrationService>((ref) {
+final pushNotificationIntegrationServiceProvider =
+    Provider<PushNotificationIntegrationService>((ref) {
   return PushNotificationIntegrationService();
 });
 
@@ -163,7 +168,9 @@ final customApiServiceProvider = Provider<CustomApiService>((ref) {
 });
 
 /// Leaderboard provider - watches top ranked users
-final leaderboardProvider = FutureProvider.family<List<LeaderboardEntry>, LeaderboardParams>((ref, params) async {
+final leaderboardProvider =
+    FutureProvider.family<List<LeaderboardEntry>, LeaderboardParams>(
+        (ref, params) async {
   final leaderboardRepo = ref.watch(leaderboardRepositoryProvider);
   return leaderboardRepo.getLeaderboard(
     type: params.type,
@@ -198,7 +205,8 @@ class LeaderboardParams {
           limit == other.limit;
 
   @override
-  int get hashCode => type.hashCode ^ hubId.hashCode ^ period.hashCode ^ limit.hashCode;
+  int get hashCode =>
+      type.hashCode ^ hubId.hashCode ^ period.hashCode ^ limit.hashCode;
 }
 
 /// Feed state for pagination
@@ -239,8 +247,7 @@ class FeedNotifier extends StateNotifier<FeedState> {
   final FeedRepository _feedRepo;
   final String _hubId;
 
-  FeedNotifier(this._feedRepo, this._hubId)
-      : super(FeedState(posts: [])) {
+  FeedNotifier(this._feedRepo, this._hubId) : super(FeedState(posts: [])) {
     _loadInitialPage();
   }
 
@@ -298,7 +305,8 @@ class FeedNotifier extends StateNotifier<FeedState> {
 }
 
 /// Feed provider for a specific hub
-final feedNotifierProvider = StateNotifierProvider.family<FeedNotifier, FeedState, String>(
+final feedNotifierProvider =
+    StateNotifierProvider.family<FeedNotifier, FeedState, String>(
   (ref, hubId) {
     final feedRepo = ref.watch(feedRepositoryProvider);
     return FeedNotifier(feedRepo, hubId);
@@ -306,13 +314,16 @@ final feedNotifierProvider = StateNotifierProvider.family<FeedNotifier, FeedStat
 );
 
 /// Unread notifications count provider
-final unreadNotificationsCountProvider = StreamProvider.family<int, String>((ref, userId) {
+final unreadNotificationsCountProvider =
+    StreamProvider.family<int, String>((ref, userId) {
+  ref.keepAlive(); // Prevent disposal during navigation
   final notificationsRepo = ref.watch(notificationsRepositoryProvider);
   return notificationsRepo.watchUnreadCount(userId);
 });
 
 /// Home dashboard data provider (weather & vibe) - using Open-Meteo (free)
-final homeDashboardDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final homeDashboardDataProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
   try {
     final locationService = ref.read(locationServiceProvider);
     final weatherService = ref.read(weatherServiceProvider);
@@ -360,18 +371,20 @@ final homeDashboardDataProvider = FutureProvider<Map<String, dynamic>>((ref) asy
 });
 
 /// Hub role provider - determines user's role in a specific hub
-/// 
+///
 /// Hub permissions provider - provides HubPermissions for a user in a hub
 /// Usage: ref.watch(hubPermissionsProvider((hubId: 'xxx', userId: 'yyy')))
-final hubPermissionsProvider = FutureProvider.family<HubPermissions, ({String hubId, String userId})>((ref, params) async {
+final hubPermissionsProvider =
+    FutureProvider.family<HubPermissions, ({String hubId, String userId})>(
+        (ref, params) async {
   try {
     final hubsRepo = ref.read(hubsRepositoryProvider);
     final hub = await hubsRepo.getHub(params.hubId);
-    
+
     if (hub == null) {
       throw Exception('Hub not found');
     }
-    
+
     return HubPermissions(hub: hub, userId: params.userId);
   } catch (e) {
     rethrow;
@@ -381,7 +394,8 @@ final hubPermissionsProvider = FutureProvider.family<HubPermissions, ({String hu
 /// Returns UserRole.admin if user is the hub creator or has manager/moderator role
 /// Returns UserRole.member if user is a member of the hub
 /// Returns UserRole.none if user is not a member
-final hubRoleProvider = FutureProvider.family<UserRole, String>((ref, hubId) async {
+final hubRoleProvider =
+    FutureProvider.family<UserRole, String>((ref, hubId) async {
   try {
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) {
@@ -390,7 +404,7 @@ final hubRoleProvider = FutureProvider.family<UserRole, String>((ref, hubId) asy
 
     final hubsRepo = ref.read(hubsRepositoryProvider);
     final hub = await hubsRepo.getHub(hubId);
-    
+
     if (hub == null) {
       return UserRole.none;
     }
@@ -407,7 +421,7 @@ final hubRoleProvider = FutureProvider.family<UserRole, String>((ref, hubId) asy
       if (roleString == 'admin') {
         return UserRole.admin;
       }
-      
+
       // Check HubRole enum values
       final hubRole = HubRole.fromFirestore(roleString);
       // Manager and moderator are considered admin
@@ -434,7 +448,7 @@ final hubRoleProvider = FutureProvider.family<UserRole, String>((ref, hubId) asy
 });
 
 /// Admin tasks provider - counts games that need to be closed
-/// 
+///
 /// Returns the number of games that:
 /// - User is admin of (hub manager)
 /// - Status is 'teamsFormed' or 'inProgress'
@@ -456,7 +470,7 @@ final adminTasksProvider = StreamProvider<int>((ref) {
 
       // Get all hubs where user is admin
       final adminHubIds = <String>{};
-      
+
       // Check user.hubIds (if exists) or query hubs
       final userHubIds = user.hubIds;
       if (userHubIds.isNotEmpty) {
@@ -471,7 +485,8 @@ final adminTasksProvider = StreamProvider<int>((ref) {
                 final roleString = hub.roles[currentUserId];
                 if (roleString != null) {
                   final hubRole = HubRole.fromFirestore(roleString);
-                  if (hubRole == HubRole.manager || hubRole == HubRole.moderator) {
+                  if (hubRole == HubRole.manager ||
+                      hubRole == HubRole.moderator) {
                     adminHubIds.add(hubId);
                   }
                 }
@@ -494,7 +509,7 @@ final adminTasksProvider = StreamProvider<int>((ref) {
         try {
           // Get games for this hub
           final games = await gamesRepo.listGamesByHub(hubId);
-          
+
           // Filter stuck games
           final stuckGames = games.where((game) {
             final isStuckStatus = game.status == GameStatus.teamsFormed ||

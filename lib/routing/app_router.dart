@@ -69,6 +69,8 @@ import 'package:kickadoor/screens/players/players_map_screen.dart'
     deferred as players_map_screen;
 import 'package:kickadoor/screens/hubs/hubs_board_screen.dart'
     deferred as hubs_board_screen;
+import 'package:kickadoor/screens/admin/admin_dashboard_screen.dart'
+    deferred as admin_dashboard_screen;
 import 'package:kickadoor/screens/admin/generate_dummy_data_screen.dart'
     deferred as generate_dummy_data_screen;
 import 'package:kickadoor/screens/hub/manage_roles_screen.dart'
@@ -346,6 +348,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => LazyRouteLoader(
             loader: hubs_board_screen.loadLibrary(),
             builder: () => hubs_board_screen.HubsBoardScreen()),
+      ),
+
+      // Admin - Dashboard
+      GoRoute(
+        path: '/admin/dashboard',
+        name: 'adminDashboard',
+        builder: (context, state) => LazyRouteLoader(
+            loader: admin_dashboard_screen.loadLibrary(),
+            builder: () => admin_dashboard_screen.AdminDashboardScreen()),
       ),
 
       // Admin - Generate dummy data

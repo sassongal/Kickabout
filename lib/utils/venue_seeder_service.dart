@@ -55,6 +55,9 @@ class VenueSeederService {
       } catch (e) {
         debugPrint('Error seeding ${city['name']}: $e');
       }
+
+      // Throttle requests between cities to avoid hitting API limits
+      await Future.delayed(const Duration(seconds: 1));
     }
 
     debugPrint(

@@ -270,17 +270,17 @@ class _HomeScreenFuturisticFigmaState
                             child: _QuickActionButton(
                               icon: Icons.person_search,
                               label: 'מצא שחקנים',
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFF4CAF50),
-                              Color(0xFF388E3C)
-                            ], // ירוק
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF4CAF50),
+                                  Color(0xFF388E3C)
+                                ], // ירוק
+                              ),
+                              onTap: () => context.push(AppPaths.playersBoard),
+                            ),
                           ),
-                          onTap: () => context.push(AppPaths.playersBoard),
-                        ),
-                      ),
                         ],
                       ),
                       const SizedBox(height: 16), // Reduced space
@@ -730,8 +730,22 @@ class _HomeScreenFuturisticFigmaState
                     ),
                     const SizedBox(height: 24),
 
-                    // Developer Tools
+                    // Developer Tools & Admin Console
                     if (user != null) ...[
+                      // Admin Console Button (prominent)
+                      ElevatedButton.icon(
+                        onPressed: () => context.push('/admin/dashboard'),
+                        icon: const Icon(Icons.admin_panel_settings),
+                        label: const Text('Admin Console'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.deepPurple,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Developer Tools Row
                       Row(
                         children: [
                           Expanded(

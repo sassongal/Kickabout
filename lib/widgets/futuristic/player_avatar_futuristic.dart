@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/widgets/optimized_image.dart';
 
 /// Futuristic player avatar with level indicator
 class PlayerAvatarFuturistic extends StatelessWidget {
@@ -34,10 +35,12 @@ class PlayerAvatarFuturistic extends StatelessWidget {
           ),
           child: user.photoUrl != null
               ? ClipOval(
-                  child: Image.network(
-                    user.photoUrl!,
+                  child: OptimizedImage(
+                    imageUrl: user.photoUrl!,
+                    width: radius * 2,
+                    height: radius * 2,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _defaultAvatar(),
+                    errorWidget: _defaultAvatar(),
                   ),
                 )
               : _defaultAvatar(),
@@ -80,4 +83,3 @@ class PlayerAvatarFuturistic extends StatelessWidget {
     );
   }
 }
-
