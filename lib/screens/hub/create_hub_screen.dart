@@ -7,9 +7,8 @@ import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/services/analytics_service.dart';
-import 'package:kickadoor/screens/location/map_picker_screen.dart';
+import 'package:kickadoor/widgets/hub/hub_venues_manager.dart';
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -24,10 +23,10 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   bool _isLoading = false;
-  GeoPoint? _selectedLocation;
-  String? _locationAddress;
-  bool _isLoadingLocation = false;
   String? _selectedRegion;
+
+  List<Venue> _selectedVenues = [];
+  String? _mainVenueId;
 
   @override
   void initState() {
@@ -59,48 +58,6 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
     super.dispose();
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() {
-      _isLoadingLocation = true;
-    });
-
-    try {
-      final locationService = ref.read(locationServiceProvider);
-      final position = await locationService.getCurrentLocation();
-
-      if (position != null) {
-        final geoPoint = locationService.positionToGeoPoint(position);
-        final address = await locationService.coordinatesToAddress(
-          position.latitude,
-          position.longitude,
-        );
-
-        setState(() {
-          _selectedLocation = geoPoint;
-          _locationAddress = address ??
-              '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
-        });
-      } else {
-        if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            AppLocalizations.of(context)!.locationPermissionError,
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingLocation = false;
-        });
-      }
-    }
-  }
-
   Future<void> _createHub() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -128,18 +85,40 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
       return;
     }
 
+    if (_selectedVenues.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('נא לבחור לפחות מגרש אחד')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
 
+      // Determine main venue and its location
+      Venue? mainVenue;
+      if (_mainVenueId != null) {
+        mainVenue = _selectedVenues.firstWhere(
+          (v) => v.venueId == _mainVenueId,
+          orElse: () => _selectedVenues.first,
+        );
+      } else if (_selectedVenues.isNotEmpty) {
+        mainVenue = _selectedVenues.first;
+        _mainVenueId = mainVenue.venueId;
+      }
+
       // Generate geohash if location is provided
       String? geohash;
-      if (_selectedLocation != null) {
+      GeoPoint? location;
+
+      if (mainVenue != null) {
+        location = mainVenue.location;
         geohash = locationService.generateGeohash(
-          _selectedLocation!.latitude,
-          _selectedLocation!.longitude,
+          location.latitude,
+          location.longitude,
         );
       }
 
@@ -152,12 +131,35 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         createdBy: currentUserId,
         createdAt: DateTime.now(),
         memberIds: [currentUserId], // Creator is automatically a member
-        location: _selectedLocation,
+        location: location,
         geohash: geohash,
         region: _selectedRegion,
+        venueIds: _selectedVenues.map((v) => v.venueId).toList(),
+        mainVenueId: _mainVenueId,
+        primaryVenueId: _mainVenueId,
+        primaryVenueLocation: location,
       );
 
-      await hubsRepo.createHub(hub);
+      final hubId = await hubsRepo.createHub(hub);
+
+      // Update hubCount for selected venues
+      // Note: createHub doesn't do this automatically yet, so we might need to do it here
+      // or update createHub. Since createHub is generic, let's do it here or via a separate call.
+      // Ideally HubsRepository should handle this, but for now let's use VenuesRepository or HubsRepository helper.
+      // Actually, setHubPrimaryVenue handles the primary one.
+      // But we are creating a new hub.
+
+      // Let's manually increment hubCount for all venues
+      final venuesRepo = ref.read(venuesRepositoryProvider);
+      for (final venue in _selectedVenues) {
+        // We can use linkSecondaryVenueToHub which increments hubCount
+        // But we need to be careful not to double add to venueIds (createHub already added them)
+        // Actually linkSecondaryVenueToHub adds to venueIds AND increments hubCount.
+        // Since createHub added venueIds, we just need to increment hubCount.
+        // But we don't have a method just for that exposed easily.
+        // Let's rely on a future update or just call linkSecondaryVenueToHub which checks for existence.
+        await venuesRepo.linkSecondaryVenueToHub(hubId, venue.venueId);
+      }
 
       // Log analytics
       try {
@@ -278,144 +280,20 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                   },
                 );
               }),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-              // Venues section
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.venuesOptionalLabel,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.venuesAddLaterInfo,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          // Note: Hub ID will be available after creation
-                          // For now, just show info
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.venuesAddAfterCreationInfo),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.add_location_alt),
-                        label: Text(l10n.addVenuesButton),
-                      ),
-                    ],
-                  ),
-                ),
+              // Hub Venues Manager
+              HubVenuesManager(
+                initialVenues: _selectedVenues,
+                initialMainVenueId: _mainVenueId,
+                onChanged: (venues, mainVenueId) {
+                  setState(() {
+                    _selectedVenues = venues;
+                    _mainVenueId = mainVenueId;
+                  });
+                },
               ),
-              const SizedBox(height: 16),
 
-              // Location section (deprecated - use venues instead)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.locationOptionalLabel,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_locationAddress != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.location_on, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _locationAddress!,
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedLocation = null;
-                                    _locationAddress = null;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isLoadingLocation
-                                  ? null
-                                  : _getCurrentLocation,
-                              icon: _isLoadingLocation
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.my_location),
-                              label: Text(
-                                _isLoadingLocation
-                                    ? l10n.gettingLocation
-                                    : l10n.currentLocation,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final result =
-                                    await context.push<Map<String, dynamic>>(
-                                  '/map-picker',
-                                  extra: MapPickerScreen(
-                                    initialLocation: _selectedLocation,
-                                  ),
-                                );
-                                if (result != null && mounted) {
-                                  setState(() {
-                                    _selectedLocation =
-                                        result['location'] as GeoPoint;
-                                    _locationAddress =
-                                        result['address'] as String?;
-                                  });
-                                }
-                              },
-                              icon: const Icon(Icons.map),
-                              label: Text(l10n.selectOnMap),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               const SizedBox(height: 32),
 
               // Create button

@@ -7,12 +7,32 @@ import 'package:kickadoor/services/firestore_paths.dart';
 import 'package:kickadoor/services/google_places_service.dart';
 import 'package:kickadoor/utils/geohash_utils.dart';
 
+import 'package:kickadoor/models/venue_edit_request.dart';
+
 /// Repository for Venue operations
 class VenuesRepository {
   final FirebaseFirestore _firestore;
 
   VenuesRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  /// Submit a venue edit request for moderation
+  Future<void> submitEditRequest(VenueEditRequest request) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final data = request.toJson();
+      // Use requestId as document ID
+      await _firestore
+          .collection('venue_edit_requests')
+          .doc(request.requestId)
+          .set(data);
+    } catch (e) {
+      throw Exception('Failed to submit edit request: $e');
+    }
+  }
 
   /// Get venue by ID
   Future<Venue?> getVenue(String venueId) async {

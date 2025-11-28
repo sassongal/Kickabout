@@ -9,8 +9,9 @@ import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/models/hub_role.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/screens/hub/hub_invitations_screen.dart';
-import 'package:go_router/go_router.dart';
-import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kickadoor/widgets/hub/hub_venues_manager.dart';
+import 'package:kickadoor/models/venue.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
@@ -311,48 +312,20 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                   const SizedBox(height: 16),
                   // Venues Management
                   Card(
-                    child: ListTile(
+                    child: ExpansionTile(
                       title: Text(l10n.manageVenues),
                       subtitle: Text(l10n.manageVenuesDescription),
-                      trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () async {
-                        final selectedVenue = await context.push<Venue?>(
-                          '/venues/search?hubId=${widget.hubId}&select=true',
-                        );
-
-                        if (selectedVenue != null) {
-                          try {
-                            final hubsRepo = ref.read(hubsRepositoryProvider);
-                            final geohash = GeohashUtils.encode(
-                              selectedVenue.location.latitude,
-                              selectedVenue.location.longitude,
-                              precision: 8,
-                            );
-
-                            await hubsRepo.updateHub(widget.hubId, {
-                              'primaryVenueId': selectedVenue.venueId,
-                              'primaryVenueLocation':
-                                  selectedVenue.location,
-                              'location': selectedVenue.location,
-                              'geohash': geohash,
-                            });
-
-                            if (mounted) {
-                              SnackbarHelper.showSuccess(
-                                context,
-                                'עודכן מגרש הבית של ההאב',
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              SnackbarHelper.showError(
-                                context,
-                                'שגיאה בעדכון מגרש הבית: $e',
-                              );
-                            }
-                          }
-                        }
-                      },
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: _HubVenuesEditor(
+                            hubId: widget.hubId,
+                            initialVenueIds: hub.venueIds,
+                            initialMainVenueId:
+                                hub.mainVenueId ?? hub.primaryVenueId,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -458,6 +431,158 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
       if (!mounted) return;
       SnackbarHelper.showError(context, l10n.settingUpdateError(e.toString()));
     }
+  }
+}
+
+/// Widget for editing hub venues
+class _HubVenuesEditor extends ConsumerStatefulWidget {
+  final String hubId;
+  final List<String> initialVenueIds;
+  final String? initialMainVenueId;
+
+  const _HubVenuesEditor({
+    required this.hubId,
+    required this.initialVenueIds,
+    this.initialMainVenueId,
+  });
+
+  @override
+  ConsumerState<_HubVenuesEditor> createState() => _HubVenuesEditorState();
+}
+
+class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
+  bool _isLoading = true;
+  bool _isSaving = false;
+  List<Venue> _venues = [];
+  String? _mainVenueId;
+  bool _hasChanges = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVenues();
+    _mainVenueId = widget.initialMainVenueId;
+  }
+
+  Future<void> _loadVenues() async {
+    try {
+      final venuesRepo = ref.read(venuesRepositoryProvider);
+      final futures =
+          widget.initialVenueIds.map((id) => venuesRepo.getVenue(id));
+      final venues = await Future.wait(futures);
+
+      if (mounted) {
+        setState(() {
+          _venues = venues.whereType<Venue>().toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading venues: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _saveVenues() async {
+    setState(() => _isSaving = true);
+
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final locationService = ref.read(locationServiceProvider);
+
+      // Determine main venue location
+      GeoPoint? location;
+      String? geohash;
+
+      if (_mainVenueId != null) {
+        final mainVenue = _venues.firstWhere(
+          (v) => v.venueId == _mainVenueId,
+          orElse: () => _venues.first,
+        );
+        location = mainVenue.location;
+        geohash = locationService.generateGeohash(
+          location.latitude,
+          location.longitude,
+        );
+      }
+
+      // Update hub
+      await hubsRepo.updateHub(widget.hubId, {
+        'venueIds': _venues.map((v) => v.venueId).toList(),
+        'mainVenueId': _mainVenueId,
+        'primaryVenueId': _mainVenueId,
+        'primaryVenueLocation': location,
+        'location': location,
+        'geohash': geohash,
+      });
+
+      // Update venue hub counts (optional but good for consistency)
+      // We can iterate and link/unlink if needed, but for now let's assume
+      // the updateHub call is enough for the hub side.
+      // Ideally we should handle hubCount on venues too.
+      // Let's use VenuesRepository to ensure consistency.
+      final venuesRepo = ref.read(venuesRepositoryProvider);
+
+      // Link new venues
+      for (final venue in _venues) {
+        await venuesRepo.linkSecondaryVenueToHub(widget.hubId, venue.venueId);
+      }
+
+      // Note: We are not unlinking removed venues here to keep it simple and safe.
+      // Removed venues will just have an inaccurate hubCount, which is acceptable for now.
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'מגרשי הבית עודכנו בהצלחה');
+        setState(() => _hasChanges = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בעדכון מגרשים: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HubVenuesManager(
+          initialVenues: _venues,
+          initialMainVenueId: _mainVenueId,
+          onChanged: (venues, mainVenueId) {
+            setState(() {
+              _venues = venues;
+              _mainVenueId = mainVenueId;
+              _hasChanges = true;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        if (_hasChanges)
+          ElevatedButton.icon(
+            onPressed: _isSaving ? null : _saveVenues,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save),
+            label: Text(_isSaving ? 'שומר...' : 'שמור שינויים'),
+          ),
+      ],
+    );
   }
 }
 

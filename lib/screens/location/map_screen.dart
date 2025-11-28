@@ -10,6 +10,8 @@ import 'package:kickadoor/widgets/app_scaffold.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kickadoor/models/venue.dart';
+import 'package:kickadoor/models/venue_edit_request.dart';
 import 'package:kickadoor/models/models.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
@@ -1243,28 +1245,34 @@ class _VenueDetailsSheetState extends ConsumerState<_VenueDetailsSheet> {
   Future<void> _updateVenueField(String field, dynamic value) async {
     setState(() => _isUpdating = true);
     try {
-      await ref.read(venuesRepositoryProvider).updateVenue(
-        _venue.venueId,
-        {field: value},
+      final currentUserId = ref.read(currentUserIdProvider);
+      if (currentUserId == null) {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'עליך להתחבר כדי להציע שינויים');
+        }
+        return;
+      }
+
+      // Generate a new ID for the request
+      final requestId =
+          FirebaseFirestore.instance.collection('venue_edit_requests').doc().id;
+
+      final request = VenueEditRequest(
+        requestId: requestId,
+        venueId: _venue.venueId,
+        userId: currentUserId,
+        changes: {field: value},
+        createdAt: DateTime.now(),
       );
 
-      // Update local state
-      setState(() {
-        if (field == 'surfaceType') {
-          _venue = _venue.copyWith(surfaceType: value as String);
-        } else if (field == 'amenities') {
-          _venue = _venue.copyWith(amenities: value as List<String>);
-        } else if (field == 'isPublic') {
-          _venue = _venue.copyWith(isPublic: value as bool);
-        }
-      });
+      await ref.read(venuesRepositoryProvider).submitEditRequest(request);
 
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'עודכן בהצלחה!');
+        SnackbarHelper.showSuccess(context, 'ההצעה נשלחה לבדיקה!');
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בעדכון: $e');
+        SnackbarHelper.showError(context, 'שגיאה בשליחת הצעה: $e');
       }
     } finally {
       if (mounted) {

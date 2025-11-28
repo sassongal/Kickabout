@@ -6,6 +6,8 @@ import 'package:kickadoor/scripts/generate_dummy_data.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:kickadoor/utils/venue_seeder_service.dart';
+
 /// Screen for generating dummy data (admin only)
 class GenerateDummyDataScreen extends ConsumerStatefulWidget {
   const GenerateDummyDataScreen({super.key});
@@ -168,6 +170,37 @@ class _GenerateDummyDataScreenState
         SnackbarHelper.showSuccess(
           context,
           'נוצר תרחיש חיפה: 30 שחקנים ו-6 הובים',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '❌ שגיאה: $e';
+        });
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _seedVenues() async {
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'מאכלס מגרשים בערים מרכזיות...';
+    });
+
+    try {
+      final seeder = ref.read(venueSeederServiceProvider);
+      await seeder.seedMajorCities();
+
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '✅ אכלוס מגרשים הסתיים בהצלחה!';
+        });
+        SnackbarHelper.showSuccess(
+          context,
+          'אכלוס מגרשים הסתיים בהצלחה!',
         );
       }
     } catch (e) {
@@ -397,6 +430,7 @@ class _GenerateDummyDataScreenState
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 12),
+              const SizedBox(height: 12),
               GradientButton(
                 label: 'צור תרחיש חיפה',
                 icon: Icons.location_city,
@@ -405,6 +439,17 @@ class _GenerateDummyDataScreenState
                 width: double.infinity,
                 gradient: const LinearGradient(
                   colors: [Colors.green, Colors.greenAccent],
+                ),
+              ),
+              const SizedBox(height: 16),
+              GradientButton(
+                label: 'אכלס מגרשים (ערים מרכזיות)',
+                icon: Icons.stadium,
+                onPressed: _isGenerating ? null : _seedVenues,
+                isLoading: _isGenerating,
+                width: double.infinity,
+                gradient: const LinearGradient(
+                  colors: [Colors.orange, Colors.deepOrange],
                 ),
               ),
               const SizedBox(height: 32),
