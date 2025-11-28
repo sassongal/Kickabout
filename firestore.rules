@@ -191,11 +191,14 @@ service cloud.firestore {
           (!('text' in request.resource.data) ||
            request.resource.data.text is string &&
            request.resource.data.text.size() > 0);
-        allow update, delete: if isHubAdmin(hubId) &&
+           request.resource.data.text is string &&
+           request.resource.data.text.size() > 0);
+        allow update: if (isHubAdmin(hubId) || request.auth.uid == resource.data.authorId) &&
           request.resource.data.postId == resource.data.postId &&
           request.resource.data.hubId == resource.data.hubId &&
           request.resource.data.authorId == resource.data.authorId &&
           request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isHubModerator(hubId) || request.auth.uid == resource.data.authorId;
 
         match /comments/{commentId} {
           allow read: if isAuthenticated();
@@ -206,12 +209,15 @@ service cloud.firestore {
             request.resource.data.hubId == hubId &&
             request.resource.data.authorId == request.auth.uid &&
             request.resource.data.createdAt is timestamp;
-          allow update, delete: if isHubAdmin(hubId) &&
+            request.resource.data.authorId == request.auth.uid &&
+            request.resource.data.createdAt is timestamp;
+          allow update: if (isHubAdmin(hubId) || request.auth.uid == resource.data.authorId) &&
             request.resource.data.commentId == resource.data.commentId &&
             request.resource.data.postId == resource.data.postId &&
             request.resource.data.hubId == resource.data.hubId &&
             request.resource.data.authorId == resource.data.authorId &&
             request.resource.data.createdAt == resource.data.createdAt;
+          allow delete: if isHubModerator(hubId) || request.auth.uid == resource.data.authorId;
         }
       }
 
@@ -275,12 +281,12 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read: if isAuthenticated();
 
-      allow create: if isHubModerator(request.resource.data.hubId) &&
+      allow create: if isHubMember(request.resource.data.hubId) &&
         isValidGame(request.resource.data) &&
         request.resource.data.gameId == gameId &&
         request.resource.data.createdBy == request.auth.uid;
 
-      allow update: if isHubModerator(resource.data.hubId) &&
+      allow update: if (isHubModerator(resource.data.hubId) || resource.data.createdBy == request.auth.uid) &&
         isValidGame(request.resource.data) &&
         request.resource.data.gameId == resource.data.gameId &&
         request.resource.data.createdBy == resource.data.createdBy &&
@@ -294,7 +300,7 @@ service cloud.firestore {
         (!('aggregateWins' in request.resource.data) || isHubAdmin(resource.data.hubId)) &&
         (!('matches' in request.resource.data) || isHubAdmin(resource.data.hubId));
 
-      allow delete: if isHubModerator(resource.data.hubId);
+      allow delete: if isHubModerator(resource.data.hubId) || resource.data.createdBy == request.auth.uid;
 
       // Signups
       match /signups/{userId} {

@@ -54,6 +54,7 @@ import 'package:kickadoor/screens/social/followers_screen.dart'
 import 'package:kickadoor/screens/home_screen_futuristic_figma.dart';
 import 'package:kickadoor/screens/game/game_chat_screen.dart'
     deferred as game_chat_screen;
+import 'package:kickadoor/screens/community/community_screen.dart';
 
 import 'package:kickadoor/screens/social/messages_list_screen.dart'
     deferred as messages_list_screen;
@@ -196,8 +197,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         // Wait for auth state to be available
         final authValue = authState.valueOrNull;
-        final isAuthenticated =
-            authValue != null && !authService.isAnonymous;
+        final isAuthenticated = authValue != null && !authService.isAnonymous;
 
         final isGoingToAuth = state.matchedLocation == AppPaths.auth;
         final isGoingToWelcome = state.matchedLocation == AppPaths.welcome;
@@ -208,10 +208,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           return null;
         }
 
-        // Welcome flow (first-time only)
+        // Welcome flow (first-time only) - only for unauthenticated users
         final prefs = await SharedPreferences.getInstance();
         final hasSeenWelcome = prefs.getBool('has_seen_welcome') ?? false;
-        if (!hasSeenWelcome && !isGoingToWelcome) {
+        if (!isAuthenticated && !hasSeenWelcome && !isGoingToWelcome) {
           return AppPaths.welcome;
         }
 
@@ -290,6 +290,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/',
         name: 'home',
         builder: (context, state) => const HomeScreenFuturisticFigma(),
+      ),
+
+      GoRoute(
+        path: AppPaths.community,
+        name: 'community',
+        builder: (context, state) => const CommunityScreen(),
       ),
 
       // Location/Discovery routes
@@ -838,7 +844,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Profile routes
       GoRoute(
-        path: AppPaths.playerProfile,
+        path: '/profile/:uid',
         name: 'playerProfile',
         builder: (context, state) => LazyRouteLoader(
             loader: player_profile_screen.loadLibrary(),

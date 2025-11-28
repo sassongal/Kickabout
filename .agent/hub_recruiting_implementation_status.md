@@ -334,5 +334,13 @@ The dropdown for linking events needs:
 2. Fix AnalyticsService API calls  
 3. Implement recruiting post card in feed
 4. Add hub inbox screen
-5. Add button to hub detail screen
-6. Test end-to-end flow
+5. Test end-to-end flow
+
+**Recent Fixes (2025-11-28):**
+- Fixed `FeedScreen` compilation errors (moved methods to correct scope)
+- Deleted unused `OnboardingScreen`
+- Ran `build_runner` to fix model errors
+- Implemented Feed Filtering UI and logic (Phase 8)
+- Fixed critical redirect loop in `AppRouter` (Welcome <-> Profile Setup)
+- Improved `DiscoverVenuesScreen` UI (dropdown, selection confirmation)
+- Fixed `HubDetailScreen` home venue saving logic (added to `venueIds`)

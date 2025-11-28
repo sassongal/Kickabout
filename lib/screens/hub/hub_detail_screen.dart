@@ -143,8 +143,12 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                 : null;
             return AppScaffold(
               title: hub.name,
-              floatingActionButton:
-                  isAdminRole ? _HubAdminSpeedDial(hubId: widget.hubId) : null,
+              floatingActionButton: hubPermissions != null &&
+                      (hubPermissions.canCreateGames() ||
+                          hubPermissions.canInvitePlayers())
+                  ? _HubAdminSpeedDial(
+                      hubId: widget.hubId, permissions: hubPermissions)
+                  : null,
               body: NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
                   return [
@@ -238,8 +242,10 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  // Command Center - Compact Header (for managers)
-                                  if (isAdminRole) ...[
+                                  // Command Center - Compact Header (for managers/moderators)
+                                  if (hubPermissions != null &&
+                                      (hubPermissions.isManager() ||
+                                          hubPermissions.isModerator())) ...[
                                     // Row 1: Top Actions (Manager Mode Toggle + IconButtons)
                                     Row(
                                       mainAxisAlignment:
@@ -275,15 +281,19 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                     0;
                                                 return Stack(
                                                   children: [
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                          Icons.inbox,
-                                                          size: 20),
-                                                      tooltip: 'בקשות הצטרפות',
-                                                      onPressed: () => context.push(
-                                                          '/hubs/${hub.hubId}/requests'),
-                                                      color: Colors.orange,
-                                                    ),
+                                                    if (hubPermissions
+                                                        .canManageMembers())
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                            Icons.inbox,
+                                                            size: 20),
+                                                        tooltip:
+                                                            'בקשות הצטרפות',
+                                                        onPressed: () =>
+                                                            context.push(
+                                                                '/hubs/${hub.hubId}/requests'),
+                                                        color: Colors.orange,
+                                                      ),
                                                     if (pendingCount > 0)
                                                       Positioned(
                                                         right: 8,
@@ -349,9 +359,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                   '/hubs/${hub.hubId}/analytics'),
                                               color: Colors.purple,
                                             ),
-                                            if (hubPermissions
-                                                    ?.canCreatePosts() ??
-                                                false)
+                                            if (hubPermissions.canCreatePosts())
                                               Column(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
@@ -360,9 +368,8 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                         Icons.person_search),
                                                     color: Colors.orange,
                                                     iconSize: 28,
-                                                    onPressed: () =>
-                                                        context.push(
-                                                            '/hubs/${hub.hubId}/create-recruiting-post'),
+                                                    onPressed: () => context.push(
+                                                        '/hubs/${hub.hubId}/create-recruiting-post'),
                                                     tooltip: 'מחפש שחקנים',
                                                   ),
                                                   const Text(
@@ -383,17 +390,26 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                     Row(
                                       children: [
                                         Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => context.push(
-                                                '/hubs/${hub.hubId}/settings'),
-                                            icon: const Icon(Icons.settings,
-                                                size: 18),
-                                            label: const Text('הגדרות'),
-                                            style: OutlinedButton.styleFrom(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 8),
-                                              minimumSize: const Size(0, 36),
+                                          child: Opacity(
+                                            opacity: hubPermissions
+                                                    .canManageSettings()
+                                                ? 1.0
+                                                : 0.5,
+                                            child: OutlinedButton.icon(
+                                              onPressed: hubPermissions
+                                                      .canManageSettings()
+                                                  ? () => context.push(
+                                                      '/hubs/${hub.hubId}/settings')
+                                                  : null,
+                                              icon: const Icon(Icons.settings,
+                                                  size: 18),
+                                              label: const Text('הגדרות'),
+                                              style: OutlinedButton.styleFrom(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8),
+                                                minimumSize: const Size(0, 36),
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -983,72 +999,6 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
     // Check if user is manager/admin (creator or has admin role)
     final isManagerOrAdmin = isHubManager || isAdmin;
 
-    return Column(
-      children: [
-        // Header with view all button
-        if (widget.hub.memberIds.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${widget.hub.memberIds.length} שחקנים',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                TextButton.icon(
-                  onPressed: () =>
-                      context.push('/hubs/${widget.hub.hubId}/players'),
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('צפה בכולם'),
-                ),
-              ],
-            ),
-          ),
-        // Add manual player button (for managers/admins)
-        if (isManagerOrAdmin)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                final result = await showDialog<bool>(
-                  context: context,
-                  builder: (context) =>
-                      AddManualPlayerDialog(hubId: widget.hubId),
-                );
-                if (result == true && context.mounted) {
-                  // Refresh will happen automatically via StreamBuilder
-                }
-              },
-              icon: const Icon(Icons.person_add),
-              label: const Text('הוסף שחקן ידנית'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                foregroundColor: Theme.of(context).colorScheme.onSecondary,
-              ),
-            ),
-          ),
-        // Members list (limited to 10 in tab view)
-        Expanded(
-          child: widget.hub.memberIds.isEmpty
-              ? FuturisticEmptyState(
-                  icon: Icons.people_outline,
-                  title: 'אין חברים',
-                  message: 'עדיין אין חברים ב-Hub זה',
-                )
-              : _buildMembersList(context, ref, limit: 10),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMembersList(BuildContext context, WidgetRef ref, {int? limit}) {
-    final currentUserId = ref.watch(currentUserIdProvider);
-    final isHubManager = currentUserId == widget.hub.createdBy;
-    final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
-    final isAdmin = roleAsync.valueOrNull == UserRole.admin;
-    final isManagerOrAdmin = isHubManager || isAdmin;
-
     // Debug: Log memberIds to help diagnose issues
     debugPrint('🔍 Members Tab - hub.memberIds: ${widget.hub.memberIds}');
     debugPrint(
@@ -1143,214 +1093,237 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
           );
         }
 
-        // Apply limit if specified (for preview mode)
-        final displayUsers = limit != null && usersToShow.length > limit
-            ? usersToShow.take(limit).toList()
-            : usersToShow;
+        final hubPermissions = currentUserId != null
+            ? HubPermissions(hub: widget.hub, userId: currentUserId)
+            : null;
 
-        return ListView.builder(
-          controller: _scrollController,
-          itemCount: displayUsers.length +
-              (limit != null && usersToShow.length > limit ? 1 : 0) +
-              (hasMoreToShow && limit == null ? 1 : 0),
-          padding: const EdgeInsets.all(8),
-          itemBuilder: (context, index) {
-            // Show "view all" button if limit is set
-            if (limit != null &&
-                usersToShow.length > limit &&
-                index == displayUsers.length) {
-              return Padding(
+        return Column(
+          children: [
+            // Add manual player button (for managers/moderators)
+            if (hubPermissions != null && hubPermissions.canManageMembers())
+              Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Center(
-                  child: TextButton.icon(
-                    onPressed: () =>
-                        context.push('/hubs/${widget.hub.hubId}/players'),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: Text('צפה ב-${usersToShow.length - limit} נוספים'),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final result = await showDialog<bool>(
+                        context: context,
+                        builder: (context) =>
+                            AddManualPlayerDialog(hubId: widget.hubId),
+                      );
+                      if (result == true && context.mounted) {
+                        // Refresh will happen automatically via StreamBuilder
+                        ref.invalidate(usersRepositoryProvider);
+                      }
+                    },
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('הוסף שחקן ידנית'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onSecondary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
-              );
-            }
-
-            // Show loading indicator at the bottom if pagination is active
-            if (limit == null &&
-                hasMoreToShow &&
-                index == displayUsers.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            final user = displayUsers[index];
-            final isManualPlayer = user.email.startsWith('manual_');
-
-            // Get first and last name - prefer firstName/lastName if available, otherwise split name
-            String firstName;
-            String lastName = '';
-
-            if (user.firstName != null && user.firstName!.isNotEmpty) {
-              firstName = user.firstName!;
-            } else if (user.name.isNotEmpty && user.name.contains(' ')) {
-              final nameParts = user.name.split(' ');
-              firstName = nameParts.first;
-              if (nameParts.length > 1) {
-                lastName = nameParts.sublist(1).join(' ');
-              }
-            } else {
-              firstName = user.name.isNotEmpty ? user.name : 'משתמש לא ידוע';
-              lastName = '';
-            }
-
-            if (user.lastName != null && user.lastName!.isNotEmpty) {
-              lastName = user.lastName!;
-            }
-
-            // Get user role in hub
-            final hubPermissions =
-                HubPermissions(hub: widget.hub, userId: user.uid);
-            String roleDisplayName;
-            IconData roleIcon;
-            Color? roleColor;
-
-            try {
-              final role = hubPermissions.userRole;
-              roleDisplayName = role.displayName;
-
-              // Determine if user is "שחקן משפיע" (influential player)
-              // Based on: high rank score (>= 7.0) or many participations (>= 10)
-              final isInfluential = user.currentRankScore >= 7.0 ||
-                  user.totalParticipations >= 10;
-
-              if (role == HubRole.manager) {
-                roleIcon = Icons.admin_panel_settings;
-                roleColor = Colors.blue;
-                roleDisplayName = 'מנהל';
-              } else if (role == HubRole.moderator) {
-                roleIcon = Icons.shield;
-                roleColor = Colors.purple;
-                roleDisplayName = 'מנחה';
-              } else if (isInfluential) {
-                roleIcon = Icons.star;
-                roleColor = Colors.amber;
-                roleDisplayName = 'שחקן משפיע';
-              } else {
-                roleIcon = Icons.person;
-                roleColor = Colors.grey;
-                roleDisplayName = 'שחקן רגיל';
-              }
-            } catch (e) {
-              // User is not a member, show as regular player
-              roleIcon = Icons.person;
-              roleColor = Colors.grey;
-              roleDisplayName = 'שחקן רגיל';
-            }
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: ListTile(
-                leading: CircleAvatar(
-                  radius: 28,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  backgroundImage:
-                      user.photoUrl != null && user.photoUrl!.isNotEmpty
-                          ? NetworkImage(user.photoUrl!)
-                          : null,
-                  child: user.photoUrl == null || user.photoUrl!.isEmpty
-                      ? Text(
-                          // Use initials from firstName/lastName or name
-                          (user.firstName != null && user.lastName != null)
-                              ? '${user.firstName![0]}${user.lastName![0]}'
-                              : (firstName.isNotEmpty && lastName.isNotEmpty)
-                                  ? '${firstName[0]}${lastName[0]}'
-                                  : firstName.isNotEmpty
-                                      ? firstName[0]
-                                      : '?',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        )
-                      : null,
-                ),
-                title: Text(
-                  firstName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (lastName.isNotEmpty)
-                      Text(
-                        lastName,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    if (isManualPlayer)
-                      Text(
-                        'שחקן ידני - ללא אפליקציה',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
-                      ),
-                  ],
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isManualPlayer && isManagerOrAdmin)
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () async {
-                          final result = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => EditManualPlayerDialog(
-                              player: user,
-                              hubId: widget.hubId,
-                            ),
-                          );
-                          if (result == true && context.mounted) {
-                            // Refresh will happen automatically via StreamBuilder
-                          }
-                        },
-                        tooltip: 'ערוך שחקן',
-                      ),
-                    // Show role badge with proper display name
-                    Chip(
-                      label: Text(roleDisplayName),
-                      backgroundColor: roleColor.withValues(alpha: 0.2),
-                      avatar: Icon(
-                        roleIcon,
-                        size: 16,
-                        color: roleColor,
-                      ),
-                    ),
-                  ],
-                ),
-                onTap: isManualPlayer
-                    ? (isManagerOrAdmin
-                        ? () async {
-                            final result = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => EditManualPlayerDialog(
-                                player: user,
-                                hubId: widget.hubId,
-                              ),
-                            );
-                            if (result == true && context.mounted) {
-                              // Refresh will happen automatically via StreamBuilder
-                            }
-                          }
-                        : null)
-                    : () => context.push('/profile/${user.uid}'),
               ),
-            );
-          },
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                itemCount: usersToShow.length + (hasMoreToShow ? 1 : 0),
+                padding: const EdgeInsets.all(8),
+                itemBuilder: (context, index) {
+                  // Show loading indicator at the bottom if pagination is active
+                  if (hasMoreToShow && index == usersToShow.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final user = usersToShow[index];
+                  final isManualPlayer = user.email.startsWith('manual_');
+
+                  // Get first and last name - prefer firstName/lastName if available, otherwise split name
+                  String firstName;
+                  String lastName = '';
+
+                  if (user.firstName != null && user.firstName!.isNotEmpty) {
+                    firstName = user.firstName!;
+                  } else if (user.name.isNotEmpty && user.name.contains(' ')) {
+                    final nameParts = user.name.split(' ');
+                    firstName = nameParts.first;
+                    if (nameParts.length > 1) {
+                      lastName = nameParts.sublist(1).join(' ');
+                    }
+                  } else {
+                    firstName =
+                        user.name.isNotEmpty ? user.name : 'משתמש לא ידוע';
+                    lastName = '';
+                  }
+
+                  if (user.lastName != null && user.lastName!.isNotEmpty) {
+                    lastName = user.lastName!;
+                  }
+
+                  // Get user role in hub
+                  final hubPermissions =
+                      HubPermissions(hub: widget.hub, userId: user.uid);
+                  String roleDisplayName;
+                  IconData roleIcon;
+                  Color? roleColor;
+
+                  try {
+                    final role = hubPermissions.userRole;
+                    roleDisplayName = role.displayName;
+
+                    // Determine if user is "שחקן משפיע" (influential player)
+                    // Based on: high rank score (>= 7.0) or many participations (>= 10)
+                    final isInfluential = user.currentRankScore >= 7.0 ||
+                        user.totalParticipations >= 10;
+
+                    if (role == HubRole.manager) {
+                      roleIcon = Icons.admin_panel_settings;
+                      roleColor = Colors.blue;
+                      roleDisplayName = 'מנהל';
+                    } else if (role == HubRole.moderator) {
+                      roleIcon = Icons.shield;
+                      roleColor = Colors.purple;
+                      roleDisplayName = 'מנחה';
+                    } else if (isInfluential) {
+                      roleIcon = Icons.star;
+                      roleColor = Colors.amber;
+                      roleDisplayName = 'שחקן משפיע';
+                    } else {
+                      roleIcon = Icons.person;
+                      roleColor = Colors.grey;
+                      roleDisplayName = 'שחקן רגיל';
+                    }
+                  } catch (e) {
+                    // User is not a member, show as regular player
+                    roleIcon = Icons.person;
+                    roleColor = Colors.grey;
+                    roleDisplayName = 'שחקן רגיל';
+                  }
+
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        radius: 28,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        backgroundImage:
+                            user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                ? NetworkImage(user.photoUrl!)
+                                : null,
+                        child: user.photoUrl == null || user.photoUrl!.isEmpty
+                            ? Text(
+                                // Use initials from firstName/lastName or name
+                                (user.firstName != null &&
+                                        user.lastName != null)
+                                    ? '${user.firstName![0]}${user.lastName![0]}'
+                                    : (firstName.isNotEmpty &&
+                                            lastName.isNotEmpty)
+                                        ? '${firstName[0]}${lastName[0]}'
+                                        : firstName.isNotEmpty
+                                            ? firstName[0]
+                                            : '?',
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        firstName,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (lastName.isNotEmpty)
+                            Text(
+                              lastName,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          if (isManualPlayer)
+                            Text(
+                              'שחקן ידני - ללא אפליקציה',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
+                                  ),
+                            ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isManualPlayer && isManagerOrAdmin)
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () async {
+                                final result = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => EditManualPlayerDialog(
+                                    player: user,
+                                    hubId: widget.hubId,
+                                  ),
+                                );
+                                if (result == true && context.mounted) {
+                                  // Refresh will happen automatically via StreamBuilder
+                                }
+                              },
+                              tooltip: 'ערוך שחקן',
+                            ),
+                          // Show role badge with proper display name
+                          Chip(
+                            label: Text(roleDisplayName),
+                            backgroundColor: roleColor.withValues(alpha: 0.2),
+                            avatar: Icon(
+                              roleIcon,
+                              size: 16,
+                              color: roleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      onTap: isManualPlayer
+                          ? (isManagerOrAdmin
+                              ? () async {
+                                  final result = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) =>
+                                        EditManualPlayerDialog(
+                                      player: user,
+                                      hubId: widget.hubId,
+                                    ),
+                                  );
+                                  if (result == true && context.mounted) {
+                                    // Refresh will happen automatically via StreamBuilder
+                                  }
+                                }
+                              : null)
+                          : () => context.push('/profile/${user.uid}'),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
@@ -1402,6 +1375,7 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
             'primaryVenueLocation': result.location,
             'location': result.location,
             'geohash': geohash,
+            'venueIds': FieldValue.arrayUnion([result.venueId]),
           });
         } else if (result is Map<String, dynamic>) {
           // Manual location selected
@@ -1432,6 +1406,7 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
             'primaryVenueLocation': location,
             'location': location,
             'geohash': geohash,
+            'venueIds': FieldValue.arrayUnion([newVenue.venueId]),
           });
         }
 
@@ -2286,8 +2261,9 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
 class _HubAdminSpeedDial extends StatelessWidget {
   final String hubId;
+  final HubPermissions permissions;
 
-  const _HubAdminSpeedDial({required this.hubId});
+  const _HubAdminSpeedDial({required this.hubId, required this.permissions});
 
   @override
   Widget build(BuildContext context) {
@@ -2304,45 +2280,34 @@ class _HubAdminSpeedDial extends StatelessWidget {
       overlayColor: Colors.black,
       overlayOpacity: 0.5,
       children: [
-        SpeedDialChild(
-          child: const Icon(Icons.event, color: Colors.black),
-          backgroundColor: const Color(0xFFFF6B35), // Vibrant orange
-          foregroundColor: Colors.black,
-          label: 'צור אירוע',
-          labelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        if (permissions.canCreateGames())
+          SpeedDialChild(
+            child: const Icon(Icons.event, color: Colors.black),
+            backgroundColor: const Color(0xFFFF6B35), // Vibrant orange
+            foregroundColor: Colors.black,
+            label: 'צור משחק',
+            labelStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            labelBackgroundColor: Colors.black87,
+            onTap: () => context.push('/games/create?hubId=$hubId'),
           ),
-          labelBackgroundColor: Colors.black87,
-          onTap: () => context.push('/hubs/$hubId/events/create'),
-        ),
-        SpeedDialChild(
-          child: const Icon(Icons.sports_soccer, color: Colors.black),
-          backgroundColor: const Color(0xFF00D9FF), // Neon cyan
-          foregroundColor: Colors.black,
-          label: 'צור משחק',
-          labelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        if (permissions.canInvitePlayers())
+          SpeedDialChild(
+            child: const Icon(Icons.person_search, color: Colors.black),
+            backgroundColor: const Color(0xFF39FF14), // Neon green
+            foregroundColor: Colors.black,
+            label: 'חפש שחקנים',
+            labelStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            labelBackgroundColor: Colors.black87,
+            onTap: () => context.push('/hubs/$hubId/scouting'),
           ),
-          labelBackgroundColor: Colors.black87,
-          onTap: () => context.push('/games/create?hubId=$hubId'),
-        ),
-        SpeedDialChild(
-          child: const Icon(Icons.person_search, color: Colors.black),
-          backgroundColor: const Color(0xFF39FF14), // Neon green
-          foregroundColor: Colors.black,
-          label: 'חפש שחקנים',
-          labelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          labelBackgroundColor: Colors.black87,
-          onTap: () => context.push('/hubs/$hubId/scouting'),
-        ),
       ],
     );
   }

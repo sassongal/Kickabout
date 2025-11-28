@@ -115,8 +115,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               // Filter chips
               Container(
                 height: 60,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 decoration: BoxDecoration(
                   color: Theme.of(context).scaffoldBackgroundColor,
                   boxShadow: [
@@ -223,8 +222,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             ? 'כשיהיו משחקים חדשים באזור שלך, הם יופיעו כאן'
                             : 'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
                         action: ElevatedButton.icon(
-                          onPressed: () => context
-                              .push('/hubs/${widget.hubId}/create-post'),
+                          onPressed: () =>
+                              context.push('/hubs/${widget.hubId}/create-post'),
                           icon: const Icon(Icons.add),
                           label: const Text('צור פוסט'),
                         ),
@@ -253,6 +252,33 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         );
       },
     );
+  }
+
+  Stream<List<FeedPost>> _getFeedStream(String? userRegion) {
+    final feedRepo = ref.read(feedRepositoryProvider);
+    final postType = _getPostTypeFromFilter(_selectedFilter);
+
+    if (userRegion != null && userRegion.isNotEmpty) {
+      return feedRepo.streamRegionalFeed(
+          region: userRegion, postType: postType);
+    }
+
+    return feedRepo.watchFeed(widget.hubId!, postType: postType);
+  }
+
+  String? _getPostTypeFromFilter(String filter) {
+    switch (filter) {
+      case 'games':
+        return 'game_completed';
+      case 'recruiting':
+        return 'hub_recruiting';
+      case 'achievements':
+        return 'achievement';
+      case 'posts':
+        return 'post';
+      default:
+        return null;
+    }
   }
 
   // Removed: _buildBody - not used (using StreamBuilder directly)
@@ -558,32 +584,6 @@ class _PostCard extends ConsumerWidget {
       return 'לפני ${difference.inDays} ימים';
     } else {
       return DateFormat('dd/MM/yyyy').format(time);
-    }
-  }
-
-  Stream<List<FeedPost>> _getFeedStream(String? userRegion) {
-    final feedRepo = ref.read(feedRepositoryProvider);
-    final postType = _getPostTypeFromFilter(_selectedFilter);
-
-    if (userRegion != null && userRegion.isNotEmpty) {
-      return feedRepo.streamRegionalFeed(region: userRegion, postType: postType);
-    }
-
-    return feedRepo.watchFeed(widget.hubId!, postType: postType);
-  }
-
-  String? _getPostTypeFromFilter(String filter) {
-    switch (filter) {
-      case 'games':
-        return 'game_completed';
-      case 'recruiting':
-        return 'hub_recruiting';
-      case 'achievements':
-        return 'achievement';
-      case 'posts':
-        return 'post';
-      default:
-        return null;
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kickadoor/widgets/futuristic/bottom_navigation_bar.dart';
+import 'package:kickadoor/routing/app_paths.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
 import 'package:kickadoor/data/repositories.dart';
 
@@ -151,14 +152,44 @@ class _HomeScreenFuturisticFigmaState
                         gamificationStream: gamificationStream,
                         onPerformanceTap: () =>
                             context.push('/profile/$currentUserId/performance'),
-                        onAvailabilityChanged: (value) {
-                          ref.read(usersRepositoryProvider).updateUser(
-                            currentUserId,
-                            {
-                              'availabilityStatus':
-                                  value ? 'available' : 'notAvailable'
-                            },
-                          );
+                        onAvailabilityChanged: (value) async {
+                          try {
+                            // Update availability status without triggering navigation
+                            await ref.read(usersRepositoryProvider).updateUser(
+                              currentUserId,
+                              {
+                                'availabilityStatus':
+                                    value ? 'available' : 'notAvailable'
+                              },
+                            );
+
+                            // Show feedback to user
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    value
+                                        ? 'סטטוס עודכן: זמין למשחקים'
+                                        : 'סטטוס עודכן: לא זמין למשחקים',
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor:
+                                      value ? Colors.green : Colors.grey,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            // Handle error without breaking UI
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('שגיאה בעדכון סטטוס: $e'),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          }
                         },
                       ),
                       const SizedBox(height: 16),
@@ -212,17 +243,17 @@ class _HomeScreenFuturisticFigmaState
                             child: _QuickActionButton(
                               icon: Icons.person_search,
                               label: 'מצא שחקנים',
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF4CAF50),
-                                  Color(0xFF388E3C)
-                                ], // ירוק
-                              ),
-                              onTap: () => context.push('/players'),
-                            ),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF4CAF50),
+                              Color(0xFF388E3C)
+                            ], // ירוק
                           ),
+                          onTap: () => context.push(AppPaths.playersBoard),
+                        ),
+                      ),
                         ],
                       ),
                       const SizedBox(height: 16), // Reduced space
@@ -1492,7 +1523,7 @@ class _ProfileSummaryCard extends StatelessWidget {
   final String currentUserId;
   final Stream<Gamification?> gamificationStream;
   final VoidCallback onPerformanceTap;
-  final ValueChanged<bool> onAvailabilityChanged;
+  final Future<void> Function(bool) onAvailabilityChanged;
 
   const _ProfileSummaryCard({
     required this.user,

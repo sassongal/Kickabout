@@ -313,6 +313,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                                 _autocompleteResults = [];
                                 _showAutocomplete = false;
                                 _selectedPlace = null;
+                                _selectedVenue = null;
                               });
                               _searchVenues('');
                             },
@@ -321,13 +322,21 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
+                  onTap: () {
+                    if (_searchController.text.length >= 3) {
+                      setState(() => _showAutocomplete = true);
+                    }
+                  },
                 ),
 
                 // Autocomplete dropdown
                 if (_showAutocomplete && _autocompleteResults.isNotEmpty)
                   Container(
                     margin: const EdgeInsets.only(top: 4),
+                    constraints: const BoxConstraints(maxHeight: 200),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -341,6 +350,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
+                      padding: EdgeInsets.zero,
                       itemCount: _autocompleteResults.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
@@ -356,7 +366,10 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                                 '',
                             style: FuturisticTypography.bodySmall,
                           ),
-                          onTap: () => _selectAutocompleteResult(prediction),
+                          onTap: () {
+                            FocusScope.of(context).unfocus(); // Hide keyboard
+                            _selectAutocompleteResult(prediction);
+                          },
                         );
                       },
                     ),
@@ -390,20 +403,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                 ),
                 const SizedBox(width: 8),
                 // Save new venue button (if place is selected from autocomplete)
-                if (_selectedPlace != null)
-                  ElevatedButton.icon(
-                    onPressed: _selectLocation,
-                    icon: const Icon(Icons.check),
-                    label: const Text('בחר מיקום'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FuturisticColors.success,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                    ),
-                  ),
+                // Removed redundant button here, moved to bottom sheet
               ],
             ),
           ),
@@ -616,60 +616,104 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: FuturisticColors.primary.withValues(alpha: 0.1),
-                border: Border(
-                  top: BorderSide(color: FuturisticColors.primary),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _selectedVenue?.name ?? _selectedPlace!.name,
-                          style: FuturisticTypography.labelLarge,
-                        ),
-                        if (_selectedVenue?.description != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            _selectedVenue!.description!,
-                            style: FuturisticTypography.bodySmall,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (_selectedPlace != null &&
-                            _selectedPlace!.address != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            _selectedPlace!.address!,
-                            style: FuturisticTypography.bodySmall,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_selectedVenue != null) {
-                        Navigator.of(context).pop(_selectedVenue);
-                      } else if (_selectedPlace != null) {
-                        _selectLocation();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FuturisticColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: Text(_selectedVenue != null ? 'בחר' : 'בחר מיקום'),
+                color: Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
                   ),
                 ],
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color:
+                                FuturisticColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _selectedVenue != null
+                                ? Icons.sports_soccer
+                                : Icons.location_on,
+                            color: FuturisticColors.primary,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _selectedVenue?.name ?? _selectedPlace!.name,
+                                style: FuturisticTypography.labelLarge
+                                    .copyWith(fontSize: 18),
+                              ),
+                              if (_selectedVenue?.description != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  _selectedVenue!.description!,
+                                  style: FuturisticTypography.bodySmall,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                              if (_selectedPlace != null &&
+                                  _selectedPlace!.address != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  _selectedPlace!.address!,
+                                  style: FuturisticTypography.bodySmall,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (_selectedVenue != null) {
+                            Navigator.of(context).pop(_selectedVenue);
+                          } else if (_selectedPlace != null) {
+                            _selectLocation();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: FuturisticColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.check_circle),
+                        label: Text(
+                          _selectedVenue != null
+                              ? 'בחר מגרש זה'
+                              : 'שמור מיקום זה',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

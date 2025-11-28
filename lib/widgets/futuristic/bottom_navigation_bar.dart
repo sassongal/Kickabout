@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kickadoor/routing/app_paths.dart';
 
 /// Futuristic Bottom Navigation Bar
 class FuturisticBottomNavBar extends ConsumerWidget {
@@ -51,9 +52,9 @@ class FuturisticBottomNavBar extends ConsumerWidget {
                 _NavItem(
                   icon: Icons.message_rounded,
                   label: 'קהילה',
-                  route: '/feed',
+                  route: AppPaths.community,
                   currentRoute: currentRoute,
-                  onTap: () => context.go('/feed'),
+                  onTap: () => context.go(AppPaths.community),
                 ),
                 _NavItem(
                   icon: Icons.map_rounded,
@@ -99,6 +100,10 @@ class _NavItem extends StatelessWidget {
     // For activity feed
     if (route == '/activity') {
       return currentRoute == '/activity' || currentRoute.startsWith('/activity');
+    }
+    // For community
+    if (route == AppPaths.community) {
+      return currentRoute == AppPaths.community || currentRoute.startsWith(AppPaths.community);
     }
     // For other routes, check if it starts with the route
     return currentRoute.startsWith(route);
