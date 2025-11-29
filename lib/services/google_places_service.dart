@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -341,34 +342,49 @@ class GooglePlacesService {
     try {
       final results = <PlaceResult>[];
       
-      // List of search queries in Hebrew focused on football fields in Israel
+      // Broader search queries to improve coverage of football venues in Israel
       final queries = [
-        'מגרש כדורגל בישראל',
+        'מגרש כדורגל',
         'מגרש קט רגל',
         'מגרשי ספורט',
-        'מגרש כדורגל',
-        'football field Israel',
-        'soccer field Israel',
+        'אצטדיון כדורגל',
+        'מגרש דשא',
+        'מגרש סינטטי',
+        'אולם ספורט',
+        'חוג כדורגל',
+        'soccer field',
+        'football pitch',
+        'five a side football',
+        'indoor soccer',
+        'futsal court',
+        'community soccer field',
       ];
 
       // Perform text search for each query
       for (final query in queries) {
         try {
+          final regionParam = '&region=il';
           final url = Uri.parse(
             'https://maps.googleapis.com/maps/api/place/textsearch/json'
             '?query=${Uri.encodeComponent(query)}'
             '${latitude != null && longitude != null ? '&location=$latitude,$longitude&radius=$radius' : ''}'
+            '$regionParam'
             '&key=$apiKey'
             '&language=he',
           );
 
           final response = await _httpClient.get(url);
           if (response.statusCode != 200) {
+            debugPrint(
+                'Places textsearch failed for \"$query\" with status ${response.statusCode}');
             continue; // Skip this query if it fails
           }
 
           final data = json.decode(response.body);
-          if (data['status'] != 'OK' && data['status'] != 'ZERO_RESULTS') {
+          final status = data['status'];
+          if (status != 'OK' && status != 'ZERO_RESULTS') {
+            debugPrint(
+                'Places textsearch status=$status error=${data['error_message']} for query \"$query\"');
             continue; // Skip if API returns error
           }
 
@@ -569,4 +585,3 @@ class StructuredFormatting {
     this.secondaryText,
   });
 }
-

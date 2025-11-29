@@ -17,6 +17,7 @@ import 'package:kickadoor/utils/snackbar_helper.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:kickadoor/utils/venue_seeder_service.dart';
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {
@@ -520,20 +521,60 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final markers = <Marker>{};
 
     try {
-      // Load Google Places venues (football fields in Israel)
+      // Load venues (prefer Firestore; fallback to Google Places)
       if (_selectedFilter == 'all' || _selectedFilter == 'venues') {
+        final venuesRepo = ref.read(venuesRepositoryProvider);
         try {
-          await _loadGooglePlacesVenues(markers).timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              debugPrint(
-                  '⚠️ Timeout loading Google Places venues - continuing without them');
-              // Continue loading other markers even if Google Places fails
-            },
-          );
+          final nearbyVenues = await venuesRepo
+              .getVenuesForMap()
+              .timeout(
+                const Duration(seconds: 10),
+                onTimeout: () {
+                  debugPrint(
+                      '⚠️ Timeout loading nearby venues from Firestore');
+                  return <Venue>[];
+                },
+              );
+
+          for (final venue in nearbyVenues) {
+            markers.add(
+              Marker(
+                markerId: MarkerId('venue_${venue.venueId}'),
+                position: LatLng(
+                  venue.location.latitude,
+                  venue.location.longitude,
+                ),
+                infoWindow: InfoWindow(
+                  title: venue.name,
+                  snippet: venue.address ?? 'מגרש',
+                ),
+                icon: venue.isPublic
+                    ? (_venuePublicIcon ??
+                        BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueGreen,
+                        ))
+                    : (_venueRentalIcon ??
+                        BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueOrange,
+                        )),
+                onTap: () => _showVenueDetails(venue),
+              ),
+            );
+          }
+          debugPrint('✅ Loaded ${nearbyVenues.length} venues from Firestore');
         } catch (e) {
-          debugPrint('❌ Error loading Google Places venues: $e');
-          // Continue loading other markers even if Google Places fails
+          debugPrint('❌ Error loading nearby venues from Firestore: $e');
+          try {
+            await _loadGooglePlacesVenues(markers).timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                debugPrint(
+                    '⚠️ Timeout loading Google Places venues - continuing without them');
+              },
+            );
+          } catch (e) {
+            debugPrint('❌ Cloud Function load also failed: $e');
+          }
         }
       }
 
@@ -790,6 +831,35 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       title: 'מפה',
       showBottomNav: true,
       actions: [
+        // --- כפתור שתילת המגרשים (Seeder) ---
+        IconButton(
+          icon: const Icon(Icons.cloud_upload),
+          tooltip: 'צור מגרשים ראשוניים',
+          onPressed: () async {
+            debugPrint("🚀 מתחיל תהליך יצירת מגרשים...");
+            if (mounted) {
+              SnackbarHelper.showSuccess(context, 'מתחיל ביצירת מגרשים...');
+            }
+
+            try {
+              final seeder = ref.read(venueSeederServiceProvider);
+              await seeder.seedMajorCities();
+
+              debugPrint("✅ תהליך היצירה הסתיים בהצלחה!");
+              if (mounted) {
+                SnackbarHelper.showSuccess(
+                    context, 'המגרשים נוצרו בהצלחה! רענן את המפה.');
+                _loadMarkers(); // Refresh map
+              }
+            } catch (e) {
+              debugPrint("❌ שגיאה ביצירת מגרשים: $e");
+              if (mounted) {
+                SnackbarHelper.showError(context, 'שגיאה: $e');
+              }
+            }
+          },
+        ),
+        // -------------------------------------
         IconButton(
           icon: const Icon(Icons.refresh),
           tooltip: 'רענן',

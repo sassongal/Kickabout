@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:kickadoor/theme/futuristic_theme.dart';
 import 'package:kickadoor/core/constants.dart';
 import 'package:kickadoor/firebase_options.dart';
@@ -75,6 +76,12 @@ Future<bool> _initializeAppServices() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('✅ Firebase initialized successfully');
+
+    // Enable Firebase App Check (debug providers for dev)
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.debug,
+      appleProvider: AppleProvider.debug,
+    );
 
     // Set up global error handling and Crashlytics.
     _initializeErrorHandling();

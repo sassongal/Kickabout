@@ -60,7 +60,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             // Header
             Text(
               'ניהול מערכת',
-              style: FuturisticTypography.headlineLarge.copyWith(
+              style: FuturisticTypography.heading1.copyWith(
                 color: FuturisticColors.primary,
               ),
             ),
@@ -175,7 +175,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   children: [
                     Text(
                       title,
-                      style: FuturisticTypography.titleMedium.copyWith(
+                      style: FuturisticTypography.heading3.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),

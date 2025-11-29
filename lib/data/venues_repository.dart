@@ -316,6 +316,10 @@ class VenuesRepository {
       final data = venueFromGoogle.toJson();
       data.remove('venueId'); // Remove venueId from data (it's the document ID)
 
+      data['geohash'] = GeohashUtils.encode(
+        venueFromGoogle.location.latitude,
+        venueFromGoogle.location.longitude,
+      );
       // Ensure required fields are set
       data['hubCount'] = venueFromGoogle.hubCount;
       data['isPublic'] = venueFromGoogle.isPublic;
@@ -482,6 +486,11 @@ class VenuesRepository {
       // Convert to JSON and remove venueId (it's the document ID)
       final data = venue.toJson();
       data.remove('venueId');
+
+      data['geohash'] = GeohashUtils.encode(
+        location.latitude,
+        location.longitude,
+      );
 
       // Add to Firestore
       final docRef =
