@@ -57,18 +57,17 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
       final signupsRepo = ref.read(signupsRepositoryProvider);
 
       // Get hub members
-      final hub = await hubsRepo.getHub(widget.game.hubId);
-      if (hub == null) return;
+      final hubUsers =
+          await hubsRepo.getHubMembersAsUsers(widget.game.hubId, limit: 200);
+      if (hubUsers.isEmpty) return;
 
-      final allMembers = await usersRepo.getUsers(hub.memberIds);
-      
       // Filter out players already signed up
       final signedUpIds = widget.signups
           .where((s) => s.status == SignupStatus.confirmed)
           .map((s) => s.playerId)
           .toSet();
       
-      final availableMembers = allMembers
+      final availableMembers = hubUsers
           .where((user) => !signedUpIds.contains(user.uid))
           .toList();
 
@@ -269,4 +268,3 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
     );
   }
 }
-

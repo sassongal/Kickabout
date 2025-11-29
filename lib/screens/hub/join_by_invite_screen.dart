@@ -101,6 +101,15 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
       // Check join mode
       final joinMode = hub.settings['joinMode'] as String? ?? 'auto';
 
+      // Prevent double-join using user profile hubIds
+      final currentUser = await ref.read(usersRepositoryProvider).getUser(currentUserId);
+      if (currentUser != null && currentUser.hubIds.contains(hub.hubId)) {
+        if (!mounted) return;
+        SnackbarHelper.showInfo(context, l10n.joinedHubSuccess(hub.name));
+        context.go('/hubs/${hub.hubId}');
+        return;
+      }
+
       if (joinMode == 'auto') {
         // Auto join
         await hubsRepo.addMember(_hub!.hubId, currentUserId);

@@ -599,8 +599,8 @@ class _PostCard extends ConsumerWidget {
     if (userId == null) return false;
 
     try {
-      final hub = await ref.read(hubsRepositoryProvider).getHub(hubId);
-      return hub?.memberIds.contains(userId) ?? false;
+      final user = await ref.read(usersRepositoryProvider).getUser(userId);
+      return user?.hubIds.contains(hubId) ?? false;
     } catch (e) {
       return false;
     }
