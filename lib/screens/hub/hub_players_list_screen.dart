@@ -82,8 +82,10 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
       return;
     }
 
+    final memberIds =
+        await ref.read(hubsRepositoryProvider).getHubMemberIds(widget.hubId);
     final allUsers =
-        await ref.read(usersRepositoryProvider).getUsers(hub.memberIds);
+        await ref.read(usersRepositoryProvider).getUsers(memberIds);
     final filteredUsers = _filterAndSort(allUsers, hub);
 
     final nextIndex = _displayedUsers.length;
@@ -219,7 +221,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
             });
           }
 
-          if (hub.memberIds.isEmpty) {
+          if (hub.memberCount == 0) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -262,7 +264,10 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
           }
 
           return FutureBuilder<List<User>>(
-            future: usersRepo.getUsers(hub.memberIds),
+            future: () async {
+              final memberIds = await hubsRepo.getHubMemberIds(hub.hubId);
+              return usersRepo.getUsers(memberIds);
+            }(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return ListView.builder(

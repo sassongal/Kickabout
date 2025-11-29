@@ -525,16 +525,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (_selectedFilter == 'all' || _selectedFilter == 'venues') {
         final venuesRepo = ref.read(venuesRepositoryProvider);
         try {
-          final nearbyVenues = await venuesRepo
-              .getVenuesForMap()
-              .timeout(
-                const Duration(seconds: 10),
-                onTimeout: () {
-                  debugPrint(
-                      '⚠️ Timeout loading nearby venues from Firestore');
-                  return <Venue>[];
-                },
-              );
+          final nearbyVenues = await venuesRepo.getVenuesForMap().timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint('⚠️ Timeout loading nearby venues from Firestore');
+              return <Venue>[];
+            },
+          );
 
           for (final venue in nearbyVenues) {
             markers.add(
@@ -643,7 +640,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ),
                 infoWindow: InfoWindow(
                   title: hub.name,
-                  snippet: hub.description ?? '${hub.memberIds.length} חברים',
+                  snippet: hub.description ?? '${hub.memberCount} חברים',
                 ),
                 icon: _hubMarkerIcon ??
                     BitmapDescriptor.defaultMarkerWithHue(

@@ -78,39 +78,43 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      
+
       // Get all hubs and sort by distance from user location
       final allHubs = await hubsRepo.getAllHubs(limit: 1000);
-      
+
       // Calculate distances and filter by radius
-      final hubsWithDistance = allHubs.map((hub) {
-        double? distance;
-        if (hub.location != null) {
-          distance = Geolocator.distanceBetween(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            hub.location!.latitude,
-            hub.location!.longitude,
-          ) / 1000; // Convert to km
-        } else if (hub.mainVenueId != null) {
-          // If hub has main venue, we'll need to fetch it
-          // For now, we'll use a large distance
-          distance = 999999;
-        } else {
-          distance = 999999;
-        }
-        return MapEntry(hub, distance);
-      }).where((entry) => entry.value <= _radiusKm).toList();
-      
+      final hubsWithDistance = allHubs
+          .map((hub) {
+            double? distance;
+            if (hub.location != null) {
+              distance = Geolocator.distanceBetween(
+                    _currentPosition!.latitude,
+                    _currentPosition!.longitude,
+                    hub.location!.latitude,
+                    hub.location!.longitude,
+                  ) /
+                  1000; // Convert to km
+            } else if (hub.mainVenueId != null) {
+              // If hub has main venue, we'll need to fetch it
+              // For now, we'll use a large distance
+              distance = 999999;
+            } else {
+              distance = 999999;
+            }
+            return MapEntry(hub, distance);
+          })
+          .where((entry) => entry.value <= _radiusKm)
+          .toList();
+
       // Sort by distance (closest first)
       hubsWithDistance.sort((a, b) => a.value.compareTo(b.value));
-      
+
       final hubs = hubsWithDistance.map((entry) => entry.key).toList();
 
       setState(() {
         _nearbyHubs = hubs;
       });
-      
+
       // Update map markers if in map view
       if (_isMapView) {
         _updateMapMarkers();
@@ -137,18 +141,19 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
 
   void _updateMapMarkers() {
     final markers = <Marker>{};
-    
+
     for (final hub in _nearbyHubs) {
       if (hub.location != null) {
         final distance = _currentPosition != null
             ? Geolocator.distanceBetween(
-                _currentPosition!.latitude,
-                _currentPosition!.longitude,
-                hub.location!.latitude,
-                hub.location!.longitude,
-              ) / 1000
+                  _currentPosition!.latitude,
+                  _currentPosition!.longitude,
+                  hub.location!.latitude,
+                  hub.location!.longitude,
+                ) /
+                1000
             : 0.0;
-        
+
         markers.add(
           Marker(
             markerId: MarkerId(hub.hubId),
@@ -158,7 +163,8 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
             ),
             infoWindow: InfoWindow(
               title: hub.name,
-              snippet: '${hub.memberIds.length} חברים • ${_formatDistance(distance)}',
+              snippet:
+                  '${hub.memberCount} חברים • ${_formatDistance(distance)}',
             ),
             onTap: () {
               context.push('/hubs/${hub.hubId}');
@@ -167,11 +173,11 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
         );
       }
     }
-    
+
     setState(() {
       _markers = markers;
     });
-    
+
     // Update camera to show all markers
     if (_mapController != null && _markers.isNotEmpty) {
       final bounds = _calculateBounds();
@@ -185,12 +191,12 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
 
   LatLngBounds? _calculateBounds() {
     if (_nearbyHubs.isEmpty || _currentPosition == null) return null;
-    
+
     double minLat = _currentPosition!.latitude;
     double maxLat = _currentPosition!.latitude;
     double minLng = _currentPosition!.longitude;
     double maxLng = _currentPosition!.longitude;
-    
+
     for (final hub in _nearbyHubs) {
       if (hub.location != null) {
         final lat = hub.location!.latitude;
@@ -201,7 +207,7 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
         maxLng = maxLng > lng ? maxLng : lng;
       }
     }
-    
+
     return LatLngBounds(
       southwest: LatLng(minLat, minLng),
       northeast: LatLng(maxLat, maxLng),
@@ -226,7 +232,8 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.location_off, size: 64, color: Colors.grey),
+                      const Icon(Icons.location_off,
+                          size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
                       const Text('לא ניתן לקבל מיקום'),
                       const SizedBox(height: 16),
@@ -241,7 +248,8 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                   children: [
                     // View Toggle (List/Map)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       child: SegmentedButton<bool>(
                         segments: const [
                           ButtonSegment<bool>(
@@ -272,7 +280,8 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('רדיוס חיפוש: ${_radiusKm.toStringAsFixed(1)} ק"מ'),
+                          Text(
+                              'רדיוס חיפוש: ${_radiusKm.toStringAsFixed(1)} ק"מ'),
                           Slider(
                             value: _radiusKm,
                             min: 1.0,
@@ -294,12 +303,14 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                     // Results (List or Map)
                     Expanded(
                       child: _isLoading
-                          ? const FuturisticLoadingState(message: 'מחפש הובים...')
+                          ? const FuturisticLoadingState(
+                              message: 'מחפש הובים...')
                           : _nearbyHubs.isEmpty
                               ? FuturisticEmptyState(
                                   icon: Icons.search_off,
                                   title: 'לא נמצאו הובים',
-                                  message: 'לא נמצאו הובים ברדיוס של ${_radiusKm.toStringAsFixed(1)} ק"מ',
+                                  message:
+                                      'לא נמצאו הובים ברדיוס של ${_radiusKm.toStringAsFixed(1)} ק"מ',
                                   action: ElevatedButton.icon(
                                     onPressed: _searchNearbyHubs,
                                     icon: const Icon(Icons.refresh),
@@ -323,11 +334,12 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
         double distance = 0;
         if (hub.location != null && _currentPosition != null) {
           distance = Geolocator.distanceBetween(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            hub.location!.latitude,
-            hub.location!.longitude,
-          ) / 1000;
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+                hub.location!.latitude,
+                hub.location!.longitude,
+              ) /
+              1000;
         }
 
         return Card(
@@ -338,9 +350,7 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
           child: ListTile(
             leading: const Icon(Icons.group),
             title: Text(hub.name),
-            subtitle: hub.description != null
-                ? Text(hub.description!)
-                : null,
+            subtitle: hub.description != null ? Text(hub.description!) : null,
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -352,7 +362,7 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                   ),
                 ),
                 Text(
-                  '${hub.memberIds.length} חברים',
+                  '${hub.memberCount} חברים',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -397,4 +407,3 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
     );
   }
 }
-

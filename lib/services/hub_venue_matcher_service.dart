@@ -17,7 +17,7 @@ class HubVenueMatcherService {
         _venuesRepo = venuesRepo;
 
   /// Find relevant hubs for a player based on their location and preferred venues
-  /// 
+  ///
   /// [latitude] - Player's latitude
   /// [longitude] - Player's longitude
   /// [radiusKm] - Search radius in kilometers
@@ -61,18 +61,19 @@ class HubVenueMatcherService {
       for (final hub in hubs) {
         // Get all venues for this hub
         final hubVenues = await _venuesRepo.getVenuesByHub(hub.hubId);
-        
+
         // Find closest venue
         double? closestDistance;
         Venue? closestVenue;
-        
+
         for (final venue in hubVenues) {
           final distance = Geolocator.distanceBetween(
-            latitude,
-            longitude,
-            venue.location.latitude,
-            venue.location.longitude,
-          ) / 1000; // Convert to km
+                latitude,
+                longitude,
+                venue.location.latitude,
+                venue.location.longitude,
+              ) /
+              1000; // Convert to km
 
           if (closestDistance == null || distance < closestDistance) {
             closestDistance = distance;
@@ -83,8 +84,10 @@ class HubVenueMatcherService {
         if (closestVenue != null && closestDistance != null) {
           // Calculate relevance score
           // Factors: distance (closer = better), hub size (more members = better)
-          final distanceScore = 1.0 / (1.0 + closestDistance); // Inverse distance
-          final sizeScore = (hub.memberIds.length / 100.0).clamp(0.0, 1.0); // Normalize to 0-1
+          final distanceScore =
+              1.0 / (1.0 + closestDistance); // Inverse distance
+          final sizeScore =
+              (hub.memberCount / 100.0).clamp(0.0, 1.0); // Normalize to 0-1
           final relevanceScore = (distanceScore * 0.7) + (sizeScore * 0.3);
 
           results.add(HubMatchResult(
@@ -180,4 +183,3 @@ final hubVenueMatcherServiceProvider = Provider<HubVenueMatcherService>((ref) {
     venuesRepo: ref.watch(venuesRepositoryProvider),
   );
 });
-

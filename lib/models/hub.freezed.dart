@@ -26,7 +26,7 @@ mixin _$Hub {
   String get createdBy => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
-  List<String> get memberIds => throw _privateConstructorUsedError;
+  int get memberCount => throw _privateConstructorUsedError;
   @TimestampMapConverter()
   Map<String, Timestamp> get memberJoinDates =>
       throw _privateConstructorUsedError; // userId -> join date timestamp
@@ -92,7 +92,7 @@ abstract class $HubCopyWith<$Res> {
       String? description,
       String createdBy,
       @TimestampConverter() DateTime createdAt,
-      List<String> memberIds,
+      int memberCount,
       @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
       Map<String, String> roles,
@@ -134,7 +134,7 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? description = freezed,
     Object? createdBy = null,
     Object? createdAt = null,
-    Object? memberIds = null,
+    Object? memberCount = null,
     Object? memberJoinDates = null,
     Object? settings = null,
     Object? roles = null,
@@ -177,10 +177,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      memberIds: null == memberIds
-          ? _value.memberIds
-          : memberIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
+      memberCount: null == memberCount
+          ? _value.memberCount
+          : memberCount // ignore: cast_nullable_to_non_nullable
+              as int,
       memberJoinDates: null == memberJoinDates
           ? _value.memberJoinDates
           : memberJoinDates // ignore: cast_nullable_to_non_nullable
@@ -277,7 +277,7 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       String? description,
       String createdBy,
       @TimestampConverter() DateTime createdAt,
-      List<String> memberIds,
+      int memberCount,
       @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
       Map<String, String> roles,
@@ -316,7 +316,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? description = freezed,
     Object? createdBy = null,
     Object? createdAt = null,
-    Object? memberIds = null,
+    Object? memberCount = null,
     Object? memberJoinDates = null,
     Object? settings = null,
     Object? roles = null,
@@ -359,10 +359,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      memberIds: null == memberIds
-          ? _value._memberIds
-          : memberIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
+      memberCount: null == memberCount
+          ? _value.memberCount
+          : memberCount // ignore: cast_nullable_to_non_nullable
+              as int,
       memberJoinDates: null == memberJoinDates
           ? _value._memberJoinDates
           : memberJoinDates // ignore: cast_nullable_to_non_nullable
@@ -456,7 +456,7 @@ class _$HubImpl implements _Hub {
       this.description,
       required this.createdBy,
       @TimestampConverter() required this.createdAt,
-      final List<String> memberIds = const [],
+      this.memberCount = 0,
       @TimestampMapConverter()
       final Map<String, Timestamp> memberJoinDates = const {},
       final Map<String, dynamic> settings = const {
@@ -482,8 +482,7 @@ class _$HubImpl implements _Hub {
       this.paymentLink,
       this.gameCount,
       @TimestampConverter() this.lastActivity})
-      : _memberIds = memberIds,
-        _memberJoinDates = memberJoinDates,
+      : _memberJoinDates = memberJoinDates,
         _settings = settings,
         _roles = roles,
         _permissions = permissions,
@@ -504,15 +503,9 @@ class _$HubImpl implements _Hub {
   @override
   @TimestampConverter()
   final DateTime createdAt;
-  final List<String> _memberIds;
   @override
   @JsonKey()
-  List<String> get memberIds {
-    if (_memberIds is EqualUnmodifiableListView) return _memberIds;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_memberIds);
-  }
-
+  final int memberCount;
   final Map<String, Timestamp> _memberJoinDates;
   @override
   @JsonKey()
@@ -629,7 +622,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberIds: $memberIds, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity)';
   }
 
   @override
@@ -645,8 +638,8 @@ class _$HubImpl implements _Hub {
                 other.createdBy == createdBy) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            const DeepCollectionEquality()
-                .equals(other._memberIds, _memberIds) &&
+            (identical(other.memberCount, memberCount) ||
+                other.memberCount == memberCount) &&
             const DeepCollectionEquality()
                 .equals(other._memberJoinDates, _memberJoinDates) &&
             const DeepCollectionEquality().equals(other._settings, _settings) &&
@@ -691,7 +684,7 @@ class _$HubImpl implements _Hub {
         description,
         createdBy,
         createdAt,
-        const DeepCollectionEquality().hash(_memberIds),
+        memberCount,
         const DeepCollectionEquality().hash(_memberJoinDates),
         const DeepCollectionEquality().hash(_settings),
         const DeepCollectionEquality().hash(_roles),
@@ -737,7 +730,7 @@ abstract class _Hub implements Hub {
       final String? description,
       required final String createdBy,
       @TimestampConverter() required final DateTime createdAt,
-      final List<String> memberIds,
+      final int memberCount,
       @TimestampMapConverter() final Map<String, Timestamp> memberJoinDates,
       final Map<String, dynamic> settings,
       final Map<String, String> roles,
@@ -773,7 +766,7 @@ abstract class _Hub implements Hub {
   @TimestampConverter()
   DateTime get createdAt;
   @override
-  List<String> get memberIds;
+  int get memberCount;
   @override
   @TimestampMapConverter()
   Map<String, Timestamp> get memberJoinDates; // userId -> join date timestamp

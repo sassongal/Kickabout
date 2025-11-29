@@ -3,19 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:kickadoor/config/env.dart';
 import 'package:kickadoor/models/models.dart';
 
-/// Result of a paginated feed query
-class FeedPageResult {
-  final List<FeedPost> posts;
-  final DocumentSnapshot? lastDocument;
-  final bool hasMore;
-
-  FeedPageResult({
-    required this.posts,
-    required this.lastDocument,
-    required this.hasMore,
-  });
-}
-
 /// Repository for Feed operations
 class FeedRepository {
   final FirebaseFirestore _firestore;
@@ -42,16 +29,16 @@ class FeedRepository {
       query = query.where('type', isEqualTo: postType);
     }
 
-    return query.snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => FeedPost.fromJson({...doc.data(), 'postId': doc.id}))
-            .toList());
+    return query.snapshots().map((snapshot) => snapshot.docs
+        .map((doc) => FeedPost.fromJson({...doc.data(), 'postId': doc.id}))
+        .toList());
   }
 
   /// Stream regional feed posts (from feedPosts root collection)
   /// Filters by region and last 24 hours (or last 20 items)
   /// Optimized for bulletin board display
-  Stream<List<FeedPost>> streamRegionalFeed({String? region, String? postType}) {
+  Stream<List<FeedPost>> streamRegionalFeed(
+      {String? region, String? postType}) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
     }
@@ -64,12 +51,12 @@ class FeedRepository {
 
     // Filter by region if provided (required for composite index)
     if (region != null && region.isNotEmpty) {
-      query = query
-          .where('region', isEqualTo: region)
-          .where('createdAt', isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
+      query = query.where('region', isEqualTo: region).where('createdAt',
+          isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
     } else {
       // If no region, just filter by time
-      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
+      query = query.where('createdAt',
+          isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
     }
 
     if (postType != null) {
@@ -79,63 +66,10 @@ class FeedRepository {
     // Order by createdAt descending and limit to 20 items
     query = query.orderBy('createdAt', descending: true).limit(20);
 
-    return query.snapshots().map((snapshot) => snapshot.docs
-        .map((doc) {
+    return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
           final data = doc.data() as Map<String, dynamic>;
           return FeedPost.fromJson({...data, 'postId': doc.id});
-        })
-        .toList());
-  }
-
-  /// Get feed posts with pagination
-  /// Returns a FeedPageResult containing posts and the last document snapshot
-  Future<FeedPageResult> getFeedPosts({
-    required String hubId,
-    DocumentSnapshot? lastDocumentSnapshot,
-    int limit = 15,
-  }) async {
-    if (!Env.isFirebaseAvailable) {
-      return FeedPageResult(posts: [], lastDocument: null, hasMore: false);
-    }
-
-    try {
-      Query query = _firestore
-          .collection('hubs')
-          .doc(hubId)
-          .collection('feed')
-          .doc('posts')
-          .collection('items')
-          .orderBy('createdAt', descending: true)
-          .limit(limit + 1); // Get one extra to check if there's more
-
-      if (lastDocumentSnapshot != null) {
-        query = query.startAfterDocument(lastDocumentSnapshot);
-      }
-
-      final snapshot = await query.get();
-      final docs = snapshot.docs;
-      final hasMore = docs.length > limit;
-      
-      // Remove the extra document if we got more than limit
-      final postsToReturn = hasMore ? docs.take(limit).toList() : docs;
-      final lastDoc = postsToReturn.isNotEmpty ? postsToReturn.last : null;
-
-      final posts = postsToReturn
-          .map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return FeedPost.fromJson({...data, 'postId': doc.id});
-          })
-          .toList();
-
-      return FeedPageResult(
-        posts: posts,
-        lastDocument: lastDoc,
-        hasMore: hasMore,
-      );
-    } catch (e) {
-      debugPrint('Failed to get feed posts: $e');
-      return FeedPageResult(posts: [], lastDocument: null, hasMore: false);
-    }
+        }).toList());
   }
 
   /// Create feed post

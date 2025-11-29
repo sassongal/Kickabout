@@ -112,8 +112,11 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
           );
         }
 
-        final isMember =
-            currentUserId != null && hub.memberIds.contains(currentUserId);
+        // Check user role for admin permissions
+        final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
+        final role = roleAsync.valueOrNull ?? UserRole.none;
+        final isMember = role != UserRole.none;
+
         // Check if join requests are enabled
         final joinRequestsEnabled =
             hub.settings['allowJoinRequests'] as bool? ?? true;
@@ -131,9 +134,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
             ),
           );
         }
-
-        // Check user role for admin permissions
-        final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
 
         return roleAsync.when(
           data: (role) {
@@ -231,7 +231,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '${hub.memberIds.length} משתתפים',
+                                        '${hub.memberCount} משתתפים',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
@@ -481,7 +481,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                               context.push('/hubs/${hub.hubId}/players'),
                           icon: const Icon(Icons.groups_3, size: 20),
                           label: Text(
-                            'חברי ההאב (${hub.memberIds.length})',
+                            'חברי ההאב (${hub.memberCount})',
                             style: const TextStyle(
                                 fontSize: 14, fontWeight: FontWeight.bold),
                           ),
@@ -970,7 +970,9 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final allUsers = await widget.usersRepo.getUsers(widget.hub.memberIds);
+    // Fetch member IDs from subcollection (Strategy B)
+    final memberIds = await widget.hubsRepo.getHubMemberIds(widget.hubId);
+    final allUsers = await widget.usersRepo.getUsers(memberIds);
 
     final nextIndex = _displayedUsers.length;
     final endIndex = (nextIndex + _pageSize).clamp(0, allUsers.length);
@@ -999,13 +1001,14 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
     // Check if user is manager/admin (creator or has admin role)
     final isManagerOrAdmin = isHubManager || isAdmin;
 
-    // Debug: Log memberIds to help diagnose issues
-    debugPrint('🔍 Members Tab - hub.memberIds: ${widget.hub.memberIds}');
-    debugPrint(
-        '🔍 Members Tab - memberIds.length: ${widget.hub.memberIds.length}');
+    // Debug: Log member count to help diagnose issues
+    debugPrint('🔍 Members Tab - hub.memberCount: ${widget.hub.memberCount}');
 
     return FutureBuilder<List<User>>(
-      future: widget.usersRepo.getUsers(widget.hub.memberIds),
+      future: () async {
+        final memberIds = await widget.hubsRepo.getHubMemberIds(widget.hubId);
+        return widget.usersRepo.getUsers(memberIds);
+      }(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ListView.builder(
@@ -1063,17 +1066,19 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
         // Debug: Log users found
         debugPrint('🔍 Members Tab - users found: ${allUsers.length}');
-        if (usersToShow.isEmpty &&
-            allUsers.isEmpty &&
-            widget.hub.memberIds.isNotEmpty) {
-          // If memberIds exist but no users found, show error with more info
+        // If memberCount > 0 but no users found, show error
+        if (snapshot.hasError ||
+            (snapshot.hasData &&
+                snapshot.data!.isEmpty &&
+                widget.hub.memberCount > 0)) {
+          // If member count exists but no users found, show error with more info
           debugPrint(
-              '⚠️ Members Tab - memberIds exist but no users found. memberIds: ${widget.hub.memberIds}');
+              '⚠️ Members Tab - memberCount > 0 but no users found. memberCount: ${widget.hub.memberCount}');
           return FuturisticEmptyState(
             icon: Icons.error_outline,
-            title: 'שגיאה בטעינת חברים',
+            title: 'שגיאה בטעינת החברים',
             message:
-                'נמצאו ${widget.hub.memberIds.length} חברים ברשימה, אך לא ניתן לטעון את הפרטים שלהם',
+                'נמצאו ${widget.hub.memberCount} חברים ברשימה, אך לא ניתן לטעון את הפרטים שלהם',
             action: ElevatedButton.icon(
               onPressed: () {
                 // Force rebuild by invalidating provider
@@ -1884,7 +1889,7 @@ class _NonMemberHubViewState extends ConsumerState<_NonMemberHubView> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    '${widget.hub.memberIds.length} משתתפים',
+                    '${widget.hub.memberCount} משתתפים',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],

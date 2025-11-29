@@ -1,4 +1,6 @@
 import 'package:kickadoor/models/models.dart';
+import 'package:kickadoor/models/hub.dart';
+import 'package:kickadoor/models/user.dart';
 
 /// Simple user role enum for permission checks
 enum UserRole {
@@ -67,6 +69,22 @@ enum HubRole {
     }
   }
 
+  // Determine role using user profile membership (not hub.memberIds)
+  static HubRole determine(Hub hub, User user) {
+    if (hub.createdBy == user.uid) return HubRole.manager;
+
+    final roleString = hub.roles[user.uid];
+    if (roleString != null) {
+      return HubRole.fromFirestore(roleString);
+    }
+
+    if (user.hubIds.contains(hub.hubId)) {
+      return HubRole.member;
+    }
+
+    return HubRole.guest;
+  }
+
   /// Check if role has permission to perform action
   ///
   /// Permission Matrix:
@@ -107,8 +125,14 @@ enum HubRole {
 class HubPermissions {
   final Hub hub;
   final String userId;
+  final List<String>?
+      userHubIds; // Optional: user's hub memberships for membership check
 
-  HubPermissions({required this.hub, required this.userId});
+  HubPermissions({
+    required this.hub,
+    required this.userId,
+    this.userHubIds, // If provided, used for membership check; otherwise assume guest
+  });
 
   /// Get the user's role in the hub
   /// Priority: Manager (creator) > Explicit role > Veteran (if >2 months) > Member > Guest
@@ -129,8 +153,9 @@ class HubPermissions {
       return explicitRole;
     }
 
-    // Check if member
-    if (hub.memberIds.contains(userId)) {
+    // Check if member (Strategy A: use userHubIds if provided)
+    final isMember = userHubIds != null && userHubIds!.contains(hub.hubId);
+    if (isMember) {
       // Check if veteran (in hub for more than 2 months)
       return _isVeteranPlayer() ? HubRole.veteran : HubRole.member;
     }
@@ -141,7 +166,9 @@ class HubPermissions {
 
   /// Check if user is a veteran player (in hub for more than 2 months)
   bool _isVeteranPlayer() {
-    if (!hub.memberIds.contains(userId)) return false;
+    // Must be a member first
+    final isMember = userHubIds != null && userHubIds!.contains(hub.hubId);
+    if (!isMember) return false;
 
     // Get join date from memberJoinDates
     final joinDateTimestamp = hub.memberJoinDates[userId];
@@ -232,7 +259,7 @@ class HubPermissions {
   bool isModerator() =>
       userRole == HubRole.moderator || userRole == HubRole.manager;
   bool isVeteran() => userRole == HubRole.veteran;
-  bool isMember() => hub.memberIds.contains(userId);
+  bool isMember() => userHubIds != null && userHubIds!.contains(hub.hubId);
 
   /// Get role display name
   String getRoleDisplayName() => userRole.displayName;

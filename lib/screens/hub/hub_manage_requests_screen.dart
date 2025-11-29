@@ -275,10 +275,23 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
         }
 
         final hubData = hubDoc.data()!;
-        final memberIds = List<String>.from(hubData['memberIds'] ?? []);
+        final memberCount = hubData['memberCount'] as int? ?? 0;
+
+        // Check capacity
+        if (memberCount >= 50) {
+          throw Exception('ההאב מלא (מקסימום 50 חברים)');
+        }
+
+        // Check user
+        final userRef = firestore.collection('users').doc(widget.userId);
+        final userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) throw Exception('משתמש לא נמצא');
+
+        final userData = userDoc.data()!;
+        final userHubIds = List<String>.from(userData['hubIds'] ?? []);
 
         // Check if user is already a member
-        if (memberIds.contains(widget.userId)) {
+        if (userHubIds.contains(widget.hubId)) {
           // User already a member, just update request status
           final requestRef =
               hubRef.collection('requests').doc(widget.requestId);
@@ -290,26 +303,24 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
           return;
         }
 
-        // 2. Add user to memberIds
-        memberIds.add(widget.userId);
-
-        // 3. Update memberJoinDates
-        final memberJoinDates =
-            Map<String, dynamic>.from(hubData['memberJoinDates'] ?? {});
-        memberJoinDates[widget.userId] = FieldValue.serverTimestamp();
-
-        // 4. Set role to 'player' (or 'member')
-        final roles = Map<String, dynamic>.from(hubData['roles'] ?? {});
-        roles[widget.userId] = 'player';
-
-        // 5. Update hub
-        transaction.update(hubRef, {
-          'memberIds': memberIds,
-          'memberJoinDates': memberJoinDates,
-          'roles': roles,
+        // 2. Add to members subcollection
+        final memberRef = hubRef.collection('members').doc(widget.userId);
+        transaction.set(memberRef, {
+          'joinedAt': FieldValue.serverTimestamp(),
+          'role': 'player',
         });
 
-        // 6. Update request status
+        // 3. Increment memberCount
+        transaction.update(hubRef, {
+          'memberCount': FieldValue.increment(1),
+        });
+
+        // 4. Update user.hubIds
+        transaction.update(userRef, {
+          'hubIds': FieldValue.arrayUnion([widget.hubId]),
+        });
+
+        // 5. Update request status
         final requestRef = hubRef.collection('requests').doc(widget.requestId);
         transaction.update(requestRef, {
           'status': 'approved',

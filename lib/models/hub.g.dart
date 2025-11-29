@@ -13,10 +13,7 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
       createdBy: json['createdBy'] as String,
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
-      memberIds: (json['memberIds'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
+      memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
       memberJoinDates: json['memberJoinDates'] == null
           ? const {}
           : const TimestampMapConverter()
@@ -64,7 +61,7 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'description': instance.description,
       'createdBy': instance.createdBy,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
-      'memberIds': instance.memberIds,
+      'memberCount': instance.memberCount,
       'memberJoinDates':
           const TimestampMapConverter().toJson(instance.memberJoinDates),
       'settings': instance.settings,

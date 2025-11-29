@@ -280,18 +280,23 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
       // Create notifications for hub members (only if hub exists)
       if (hub != null) {
+        // Send push notifications to hub members
         try {
           final pushIntegration =
               ref.read(pushNotificationIntegrationServiceProvider);
           final usersRepo = ref.read(usersRepositoryProvider);
+          final hubsRepo = ref.read(hubsRepositoryProvider);
           final currentUser = await usersRepo.getUser(currentUserId);
+
+          // Fetch member IDs from subcollection
+          final memberIds = await hubsRepo.getHubMemberIds(selectedHubId);
 
           await pushIntegration.notifyNewGame(
             gameId: gameId,
             hubId: selectedHubId,
             creatorName: currentUser?.name ?? 'מישהו',
             hubName: hub.name,
-            memberIds: hub.memberIds,
+            memberIds: memberIds,
             excludeUserId: currentUserId,
           );
         } catch (e) {

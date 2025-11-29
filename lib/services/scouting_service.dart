@@ -64,16 +64,15 @@ class ScoutingService {
         return [];
       }
 
-      final excludedPlayerIds = hub.memberIds.toSet();
       final List<User> allUsers = await _usersRepo.getAllUsers();
-      
+
       // Calculate current date for age calculation
       final now = DateTime.now();
-      
+
       // Filter players
       final candidates = allUsers.where((User user) {
-        // Exclude hub members
-        if (excludedPlayerIds.contains(user.uid)) {
+        // Exclude hub members via user profile hubIds
+        if (user.hubIds.contains(hub.hubId)) {
           return false;
         }
 
@@ -87,18 +86,19 @@ class ScoutingService {
           final age = now.year - user.birthDate!.year;
           final monthDiff = now.month - user.birthDate!.month;
           final dayDiff = now.day - user.birthDate!.day;
-          final actualAge = age - (monthDiff < 0 || (monthDiff == 0 && dayDiff < 0) ? 1 : 0);
-          
+          final actualAge =
+              age - (monthDiff < 0 || (monthDiff == 0 && dayDiff < 0) ? 1 : 0);
+
           if (criteria.minAge != null && actualAge < criteria.minAge!) {
             return false;
           }
           if (criteria.maxAge != null && actualAge > criteria.maxAge!) {
-          return false;
-        }
+            return false;
+          }
         } else {
           // If no birthDate, exclude if age filter is set
           if (criteria.minAge != null || criteria.maxAge != null) {
-          return false;
+            return false;
           }
         }
 
@@ -151,31 +151,36 @@ class ScoutingService {
       // Prepare data for compute (must be serializable)
       final hubLat = hubPosition?.latitude;
       final hubLng = hubPosition?.longitude;
-      
-      final playersData = candidates.map((player) => {
-        'uid': player.uid,
-        'name': player.name,
-        'isActive': player.isActive,
-        'totalParticipations': player.totalParticipations,
-        'location': player.location != null ? {
-          'latitude': player.location!.latitude,
-          'longitude': player.location!.longitude,
-        } : null,
-        // Serialize User object (simplified for compute)
-        'userJson': player.toJson(),
-      }).toList();
-      
+
+      final playersData = candidates
+          .map((player) => {
+                'uid': player.uid,
+                'name': player.name,
+                'isActive': player.isActive,
+                'totalParticipations': player.totalParticipations,
+                'location': player.location != null
+                    ? {
+                        'latitude': player.location!.latitude,
+                        'longitude': player.location!.longitude,
+                      }
+                    : null,
+                // Serialize User object (simplified for compute)
+                'userJson': player.toJson(),
+              })
+          .toList();
+
       final computeParams = {
         'players': playersData,
         'hubLat': hubLat,
         'hubLng': hubLng,
         'limit': criteria.limit,
       };
-      
+
       // Run heavy computation in isolate to prevent UI blocking
-      final computedData = await compute(_computeScoutingResults, computeParams);
+      final computedData =
+          await compute(_computeScoutingResults, computeParams);
       final computedResults = computedData['results'] as List<dynamic>;
-      
+
       // Reconstruct ScoutingResult objects from computed data
       final results = <ScoutingResult>[];
       for (final resultData in computedResults) {
@@ -185,7 +190,7 @@ class ScoutingService {
           (p) => p.uid == resultMap['uid'],
           orElse: () => candidates.first, // Fallback (shouldn't happen)
         );
-        
+
         results.add(ScoutingResult(
           player: player,
           matchScore: resultMap['matchScore'] as double,
@@ -199,7 +204,6 @@ class ScoutingService {
       throw Exception('Failed to scout players: $e');
     }
   }
-
 }
 
 /// Heavy computation function for isolate (must be top-level)
@@ -209,52 +213,53 @@ Map<String, dynamic> _computeScoutingResults(Map<String, dynamic> params) {
   final hubLat = params['hubLat'] as double?;
   final hubLng = params['hubLng'] as double?;
   final limit = params['limit'] as int?;
-  
+
   final results = <Map<String, dynamic>>[];
-  
+
   for (final playerData in players) {
     final playerMap = playerData as Map<String, dynamic>;
     final playerLocation = playerMap['location'] as Map<String, dynamic>?;
-    
+
     double? distanceKm;
     if (hubLat != null && hubLng != null && playerLocation != null) {
       try {
         distanceKm = Geolocator.distanceBetween(
-          hubLat,
-          hubLng,
-          playerLocation['latitude'] as double,
-          playerLocation['longitude'] as double,
-        ) / 1000; // Convert to km
+              hubLat,
+              hubLng,
+              playerLocation['latitude'] as double,
+              playerLocation['longitude'] as double,
+            ) /
+            1000; // Convert to km
       } catch (e) {
         distanceKm = null;
       }
     }
-    
+
     // Calculate match score (0-100)
     double matchScore = 50.0; // Base score
     final matchReasons = <String>[];
-    
+
     // Active status bonus
     if (playerMap['isActive'] == true) {
       matchScore += 20;
       matchReasons.add('פעיל');
     }
-    
+
     // Participation bonus
     final participations = playerMap['totalParticipations'] as int? ?? 0;
     if (participations > 10) {
       matchScore += 10;
       matchReasons.add('$participations משחקים');
     }
-    
+
     // Distance info
     if (distanceKm != null) {
       matchReasons.add('${distanceKm.toStringAsFixed(1)} ק"מ מההוב');
     }
-    
+
     // Cap score at 100
     matchScore = matchScore.clamp(0, 100);
-    
+
     results.add({
       'uid': playerMap['uid'] as String,
       'matchScore': matchScore,
@@ -262,12 +267,12 @@ Map<String, dynamic> _computeScoutingResults(Map<String, dynamic> params) {
       'matchReasons': matchReasons,
     });
   }
-  
+
   // Sort by distance (ascending - closest first), then by match score
   results.sort((a, b) {
     final aDist = a['distanceKm'] as double?;
     final bDist = b['distanceKm'] as double?;
-    
+
     // If both have distances, sort by distance first
     if (aDist != null && bDist != null) {
       final distanceCompare = aDist.compareTo(bDist);
@@ -281,11 +286,11 @@ Map<String, dynamic> _computeScoutingResults(Map<String, dynamic> params) {
     final bScore = b['matchScore'] as double;
     return bScore.compareTo(aScore);
   });
-  
+
   // Apply limit
   if (limit != null && results.length > limit) {
     return {'results': results.take(limit).toList()};
   }
-  
+
   return {'results': results};
 }

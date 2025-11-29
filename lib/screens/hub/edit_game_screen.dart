@@ -25,16 +25,16 @@ class EditGameScreen extends ConsumerStatefulWidget {
 class _EditGameScreenState extends ConsumerState<EditGameScreen> {
   bool _isLoading = false;
   bool _isLoadingData = true;
-  
+
   Game? _game;
   List<HubEvent> _events = [];
   List<User> _hubMembers = [];
-  
+
   // Form fields
   String? _selectedEventId;
   final _teamAScoreController = TextEditingController();
   final _teamBScoreController = TextEditingController();
-  
+
   // Selected players
   final Set<String> _selectedPlayerIds = {};
   final Set<String> _goalScorers = {};
@@ -57,36 +57,35 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoadingData = true);
-    
+
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       final eventsRepo = ref.read(hubEventsRepositoryProvider);
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
       final gameEventsRepo = ref.read(eventsRepositoryProvider);
-      
+
       // Load game
       final game = await gamesRepo.getGame(widget.gameId);
       if (game == null) {
         throw Exception('משחק לא נמצא');
       }
-      
+
       // Load events
       final events = await eventsRepo.getHubEvents(widget.hubId);
-      
+
       // Load hub members
-      final hub = await hubsRepo.getHub(widget.hubId);
-      final memberIds = hub?.memberIds ?? [];
+      final memberIds = await hubsRepo.getHubMemberIds(widget.hubId);
       final members = await usersRepo.getUsers(memberIds);
-      
+
       // Load game events (goals, assists, MVP)
       final gameEvents = await gameEventsRepo.getEvents(widget.gameId);
-      
+
       // Extract data from game events
       final goalScorers = <String>{};
       final assistProviders = <String>{};
       String? mvpPlayerId;
-      
+
       for (final event in gameEvents) {
         switch (event.type) {
           case EventType.goal:
@@ -102,14 +101,15 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
             break;
         }
       }
-      
+
       // Get players from teams
-      final teams = await ref.read(teamsRepositoryProvider).getTeams(widget.gameId);
+      final teams =
+          await ref.read(teamsRepositoryProvider).getTeams(widget.gameId);
       final allPlayerIds = <String>{};
       for (final team in teams) {
         allPlayerIds.addAll(team.playerIds);
       }
-      
+
       if (mounted) {
         setState(() {
           _game = game;
@@ -152,7 +152,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       final eventsRepo = ref.read(eventsRepositoryProvider);
       final currentUserId = ref.read(currentUserIdProvider);
-      
+
       if (currentUserId == null) {
         throw Exception('משתמש לא מחובר');
       }
@@ -163,19 +163,20 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       // Get denormalized data for optimization
       final usersRepo = ref.read(usersRepositoryProvider);
       final venuesRepo = ref.read(venuesRepositoryProvider);
-      
+
       // Get goal scorer names
-      final goalScorerIds = _goalScorers.where((id) => _selectedPlayerIds.contains(id)).toList();
+      final goalScorerIds =
+          _goalScorers.where((id) => _selectedPlayerIds.contains(id)).toList();
       final goalScorers = await usersRepo.getUsers(goalScorerIds);
       final goalScorerNames = goalScorers.map((u) => u.name).toList();
-      
+
       // Get MVP name
       String? mvpPlayerName;
       if (_mvpPlayerId != null && _selectedPlayerIds.contains(_mvpPlayerId)) {
         final mvp = await usersRepo.getUser(_mvpPlayerId!);
         mvpPlayerName = mvp?.name;
       }
-      
+
       // Get venue name
       String? venueName;
       if (_selectedEventId != null) {
@@ -218,38 +219,44 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       // Create goal events
       for (final playerId in _goalScorers) {
         if (_selectedPlayerIds.contains(playerId)) {
-          await eventsRepo.addEvent(widget.gameId, GameEvent(
-            eventId: '',
-            type: EventType.goal,
-            playerId: playerId,
-            timestamp: _game?.gameDate ?? DateTime.now(),
-            metadata: {},
-          ));
+          await eventsRepo.addEvent(
+              widget.gameId,
+              GameEvent(
+                eventId: '',
+                type: EventType.goal,
+                playerId: playerId,
+                timestamp: _game?.gameDate ?? DateTime.now(),
+                metadata: {},
+              ));
         }
       }
 
       // Create assist events
       for (final playerId in _assistProviders) {
         if (_selectedPlayerIds.contains(playerId)) {
-          await eventsRepo.addEvent(widget.gameId, GameEvent(
-            eventId: '',
-            type: EventType.assist,
-            playerId: playerId,
-            timestamp: _game?.gameDate ?? DateTime.now(),
-            metadata: {},
-          ));
+          await eventsRepo.addEvent(
+              widget.gameId,
+              GameEvent(
+                eventId: '',
+                type: EventType.assist,
+                playerId: playerId,
+                timestamp: _game?.gameDate ?? DateTime.now(),
+                metadata: {},
+              ));
         }
       }
 
       // Create MVP event
       if (_mvpPlayerId != null && _selectedPlayerIds.contains(_mvpPlayerId)) {
-        await eventsRepo.addEvent(widget.gameId, GameEvent(
-          eventId: '',
-          type: EventType.mvpVote,
-          playerId: _mvpPlayerId!,
-          timestamp: _game?.gameDate ?? DateTime.now(),
-          metadata: {},
-        ));
+        await eventsRepo.addEvent(
+            widget.gameId,
+            GameEvent(
+              eventId: '',
+              type: EventType.mvpVote,
+              playerId: _mvpPlayerId!,
+              timestamp: _game?.gameDate ?? DateTime.now(),
+              metadata: {},
+            ));
       }
 
       // Create feed post with game summary
@@ -258,33 +265,35 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
         final usersRepo = ref.read(usersRepositoryProvider);
         final creator = await usersRepo.getUser(_game?.createdBy ?? '');
         final creatorName = creator?.name ?? 'מישהו';
-        
+
         // Build story text
         final storyParts = <String>[];
         storyParts.add('$creatorName תיעד משחק');
         if (_selectedEventId != null) {
-          final event = _events.firstWhere((e) => e.eventId == _selectedEventId, orElse: () => _events.first);
+          final event = _events.firstWhere((e) => e.eventId == _selectedEventId,
+              orElse: () => _events.first);
           storyParts.add('במסגרת "${event.title}"');
         }
         storyParts.add('תוצאה: $teamAScore - $teamBScore');
-        
+
         if (_goalScorers.isNotEmpty) {
           final scorerNames = await usersRepo.getUsers(_goalScorers.toList());
           final names = scorerNames.map((u) => u.name).join(', ');
           storyParts.add('מבקיעים: $names');
         }
-        
+
         if (_assistProviders.isNotEmpty) {
-          final assistNames = await usersRepo.getUsers(_assistProviders.toList());
+          final assistNames =
+              await usersRepo.getUsers(_assistProviders.toList());
           final names = assistNames.map((u) => u.name).join(', ');
           storyParts.add('מבשלים: $names');
         }
-        
+
         if (_mvpPlayerId != null) {
           final mvp = await usersRepo.getUser(_mvpPlayerId!);
           storyParts.add('MVP: ${mvp?.name ?? "לא ידוע"}');
         }
-        
+
         final feedPost = FeedPost(
           postId: '',
           hubId: widget.hubId,
@@ -294,7 +303,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
           entityId: widget.gameId,
           createdAt: DateTime.now(),
         );
-        
+
         await feedRepo.createPost(feedPost);
       } catch (e) {
         debugPrint('Failed to create feed post: $e');
@@ -344,11 +353,12 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
               child: ListTile(
                 leading: const Icon(Icons.calendar_today),
                 title: const Text('תאריך המשחק'),
-                subtitle: Text(DateFormat('dd/MM/yyyy HH:mm', 'he').format(_game!.gameDate)),
+                subtitle: Text(DateFormat('dd/MM/yyyy HH:mm', 'he')
+                    .format(_game!.gameDate)),
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Event selection
             Card(
               child: Padding(
@@ -373,9 +383,9 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
                           child: Text('ללא אירוע'),
                         ),
                         ..._events.map((event) => DropdownMenuItem<String>(
-                          value: event.eventId,
-                          child: Text(event.title),
-                        )),
+                              value: event.eventId,
+                              child: Text(event.title),
+                            )),
                       ],
                       onChanged: (value) {
                         setState(() => _selectedEventId = value);
@@ -386,7 +396,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Score
             Card(
               child: Padding(
@@ -432,7 +442,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Players selection
             Card(
               child: Padding(
@@ -446,29 +456,29 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
                     ),
                     const SizedBox(height: 8),
                     ..._hubMembers.map((member) => CheckboxListTile(
-                      title: Text(member.name),
-                      value: _selectedPlayerIds.contains(member.uid),
-                      onChanged: (value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedPlayerIds.add(member.uid);
-                          } else {
-                            _selectedPlayerIds.remove(member.uid);
-                            _goalScorers.remove(member.uid);
-                            _assistProviders.remove(member.uid);
-                            if (_mvpPlayerId == member.uid) {
-                              _mvpPlayerId = null;
-                            }
-                          }
-                        });
-                      },
-                    )),
+                          title: Text(member.name),
+                          value: _selectedPlayerIds.contains(member.uid),
+                          onChanged: (value) {
+                            setState(() {
+                              if (value == true) {
+                                _selectedPlayerIds.add(member.uid);
+                              } else {
+                                _selectedPlayerIds.remove(member.uid);
+                                _goalScorers.remove(member.uid);
+                                _assistProviders.remove(member.uid);
+                                if (_mvpPlayerId == member.uid) {
+                                  _mvpPlayerId = null;
+                                }
+                              }
+                            });
+                          },
+                        )),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Goal scorers
             Card(
               child: Padding(
@@ -506,7 +516,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Assist providers
             Card(
               child: Padding(
@@ -544,7 +554,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // MVP
             Card(
               child: Padding(
@@ -584,11 +594,12 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Show in Community Feed
             CheckboxListTile(
               title: const Text('להעלות ללוח אירועים הקהילתי?'),
-              subtitle: const Text('המשחק יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
+              subtitle:
+                  const Text('המשחק יופיע בלוח הפעילות הקהילתי לכל המשתמשים'),
               value: _showInCommunityFeed,
               onChanged: (value) {
                 setState(() {
@@ -598,7 +609,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
               controlAffinity: ListTileControlAffinity.leading,
             ),
             const SizedBox(height: 24),
-            
+
             // Save button
             ElevatedButton(
               onPressed: _isLoading ? null : _saveGame,

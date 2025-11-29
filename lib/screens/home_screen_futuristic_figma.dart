@@ -345,7 +345,7 @@ class _HomeScreenFuturisticFigmaState
                                                 ),
                                               ),
                                               Text(
-                                                '${hub.memberIds.length} חברים',
+                                                '${hub.memberCount} חברים',
                                                 style: GoogleFonts.inter(
                                                   fontSize: 14,
                                                   color:
@@ -990,6 +990,10 @@ class _HomeScreenFuturisticFigmaState
   Future<List<Hub>> _getAssociatedHubs(
       HubsRepository hubsRepo, String userId) async {
     try {
+      // Get user to check hubIds
+      final user = await ref.read(usersRepositoryProvider).getUser(userId);
+      if (user == null) return [];
+
       final position =
           await ref.read(locationServiceProvider).getCurrentLocation();
       if (position == null) return [];
@@ -1002,7 +1006,7 @@ class _HomeScreenFuturisticFigmaState
 
       return nearbyHubs
           .where((hub) =>
-              hub.memberIds.contains(userId) && hub.createdBy != userId)
+              user.hubIds.contains(hub.hubId) && hub.createdBy != userId)
           .toList();
     } catch (e) {
       return [];
@@ -1044,7 +1048,7 @@ class _HomeScreenFuturisticFigmaState
                       return ListTile(
                         leading: const Icon(Icons.group),
                         title: Text(hub.name),
-                        subtitle: Text('${hub.memberIds.length} חברים'),
+                        subtitle: Text('${hub.memberCount} חברים'),
                         trailing: const Icon(Icons.chevron_left),
                         onTap: () {
                           Navigator.pop(context);
@@ -1096,7 +1100,7 @@ class _HomeScreenFuturisticFigmaState
                       return ListTile(
                         leading: const Icon(Icons.people),
                         title: Text(hub.name),
-                        subtitle: Text('${hub.memberIds.length} חברים'),
+                        subtitle: Text('${hub.memberCount} חברים'),
                         trailing: const Icon(Icons.chevron_left),
                         onTap: () {
                           Navigator.pop(context);

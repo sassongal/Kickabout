@@ -158,7 +158,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
                         ),
                       const SizedBox(height: 4),
                       Text(
-                        l10n.memberCount(hub.memberIds.length),
+                        l10n.memberCount(hub.memberCount),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],

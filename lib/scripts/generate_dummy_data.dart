@@ -83,9 +83,20 @@ class DummyDataGenerator {
       }
     }
 
-    // 2. עדכון ה-Hub עם החברים החדשים
-    batch.update(firestore.doc(FirestorePaths.hub(hubId)), {
-      'memberIds': FieldValue.arrayUnion(newMemberIds),
+    // 2. Add members to subcollection and update memberCount (Strategy C)
+    final hubRef = firestore.doc(FirestorePaths.hub(hubId));
+    for (final memberId in newMemberIds) {
+      batch.set(
+        hubRef.collection('members').doc(memberId),
+        {
+          'joinedAt': FieldValue.serverTimestamp(),
+          'role': 'member',
+        },
+      );
+    }
+    // Increment member count
+    batch.update(hubRef, {
+      'memberCount': FieldValue.increment(newMemberIds.length),
     });
 
     await batch.commit();
@@ -346,7 +357,8 @@ class DummyDataGenerator {
       createdBy: finalMemberIds.isNotEmpty
           ? finalMemberIds[0]
           : firestore.collection('users').doc().id,
-      memberIds: finalMemberIds,
+      memberCount:
+          finalMemberIds.length, // Use memberCount instead of memberIds
       region: hubRegion,
       createdAt: DateTime.now().subtract(Duration(days: random.nextInt(180))),
       location: finalLocation,
@@ -356,7 +368,22 @@ class DummyDataGenerator {
       },
     );
 
-    await firestore.doc(FirestorePaths.hub(hubId)).set(hub.toJson());
+    final batch = firestore.batch();
+    final hubRef = firestore.doc(FirestorePaths.hub(hubId));
+    batch.set(hubRef, hub.toJson());
+
+    // Add members to subcollection (Strategy C)
+    for (final memberId in finalMemberIds) {
+      batch.set(
+        hubRef.collection('members').doc(memberId),
+        {
+          'joinedAt': FieldValue.serverTimestamp(),
+          'role': memberId == finalMemberIds[0] ? 'manager' : 'member',
+        },
+      );
+    }
+
+    await batch.commit();
 
     // Generate some games for this hub
     await _generateGamesForHub(hubId, finalMemberIds, finalLocation);
@@ -667,7 +694,7 @@ class DummyDataGenerator {
       description:
           'קבוצת כדורגל פעילה וחזקה מחיפה. משחקים קבועים במגרש גן דניאל. קבוצה תחרותית עם מסורת ארוכה.',
       createdBy: currentUser?.uid ?? hubMemberIds[0],
-      memberIds: hubMemberIds,
+      memberCount: hubMemberIds.length, // Use memberCount instead of memberIds
       createdAt: DateTime.now().subtract(const Duration(days: 180)),
       location: hubLocation,
       geohash: hubGeohash,
@@ -677,7 +704,19 @@ class DummyDataGenerator {
       },
     );
 
-    batch.set(firestore.doc(FirestorePaths.hub(hubId)), hub.toJson());
+    final hubRef = firestore.doc(FirestorePaths.hub(hubId));
+    batch.set(hubRef, hub.toJson());
+
+    // Add members to subcollection (Strategy C)
+    for (final memberId in hubMemberIds) {
+      batch.set(
+        hubRef.collection('members').doc(memberId),
+        {
+          'joinedAt': FieldValue.serverTimestamp(),
+          'role': memberId == hubMemberIds[0] ? 'manager' : 'member',
+        },
+      );
+    }
 
     // Commit all users and hub in one batch
     await batch.commit();

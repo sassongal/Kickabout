@@ -41,29 +41,32 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
             return const Center(child: Text('הוב לא נמצא'));
           }
 
-          if (hub.memberIds.isEmpty) {
+          if (hub.memberCount == 0) {
             return const Center(child: Text('אין חברים בהוב'));
           }
 
           return FutureBuilder<List<User>>(
-            future: usersRepo.getUsers(hub.memberIds),
+            future: () async {
+              final memberIds = await hubsRepo.getHubMemberIds(hub.hubId);
+              return usersRepo.getUsers(memberIds);
+            }(),
             builder: (context, usersSnapshot) {
               if (usersSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
               final users = usersSnapshot.data ?? [];
-              
+
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: users.length,
                 itemBuilder: (context, index) {
                   final user = users[index];
                   final isCreator = user.uid == hub.createdBy;
-                  final currentRole = isCreator 
-                      ? HubRole.manager 
+                  final currentRole = isCreator
+                      ? HubRole.manager
                       : HubRole.fromFirestore(hub.roles[user.uid] ?? 'member');
-                  
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
@@ -84,14 +87,14 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                               }).toList(),
                               onChanged: (newRole) async {
                                 if (newRole == null) return;
-                                
+
                                 try {
                                   await hubsRepo.updateMemberRole(
                                     widget.hubId,
                                     user.uid,
                                     newRole.firestoreValue,
                                   );
-                                  
+
                                   if (!context.mounted) return;
                                   SnackbarHelper.showSuccess(
                                     context,
@@ -99,7 +102,8 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                                   );
                                 } catch (e) {
                                   if (!context.mounted) return;
-                                  SnackbarHelper.showErrorFromException(context, e);
+                                  SnackbarHelper.showErrorFromException(
+                                      context, e);
                                 }
                               },
                             )
@@ -117,14 +121,17 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                                   context: context,
                                   builder: (context) => AlertDialog(
                                     title: const Text('מחיקת משתמש'),
-                                    content: Text('האם אתה בטוח שברצונך להסיר את ${user.name} מההאב?'),
+                                    content: Text(
+                                        'האם אתה בטוח שברצונך להסיר את ${user.name} מההאב?'),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context, false),
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
                                         child: const Text('ביטול'),
                                       ),
                                       ElevatedButton(
-                                        onPressed: () => Navigator.pop(context, true),
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.red,
                                           foregroundColor: Colors.white,
@@ -134,10 +141,11 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                                     ],
                                   ),
                                 );
-                                
+
                                 if (confirmed == true) {
                                   try {
-                                    await hubsRepo.removeMember(widget.hubId, user.uid);
+                                    await hubsRepo.removeMember(
+                                        widget.hubId, user.uid);
                                     if (!context.mounted) return;
                                     SnackbarHelper.showSuccess(
                                       context,
@@ -145,7 +153,8 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                                     );
                                   } catch (e) {
                                     if (!context.mounted) return;
-                                    SnackbarHelper.showErrorFromException(context, e);
+                                    SnackbarHelper.showErrorFromException(
+                                        context, e);
                                   }
                                 }
                               },
@@ -153,7 +162,7 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                             ),
                           ],
                         ],
-                            ),
+                      ),
                     ),
                   );
                 },
@@ -165,4 +174,3 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
     );
   }
 }
-

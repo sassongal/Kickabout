@@ -130,7 +130,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
             : _descriptionController.text.trim(),
         createdBy: currentUserId,
         createdAt: DateTime.now(),
-        memberIds: [currentUserId], // Creator is automatically a member
+        // memberIds removed - creator added via transaction in repository
         location: location,
         geohash: geohash,
         region: _selectedRegion,

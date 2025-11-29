@@ -20,9 +20,10 @@ void main() {
       mockHubRef = MockDocumentReference();
       mockHubDoc = MockDocumentSnapshot();
       repository = HubsRepository(firestore: mockFirestore);
-      
+
       // Setup default mocks
-      when(() => mockFirestore.collection('hubs')).thenReturn(mockHubsCollection);
+      when(() => mockFirestore.collection('hubs'))
+          .thenReturn(mockHubsCollection);
       when(() => mockHubsCollection.doc(any())).thenReturn(mockHubRef);
       when(() => mockHubRef.get()).thenAnswer((_) async => mockHubDoc);
     });
@@ -65,7 +66,7 @@ void main() {
         'description': 'Test Description',
         'createdBy': 'user123',
         'createdAt': Timestamp.fromDate(now),
-        'memberIds': ['user123'],
+        'memberCount': 1,
         'roles': {'user123': 'manager'},
         'memberJoinDates': {'user123': Timestamp.fromDate(now)},
         'settings': {'ratingMode': 'basic'},
@@ -104,7 +105,7 @@ void main() {
         name: 'Test Hub',
         createdBy: 'user123',
         createdAt: DateTime.now(),
-        memberIds: ['user123'],
+        // memberIds removed - creator added via transaction
       );
 
       // Act & Assert
@@ -122,24 +123,28 @@ void main() {
         name: 'Test Hub',
         createdBy: 'user123',
         createdAt: DateTime.now(),
-        memberIds: ['user123'],
+        // memberIds removed - creator added via transaction
       );
-      
+
       when(() => mockHubsCollection.doc()).thenReturn(mockHubRef);
       when(() => mockHubRef.id).thenReturn('hub123');
       when(() => mockHubRef.set(any(), any())).thenAnswer((_) async => {});
-      
+
       // Mock transaction for user update - the transaction callback is wrapped in try-catch
       // so we can just return null and it won't fail the test
-      when(() => mockFirestore.runTransaction(any())).thenAnswer((invocation) async {
+      when(() => mockFirestore.runTransaction(any()))
+          .thenAnswer((invocation) async {
         try {
           // Get the transaction callback and execute it
-          final callback = invocation.positionalArguments[0] as Future<dynamic> Function(Transaction);
+          final callback = invocation.positionalArguments[0] as Future<dynamic>
+              Function(Transaction);
           final mockTransaction = MockTransaction();
           final mockUserRef = MockDocumentReference();
           final mockUserDoc = MockDocumentSnapshot();
           when(() => mockFirestore.doc(any<String>())).thenReturn(mockUserRef);
-          when(() => mockTransaction.get(any<DocumentReference<Map<String, dynamic>>>())).thenAnswer((_) async => mockUserDoc);
+          when(() => mockTransaction
+                  .get(any<DocumentReference<Map<String, dynamic>>>()))
+              .thenAnswer((_) async => mockUserDoc);
           when(() => mockUserDoc.exists).thenReturn(true);
           when(() => mockUserDoc.data()).thenReturn({'hubIds': []});
           return await callback(mockTransaction);
@@ -158,4 +163,3 @@ void main() {
     });
   });
 }
-

@@ -31,7 +31,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
   String _searchQuery = '';
   GoogleMapController? _mapController;
   Position? _currentPosition;
-  
+
   // Pagination state for list view
   final ScrollController _scrollController = ScrollController();
   List<Hub> _displayedHubs = [];
@@ -87,10 +87,10 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     final hubsRepo = ref.read(hubsRepositoryProvider);
     final locationService = ref.read(locationServiceProvider);
     final allHubs = await _getHubs(hubsRepo, locationService);
-    
+
     final nextIndex = _displayedHubs.length;
     final endIndex = (nextIndex + _pageSize).clamp(0, allHubs.length);
-    
+
     if (nextIndex < allHubs.length) {
       setState(() {
         _displayedHubs.addAll(allHubs.sublist(nextIndex, endIndex));
@@ -131,7 +131,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     final hubsRepo = ref.watch(hubsRepositoryProvider);
 
     final currentUserId = ref.watch(currentUserIdProvider);
-    
+
     return FuturisticScaffold(
       title: 'לוח הובים',
       showBottomNav: true,
@@ -204,7 +204,8 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     );
   }
 
-  Widget _buildHubsList(HubsRepository hubsRepo, LocationService locationService) {
+  Widget _buildHubsList(
+      HubsRepository hubsRepo, LocationService locationService) {
     return FutureBuilder<List<Hub>>(
       future: _getHubs(hubsRepo, locationService),
       builder: (context, snapshot) {
@@ -228,11 +229,12 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
         }
 
         final allHubs = snapshot.data ?? [];
-        
+
         // Initialize displayed hubs on first load or when data changes
-        if (_displayedHubs.isEmpty || 
+        if (_displayedHubs.isEmpty ||
             _displayedHubs.length != allHubs.length ||
-            (_displayedHubs.isNotEmpty && _displayedHubs.first.hubId != allHubs.first.hubId)) {
+            (_displayedHubs.isNotEmpty &&
+                _displayedHubs.first.hubId != allHubs.first.hubId)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               setState(() {
@@ -242,15 +244,14 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
             }
           });
         }
-        
+
         // Use displayed hubs if available, otherwise use first page
-        final hubsToShow = _displayedHubs.isNotEmpty 
-            ? _displayedHubs 
+        final hubsToShow = _displayedHubs.isNotEmpty
+            ? _displayedHubs
             : allHubs.take(_pageSize).toList();
-        final hasMoreToShow = _displayedHubs.isNotEmpty 
-            ? _hasMore 
-            : allHubs.length > _pageSize;
-        
+        final hasMoreToShow =
+            _displayedHubs.isNotEmpty ? _hasMore : allHubs.length > _pageSize;
+
         if (hubsToShow.isEmpty && allHubs.isEmpty) {
           return FuturisticEmptyState(
             icon: Icons.group_outlined,
@@ -338,10 +339,11 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${hub.memberIds.length} חברים',
+                            '${hub.memberCount} חברים',
                             style: FuturisticTypography.bodySmall,
                           ),
-                          if (hub.location != null && _currentPosition != null) ...[
+                          if (hub.location != null &&
+                              _currentPosition != null) ...[
                             const SizedBox(width: 16),
                             Icon(
                               Icons.location_on,
@@ -350,7 +352,8 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
                             ),
                             const SizedBox(width: 4),
                             FutureBuilder<double>(
-                              future: _calculateDistance(hub.location!, _currentPosition!),
+                              future: _calculateDistance(
+                                  hub.location!, _currentPosition!),
                               builder: (context, distanceSnapshot) {
                                 final distance = distanceSnapshot.data;
                                 if (distance == null) {
@@ -376,7 +379,8 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     );
   }
 
-  Widget _buildHubsMap(HubsRepository hubsRepo, LocationService locationService) {
+  Widget _buildHubsMap(
+      HubsRepository hubsRepo, LocationService locationService) {
     return FutureBuilder<List<Hub>>(
       future: _getHubs(hubsRepo, locationService).timeout(
         const Duration(seconds: 15),
@@ -430,27 +434,24 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
                 },
                 myLocationEnabled: true,
                 myLocationButtonEnabled: true,
-                markers: hubs
-                    .where((hub) => hub.location != null)
-                    .map((hub) {
-                      return Marker(
-                        markerId: MarkerId(hub.hubId),
-                        position: LatLng(
-                          hub.location!.latitude,
-                          hub.location!.longitude,
-                        ),
-                        infoWindow: InfoWindow(
-                          title: hub.name,
-                          snippet: '${hub.memberIds.length} חברים',
-                        ),
-                        onTap: () {
-                          if (hub.hubId.isNotEmpty) {
-                            context.push('/hubs/${hub.hubId}');
-                          }
-                        },
-                      );
-                    })
-                    .toSet(),
+                markers: hubs.where((hub) => hub.location != null).map((hub) {
+                  return Marker(
+                    markerId: MarkerId(hub.hubId),
+                    position: LatLng(
+                      hub.location!.latitude,
+                      hub.location!.longitude,
+                    ),
+                    infoWindow: InfoWindow(
+                      title: hub.name,
+                      snippet: '${hub.memberCount} חברים',
+                    ),
+                    onTap: () {
+                      if (hub.hubId.isNotEmpty) {
+                        context.push('/hubs/${hub.hubId}');
+                      }
+                    },
+                  );
+                }).toSet(),
               ),
             );
           },
@@ -465,32 +466,32 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
   ) async {
     try {
       // Add timeout to location service call
-      final position = await locationService.getCurrentLocation()
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              debugPrint('⚠️ Timeout getting current location');
-              return null;
-            },
-          );
-      
+      final position = await locationService.getCurrentLocation().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('⚠️ Timeout getting current location');
+          return null;
+        },
+      );
+
       if (position == null) {
         // Fallback: get all hubs (limited)
-        return await hubsRepo.getAllHubs(limit: 100)
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                debugPrint('⚠️ Timeout loading all hubs');
-                return <Hub>[];
-              },
-            );
+        return await hubsRepo.getAllHubs(limit: 100).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint('⚠️ Timeout loading all hubs');
+            return <Hub>[];
+          },
+        );
       }
 
-      final hubs = await hubsRepo.findHubsNearby(
+      final hubs = await hubsRepo
+          .findHubsNearby(
         latitude: position.latitude,
         longitude: position.longitude,
         radiusKm: 50.0, // 50km radius
-      ).timeout(
+      )
+          .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           debugPrint('⚠️ Timeout finding nearby hubs');
@@ -503,7 +504,9 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
         return hubs.where((hub) {
           return hub.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
               (hub.description != null &&
-                  hub.description!.toLowerCase().contains(_searchQuery.toLowerCase()));
+                  hub.description!
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()));
         }).toList();
       }
 
@@ -515,13 +518,14 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
     }
   }
 
-  Future<double> _calculateDistance(GeoPoint hubLocation, Position userPosition) async {
+  Future<double> _calculateDistance(
+      GeoPoint hubLocation, Position userPosition) async {
     return Geolocator.distanceBetween(
-      userPosition.latitude,
-      userPosition.longitude,
-      hubLocation.latitude,
-      hubLocation.longitude,
-    ) / 1000; // Convert to km
+          userPosition.latitude,
+          userPosition.longitude,
+          hubLocation.latitude,
+          hubLocation.longitude,
+        ) /
+        1000; // Convert to km
   }
 }
-

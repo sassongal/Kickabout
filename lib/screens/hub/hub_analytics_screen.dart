@@ -72,13 +72,14 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
 
       // 3. Fetch Members (for names/avatars)
       // Optimization: fetch only if needed, but for now fetch all members to map names
-      if (hub.memberIds.isNotEmpty) {
-        final members = await usersRepo.getUsers(hub.memberIds);
+      if (hub.memberCount > 0) {
+        final memberIds = await hubsRepo.getHubMemberIds(widget.hubId);
+        final members = await usersRepo.getUsers(memberIds);
         _hubMembers = {for (var m in members) m.uid: m};
       }
 
       // 4. Calculate Stats
-      await _calculateHubStats(gamesRepo);
+      await _calculateHubStats(gamesRepo, hubsRepo);
 
       if (mounted) {
         setState(() {
@@ -95,9 +96,9 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
     }
   }
 
-  Future<void> _calculateHubStats(gamesRepo) async {
+  Future<void> _calculateHubStats(gamesRepo, hubsRepo) async {
     _totalGames = _completedGames.length;
-    _totalPlayers = _hub?.memberIds.length ?? 0;
+    _totalPlayers = _hub?.memberCount ?? 0;
 
     if (_completedGames.isNotEmpty) {
       final lastGameDate = _completedGames.first.gameDate; // Ordered descending
@@ -156,11 +157,11 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
       */
 
       // Win/Loss/Draw Calculation
-      await _calculateGameResult(game, gamesRepo);
+      await _calculateGameResult(game, gamesRepo, hubsRepo);
     }
   }
 
-  Future<void> _calculateGameResult(Game game, gamesRepo) async {
+  Future<void> _calculateGameResult(Game game, gamesRepo, hubsRepo) async {
     if (game.legacyTeamAScore == null || game.legacyTeamBScore == null) return;
 
     final scoreA = game.legacyTeamAScore!;
@@ -197,7 +198,9 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
 
     if (teams.length < 2) return; // Can't determine
 
-    final hubPlayers = _hub!.memberIds.toSet();
+    // Get hub member IDs for comparison
+    final memberIds = await hubsRepo.getHubMemberIds(_hub!.hubId);
+    final hubPlayers = memberIds.toSet();
 
     // Count Hub players in each team
     int teamAHubPlayers =

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/data/repositories.dart';
 import 'package:kickadoor/models/models.dart';
@@ -209,110 +210,6 @@ class LeaderboardParams {
       type.hashCode ^ hubId.hashCode ^ period.hashCode ^ limit.hashCode;
 }
 
-/// Feed state for pagination
-class FeedState {
-  final List<FeedPost> posts;
-  final DocumentSnapshot? lastDocument;
-  final bool isLoading;
-  final bool hasMore;
-  final String? error;
-
-  FeedState({
-    required this.posts,
-    this.lastDocument,
-    this.isLoading = false,
-    this.hasMore = true,
-    this.error,
-  });
-
-  FeedState copyWith({
-    List<FeedPost>? posts,
-    DocumentSnapshot? lastDocument,
-    bool? isLoading,
-    bool? hasMore,
-    String? error,
-  }) {
-    return FeedState(
-      posts: posts ?? this.posts,
-      lastDocument: lastDocument ?? this.lastDocument,
-      isLoading: isLoading ?? this.isLoading,
-      hasMore: hasMore ?? this.hasMore,
-      error: error,
-    );
-  }
-}
-
-/// Feed notifier for pagination
-class FeedNotifier extends StateNotifier<FeedState> {
-  final FeedRepository _feedRepo;
-  final String _hubId;
-
-  FeedNotifier(this._feedRepo, this._hubId) : super(FeedState(posts: [])) {
-    _loadInitialPage();
-  }
-
-  Future<void> _loadInitialPage() async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final result = await _feedRepo.getFeedPosts(
-        hubId: _hubId,
-        limit: 15,
-      );
-      state = FeedState(
-        posts: result.posts,
-        lastDocument: result.lastDocument,
-        isLoading: false,
-        hasMore: result.hasMore,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
-    }
-  }
-
-  Future<void> fetchNextPage() async {
-    if (state.isLoading || !state.hasMore || state.lastDocument == null) {
-      return;
-    }
-
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final result = await _feedRepo.getFeedPosts(
-        hubId: _hubId,
-        lastDocumentSnapshot: state.lastDocument,
-        limit: 15,
-      );
-      state = FeedState(
-        posts: [...state.posts, ...result.posts],
-        lastDocument: result.lastDocument,
-        isLoading: false,
-        hasMore: result.hasMore,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
-    }
-  }
-
-  Future<void> refresh() async {
-    state = FeedState(posts: []);
-    await _loadInitialPage();
-  }
-}
-
-/// Feed provider for a specific hub
-final feedNotifierProvider =
-    StateNotifierProvider.family<FeedNotifier, FeedState, String>(
-  (ref, hubId) {
-    final feedRepo = ref.watch(feedRepositoryProvider);
-    return FeedNotifier(feedRepo, hubId);
-  },
-);
-
 /// Unread notifications count provider
 final unreadNotificationsCountProvider =
     StreamProvider.family<int, String>((ref, userId) {
@@ -435,7 +332,11 @@ final hubRoleProvider =
     }
 
     // Check if user is a member
-    if (hub.memberIds.contains(currentUserId)) {
+    // Use user.hubIds as source of truth
+    final usersRepo = ref.read(usersRepositoryProvider);
+    final user = await usersRepo.getUser(currentUserId);
+
+    if (user != null && user.hubIds.contains(hubId)) {
       return UserRole.member;
     }
 

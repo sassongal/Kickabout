@@ -13,6 +13,7 @@ import 'package:kickadoor/widgets/player_avatar.dart';
 import 'package:kickadoor/widgets/game_photos_gallery.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kickadoor/screens/social/feed_controller.dart';
 
 /// Feed screen - shows activity feed for a hub
 class FeedScreen extends ConsumerStatefulWidget {
@@ -32,24 +33,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    if (widget.hubId == null || widget.hubId!.isEmpty) return;
-    if (_scrollController.position.extentAfter < 300) {
-      final feedState = ref.read(feedNotifierProvider(widget.hubId!));
-      if (!feedState.isLoading && feedState.hasMore) {
-        ref.read(feedNotifierProvider(widget.hubId!).notifier).fetchNextPage();
-      }
-    }
   }
 
   @override
@@ -102,6 +91,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         final user = snapshot.data;
         final userRegion = user?.region;
         final feedRepo = ref.read(feedRepositoryProvider);
+
+        final filter = FeedFilter(
+          hubId: widget.hubId,
+          region: userRegion,
+          filterType: _selectedFilter,
+        );
+        final feedState = ref.watch(feedControllerProvider(filter));
 
         return AppScaffold(
           title: userRegion != null ? 'פיד אזורי ($userRegion)' : 'פיד פעילות',
@@ -182,38 +178,30 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               ),
               const Divider(height: 1),
               Expanded(
-                child: StreamBuilder<List<FeedPost>>(
-                  stream: _getFeedStream(userRegion),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: 5,
-                        itemBuilder: (context, index) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: SkeletonLoader(height: 120),
-                        ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return FuturisticEmptyState(
-                        icon: Icons.error_outline,
-                        title: 'שגיאה בטעינת הפיד',
-                        message: ErrorHandlerService().handleException(
-                          snapshot.error,
-                          context: 'Feed screen',
-                        ),
-                        action: ElevatedButton.icon(
-                          onPressed: () => setState(() {}),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('נסה שוב'),
-                        ),
-                      );
-                    }
-
-                    final posts = snapshot.data ?? [];
-
+                child: feedState.when(
+                  loading: () => ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SkeletonLoader(height: 120),
+                    ),
+                  ),
+                  error: (error, stackTrace) => FuturisticEmptyState(
+                    icon: Icons.error_outline,
+                    title: 'שגיאה בטעינת הפיד',
+                    message: ErrorHandlerService().handleException(
+                      error,
+                      context: 'Feed screen',
+                    ),
+                    action: ElevatedButton.icon(
+                      onPressed: () =>
+                          ref.refresh(feedControllerProvider(filter)),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('נסה שוב'),
+                    ),
+                  ),
+                  data: (posts) {
                     if (posts.isEmpty) {
                       return FuturisticEmptyState(
                         icon: Icons.feed,
@@ -252,33 +240,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         );
       },
     );
-  }
-
-  Stream<List<FeedPost>> _getFeedStream(String? userRegion) {
-    final feedRepo = ref.read(feedRepositoryProvider);
-    final postType = _getPostTypeFromFilter(_selectedFilter);
-
-    if (userRegion != null && userRegion.isNotEmpty) {
-      return feedRepo.streamRegionalFeed(
-          region: userRegion, postType: postType);
-    }
-
-    return feedRepo.watchFeed(widget.hubId!, postType: postType);
-  }
-
-  String? _getPostTypeFromFilter(String filter) {
-    switch (filter) {
-      case 'games':
-        return 'game_completed';
-      case 'recruiting':
-        return 'hub_recruiting';
-      case 'achievements':
-        return 'achievement';
-      case 'posts':
-        return 'post';
-      default:
-        return null;
-    }
   }
 
   // Removed: _buildBody - not used (using StreamBuilder directly)
