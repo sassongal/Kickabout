@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kickadoor/widgets/futuristic/loading_state.dart';
 import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
 import 'package:kickadoor/data/repositories_providers.dart';
@@ -16,6 +17,18 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kickadoor/services/error_handler_service.dart';
 import 'package:kickadoor/models/hub_role.dart';
 
+class HubMember {
+  final User user;
+  final DateTime? joinedAt;
+  final String role;
+
+  HubMember({
+    required this.user,
+    this.joinedAt,
+    required this.role,
+  });
+}
+
 /// Dedicated screen for viewing all players in a hub
 class HubPlayersListScreen extends ConsumerStatefulWidget {
   final String hubId;
@@ -29,7 +42,7 @@ class HubPlayersListScreen extends ConsumerStatefulWidget {
 
 class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
   String _searchQuery = '';
-  String _sortBy = 'rating'; // rating, name, position
+  String _sortBy = 'rating'; // rating, name, position, tenure
   final TextEditingController _searchController = TextEditingController();
 
   // Manager Ratings Mode
@@ -37,10 +50,11 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
   Map<String, double> _tempRatings = {}; // userId -> rating (1.0-7.0)
   bool _isSavingRatings = false;
 
-  // Pagination state
+  // Pagination state for subcollection
   final ScrollController _scrollController = ScrollController();
-  List<User> _displayedUsers = [];
-  bool _isLoadingMore = false;
+  final List<HubMember> _members = [];
+  DocumentSnapshot? _lastDocument;
+  bool _isLoading = false;
   bool _hasMore = true;
   static const int _pageSize = 20;
 
@@ -48,6 +62,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _loadMembers();
   }
 
   @override
@@ -60,58 +75,88 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent * 0.8) {
-      _loadMoreUsers();
+      _loadMembers();
     }
   }
 
-  Future<void> _loadMoreUsers() async {
-    if (_isLoadingMore || !_hasMore) return;
+  Future<void> _loadMembers() async {
+    if (_isLoading || !_hasMore) return;
 
     setState(() {
-      _isLoadingMore = true;
+      _isLoading = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('hubs')
+          .doc(widget.hubId)
+          .collection('members')
+          .orderBy('joinedAt', descending: true)
+          .limit(_pageSize);
 
-    // Get current filtered users
-    final hub = await ref.read(hubsRepositoryProvider).getHub(widget.hubId);
-    if (hub == null) {
-      setState(() {
-        _isLoadingMore = false;
-      });
-      return;
-    }
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
 
-    final memberIds =
-        await ref.read(hubsRepositoryProvider).getHubMemberIds(widget.hubId);
-    final allUsers =
-        await ref.read(usersRepositoryProvider).getUsers(memberIds);
-    final filteredUsers = _filterAndSort(allUsers, hub);
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isLoading = false;
+        });
+        return;
+      }
 
-    final nextIndex = _displayedUsers.length;
-    final endIndex = (nextIndex + _pageSize).clamp(0, filteredUsers.length);
+      _lastDocument = snapshot.docs.last;
 
-    if (nextIndex < filteredUsers.length) {
-      setState(() {
-        _displayedUsers.addAll(filteredUsers.sublist(nextIndex, endIndex));
-        _hasMore = endIndex < filteredUsers.length;
-        _isLoadingMore = false;
-      });
-    } else {
-      setState(() {
-        _hasMore = false;
-        _isLoadingMore = false;
-      });
+      final memberIds = snapshot.docs.map((doc) => doc.id).toList();
+      final metadata = <String, Map<String, dynamic>>{};
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        metadata[doc.id] = {
+          'joinedAt': data['joinedAt'] as Timestamp?,
+          'role': data['role'] as String? ?? 'member',
+        };
+      }
+
+      final users =
+          await ref.read(usersRepositoryProvider).getUsers(memberIds);
+
+      final newMembers = users.map((u) {
+        final meta = metadata[u.uid];
+        return HubMember(
+          user: u,
+          joinedAt: meta?['joinedAt']?.toDate(),
+          role: meta?['role'] as String? ?? 'member',
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _members.addAll(newMembers);
+          _hasMore = snapshot.docs.length == _pageSize;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasMore = false;
+        });
+      }
+      debugPrint('Error loading members: $e');
     }
   }
 
-  List<User> _filterAndSort(List<User> users, Hub? hub) {
-    var filtered = users;
+  List<HubMember> _filterAndSort(List<HubMember> members, Hub? hub) {
+    var filtered = List<HubMember>.from(members);
 
     // Search filter
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((user) {
+      filtered = filtered.where((member) {
         final query = _searchQuery.toLowerCase();
+        final user = member.user;
         return user.name.toLowerCase().contains(query) ||
             (user.email.toLowerCase().contains(query)) ||
             (user.city?.toLowerCase().contains(query) ?? false) ||
@@ -121,53 +166,29 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
     // Sort with priority: Managers first, then by Tenure (Join Date)
     filtered.sort((a, b) {
-      if (hub == null) {
-        // Fallback to original sorting if no hub data
-        switch (_sortBy) {
-          case 'rating':
-            return b.currentRankScore.compareTo(a.currentRankScore);
-          case 'name':
-            return a.name.compareTo(b.name);
-          case 'position':
-            return a.preferredPosition.compareTo(b.preferredPosition);
-          default:
-            return 0;
-        }
-      }
-
       // Priority 1: Managers/Admins must appear at the very top
-      final isAManager =
-          a.uid == hub.createdBy || hub.roles[a.uid] == 'manager';
-      final isBManager =
-          b.uid == hub.createdBy || hub.roles[b.uid] == 'manager';
+      final isAManager = a.role == 'manager' || a.role == 'admin';
+      final isBManager = b.role == 'manager' || b.role == 'admin';
 
       if (isAManager && !isBManager) return -1;
       if (!isAManager && isBManager) return 1;
 
-      // Priority 2: Sort by Tenure (Join Date) - older dates = higher on list
-      if (isAManager == isBManager && hub.memberJoinDates.isNotEmpty) {
-        final aJoinDate = hub.memberJoinDates[a.uid];
-        final bJoinDate = hub.memberJoinDates[b.uid];
-
-        if (aJoinDate != null && bJoinDate != null) {
-          // Older date = earlier in list (negative value)
-          return aJoinDate.compareTo(bJoinDate);
-        } else if (aJoinDate != null) {
-          return -1; // a has join date, b doesn't - a comes first
-        } else if (bJoinDate != null) {
-          return 1; // b has join date, a doesn't - b comes first
-        }
-      }
-
-      // Fallback to original sorting if no tenure data
+      // Priority 2: Sort by selected criterion
       switch (_sortBy) {
         case 'rating':
-          return b.currentRankScore.compareTo(a.currentRankScore);
+          final aRating =
+              (hub?.managerRatings[a.user.uid]) ?? a.user.currentRankScore;
+          final bRating =
+              (hub?.managerRatings[b.user.uid]) ?? b.user.currentRankScore;
+          return bRating.compareTo(aRating);
         case 'name':
-          return a.name.compareTo(b.name);
+          return a.user.name.compareTo(b.user.name);
         case 'position':
-          return a.preferredPosition.compareTo(b.preferredPosition);
-        default:
+          return a.user.preferredPosition.compareTo(b.user.preferredPosition);
+        default: // tenure (oldest join date first)
+          if (a.joinedAt != null && b.joinedAt != null) {
+            return a.joinedAt!.compareTo(b.joinedAt!);
+          }
           return 0;
       }
     });
@@ -309,31 +330,9 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 );
               }
 
-              final allUsers = snapshot.data ?? [];
-              final filteredUsers = _filterAndSort(allUsers, hub);
-
-              // Initialize displayed users on first load or when data changes
-              if (_displayedUsers.isEmpty ||
-                  _displayedUsers.length != filteredUsers.length ||
-                  (_displayedUsers.isNotEmpty &&
-                      _displayedUsers.first.uid != filteredUsers.first.uid)) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {
-                      _displayedUsers = filteredUsers.take(_pageSize).toList();
-                      _hasMore = filteredUsers.length > _pageSize;
-                    });
-                  }
-                });
-              }
-
-              // Use displayed users if available, otherwise use first page
-              final usersToShow = _displayedUsers.isNotEmpty
-                  ? _displayedUsers
-                  : filteredUsers.take(_pageSize).toList();
-              final hasMoreToShow = _displayedUsers.isNotEmpty
-                  ? _hasMore
-                  : filteredUsers.length > _pageSize;
+              final filteredMembers = _filterAndSort(_members, hub);
+              final membersToShow = filteredMembers;
+              final hasMoreToShow = _hasMore;
 
               return Column(
                 children: [
@@ -483,7 +482,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                           OutlinedButton.icon(
                             onPressed: () async {
                               // Get manual players
-                              final manualPlayers = allUsers
+                              final manualPlayers = _members
+                                  .map((m) => m.user)
                                   .where((u) => u.email.startsWith('manual_'))
                                   .toList();
 
@@ -527,7 +527,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                   ),
                   // Players list
                   Expanded(
-                    child: filteredUsers.isEmpty
+                    child: membersToShow.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -554,17 +554,18 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                             controller: _scrollController,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount:
-                                usersToShow.length + (hasMoreToShow ? 1 : 0),
+                                membersToShow.length + (hasMoreToShow ? 1 : 0),
                             itemBuilder: (context, index) {
                               // Show loading indicator at the bottom
-                              if (index == usersToShow.length) {
+                              if (index == membersToShow.length) {
                                 return const Padding(
                                   padding: EdgeInsets.all(16.0),
                                   child: Center(
                                       child: CircularProgressIndicator()),
                                 );
                               }
-                              final user = usersToShow[index];
+                              final member = membersToShow[index];
+                              final user = member.user;
                               final isManualPlayer =
                                   user.email.startsWith('manual_');
                               final isCreator = user.uid == hub.createdBy;
@@ -602,6 +603,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                           user, currentRating, hub)
                                       : _buildNormalModeTile(
                                           user,
+                                          member.role,
                                           isManualPlayer,
                                           isCreator,
                                           isHubManager,
@@ -620,12 +622,13 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     );
   }
 
-  Widget _buildNormalModeTile(User user, bool isManualPlayer, bool isCreator,
-      bool isHubManager, Hub hub) {
+  Widget _buildNormalModeTile(User user, String role, bool isManualPlayer,
+      bool isCreator, bool isHubManager, Hub hub) {
     // Get manager rating if it exists, otherwise use global rating
     final managerRating = hub.managerRatings[user.uid];
     final displayRating = managerRating ?? user.currentRankScore;
     final hasManagerRating = managerRating != null;
+    final isManagerRole = role == 'manager' || role == 'admin';
 
     return ListTile(
       contentPadding: const EdgeInsets.all(12),
@@ -668,7 +671,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
               style: FuturisticTypography.labelLarge,
             ),
           ),
-          if (isCreator)
+          if (isManagerRole)
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 8,
@@ -679,12 +682,31 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
+                'מנהל',
+                style: FuturisticTypography.labelSmall.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          if (!isManagerRole && isCreator) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: FuturisticColors.secondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
                 'יוצר',
                 style: FuturisticTypography.labelSmall.copyWith(
                   color: Colors.white,
                 ),
               ),
             ),
+          ],
           if (isManualPlayer) ...[
             const SizedBox(width: 8),
             Icon(

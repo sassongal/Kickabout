@@ -238,13 +238,15 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ref.read(pushNotificationIntegrationServiceProvider);
           final usersRepo = ref.read(usersRepositoryProvider);
           final currentUser = await usersRepo.getUser(currentUserId);
+          final memberIds =
+              await ref.read(hubsRepositoryProvider).getHubMemberIds(widget.hubId);
 
           await pushIntegration.notifyNewEvent(
             eventId: eventId,
             hubId: widget.hubId,
             creatorName: currentUser?.name ?? 'מישהו',
             hubName: _hub?.name ?? 'האב',
-            memberIds: _hub?.memberIds ?? [],
+            memberIds: memberIds,
             excludeUserId: currentUserId,
             eventTitle: event.title,
             eventDate: eventDate,

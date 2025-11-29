@@ -51,32 +51,30 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
     try {
       final chatRepo = ref.read(chatRepositoryProvider);
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(widget.hubId);
-      
+
       await chatRepo.sendMessage(
         widget.hubId,
         currentUserId,
         text,
-        memberIds: hub?.memberIds,
       );
-      
+
       // Send notification to other members
-      if (hub != null) {
-        try {
-          final pushIntegration = ref.read(pushNotificationIntegrationServiceProvider);
-          final usersRepo = ref.read(usersRepositoryProvider);
-          final currentUser = await usersRepo.getUser(currentUserId);
-          
-          await pushIntegration.notifyNewMessage(
-            hubId: widget.hubId,
-            senderName: currentUser?.name ?? 'מישהו',
-            message: text,
-            memberIds: hub.memberIds,
-            excludeUserId: currentUserId,
-          );
-        } catch (e) {
-          debugPrint('Failed to send message notification: $e');
-        }
+      try {
+        final pushIntegration =
+            ref.read(pushNotificationIntegrationServiceProvider);
+        final usersRepo = ref.read(usersRepositoryProvider);
+        final currentUser = await usersRepo.getUser(currentUserId);
+        final memberIds = await hubsRepo.getHubMemberIds(widget.hubId);
+
+        await pushIntegration.notifyNewMessage(
+          hubId: widget.hubId,
+          senderName: currentUser?.name ?? 'מישהו',
+          message: text,
+          memberIds: memberIds,
+          excludeUserId: currentUserId,
+        );
+      } catch (e) {
+        debugPrint('Failed to send message notification: $e');
       }
       
       _messageController.clear();
@@ -325,4 +323,3 @@ class _MessageBubble extends ConsumerWidget {
     );
   }
 }
-

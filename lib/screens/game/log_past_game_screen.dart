@@ -83,8 +83,10 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
       }
       
       // Load hub members
-      final memberIds = hub?.memberIds ?? [];
-      final members = await usersRepo.getUsers(memberIds);
+      final members = hub != null
+          ? await usersRepo
+              .getUsers(await hubsRepo.getHubMemberIds(hub.hubId))
+          : <User>[];
       
       // Load events
       final events = await eventsRepo.getHubEvents(widget.hubId);
@@ -502,4 +504,3 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
     );
   }
 }
-

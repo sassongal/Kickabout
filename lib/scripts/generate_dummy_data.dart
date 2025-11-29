@@ -357,8 +357,7 @@ class DummyDataGenerator {
       createdBy: finalMemberIds.isNotEmpty
           ? finalMemberIds[0]
           : firestore.collection('users').doc().id,
-      memberCount:
-          finalMemberIds.length, // Use memberCount instead of memberIds
+      memberCount: finalMemberIds.length,
       region: hubRegion,
       createdAt: DateTime.now().subtract(Duration(days: random.nextInt(180))),
       location: finalLocation,
@@ -372,11 +371,11 @@ class DummyDataGenerator {
     final hubRef = firestore.doc(FirestorePaths.hub(hubId));
     batch.set(hubRef, hub.toJson());
 
-    // Add members to subcollection (Strategy C)
-    for (final memberId in finalMemberIds) {
-      batch.set(
-        hubRef.collection('members').doc(memberId),
-        {
+      // Add members to subcollection (Strategy C)
+      for (final memberId in finalMemberIds) {
+        batch.set(
+          hubRef.collection('members').doc(memberId),
+          {
           'joinedAt': FieldValue.serverTimestamp(),
           'role': memberId == finalMemberIds[0] ? 'manager' : 'member',
         },
@@ -850,11 +849,11 @@ class DummyDataGenerator {
         name: hubNames[i],
         description: hubDescriptions[i],
         createdBy: creatorId,
-        memberIds: hubMemberIds,
         createdAt: DateTime.now().subtract(Duration(days: 180 + i * 30)),
         location: hubLocation,
         geohash: hubGeohash,
         region: hubRegions[i], // Add region
+        memberCount: hubMemberIds.length,
         settings: {
           'ratingMode': ['basic', 'advanced'][random.nextInt(2)],
         },
@@ -864,6 +863,14 @@ class DummyDataGenerator {
       );
 
       await firestore.doc(FirestorePaths.hub(hubId)).set(hub.toJson());
+      // Add members subcollection
+      final hubRef = firestore.doc(FirestorePaths.hub(hubId));
+      for (final memberId in hubMemberIds) {
+        await hubRef.collection('members').doc(memberId).set({
+          'joinedAt': FieldValue.serverTimestamp(),
+          'role': memberId == managerId ? 'manager' : 'member',
+        });
+      }
       hubIds.add(hubId);
       hubMemberAssignments[hubId] = hubMemberIds;
 
@@ -1304,7 +1311,7 @@ class DummyDataGenerator {
         name: hubData['name'] as String,
         description: hubData['description'] as String?,
         createdBy: hubMemberIds.isNotEmpty ? hubMemberIds[0] : allUserIds[0],
-        memberIds: hubMemberIds,
+        memberCount: hubMemberIds.length,
         region: 'צפון',
         createdAt: DateTime.now().subtract(Duration(days: random.nextInt(180))),
         location: hubLocation,
@@ -1319,6 +1326,16 @@ class DummyDataGenerator {
         ...hub.toJson(),
         'isDummy': true, // Flag for cleanup
       });
+
+      // Add members subcollection
+      final hubRef = firestore.doc(FirestorePaths.hub(hubId));
+      for (int idx = 0; idx < hubMemberIds.length; idx++) {
+        final memberId = hubMemberIds[idx];
+        await hubRef.collection('members').doc(memberId).set({
+          'joinedAt': FieldValue.serverTimestamp(),
+          'role': idx == 0 ? 'manager' : 'member',
+        });
+      }
 
       // Update users' hubIds
       for (final userId in hubMemberIds) {

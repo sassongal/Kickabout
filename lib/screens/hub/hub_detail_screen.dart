@@ -923,11 +923,9 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
 class _MembersTab extends ConsumerStatefulWidget {
   final String hubId;
   final Hub hub;
-  final UsersRepository usersRepo;
   const _MembersTab({
     required this.hubId,
     required this.hub,
-    required this.usersRepo,
   });
 
   @override
@@ -971,8 +969,10 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
     await Future.delayed(const Duration(milliseconds: 300));
 
     // Fetch member IDs from subcollection (Strategy B)
-    final memberIds = await widget.hubsRepo.getHubMemberIds(widget.hubId);
-    final allUsers = await widget.usersRepo.getUsers(memberIds);
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
+    final memberIds = await hubsRepo.getHubMemberIds(widget.hubId);
+    final allUsers = await usersRepo.getUsers(memberIds);
 
     final nextIndex = _displayedUsers.length;
     final endIndex = (nextIndex + _pageSize).clamp(0, allUsers.length);
@@ -1006,8 +1006,10 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
     return FutureBuilder<List<User>>(
       future: () async {
-        final memberIds = await widget.hubsRepo.getHubMemberIds(widget.hubId);
-        return widget.usersRepo.getUsers(memberIds);
+        final hubsRepo = ref.read(hubsRepositoryProvider);
+        final usersRepo = ref.read(usersRepositoryProvider);
+        final memberIds = await hubsRepo.getHubMemberIds(widget.hubId);
+        return usersRepo.getUsers(memberIds);
       }(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {

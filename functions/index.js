@@ -31,6 +31,16 @@ const messaging = getMessaging();
 const admin = {auth: getAuth()};
 const storage = getStorage();
 
+async function getHubMemberIds(hubId, limit = 500) {
+  const snap = await db
+      .collection('hubs')
+      .doc(hubId)
+      .collection('members')
+      .limit(limit)
+      .get();
+  return snap.docs.map((d) => d.id);
+}
+
 // Image processing library (sharp)
 // Note: You'll need to install: npm install sharp
 let sharp;
@@ -388,7 +398,10 @@ exports.onHubMessageCreated = onDocumentCreated(
 
         // Get hub members
         const hubData = hubSnap.data();
-        const memberIds = hubData.memberIds || [];
+        let memberIds = hubData.memberIds || [];
+        if (!memberIds.length) {
+          memberIds = await getHubMemberIds(hubId);
+        }
         if (memberIds.length === 0) return;
 
         // Get FCM tokens for all members except sender
@@ -593,12 +606,17 @@ exports.onRecruitingPostCreated = onDocumentCreated(
             .limit(100)
             .get();
 
+        let memberIds = hubData.memberIds || [];
+        if (!memberIds.length) {
+          memberIds = await getHubMemberIds(hubId);
+        }
+
         const tokens = [];
         for (const userDoc of usersSnapshot.docs) {
           const userId = userDoc.id;
 
           // Skip hub members
-          if (hubData.memberIds && hubData.memberIds.includes(userId)) continue;
+          if (memberIds.includes(userId)) continue;
 
           try {
             const tokenDoc = await db
@@ -1501,7 +1519,10 @@ exports.notifyHubOnNewGame = onCall(
 
         const hubData = hubDoc.data();
         const hubName = hubData.name || 'האב';
-        const memberIds = hubData.memberIds || [];
+        let memberIds = hubData.memberIds || [];
+        if (!memberIds.length) {
+          memberIds = await getHubMemberIds(hubId);
+        }
 
         if (memberIds.length === 0) {
           info(`Hub ${hubId} has no members to notify`);
@@ -1964,80 +1985,49 @@ exports.getHomeDashboardData = onCall(
     },
 );
 
-// --- Custom Claims Update for Hub Members ---
-// When a hub's memberIds or roles change, update custom claims for affected users
-// This allows Firestore rules to check permissions without reading hub document
-// Custom claims format: { hubs: { [hubId]: 'role' } }
+// --- Custom Claims Update for Hub Members (Subcollection-aware) ---
 exports.onHubMemberChanged = onDocumentUpdated(
     'hubs/{hubId}',
     async (event) => {
       const hubId = event.params.hubId;
-      const beforeData = event.data.before.data();
       const afterData = event.data.after.data();
+      if (!afterData) return;
 
-      if (!beforeData || !afterData) {
-        // Hub was created or deleted, skip
-        return;
-      }
-
-      const beforeMemberIds = new Set(beforeData.memberIds || []);
-      const afterMemberIds = new Set(afterData.memberIds || []);
       const afterRoles = afterData.roles || {};
+      const affectedUserIds = new Set(Object.keys(afterRoles));
 
-      // Find users who were added, removed, or had role changes
-      const affectedUserIds = new Set([
-        ...beforeMemberIds,
-        ...afterMemberIds,
-        ...Object.keys(afterRoles),
-      ]);
+      if (affectedUserIds.size === 0) return;
 
-      if (affectedUserIds.size === 0) {
-        return;
-      }
-
-      info(`Hub ${hubId} member/role changed. Updating custom claims for ${affectedUserIds.size} users.`);
+      info(`Hub ${hubId} role map changed. Updating custom claims for ${affectedUserIds.size} users.`);
 
       try {
-        // Update custom claims for each affected user
         const updatePromises = Array.from(affectedUserIds).map(async (userId) => {
           try {
-            // Get all hubs this user is a member of
-            const userHubsSnapshot = await db
-                .collection('hubs')
-                .where('memberIds', 'array-contains', userId)
-                .get();
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (!userDoc.exists) return;
+            const hubIds = userDoc.data().hubIds || [];
 
-            // Build hubs map: { [hubId]: role }
-            const hubs = {};
-            for (const hubDoc of userHubsSnapshot.docs) {
-              const hubData = hubDoc.data();
-              const currentHubId = hubDoc.id;
-
-              // Determine role: creator is always 'manager', otherwise check roles map
-              let role = 'member';
-              if (hubData.createdBy === userId) {
-                role = 'manager';
-              } else if (hubData.roles && hubData.roles[userId]) {
-                role = hubData.roles[userId];
+            const hubsClaims = {};
+            for (const hid of hubIds) {
+              const memberDoc = await db
+                  .collection('hubs')
+                  .doc(hid)
+                  .collection('members')
+                  .doc(userId)
+                  .get();
+              if (memberDoc.exists) {
+                hubsClaims[hid] = memberDoc.data().role || 'member';
               }
-
-              hubs[currentHubId] = role;
             }
 
-            // Update custom claims
-            await admin.auth.setCustomUserClaims(userId, {
-              hubs: hubs,
-            });
-
-            info(`Updated custom claims for user ${userId}: ${Object.keys(hubs).length} hubs`);
+            await admin.auth.setCustomUserClaims(userId, {hubs: hubsClaims});
+            info(`Updated custom claims for user ${userId}`);
           } catch (error) {
             info(`Error updating custom claims for user ${userId}:`, error);
-            // Continue with other users even if one fails
           }
         });
 
         await Promise.all(updatePromises);
-        info(`Successfully updated custom claims for ${affectedUserIds.size} users after hub ${hubId} change.`);
       } catch (error) {
         info(`Error in onHubMemberChanged for hub ${hubId}:`, error);
       }

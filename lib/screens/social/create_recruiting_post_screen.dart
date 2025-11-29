@@ -255,7 +255,7 @@ class _CreateRecruitingPostScreenState
                               child: Text(hub.name[0]),
                             ),
                       title: Text(hub.name),
-                      subtitle: Text('${hub.memberIds.length} שחקנים'),
+                      subtitle: Text('${hub.memberCount} שחקנים'),
                     ),
                   );
                 },

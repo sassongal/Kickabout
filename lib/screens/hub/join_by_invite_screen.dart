@@ -205,7 +205,7 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
                       children: [
                         const Icon(Icons.people, size: 20),
                         const SizedBox(width: 8),
-                        Text(l10n.memberCount(hub.memberIds.length)),
+                        Text(l10n.memberCount(hub.memberCount)),
                       ],
                     ),
                   ],
