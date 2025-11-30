@@ -1,6 +1,6 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/config/env.dart';
 
 /// Service for Firebase Analytics event tracking
 class AnalyticsService {

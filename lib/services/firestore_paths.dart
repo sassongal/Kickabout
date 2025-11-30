@@ -1,4 +1,4 @@
-import 'package:kickadoor/core/constants.dart';
+import 'package:kattrick/core/constants.dart';
 
 /// Firestore path constants matching the schema
 class FirestorePaths {

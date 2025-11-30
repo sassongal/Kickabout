@@ -1,8 +1,8 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/utils/geohash_utils.dart';
 
 /// Service for handling location-related operations
 class LocationService {

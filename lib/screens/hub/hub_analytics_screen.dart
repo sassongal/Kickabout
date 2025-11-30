@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fl_chart/fl_chart.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 class HubAnalyticsScreen extends ConsumerStatefulWidget {
   final String hubId;
@@ -184,7 +184,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
     // Let's interpret this as:
     // Green: Decisive Games (someone won)
     // Grey: Draws
-    // OR, if the user meant "My Hub vs Others", but Kickabout is mostly internal pickups.
+    // OR, if the user meant "My Hub vs Others", but Kattrick is mostly internal pickups.
     // Let's stick to the prompt's logic:
     // "Check if Team A belongs to Hub... count hub players... if majority hub players won -> Win"
     // This logic assumes we might play against outsiders.

@@ -55,6 +55,21 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
             'hideStats': false,
             'hideRatings': false
           },
+      notificationPreferences:
+          (json['notificationPreferences'] as Map<String, dynamic>?)?.map(
+                (k, e) => MapEntry(k, e as bool),
+              ) ??
+              const {
+                'game_reminder': true,
+                'message': true,
+                'like': true,
+                'comment': true,
+                'signup': true,
+                'new_follower': true,
+                'hub_chat': true,
+                'new_comment': true,
+                'new_game': true
+              },
     );
 
 Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
@@ -93,6 +108,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'goals': instance.goals,
       'assists': instance.assists,
       'privacySettings': instance.privacySettings,
+      'notificationPreferences': instance.notificationPreferences,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

@@ -21,6 +21,7 @@ LogPastGameDetails _$LogPastGameDetailsFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$LogPastGameDetails {
   String get hubId => throw _privateConstructorUsedError;
+  @TimestampConverter()
   DateTime get gameDate => throw _privateConstructorUsedError;
   String? get venueId => throw _privateConstructorUsedError;
   String? get eventId =>
@@ -29,6 +30,7 @@ mixin _$LogPastGameDetails {
   int get teamBScore => throw _privateConstructorUsedError;
   List<String> get playerIds =>
       throw _privateConstructorUsedError; // Players who participated
+  @TeamListConverter()
   List<Team> get teams =>
       throw _privateConstructorUsedError; // Teams with player assignments
   bool get showInCommunityFeed =>
@@ -61,13 +63,13 @@ abstract class $LogPastGameDetailsCopyWith<$Res> {
   @useResult
   $Res call(
       {String hubId,
-      DateTime gameDate,
+      @TimestampConverter() DateTime gameDate,
       String? venueId,
       String? eventId,
       int teamAScore,
       int teamBScore,
       List<String> playerIds,
-      List<Team> teams,
+      @TeamListConverter() List<Team> teams,
       bool showInCommunityFeed,
       List<String> goalScorerIds,
       List<String> goalScorerNames,
@@ -177,13 +179,13 @@ abstract class _$$LogPastGameDetailsImplCopyWith<$Res>
   @useResult
   $Res call(
       {String hubId,
-      DateTime gameDate,
+      @TimestampConverter() DateTime gameDate,
       String? venueId,
       String? eventId,
       int teamAScore,
       int teamBScore,
       List<String> playerIds,
-      List<Team> teams,
+      @TeamListConverter() List<Team> teams,
       bool showInCommunityFeed,
       List<String> goalScorerIds,
       List<String> goalScorerNames,
@@ -286,13 +288,13 @@ class __$$LogPastGameDetailsImplCopyWithImpl<$Res>
 class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
   const _$LogPastGameDetailsImpl(
       {required this.hubId,
-      required this.gameDate,
+      @TimestampConverter() required this.gameDate,
       this.venueId,
       this.eventId,
       required this.teamAScore,
       required this.teamBScore,
       required final List<String> playerIds,
-      required final List<Team> teams,
+      @TeamListConverter() required final List<Team> teams,
       this.showInCommunityFeed = false,
       final List<String> goalScorerIds = const [],
       final List<String> goalScorerNames = const [],
@@ -310,6 +312,7 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
   @override
   final String hubId;
   @override
+  @TimestampConverter()
   final DateTime gameDate;
   @override
   final String? venueId;
@@ -332,6 +335,7 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
   final List<Team> _teams;
 // Players who participated
   @override
+  @TeamListConverter()
   List<Team> get teams {
     if (_teams is EqualUnmodifiableListView) return _teams;
     // ignore: implicit_dynamic_type
@@ -449,13 +453,13 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
 abstract class _LogPastGameDetails implements LogPastGameDetails {
   const factory _LogPastGameDetails(
       {required final String hubId,
-      required final DateTime gameDate,
+      @TimestampConverter() required final DateTime gameDate,
       final String? venueId,
       final String? eventId,
       required final int teamAScore,
       required final int teamBScore,
       required final List<String> playerIds,
-      required final List<Team> teams,
+      @TeamListConverter() required final List<Team> teams,
       final bool showInCommunityFeed,
       final List<String> goalScorerIds,
       final List<String> goalScorerNames,
@@ -469,6 +473,7 @@ abstract class _LogPastGameDetails implements LogPastGameDetails {
   @override
   String get hubId;
   @override
+  @TimestampConverter()
   DateTime get gameDate;
   @override
   String? get venueId;
@@ -481,6 +486,7 @@ abstract class _LogPastGameDetails implements LogPastGameDetails {
   @override
   List<String> get playerIds; // Players who participated
   @override
+  @TeamListConverter()
   List<Team> get teams; // Teams with player assignments
   @override
   bool get showInCommunityFeed; // Show this game in the community activity feed

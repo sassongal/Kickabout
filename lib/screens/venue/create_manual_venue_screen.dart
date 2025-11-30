@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 
 /// Screen for creating a manual venue (not from Google Places)
 class CreateManualVenueScreen extends ConsumerStatefulWidget {

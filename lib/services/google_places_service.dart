@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/venue.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/models/venue.dart';
 
 /// Google Places API result model
 class PlaceResult {

@@ -9,7 +9,11 @@ import GoogleMaps
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     // Google Maps API Key (Client-side SDK key for displaying maps)
-    GMSServices.provideAPIKey("AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU")
+    // SECURITY: This key should be restricted in Google Cloud Console
+    // Application restrictions: Add iOS bundle ID
+    // API restrictions: Only Maps SDK for iOS, Places API
+    // TODO: Move to Info.plist or use environment variable for better security
+    GMSServices.provideAPIKey("AIzaSyAapcK84BybKhuATK6n9YEtBlENgJ068tM")
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

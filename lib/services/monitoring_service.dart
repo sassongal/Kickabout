@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:kickadoor/services/error_handler_service.dart';
+import 'package:kattrick/services/error_handler_service.dart';
 
 /// Performance metrics
 class PerformanceMetrics {

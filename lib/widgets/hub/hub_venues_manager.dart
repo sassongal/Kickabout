@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/models/venue.dart';
-import 'package:kickadoor/widgets/input/smart_venue_search_field.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/models/venue.dart';
+import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 /// Widget to manage Hub venues (add, remove, set primary)
 class HubVenuesManager extends ConsumerStatefulWidget {

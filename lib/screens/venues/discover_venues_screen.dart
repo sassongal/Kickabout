@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/data/venues_repository.dart';
-import 'package:kickadoor/services/google_places_service.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/data/venues_repository.dart';
+import 'package:kattrick/services/google_places_service.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 /// Screen for discovering and searching football venues in Israel
 class DiscoverVenuesScreen extends ConsumerStatefulWidget {

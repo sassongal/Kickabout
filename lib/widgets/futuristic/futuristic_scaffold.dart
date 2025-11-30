@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/widgets/futuristic/app_bar_with_logo.dart';
-import 'package:kickadoor/widgets/futuristic/bottom_navigation_bar.dart';
-import 'package:kickadoor/widgets/futuristic/offline_indicator.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/app_bar_with_logo.dart';
+import 'package:kattrick/widgets/futuristic/bottom_navigation_bar.dart';
+import 'package:kattrick/widgets/futuristic/offline_indicator.dart';
 
 /// Futuristic scaffold with custom AppBar styling
 class FuturisticScaffold extends StatelessWidget {

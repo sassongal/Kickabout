@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/team_data.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/models/team_data.dart';
 
 /// Repository for managing favorite teams data
 /// This repository reads from a closed collection 'teams' in Firestore

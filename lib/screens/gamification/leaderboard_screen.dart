@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/widgets/kicka_ball_logo.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/kicka_ball_logo.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LeaderboardScreen extends StatelessWidget {

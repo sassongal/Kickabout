@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 /// Futuristic empty state widget
 class FuturisticEmptyState extends StatelessWidget {

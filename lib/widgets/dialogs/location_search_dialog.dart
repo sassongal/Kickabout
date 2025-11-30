@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/services/google_places_service.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/services/google_places_service.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Dialog for searching and selecting a location using Google Places Autocomplete

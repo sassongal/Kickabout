@@ -3,16 +3,16 @@ import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/kicka_ball_logo.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/services/analytics_service.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart' as model;
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/gradient_button.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/kicka_ball_logo.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart' as model;
 
 /// Futuristic login screen with seamless one-tap sign-in
 class LoginScreen extends ConsumerStatefulWidget {

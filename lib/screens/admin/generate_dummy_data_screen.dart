@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/gradient_button.dart';
-import 'package:kickadoor/scripts/generate_dummy_data.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/gradient_button.dart';
+import 'package:kattrick/scripts/generate_dummy_data.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:kickadoor/utils/venue_seeder_service.dart';
+import 'package:kattrick/utils/venue_seeder_service.dart';
 
 /// Screen for generating dummy data (admin only)
 class GenerateDummyDataScreen extends ConsumerStatefulWidget {

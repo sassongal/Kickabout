@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 
 /// Hub Invitations Screen - ניהול הזמנות ל-Hub
 class HubInvitationsScreen extends ConsumerStatefulWidget {
@@ -50,7 +50,7 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
         final invitationCode = hub.settings['invitationCode'] as String? ?? widget.hubId.substring(0, 8).toUpperCase();
 
         // Generate invitation link
-        final invitationLink = 'https://kickadoor.app/invite/$invitationCode';
+        final invitationLink = 'https://kattrick.app/invite/$invitationCode';
 
         return FuturisticScaffold(
           title: 'הזמנות ל-Hub',
@@ -175,7 +175,7 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
   Future<void> _shareInvitation(String link, String hubName) async {
     try {
       await Share.share(
-        'הצטרף ל-Hub "$hubName" ב-Kickabout!\n$link',
+        'הצטרף ל-Hub "$hubName" ב-Kattrick!\n$link',
         subject: 'הזמנה ל-Hub $hubName',
       );
     } catch (e) {

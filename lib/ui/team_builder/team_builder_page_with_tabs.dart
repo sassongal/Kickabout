@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/ui/team_builder/team_builder_page.dart';
-import 'package:kickadoor/ui/team_builder/manual_team_builder.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/ui/team_builder/team_builder_page.dart';
+import 'package:kattrick/ui/team_builder/manual_team_builder.dart';
 
 /// Team builder page with tabs for automatic and manual team division
 class TeamBuilderPageWithTabs extends ConsumerStatefulWidget {
@@ -51,6 +51,16 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
   }
 
   Future<void> _showAddPlayersDialog() async {
+    // TODO: Implement getHubMembersAsUsers or use alternative approach
+    // This feature is temporarily disabled until the proper hub members query is implemented
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('תכונה זו בהכנה')),
+      );
+    }
+    return;
+    
+    /* Original code - needs refactoring
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
@@ -204,6 +214,7 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
         );
       }
     }
+    */
   }
 
   @override

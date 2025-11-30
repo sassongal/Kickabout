@@ -1,5 +1,7 @@
 // Barrel file for all models
 export 'user.dart';
+export 'age_group.dart';
+export 'poll.dart';
 export 'hub.dart';
 export 'hub_event.dart';
 export 'game.dart';

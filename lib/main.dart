@@ -4,23 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/firebase_options.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/l10n/app_localizations.dart';
-import 'package:kickadoor/routing/app_router.dart';
-import 'package:kickadoor/services/push_notification_service.dart';
-import 'package:kickadoor/services/deep_link_service.dart';
-import 'package:kickadoor/services/error_handler_service.dart';
-import 'package:kickadoor/services/analytics_service.dart';
-import 'package:kickadoor/services/remote_config_service.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/firebase_options.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/routing/app_router.dart';
+import 'package:kattrick/services/push_notification_service.dart';
+import 'package:kattrick/services/deep_link_service.dart';
+import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/services/remote_config_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
 // Conditional import for Crashlytics (not available on Web)
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'
-    if (dart.library.html) 'package:kickadoor/services/crashlytics_stub.dart';
+    if (dart.library.html) 'package:kattrick/services/crashlytics_stub.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 

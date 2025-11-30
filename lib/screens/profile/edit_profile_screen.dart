@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/widgets/image_picker_button.dart';
-import 'package:kickadoor/widgets/loading_widget.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/services/storage_service.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/utils/city_utils.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/image_picker_button.dart';
+import 'package:kattrick/widgets/loading_widget.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/services/storage_service.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 /// Edit profile screen
 class EditProfileScreen extends ConsumerStatefulWidget {

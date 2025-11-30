@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:kickadoor/models/converters/timestamp_converter.dart';
+import 'package:kattrick/models/converters/timestamp_converter.dart';
 
 part 'gamification.freezed.dart';
 part 'gamification.g.dart';

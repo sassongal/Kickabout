@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/config/env.dart';
 // Conditional import for Crashlytics (not available on Web)
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'
-    if (dart.library.html) 'package:kickadoor/services/crashlytics_stub.dart';
+    if (dart.library.html) 'package:kattrick/services/crashlytics_stub.dart';
 
 /// Centralized error handling service
 class ErrorHandlerService {

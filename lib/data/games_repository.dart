@@ -1,19 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/log_past_game_details.dart';
-import 'package:kickadoor/models/hub_role.dart';
-import 'package:kickadoor/services/firestore_paths.dart';
-import 'package:kickadoor/services/cache_service.dart';
-import 'package:kickadoor/services/retry_service.dart';
-import 'package:kickadoor/services/monitoring_service.dart';
-import 'package:kickadoor/services/error_handler_service.dart';
-import 'package:kickadoor/data/hubs_repository.dart';
-import 'package:kickadoor/data/users_repository.dart';
-import 'package:kickadoor/data/signups_repository.dart';
-import 'package:kickadoor/data/chat_repository.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/log_past_game_details.dart';
+import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/services/firestore_paths.dart';
+import 'package:kattrick/services/cache_service.dart';
+import 'package:kattrick/services/retry_service.dart';
+import 'package:kattrick/services/monitoring_service.dart';
+import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/data/signups_repository.dart';
+import 'package:kattrick/data/chat_repository.dart';
 
 /// Repository for Game operations
 class GamesRepository {

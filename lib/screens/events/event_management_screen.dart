@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/data/hub_events_repository.dart';
-import 'package:kickadoor/data/users_repository.dart';
-import 'package:kickadoor/data/hubs_repository.dart';
-import 'package:kickadoor/services/weather_service.dart';
-import 'package:kickadoor/logic/team_maker.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/data/hub_events_repository.dart';
+import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/services/weather_service.dart';
+import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:intl/intl.dart';
 
 /// Event Management Screen - displays event details, registered players,

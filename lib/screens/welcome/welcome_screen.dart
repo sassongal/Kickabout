@@ -15,7 +15,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   final _slides = [
     (
-      title: 'ברוכים הבאים ל-Kickadoor',
+      title: 'ברוכים הבאים ל-Kattrick',
       subtitle: 'הרשת החברתית לכדורגל שכונתי בישראל',
       icon: Icons.sports_soccer,
     ),

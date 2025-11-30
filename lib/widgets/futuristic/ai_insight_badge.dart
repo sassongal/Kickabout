@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 /// AI-powered insight badge with animated glow
 class AIInsightBadge extends StatefulWidget {

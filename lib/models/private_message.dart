@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:kickadoor/models/converters/timestamp_converter.dart';
+import 'package:kattrick/models/converters/timestamp_converter.dart';
 
 part 'private_message.freezed.dart';
 part 'private_message.g.dart';

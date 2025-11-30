@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 // ignore_for_file: unused_element
 
 /// Enhanced Player Profile Screen with Futuristic Design
@@ -89,16 +89,10 @@ class _PlayerProfileScreenFuturisticState
       actions: isOwnProfile && !isAnonymous
           ? [
               IconButton(
-                icon: const Icon(Icons.edit),
+                icon: const Icon(Icons.settings),
                 onPressed: () =>
-                    context.push('/profile/${widget.playerId}/edit'),
-                tooltip: 'ערוך פרופיל',
-              ),
-              IconButton(
-                icon: const Icon(Icons.privacy_tip),
-                onPressed: () =>
-                    context.push('/profile/${widget.playerId}/privacy'),
-                tooltip: 'הגדרות פרטיות',
+                    context.push('/profile/${widget.playerId}/settings'),
+                tooltip: 'הגדרות',
               ),
             ]
           : null,

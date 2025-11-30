@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/core/app_assets.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/core/app_assets.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 /// Futuristic splash screen with animated football trajectory
 class SplashScreen extends StatefulWidget {

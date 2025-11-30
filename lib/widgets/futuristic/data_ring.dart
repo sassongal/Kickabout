@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 /// Data visualization ring - shows multiple metrics in a radar-like display
 class DataRing extends StatelessWidget {

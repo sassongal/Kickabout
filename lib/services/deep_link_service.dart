@@ -20,7 +20,7 @@ class DeepLinkService {
     _router = router;
   }
 
-  /// Handle deep link from URL (e.g., kickabout://hub/HUB_ID)
+  /// Handle deep link from URL (e.g., kattrick://hub/HUB_ID)
   Future<void> handleUrlDeepLink(Uri uri) async {
     if (_router == null) {
       debugPrint('⚠️ Router not initialized for deep linking');

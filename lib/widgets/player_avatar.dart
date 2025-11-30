@@ -2,8 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/widgets/optimized_image.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/optimized_image.dart';
 
 /// Player avatar widget matching Figma design with status ring
 class PlayerAvatar extends StatelessWidget {

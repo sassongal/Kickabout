@@ -334,7 +334,7 @@
   "@playerDetailsUpdatedSuccess": {},
   "pleaseEnterValidEmail": "נא להזין כתובת אימייל תקינה",
   "@pleaseEnterValidEmail": {},
-  "hubInvitationEmailSubject": "הזמנה להצטרף ל-{hubName} ב-Kickabout",
+  "hubInvitationEmailSubject": "הזמנה להצטרף ל-{hubName} ב-Kattrick",
   "@hubInvitationEmailSubject": {
     "placeholders": {
       "hubName": {
@@ -342,7 +342,7 @@
       }
     }
   },
-  "hubInvitationEmailBody": "היי!\n\n{playerName} הזמין אותך להצטרף ל-{hubName} ב-Kickabout.\n\nלחץ על הקישור להצטרפות:\n{link}\n\nאו השתמש בקוד: {code}",
+  "hubInvitationEmailBody": "היי!\n\n{playerName} הזמין אותך להצטרף ל-{hubName} ב-Kattrick.\n\nלחץ על הקישור להצטרפות:\n{link}\n\nאו השתמש בקוד: {code}",
   "@hubInvitationEmailBody": {
     "placeholders": {
       "playerName": {

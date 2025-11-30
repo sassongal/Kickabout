@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Event Management Screen - "The Session Dashboard"

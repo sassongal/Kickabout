@@ -1,4 +1,4 @@
-import 'package:kickadoor/models/game.dart';
+import 'package:kattrick/models/game.dart';
 
 /// Enum representing the winner of a session
 enum SessionWinner {

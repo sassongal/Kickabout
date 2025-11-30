@@ -43,6 +43,9 @@ class AppPaths {
   // Profile
   static const String playerProfile = '/profile/:uid';
   static const String editProfile = '/profile/:uid/edit';
+  static const String privacySettings = '/profile/:uid/privacy';
+  static const String settings = '/profile/:uid/settings';
+  static const String notificationSettings = '/profile/:uid/notifications';
 
   // Social
   static const String notifications = '/notifications';

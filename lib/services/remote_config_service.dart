@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/config/env.dart';
 // Conditional import for Remote Config (not available on web)
 import 'package:firebase_remote_config/firebase_remote_config.dart'
-    if (dart.library.html) 'package:kickadoor/services/remote_config_service_stub.dart';
+    if (dart.library.html) 'package:kattrick/services/remote_config_service_stub.dart';
 
 /// Service for Firebase Remote Config
 class RemoteConfigService {

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/data/feed_repository.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/data/feed_repository.dart';
+import 'package:kattrick/data/repositories_providers.dart';
 
 part 'feed_controller.g.dart';
 

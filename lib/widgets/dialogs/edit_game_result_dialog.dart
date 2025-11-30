@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/models/models.dart';
 
 /// Dialog for editing a finalized game result
 ///

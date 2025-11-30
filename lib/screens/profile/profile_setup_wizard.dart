@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/utils/city_utils.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/utils/city_utils.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 
 class ProfileSetupWizard extends ConsumerStatefulWidget {
   const ProfileSetupWizard({super.key});

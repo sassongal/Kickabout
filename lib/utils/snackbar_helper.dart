@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/utils/error_messages.dart';
+import 'package:kattrick/utils/error_messages.dart';
 
 /// Helper class for showing snackbars consistently
 class SnackbarHelper {

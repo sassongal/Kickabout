@@ -1,0 +1,23 @@
+{
+  "all": true,
+  "include": [
+    "*.js",
+    "!test/**"
+  ],
+  "exclude": [
+    "coverage/**",
+    "node_modules/**",
+    "test/**"
+  ],
+  "reporter": [
+    "text",
+    "html",
+    "lcov"
+  ],
+  "check-coverage": true,
+  "lines": 60,
+  "statements": 60,
+  "functions": 60,
+  "branches": 50
+}
+

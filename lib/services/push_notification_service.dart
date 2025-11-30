@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/config/env.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/services/deep_link_service.dart';
+import 'package:kattrick/services/deep_link_service.dart';
 
 /// Service for handling push notifications
 class PushNotificationService {
@@ -62,7 +62,8 @@ class PushNotificationService {
 
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -83,12 +84,14 @@ class PushNotificationService {
   /// Setup message handlers
   void _setupMessageHandlers() {
     // Foreground messages
-    _subscriptions.add(FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _subscriptions
+        .add(FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
     }));
 
     // Background messages (when app is in background)
-    _subscriptions.add(FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _subscriptions.add(
+        FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _handleNotificationTap(message);
     }));
 
@@ -106,8 +109,8 @@ class PushNotificationService {
     if (notification == null) return;
 
     const androidDetails = AndroidNotificationDetails(
-      'kickabout_channel',
-      'Kickabout Notifications',
+      'kattrick_channel',
+      'Kattrick Notifications',
       channelDescription: 'Notifications for games, messages, and activities',
       importance: Importance.high,
       priority: Priority.high,
@@ -227,4 +230,3 @@ class PushNotificationService {
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('Handling background message: ${message.messageId}');
 }
-

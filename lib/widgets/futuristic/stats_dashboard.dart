@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kickadoor/widgets/futuristic/stats_ring.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/stats_ring.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 
 /// Real-time stats dashboard widget
 class StatsDashboard extends StatelessWidget {

@@ -1,7 +1,7 @@
 /// קבועים כלליים לאפליקציה
 class AppConstants {
   // App Info
-  static const String appName = 'Kickadoor';
+  static const String appName = 'Kattrick';
   static const String appVersion = '1.0.0';
 
   // Firebase Collections

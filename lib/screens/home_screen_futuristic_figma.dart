@@ -2,26 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kickadoor/widgets/futuristic/bottom_navigation_bar.dart';
-import 'package:kickadoor/routing/app_paths.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/data/repositories.dart';
+import 'package:kattrick/widgets/futuristic/bottom_navigation_bar.dart';
+import 'package:kattrick/routing/app_paths.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/data/repositories.dart';
 
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:kickadoor/widgets/dialogs/location_search_dialog.dart';
+import 'package:kattrick/widgets/dialogs/location_search_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 
 /// Futuristic Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly
@@ -852,6 +853,86 @@ class _HomeScreenFuturisticFigmaState
     }
   }
 
+  /// Show logout confirmation dialog
+  Future<void> _showLogoutDialog(BuildContext context, String userId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: FuturisticColors.surface,
+        title: Text(
+          'התנתקות',
+          style: FuturisticTypography.heading3.copyWith(
+            color: FuturisticColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          'האם אתה בטוח שברצונך להתנתק?',
+          style: FuturisticTypography.bodyMedium.copyWith(
+            color: FuturisticColors.textSecondary,
+          ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: FuturisticColors.surfaceVariant,
+            width: 1,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'ביטול',
+              style: FuturisticTypography.labelLarge.copyWith(
+                color: FuturisticColors.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: FuturisticColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'התנתק',
+              style: FuturisticTypography.labelLarge,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signOut();
+
+      if (!mounted) return;
+      
+      SnackbarHelper.showSuccess(
+        context,
+        'התנתקת בהצלחה',
+      );
+      
+      if (!mounted) return;
+      context.go('/auth');
+    } catch (e) {
+      if (!mounted) return;
+      
+      SnackbarHelper.showError(
+        context,
+        'שגיאה בהתנתקות: ${e.toString()}',
+      );
+    }
+  }
+
   PreferredSizeWidget _buildAppBar(
     BuildContext context,
     User? user,
@@ -933,15 +1014,19 @@ class _HomeScreenFuturisticFigmaState
             );
           },
         ),
-        // Profile button (top-left in RTL) - Circular Avatar - ALWAYS SHOWN
+        // Profile button (top-left in RTL) - Circular Avatar with Menu - ALWAYS SHOWN
         Padding(
           padding: const EdgeInsets.only(left: 8),
-          child: InkWell(
-            onTap: () {
-              debugPrint('Navigating to edit profile for $currentUserId');
-              context.push('/profile/$currentUserId/edit');
-            },
-            borderRadius: BorderRadius.circular(20),
+          child: PopupMenuButton<String>(
+            offset: const Offset(0, 50), // Position menu below avatar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: FuturisticColors.surfaceVariant,
+                width: 1,
+              ),
+            ),
+            color: FuturisticColors.surface,
             child: Container(
               width: 40,
               height: 40,
@@ -961,6 +1046,79 @@ class _HomeScreenFuturisticFigmaState
                   : const Icon(Icons.person,
                       color: FuturisticColors.textPrimary),
             ),
+            onSelected: (value) {
+              switch (value) {
+                case 'profile':
+                  context.push('/profile/$currentUserId');
+                  break;
+                case 'settings':
+                  context.push('/profile/$currentUserId/settings');
+                  break;
+                case 'logout':
+                  _showLogoutDialog(context, currentUserId);
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.person,
+                      color: FuturisticColors.textPrimary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'הפרופיל שלי',
+                      style: FuturisticTypography.labelLarge.copyWith(
+                        color: FuturisticColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      color: FuturisticColors.textPrimary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'הגדרות',
+                      style: FuturisticTypography.labelLarge.copyWith(
+                        color: FuturisticColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.logout,
+                      color: FuturisticColors.error,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'התנתק',
+                      style: FuturisticTypography.labelLarge.copyWith(
+                        color: FuturisticColors.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],

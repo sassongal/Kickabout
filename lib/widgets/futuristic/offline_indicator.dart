@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/services/connectivity_service.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/services/connectivity_service.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Offline indicator banner that shows when device is offline

@@ -383,13 +383,13 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String hubInvitationEmailSubject(String hubName) {
-    return 'הזמנה להצטרף ל-$hubName ב-Kickabout';
+    return 'הזמנה להצטרף ל-$hubName ב-Kattrick';
   }
 
   @override
   String hubInvitationEmailBody(
       String playerName, String hubName, String link, String code) {
-    return 'היי!\n\n$playerName הזמין אותך להצטרף ל-$hubName ב-Kickabout.\n\nלחץ על הקישור להצטרפות:\n$link\n\nאו השתמש בקוד: $code';
+    return 'היי!\n\n$playerName הזמין אותך להצטרף ל-$hubName ב-Kattrick.\n\nלחץ על הקישור להצטרפות:\n$link\n\nאו השתמש בקוד: $code';
   }
 
   @override

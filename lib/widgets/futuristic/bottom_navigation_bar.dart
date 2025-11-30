@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kickadoor/routing/app_paths.dart';
+import 'package:kattrick/routing/app_paths.dart';
 
 /// Futuristic Bottom Navigation Bar
 class FuturisticBottomNavBar extends ConsumerWidget {

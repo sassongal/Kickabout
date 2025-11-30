@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/core/constants.dart';
+import 'package:kattrick/core/constants.dart';
 
 /// Reusable error widget
 class AppErrorWidget extends StatelessWidget {

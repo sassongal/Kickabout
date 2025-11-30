@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/firestore_paths.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/firestore_paths.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kickadoor/services/cache_service.dart';
-import 'package:kickadoor/services/retry_service.dart';
-import 'package:kickadoor/services/monitoring_service.dart';
+import 'package:kattrick/services/cache_service.dart';
+import 'package:kattrick/services/retry_service.dart';
+import 'package:kattrick/services/monitoring_service.dart';
 
 /// Repository for User operations
 class UsersRepository {

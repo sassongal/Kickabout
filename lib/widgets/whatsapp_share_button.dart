@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kickadoor/core/constants.dart';
+import 'package:kattrick/core/constants.dart';
 
 /// WhatsApp share button widget
 class WhatsAppShareButton extends StatelessWidget {
@@ -30,7 +30,7 @@ class WhatsAppShareButton extends StatelessWidget {
       // Fallback to share_plus
       await Share.share(
         text,
-        subject: 'Kickabout - סיכום משחק',
+        subject: 'Kattrick - סיכום משחק',
       );
     } catch (e) {
       // If share fails, try copy to clipboard

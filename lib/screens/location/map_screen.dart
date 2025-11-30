@@ -6,18 +6,19 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/venue.dart';
-import 'package:kickadoor/models/venue_edit_request.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/venue.dart';
+import 'package:kattrick/models/venue_edit_request.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:kickadoor/utils/venue_seeder_service.dart';
+import 'package:kattrick/utils/venue_seeder_service.dart';
+import 'package:kattrick/services/map_cache_service.dart';
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {
@@ -39,6 +40,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   BitmapDescriptor? _venueRentalIcon;
   BitmapDescriptor? _hubMarkerIcon;
   bool _iconsLoaded = false;
+
+  // ✅ Debouncing for camera updates - reduces unnecessary marker reloads
+  Timer? _cameraUpdateTimer;
+  // Note: MapCacheService ready for future use when needed
+  // final MapCacheService _mapCache = MapCacheService();
 
   @override
   void initState() {
@@ -901,6 +907,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             });
                           }
                         },
+                        // ✅ Debouncing: Only reload markers after user stops moving map
+                        onCameraIdle: () {
+                          // Reload markers when camera stops moving
+                          _cameraUpdateTimer?.cancel();
+                          _cameraUpdateTimer = Timer(const Duration(milliseconds: 500), () {
+                            if (mounted) {
+                              _loadMarkers();
+                            }
+                          });
+                        },
                       ),
                     ),
                     // Filter buttons
@@ -1028,6 +1044,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       } else {
         debugPrint('⚠️ No results from Google Places');
       }
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('❌ Firebase Functions error loading venues: ${e.code} - ${e.message}');
+      
+      // ✅ Handle rate limiting specifically
+      if (e.code == 'resource-exhausted') {
+        if (mounted) {
+          SnackbarHelper.showWarning(
+            context,
+            'יותר מדי חיפושים ברגע אחד. המתן רגע ונסה שוב 😊',
+          );
+        }
+      } else if (e.code == 'unauthenticated') {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'נדרשת התחברות לחיפוש מגרשים');
+        }
+      } else {
+        // Other Firebase errors - just log, don't show to user
+        debugPrint('Firebase error: ${e.code}');
+      }
     } catch (e, stackTrace) {
       debugPrint('❌ Error loading Google Places venues: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -1077,11 +1112,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Show venue details sheet
       _showVenueDetailsSheet(context, placeDetails, hubs);
-    } catch (e) {
-      // Handle error
+    } on FirebaseFunctionsException catch (e) {
+      // Handle Firebase Functions errors
       if (!mounted) return;
       Navigator.pop(context);
-      SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי המגרש: $e');
+      
+      // ✅ Handle rate limiting specifically
+      if (e.code == 'resource-exhausted') {
+        SnackbarHelper.showWarning(
+          context,
+          'יותר מדי בקשות ברגע אחד. המתן רגע ונסה שוב 😊',
+        );
+      } else if (e.code == 'unauthenticated') {
+        SnackbarHelper.showError(context, 'נדרשת התחברות לצפייה בפרטי מגרש');
+      } else {
+        SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי המגרש: ${e.message}');
+      }
+    } catch (e) {
+      // Handle other errors
+      if (!mounted) return;
+      Navigator.pop(context);
+      debugPrint('Error loading venue details: $e');
+      SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי המגרש');
     }
   }
 
@@ -1273,6 +1325,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   void dispose() {
+    // ✅ Clean up timer to prevent memory leaks
+    _cameraUpdateTimer?.cancel();
     // Safely dispose map controller - handle web platform issue
     // On Web, the map might not be fully initialized when dispose is called
     if (_mapController != null) {

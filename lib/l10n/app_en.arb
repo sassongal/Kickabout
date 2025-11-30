@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appName": "Kickadoor",
+  "appName": "Kattrick",
   "welcome": "Welcome",
   "@welcome": {},
   "login": "Login",
@@ -298,7 +298,7 @@
   "@playerDetailsUpdatedSuccess": {},
   "pleaseEnterValidEmail": "Please enter a valid email",
   "@pleaseEnterValidEmail": {},
-  "hubInvitationEmailSubject": "Invitation to join {hubName} on Kickabout",
+  "hubInvitationEmailSubject": "Invitation to join {hubName} on Kattrick",
   "@hubInvitationEmailSubject": {
     "placeholders": {
       "hubName": {
@@ -306,7 +306,7 @@
       }
     }
   },
-  "hubInvitationEmailBody": "Hi!\n\n{playerName} invited you to join {hubName} on Kickabout.\n\nClick the link to join:\n{link}\n\nOr use code: {code}",
+  "hubInvitationEmailBody": "Hi!\n\n{playerName} invited you to join {hubName} on Kattrick.\n\nClick the link to join:\n{link}\n\nOr use code: {code}",
   "@hubInvitationEmailBody": {
     "placeholders": {
       "playerName": {

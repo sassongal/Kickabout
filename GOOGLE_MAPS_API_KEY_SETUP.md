@@ -1,78 +1,153 @@
-# הגדרת מפתח Google Maps API
+# 🔐 Google Maps API Key Security Setup
 
-## 📍 מיקומי המפתח
+## ⚠️ CRITICAL: Your API Key is Currently Exposed!
 
-המפתח `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU` מוגדר בכל המקומות הבאים:
+**Current Key:** `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`
 
-### 1. Client-Side (Flutter)
-- **`lib/config/env.dart`** - מפתח לשימוש בקוד Flutter
-  ```dart
-  static const String googleMapsApiKey = 'AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU';
-  ```
+**Exposed in:**
+- `lib/config/env.dart` ✅ **FIXED** - Now uses environment variables
+- `android/app/src/main/AndroidManifest.xml` ⚠️ Still hardcoded (needs manual update)
+- `ios/Runner/AppDelegate.swift` ⚠️ Still hardcoded (needs manual update)
+- `web/index.html` ⚠️ Still hardcoded (needs manual update)
 
-### 2. Android
-- **`android/app/src/main/AndroidManifest.xml`** - מפתח ל-Android Maps SDK
-  ```xml
-  <meta-data
-      android:name="com.google.android.geo.API_KEY"
-      android:value="AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU" />
-  ```
+---
 
-### 3. iOS
-- **`ios/Runner/AppDelegate.swift`** - מפתח ל-iOS Maps SDK
-  ```swift
-  GMSServices.provideAPIKey("AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU")
-  ```
+## 🚨 Immediate Actions Required
 
-### 4. Web
-- **`web/index.html`** - מפתח ל-Maps JavaScript API
-  ```html
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU"></script>
-  ```
+### Step 1: Rotate the API Key (URGENT!)
 
-### 5. Server-Side (Firebase Cloud Functions)
-- **Firebase Secret** - מפתח מאובטח ב-Firebase Secrets
-  ```bash
-  echo "AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU" | firebase functions:secrets:set GOOGLE_APIS_KEY
-  ```
+1. **Go to Google Cloud Console:**
+   - https://console.cloud.google.com/apis/credentials
 
-## 🔒 אבטחה
+2. **Create a NEW API key:**
+   - Click "Create Credentials" → "API Key"
+   - Copy the new key
 
-### הגבלות ב-Google Cloud Console
+3. **Disable/Restrict the OLD key:**
+   - Find the old key: `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`
+   - Click "Restrict key" or "Delete"
+
+---
+
+### Step 2: Set Up the NEW Key Properly
+
+#### For Flutter App (Frontend)
+
+**Option A: Using Environment Variables (Recommended)**
+
+1. Create `.env` file in project root:
+```bash
+echo "GOOGLE_MAPS_API_KEY=YOUR_NEW_KEY_HERE" > .env
+```
+
+2. Run app with environment variable:
+```bash
+flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_NEW_KEY_HERE
+```
+
+**Option B: Update Hardcoded Values (Temporary)**
+
+Update these files manually:
+- `android/app/src/main/AndroidManifest.xml` - Replace old key
+- `ios/Runner/AppDelegate.swift` - Replace old key  
+- `web/index.html` - Replace old key
+
+#### For Firebase Functions (Backend)
+
+```bash
+# Set as Firebase Secret
+echo "YOUR_NEW_KEY" | firebase functions:secrets:set GOOGLE_APIS_KEY
+```
+
+---
+
+### Step 3: Restrict the NEW Key in Google Cloud Console
 
 **Application Restrictions:**
-- **Android:** Package name: `com.mycompany.CounterApp`
-- **iOS:** Bundle ID: `com.mycompany.CounterApp`
-- **Web:** Domain restrictions (אם נדרש)
+- ✅ Android: Add package name `com.mycompany.CounterApp`
+- ✅ iOS: Add bundle ID (check `ios/Runner.xcodeproj`)
+- ✅ Web: Add your domain (e.g., `kattrick.app`)
 
 **API Restrictions:**
 - ✅ Maps SDK for Android
 - ✅ Maps SDK for iOS
 - ✅ Maps JavaScript API
 - ✅ Places API
-- ✅ Geocoding API (אם נדרש)
+- ✅ Geocoding API (if used)
 
-### הגנה מפני חשיפה
+**DO NOT enable:**
+- ❌ All APIs (too permissive!)
 
-1. **`.gitignore`** - הקבצים הבאים מוגנים:
-   - `lib/config/env.dart` - לא ב-gitignore (נדרש בקוד)
-   - `android/app/src/main/AndroidManifest.xml` - לא ב-gitignore (נדרש לבנייה)
-   - `ios/Runner/AppDelegate.swift` - לא ב-gitignore (נדרש לבנייה)
-   - `web/index.html` - לא ב-gitignore (נדרש לבנייה)
+---
 
-2. **המלצה:** אם המפתח רגיש, שקול:
-   - שימוש ב-Environment Variables
-   - שימוש ב-Flutter Flavors
-   - הגבלות חזקות ב-Google Cloud Console
+## 📝 Code Changes Made
 
-## 🔄 עדכון המפתח
+### ✅ Fixed: `lib/config/env.dart`
 
-אם צריך לעדכן את המפתח, עדכן אותו בכל 5 המקומות לעיל.
+Now uses environment variables:
+```dart
+static const String googleMapsApiKey = String.fromEnvironment(
+  'GOOGLE_MAPS_API_KEY',
+  defaultValue: '', // Empty in production - must be set!
+);
+```
 
-## ✅ אימות
+### ⚠️ Still Needs Manual Update:
 
-לאחר עדכון, ודא:
-1. המפה נטענת ב-Android ✅
-2. המפה נטענת ב-iOS ✅
-3. המפה נטענת ב-Web ✅
-4. Cloud Functions עובדות (searchVenues, getPlaceDetails) ✅
+1. **AndroidManifest.xml** - Add security comments
+2. **AppDelegate.swift** - Add security comments
+3. **web/index.html** - Add security comments
+
+---
+
+## 🔒 Security Best Practices
+
+1. **Never commit API keys to Git**
+   - ✅ `.env` is already in `.gitignore`
+   - ✅ `google-services.json` is already in `.gitignore`
+
+2. **Use different keys for different environments:**
+   - Development key (unrestricted, for local testing)
+   - Production key (fully restricted)
+
+3. **Monitor API usage:**
+   - Set up billing alerts in Google Cloud Console
+   - Review API usage regularly
+
+4. **Rotate keys periodically:**
+   - Every 6-12 months
+   - Immediately if exposed
+
+---
+
+## 🧪 Testing
+
+After updating the key:
+
+1. **Test Android:**
+```bash
+flutter run -d android
+```
+
+2. **Test iOS:**
+```bash
+flutter run -d ios
+```
+
+3. **Test Web:**
+```bash
+flutter run -d chrome
+```
+
+---
+
+## 📚 Additional Resources
+
+- [Google Maps Platform Security Best Practices](https://developers.google.com/maps/api-security-best-practices)
+- [Firebase Secrets Documentation](https://firebase.google.com/docs/functions/config-env)
+
+---
+
+**Last Updated:** 2025-01-30  
+**Status:** ⚠️ Requires manual key rotation and updates
+

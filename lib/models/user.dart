@@ -1,7 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/converters/timestamp_converter.dart';
-import 'package:kickadoor/models/converters/geopoint_converter.dart';
+import 'package:kattrick/models/converters/timestamp_converter.dart';
+import 'package:kattrick/models/converters/geopoint_converter.dart';
+import 'package:kattrick/models/age_group.dart';
 
 part 'user.freezed.dart';
 part 'user.g.dart';
@@ -67,6 +68,19 @@ class User with _$User {
       'hideRatings': false,
     })
     Map<String, bool> privacySettings,
+    // Notification preferences - control which notifications user wants to receive
+    @Default({
+      'game_reminder': true,
+      'message': true,
+      'like': true,
+      'comment': true,
+      'signup': true,
+      'new_follower': true,
+      'hub_chat': true,
+      'new_comment': true,
+      'new_game': true,
+    })
+    Map<String, bool> notificationPreferences,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
@@ -89,6 +103,40 @@ extension UserDisplayName on User {
       return this.displayName!;
     }
     return 'שחקן';
+  }
+}
+
+/// Extension to add age-related getters to User
+extension UserAgeExtension on User {
+  /// Get user's current age
+  /// Returns null if birthDate is not set
+  int? get age {
+    if (birthDate == null) return null;
+    return AgeUtils.calculateAge(birthDate!);
+  }
+
+  /// Get user's age group
+  /// Returns null if birthDate is not set or age < 13
+  AgeGroup? get ageGroup {
+    if (birthDate == null) return null;
+    try {
+      return AgeUtils.getAgeGroup(birthDate!);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get age category (Kids, Young, Adults, Veterans, Legends)
+  /// Returns null if birthDate is not set
+  String? get ageCategory {
+    if (birthDate == null) return null;
+    return AgeUtils.getAgeCategory(birthDate!);
+  }
+
+  /// Check if user meets minimum age requirement (13+)
+  bool get meetsMinimumAge {
+    if (birthDate == null) return false;
+    return AgeUtils.isAgeValid(birthDate!);
   }
 }
 

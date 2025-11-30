@@ -396,5 +396,62 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if false;
     }
+
+    // ============================================
+    // Polls Collection
+    // ============================================
+    match /polls/{pollId} {
+      // Read: כל חברי ה-Hub יכולים לקרוא
+      allow read: if isAuthenticated() && 
+                     isHubMember(resource.data.hubId);
+      
+      // Create: managers ו-moderators יכולים ליצור סקרים
+      allow create: if isAuthenticated() && 
+                       (isHubManager(request.resource.data.hubId) || 
+                        isHubModerator(request.resource.data.hubId)) &&
+                       request.resource.data.createdBy == request.auth.uid &&
+                       request.resource.data.hubId is string &&
+                       request.resource.data.question is string &&
+                       request.resource.data.options.size() >= 2 &&
+                       request.resource.data.options.size() <= 10;
+      
+      // Update: רק היוצר או managers יכולים לעדכן
+      // אבל לא יכולים לשנות הצבעות ישירות (רק דרך Cloud Function)
+      allow update: if isAuthenticated() && 
+                       (resource.data.createdBy == request.auth.uid ||
+                        isHubManager(resource.data.hubId)) &&
+                       request.resource.data.totalVotes == resource.data.totalVotes &&
+                       request.resource.data.voters == resource.data.voters;
+      
+      // Delete: רק היוצר או managers יכולים למחוק
+      allow delete: if isAuthenticated() && 
+                       (resource.data.createdBy == request.auth.uid ||
+                        isHubManager(resource.data.hubId));
+      
+      // Votes subcollection
+      match /votes/{voteId} {
+        // Read: כל חברי ה-Hub (אלא אם סקר אנונימי)
+        allow read: if isAuthenticated() && 
+                       isHubMember(get(/databases/$(database)/documents/polls/$(pollId)).data.hubId);
+        
+        // Create: רק דרך Cloud Function (למניעת manipulation)
+        allow create: if false;
+        
+        // Update/Delete: אסור
+        allow update, delete: if false;
+      }
+    }
+
+    // ============================================
+    // Rate Limits Collection (System Only)
+    // ============================================
+    // This collection is used by Cloud Functions for rate limiting
+    // Users should NEVER be able to read or write to this collection
+    match /_rate_limits/{userId} {
+      match /actions/{actionId} {
+        allow read: if false;  // Only Cloud Functions can read
+        allow write: if false; // Only Cloud Functions can write
+      }
+    }
   }
 }

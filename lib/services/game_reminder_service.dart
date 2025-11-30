@@ -1,6 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';

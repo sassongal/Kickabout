@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
 
 /// Hub rules screen - displays hub rules in a dedicated page
 class HubRulesScreen extends ConsumerWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 
 /// AI-powered recommendation card with smart insights
 class AIRecommendationCard extends StatelessWidget {

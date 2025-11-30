@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
 
 /// Followers screen - shows users that follow a user
 class FollowersScreen extends ConsumerWidget {

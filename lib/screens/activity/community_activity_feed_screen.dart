@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
-import 'package:kickadoor/services/error_handler_service.dart';
-import 'package:kickadoor/services/cache_service.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/services/cache_service.dart';
 
 /// Community Activity Feed Screen
 /// Displays public games and events from all hubs

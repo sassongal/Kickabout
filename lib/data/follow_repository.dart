@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/firestore_paths.dart';
-import 'package:kickadoor/data/users_repository.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/firestore_paths.dart';
+import 'package:kattrick/data/users_repository.dart';
 
 /// Repository for Follow operations
 class FollowRepository {

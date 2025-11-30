@@ -1,0 +1,151 @@
+# Kattrick Project Rules for Cursor AI
+# Version: 2.0
+
+## Project Name
+- Official Name: Kattrick (formerly Kickabout/Kickadoor)
+- Package: com.mycompany.CounterApp
+- Firebase Project: kickabout-ddc06
+
+## Tech Stack
+- Flutter: 3.16.0+
+- Dart: 3.2.0+
+- Riverpod: 2.x (flutter_riverpod)
+- Freezed: 2.x
+- Firebase: Latest
+  - firebase_core
+  - cloud_firestore
+  - firebase_auth
+  - firebase_storage
+  - firebase_messaging
+  - cloud_functions
+- Google Maps Platform
+- GoRouter: 13.x
+
+## Architecture
+- Clean Architecture + Micro-Sharding
+- Feature-First folder structure
+- Repository pattern for data access
+- Riverpod 2.x for state management
+- Firebase-first backend
+
+## Critical Business Rules
+
+### Hub Roles (3 Tiers) - FROM GAP ANALYSIS
+1. **Owner** (hub.ownerId) - Full control, single owner
+2. **Manager** (hub.managers array) - Can edit, add members, record games
+3. **Veteran** (hub.members with role:'veteran') - Can record games only
+4. **Player** (hub.members with role:'player') - Regular member
+
+### Numeric Limits
+- MAX_HUBS_AS_MEMBER: 10
+- MAX_HUBS_AS_OWNER: 3
+- MAX_GAME_CAPACITY: 50
+- MAX_HUB_MEMBERS: 50
+- MAX_EVENT_CAPACITY: 25
+
+### Game Status Flow
+1. **pending** → Player can sign up
+2. **active** → Game started
+3. **completed** → Game ended, stats recorded
+4. **cancelled** → Game cancelled
+
+### Auto-Close Logic (TO BE IMPLEMENTED)
+- **Pending games**: Auto-close 3h after scheduledAt if not started
+- **Active games**: Auto-close 5h after startedAt if not ended
+- Cloud Function: scheduledGameAutoClose (runs every 10 minutes)
+
+### Age Groups (TO BE IMPLEMENTED)
+- Age = Current Year - Birth Year
+- Kids: 13-17
+- Young: 18-25
+- Adults: 26-35
+- Veterans: 36-45
+- Legends: 46-50+
+- Minimum age: 13 years
+
+## Firestore Collections
+1. users
+2. hubs
+3. games
+4. venues
+5. posts
+6. ads
+7. hub_polls
+
+## Code Generation Rules
+
+### Always use Freezed for models
+```dart
+@freezed
+class UserModel with _$UserModel {
+  const factory UserModel({
+    required String id,
+    required String email,
+    // ...
+  }) = _UserModel;
+  
+  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
+}
+```
+
+### Always use Riverpod 2.x
+```dart
+@riverpod
+class UserNotifier extends _$UserNotifier {
+  @override
+  Future<UserModel?> build() async {
+    // Initial state
+  }
+}
+```
+
+### Always handle errors
+```dart
+state = await AsyncValue.guard(() async {
+  // Your async operation
+});
+```
+
+### Always use proper Firestore patterns
+```dart
+// Try cache first
+final doc = await _firestore
+  .collection('users')
+  .doc(userId)
+  .get(const GetOptions(source: Source.cache));
+```
+
+## Security Rules
+- Never bypass security in client code
+- Always let Firestore Rules enforce permissions
+- Handle permission-denied errors gracefully
+
+## Performance Rules
+- Use `select` for specific fields
+- Cache expensive computations
+- Limit Firestore reads with `.limit()`
+- Never fetch all data
+
+## Anti-Patterns to Avoid
+- ❌ Don't mix setState with Riverpod
+- ❌ Don't fetch all data without limit
+- ❌ Don't ignore offline mode
+- ❌ Don't bypass security rules
+- ❌ Don't create God Objects
+
+## Common Commands
+# Get dependencies
+flutter pub get
+
+# Run code generation
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# Run app
+flutter run
+
+# Deploy Firebase Functions
+firebase deploy --only functions
+
+# Deploy Firestore Rules
+firebase deploy --only firestore:rules
+

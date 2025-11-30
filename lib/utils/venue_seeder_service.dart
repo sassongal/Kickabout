@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/services/google_places_service.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/services/google_places_service.dart';
 
 /// Service to seed venues from Google Places
 class VenueSeederService {

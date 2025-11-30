@@ -809,13 +809,13 @@ abstract class AppLocalizations {
   /// No description provided for @hubInvitationEmailSubject.
   ///
   /// In he, this message translates to:
-  /// **'הזמנה להצטרף ל-{hubName} ב-Kickabout'**
+  /// **'הזמנה להצטרף ל-{hubName} ב-Kattrick'**
   String hubInvitationEmailSubject(String hubName);
 
   /// No description provided for @hubInvitationEmailBody.
   ///
   /// In he, this message translates to:
-  /// **'היי!\n\n{playerName} הזמין אותך להצטרף ל-{hubName} ב-Kickabout.\n\nלחץ על הקישור להצטרפות:\n{link}\n\nאו השתמש בקוד: {code}'**
+  /// **'היי!\n\n{playerName} הזמין אותך להצטרף ל-{hubName} ב-Kattrick.\n\nלחץ על הקישור להצטרפות:\n{link}\n\nאו השתמש בקוד: {code}'**
   String hubInvitationEmailBody(
       String playerName, String hubName, String link, String code);
 

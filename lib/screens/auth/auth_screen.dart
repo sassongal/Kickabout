@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/analytics_service.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -24,6 +24,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   final _signupEmail = TextEditingController();
   final _signupPassword = TextEditingController();
   final _signupConfirm = TextEditingController();
+  DateTime? _birthDate; // Date of Birth for age validation
 
   bool _loginObscure = true;
   bool _signupObscure = true;
@@ -74,6 +75,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       SnackbarHelper.showError(context, 'הסיסמאות אינן תואמות');
       return;
     }
+    
+    // ✅ Age validation - minimum 13 years old
+    if (_birthDate == null) {
+      SnackbarHelper.showError(context, 'נא לבחור תאריך לידה');
+      return;
+    }
+    if (!AgeUtils.isAgeValid(_birthDate!)) {
+      final age = AgeUtils.calculateAge(_birthDate!);
+      SnackbarHelper.showError(
+        context, 
+        'גיל מינימלי להרשמה: ${AgeUtils.minimumAge} שנים (הגיל שלך: $age)'
+      );
+      return;
+    }
+    
     setState(() => _isLoading = true);
     try {
       final authService = ref.read(authServiceProvider);
@@ -92,6 +108,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         uid: uid,
         name: _signupName.text.trim(),
         email: _signupEmail.text.trim(),
+        birthDate: _birthDate, // ✅ Save birth date
         createdAt: DateTime.now(),
         isProfileComplete: false,
       );
@@ -113,10 +130,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kickadoor'),
+        title: const Text('Kattrick'),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
@@ -192,6 +208,65 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) =>
                         v == null || v.isEmpty ? 'נא להזין אימייל' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  // ✅ Date of Birth Picker
+                  InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: AgeUtils.maxBirthDateForMinAge,
+                        firstDate: DateTime(1940),
+                        lastDate: AgeUtils.maxBirthDateForMinAge,
+                        helpText: 'בחר תאריך לידה',
+                        cancelText: 'ביטול',
+                        confirmText: 'אישור',
+                      );
+                      if (date != null) {
+                        setState(() => _birthDate = date);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _birthDate == null
+                              ? Colors.red.withOpacity(0.5)
+                              : Colors.green.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.cake_outlined,
+                              color: Colors.white.withOpacity(0.7)),
+                          const SizedBox(width: 12),
+                          Text(
+                            _birthDate == null
+                                ? 'תאריך לידה (חובה) *'
+                                : '${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(
+                                  _birthDate == null ? 0.5 : 1.0),
+                              fontSize: 16,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_birthDate != null)
+                            Text(
+                              'גיל: ${AgeUtils.calculateAge(_birthDate!)}',
+                              style: TextStyle(
+                                color: Colors.green.withOpacity(0.8),
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _PasswordField(

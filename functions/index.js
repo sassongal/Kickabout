@@ -1,22 +1,22 @@
 /* eslint-disable max-len */
-const {initializeApp} = require('firebase-admin/app');
-const {getFirestore, FieldValue} = require('firebase-admin/firestore');
-const {getMessaging} = require('firebase-admin/messaging');
-const {getAuth} = require('firebase-admin/auth');
-const {getStorage} = require('firebase-admin/storage');
-const {info} = require('firebase-functions/logger');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
+const { getAuth } = require('firebase-admin/auth');
+const { getStorage } = require('firebase-admin/storage');
+const { info } = require('firebase-functions/logger');
 
 // v2 Imports for new syntax
-const {onCall, HttpsError} = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const {
   onDocumentCreated,
   onDocumentWritten,
   onDocumentDeleted,
   onDocumentUpdated,
 } = require('firebase-functions/v2/firestore');
-const {onSchedule} = require('firebase-functions/v2/scheduler');
-const {onObjectFinalized} = require('firebase-functions/v2/storage');
-const {defineSecret} = require('firebase-functions/params');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onObjectFinalized } = require('firebase-functions/v2/storage');
+const { defineSecret } = require('firebase-functions/params');
 
 // Define secret for Google APIs key (server-side only)
 const googleApisKey = defineSecret('GOOGLE_APIS_KEY');
@@ -24,20 +24,32 @@ const googleApisKey = defineSecret('GOOGLE_APIS_KEY');
 // Google APIs
 const axios = require('axios');
 
+// Rate Limiting
+const { checkRateLimit } = require('./rateLimit');
+
+// Places API Caching
+const {
+  getCachedSearch,
+  cacheSearch,
+  getCachedDetails,
+  cacheDetails,
+  getSearchCacheKey,
+} = require('./placesCache');
+
 // Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
-const admin = {auth: getAuth()};
+const admin = { auth: getAuth() };
 const storage = getStorage();
 
 async function getHubMemberIds(hubId, limit = 500) {
   const snap = await db
-      .collection('hubs')
-      .doc(hubId)
-      .collection('members')
-      .limit(limit)
-      .get();
+    .collection('hubs')
+    .doc(hubId)
+    .collection('members')
+    .limit(limit)
+    .get();
   return snap.docs.map((d) => d.id);
 }
 
@@ -59,128 +71,130 @@ const PLACES_API_URL = 'https://maps.googleapis.com/maps/api/place';
 
 // --- v2 Scheduled Function (replaces v1 pubsub) ---
 exports.sendGameReminder = onSchedule(
-    'every 30 minutes',
-    async (event) => {
-      const now = new Date();
-      const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-      const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  'every 30 minutes',
+  async (event) => {
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-      info('Running sendGameReminder cron job at', now.toISOString());
+    info('Running sendGameReminder cron job at', now.toISOString());
 
-      try {
-        const gamesSnapshot = await db
-            .collection('games')
-            .where('gameDate', '>=', oneHourFromNow)
-            .where('gameDate', '<', twoHoursFromNow)
-            .where('status', 'in', ['teamSelection', 'teamsFormed']) // Games that haven't started yet
-            .get();
+    try {
+      const gamesSnapshot = await db
+        .collection('games')
+        .where('gameDate', '>=', oneHourFromNow)
+        .where('gameDate', '<', twoHoursFromNow)
+        .where('status', 'in', ['teamSelection', 'teamsFormed']) // Games that haven't started yet
+        .get();
 
-        if (gamesSnapshot.empty) {
-          info('No games found for reminders.');
-          return null;
-        }
-
-        info(`Found ${gamesSnapshot.size} games for reminders.`);
-
-        const reminderPromises = gamesSnapshot.docs.map(
-            async (gameDoc) => {
-              const game = gameDoc.data();
-              const gameId = gameDoc.id;
-
-              // ... (rest of your logic is identical)
-              const hubSnapshot = await db
-                  .collection('hubs')
-                  .doc(game.hubId)
-                  .get();
-              if (!hubSnapshot.exists) return;
-              const hubName = hubSnapshot.data().name;
-
-              const signupsSnapshot = await db
-                  .collection('games')
-                  .doc(gameId)
-                  .collection('signups')
-                  .where('status', '==', 'confirmed') // Use 'confirmed' status from SignupStatus enum
-                  .get();
-
-              if (signupsSnapshot.empty) return;
-
-              const tokens = [];
-              const userIds = [];
-
-              // Fetch FCM tokens from users/{userId}/fcm_tokens/tokens subcollection
-              for (const signupDoc of signupsSnapshot.docs) {
-                const userId = signupDoc.id;
-                userIds.push(userId);
-
-                try {
-                  const tokenDoc = await db
-                      .collection('users')
-                      .doc(userId)
-                      .collection('fcm_tokens')
-                      .doc('tokens')
-                      .get();
-
-                  if (tokenDoc.exists) {
-                    const tokenData = tokenDoc.data();
-                    const userTokens = tokenData?.tokens || [];
-                    if (Array.isArray(userTokens) && userTokens.length > 0) {
-                      tokens.push(...userTokens);
-                    }
-                  }
-                } catch (error) {
-                  info(`Failed to get FCM token for user ${userId}: ${error}`);
-                }
-              }
-
-              if (tokens.length === 0) return;
-
-              const uniqueTokens = [...new Set(tokens)];
-
-              const message = {
-                notification: {
-                  title: `⚽ משחק מתחיל בקרוב! (${hubName})`,
-                  body: `אל תשכח, המשחק שלכם מתחיל בעוד כשעה. תהיו מוכנים!`,
-                },
-                tokens: uniqueTokens,
-                data: {
-                  type: 'game_reminder',
-                  gameId: gameId,
-                  hubId: game.hubId,
-                },
-              };
-
-              await messaging.sendEachForMulticast(message);
-              info(`Sent reminder for game ${gameId} to ${uniqueTokens.length} tokens.`);
-
-              // Create notification docs
-              const batch = db.batch();
-              const notificationPayload = {
-                createdAt: FieldValue.serverTimestamp(),
-                type: 'game_reminder',
-                title: `משחק מתחיל בקרוב! (${hubName})`,
-                body: `המשחק שלך ב-${hubName} מתחיל בעוד כשעה.`,
-                read: false, // Notification model uses 'read', not 'isRead'
-                entityId: gameId,
-                hubId: game.hubId,
-              };
-              userIds.forEach((userId) => {
-                const ref = db
-                    .collection('notifications')
-                    .doc(userId)
-                    .collection('items')
-                    .doc();
-                batch.set(ref, notificationPayload);
-              });
-              await batch.commit();
-            },
-        );
-        await Promise.all(reminderPromises);
-        return null;
-      } catch (error) {
-        info('Error running sendGameReminder:', error);
+      if (gamesSnapshot.empty) {
+        info('No games found for reminders.');
         return null;
       }
-    },
+
+      info(`Found ${gamesSnapshot.size} games for reminders.`);
+
+      const reminderPromises = gamesSnapshot.docs.map(
+        async (gameDoc) => {
+          const game = gameDoc.data();
+          const gameId = gameDoc.id;
+
+          // ... (rest of your logic is identical)
+          const hubSnapshot = await db
+            .collection('hubs')
+            .doc(game.hubId)
+            .get();
+          if (!hubSnapshot.exists) return;
+          const hubName = hubSnapshot.data().name;
+
+          const signupsSnapshot = await db
+            .collection('games')
+            .doc(gameId)
+            .collection('signups')
+            .where('status', '==', 'confirmed') // Use 'confirmed' status from SignupStatus enum
+            .get();
+
+          if (signupsSnapshot.empty) return;
+
+          const tokens = [];
+          const userIds = signupsSnapshot.docs.map(doc => doc.id);
+
+          // ✅ PERFORMANCE FIX: Fetch FCM tokens in PARALLEL
+          const tokenFetchPromises = userIds.map(async (userId) => {
+            try {
+              const tokenDoc = await db
+                .collection('users')
+                .doc(userId)
+                .collection('fcm_tokens')
+                .doc('tokens')
+                .get();
+
+              if (tokenDoc.exists) {
+                const tokenData = tokenDoc.data();
+                const userTokens = tokenData?.tokens || [];
+                if (Array.isArray(userTokens) && userTokens.length > 0) {
+                  return userTokens;
+                }
+              }
+              return [];
+            } catch (error) {
+              info(`Failed to get FCM token for user ${userId}: ${error}`);
+              return [];
+            }
+          });
+
+          const tokenArrays = await Promise.all(tokenFetchPromises);
+          tokens.push(...tokenArrays.flat());
+
+          if (tokens.length === 0) return;
+
+          const uniqueTokens = [...new Set(tokens)];
+
+          const message = {
+            notification: {
+              title: `⚽ משחק מתחיל בקרוב! (${hubName})`,
+              body: `אל תשכח, המשחק שלכם מתחיל בעוד כשעה. תהיו מוכנים!`,
+            },
+            tokens: uniqueTokens,
+            data: {
+              type: 'game_reminder',
+              gameId: gameId,
+              hubId: game.hubId,
+            },
+          };
+
+          await messaging.sendEachForMulticast(message);
+          info(`Sent reminder for game ${gameId} to ${uniqueTokens.length} tokens.`);
+
+          // Create notification docs
+          const batch = db.batch();
+          const notificationPayload = {
+            createdAt: FieldValue.serverTimestamp(),
+            type: 'game_reminder',
+            title: `משחק מתחיל בקרוב! (${hubName})`,
+            body: `המשחק שלך ב-${hubName} מתחיל בעוד כשעה.`,
+            read: false, // Notification model uses 'read', not 'isRead'
+            entityId: gameId,
+            hubId: game.hubId,
+          };
+          userIds.forEach((userId) => {
+            const ref = db
+              .collection('notifications')
+              .doc(userId)
+              .collection('items')
+              .doc();
+            batch.set(ref, notificationPayload);
+          });
+          await batch.commit();
+        },
+      );
+      await Promise.all(reminderPromises);
+      return null;
+    } catch (error) {
+      info('Error running sendGameReminder:', error);
+      return null;
+    }
+  },
 );
 
 // --- v2 Firestore Triggers (replaces v1 functions.firestore.document) ---
@@ -266,12 +280,12 @@ exports.onGameCreated = onDocumentCreated('games/{gameId}', async (event) => {
 
     // Create feed post in the correct structure: /hubs/{hubId}/feed/posts/items/{postId}
     const postRef = db
-        .collection('hubs')
-        .doc(game.hubId)
-        .collection('feed')
-        .doc('posts')
-        .collection('items')
-        .doc();
+      .collection('hubs')
+      .doc(game.hubId)
+      .collection('feed')
+      .doc('posts')
+      .collection('items')
+      .doc();
 
     await postRef.set({
       postId: postRef.id,
@@ -307,584 +321,596 @@ exports.onGameCreated = onDocumentCreated('games/{gameId}', async (event) => {
 // --- Hub Deletion Handler ---
 // When a hub is deleted, update hubCount on all associated venues
 exports.onHubDeleted = onDocumentDeleted(
-    'hubs/{hubId}',
-    async (event) => {
-      const hubId = event.params.hubId;
-      const hubData = event.data.data();
+  'hubs/{hubId}',
+  async (event) => {
+    const hubId = event.params.hubId;
+    const hubData = event.data.data();
 
-      info(`Hub ${hubId} deleted. Updating venue hubCounts.`);
+    info(`Hub ${hubId} deleted. Updating venue hubCounts.`);
 
-      try {
-        // Get all venueIds associated with this hub
-        const venueIds = hubData?.venueIds || [];
-        const primaryVenueId = hubData?.primaryVenueId;
+    try {
+      // Get all venueIds associated with this hub
+      const venueIds = hubData?.venueIds || [];
+      const primaryVenueId = hubData?.primaryVenueId;
 
-        // Combine all venue IDs (primary + secondary)
-        const allVenueIds = [...new Set([
-          ...venueIds,
-          ...(primaryVenueId ? [primaryVenueId] : []),
-        ])];
+      // Combine all venue IDs (primary + secondary)
+      const allVenueIds = [...new Set([
+        ...venueIds,
+        ...(primaryVenueId ? [primaryVenueId] : []),
+      ])];
 
-        if (allVenueIds.length === 0) {
-          info(`No venues associated with hub ${hubId}.`);
-          return;
-        }
-
-        // Update hubCount for each venue
-        const batch = db.batch();
-        for (const venueId of allVenueIds) {
-          const venueRef = db.collection('venues').doc(venueId);
-          batch.update(venueRef, {
-            hubCount: FieldValue.increment(-1),
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        }
-
-        await batch.commit();
-        info(`Updated hubCount for ${allVenueIds.length} venues after hub ${hubId} deletion.`);
-      } catch (error) {
-        info(`Error in onHubDeleted for hub ${hubId}:`, error);
+      if (allVenueIds.length === 0) {
+        info(`No venues associated with hub ${hubId}.`);
+        return;
       }
-    },
+
+      // Update hubCount for each venue
+      const batch = db.batch();
+      for (const venueId of allVenueIds) {
+        const venueRef = db.collection('venues').doc(venueId);
+        batch.update(venueRef, {
+          hubCount: FieldValue.increment(-1),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+      info(`Updated hubCount for ${allVenueIds.length} venues after hub ${hubId} deletion.`);
+    } catch (error) {
+      info(`Error in onHubDeleted for hub ${hubId}:`, error);
+    }
+  },
 );
 
 exports.onHubMessageCreated = onDocumentCreated(
-    'hubs/{hubId}/chat/{messageId}',
-    async (event) => {
-      const message = event.data.data();
-      const hubId = event.params.hubId;
-      const messageId = event.params.messageId;
+  'hubs/{hubId}/chat/{messageId}',
+  async (event) => {
+    const message = event.data.data();
+    const hubId = event.params.hubId;
+    const messageId = event.params.messageId;
 
-      info(`New message in hub: ${hubId} by ${message.authorId || message.senderId}`);
+    info(`New message in hub: ${hubId} by ${message.authorId || message.senderId}`);
 
-      try {
+    try {
       // Fetch hub and user data in parallel for denormalization
-        const [hubSnap, userSnap] = await Promise.all([
-          db.collection('hubs').doc(hubId).get(),
-          db.collection('users').doc(message.authorId || message.senderId).get(),
-        ]);
+      const [hubSnap, userSnap] = await Promise.all([
+        db.collection('hubs').doc(hubId).get(),
+        db.collection('users').doc(message.authorId || message.senderId).get(),
+      ]);
 
-        if (!hubSnap.exists) {
-          info('Hub does not exist');
-          return;
-        }
-        const hub = hubSnap.data();
-        const user = userSnap.exists ? userSnap.data() : null;
-
-        // Denormalize user data into message document
-        const messageUpdate = {};
-        if (user) {
-          messageUpdate.senderId = message.authorId || message.senderId;
-          messageUpdate.senderName = user.name || null;
-          messageUpdate.senderPhotoUrl = user.photoUrl || null;
-        }
-
-        // Update message with denormalized data
-        if (Object.keys(messageUpdate).length > 0) {
-          await db
-              .collection('hubs')
-              .doc(hubId)
-              .collection('chat')
-              .doc(messageId)
-              .update(messageUpdate);
-        }
-
-        // Update hub last activity
-        await hubSnap.ref.update({
-          lastActivity: message.createdAt,
-        });
-
-        const hubName = hub.name;
-
-        // Get hub members
-        const hubData = hubSnap.data();
-        let memberIds = hubData.memberIds || [];
-        if (!memberIds.length) {
-          memberIds = await getHubMemberIds(hubId);
-        }
-        if (memberIds.length === 0) return;
-
-        // Get FCM tokens for all members except sender
-        const tokens = [];
-        for (const memberId of memberIds) {
-          if (memberId === message.senderId) continue;
-
-          try {
-          // FCM tokens are stored in users/{userId}/fcm_tokens/tokens
-            const tokenDoc = await db
-                .collection('users')
-                .doc(memberId)
-                .collection('fcm_tokens')
-                .doc('tokens')
-                .get();
-
-            if (tokenDoc.exists) {
-              const tokenData = tokenDoc.data();
-              const userTokens = tokenData.tokens || [];
-              // Add all tokens for this user (users can have multiple devices)
-              if (Array.isArray(userTokens) && userTokens.length > 0) {
-                tokens.push(...userTokens);
-              }
-            }
-          } catch (error) {
-            info(`Failed to get FCM token for user ${memberId}: ${error}`);
-          }
-        }
-
-        if (tokens.length === 0) return;
-        const uniqueTokens = [...new Set(tokens)];
-
-        const payload = {
-          notification: {
-            title: `💬 הודעה חדשה ב-${hubName}`,
-            body: `${message.senderName}: ${message.text}`,
-          },
-          tokens: uniqueTokens,
-          data: {
-            type: 'hub_chat',
-            hubId: hubId,
-          },
-        };
-
-        await messaging.sendEachForMulticast(payload);
-        info(`Sent chat notification for hub ${hubId} to ${uniqueTokens.length} tokens.`);
-      } catch (error) {
-        info(`Error in onHubMessageCreated for hub ${hubId}:`, error);
+      if (!hubSnap.exists) {
+        info('Hub does not exist');
+        return;
       }
-    },
-);
+      const hub = hubSnap.data();
+      const user = userSnap.exists ? userSnap.data() : null;
 
-exports.onCommentCreated = onDocumentCreated(
-    'hubs/{hubId}/feed/posts/items/{postId}/comments/{commentId}',
-    async (event) => {
-      const comment = event.data.data();
-      const hubId = event.params.hubId;
-      const postId = event.params.postId;
-      const commentId = event.params.commentId;
+      // Denormalize user data into message document
+      const messageUpdate = {};
+      if (user) {
+        messageUpdate.senderId = message.authorId || message.senderId;
+        messageUpdate.senderName = user.name || null;
+        messageUpdate.senderPhotoUrl = user.photoUrl || null;
+      }
 
-      info(`New comment on post: ${postId} by ${comment.authorId}`);
+      // Update message with denormalized data
+      if (Object.keys(messageUpdate).length > 0) {
+        await db
+          .collection('hubs')
+          .doc(hubId)
+          .collection('chat')
+          .doc(messageId)
+          .update(messageUpdate);
+      }
 
-      try {
-      // Fetch user data for denormalization
-        const userSnap = await db.collection('users').doc(comment.authorId).get();
-        const user = userSnap.exists ? userSnap.data() : null;
+      // Update hub last activity
+      await hubSnap.ref.update({
+        lastActivity: message.createdAt,
+      });
 
-        // Denormalize user data into comment document
-        const commentUpdate = {};
-        if (user) {
-          commentUpdate.authorName = user.name || null;
-          commentUpdate.authorPhotoUrl = user.photoUrl || null;
-        }
+      const hubName = hub.name;
 
-        // Update comment with denormalized data
-        if (Object.keys(commentUpdate).length > 0) {
-          await db
-              .collection('hubs')
-              .doc(hubId)
-              .collection('feed')
-              .doc('posts')
-              .collection('items')
-              .doc(postId)
-              .collection('comments')
-              .doc(commentId)
-              .update(commentUpdate);
-        }
+      // Get hub members
+      const hubData = hubSnap.data();
+      let memberIds = hubData.memberIds || [];
+      if (!memberIds.length) {
+        memberIds = await getHubMemberIds(hubId);
+      }
+      if (memberIds.length === 0) return;
 
-        // Increment comment count on post
-        const postRef = db
-            .collection('hubs')
-            .doc(hubId)
-            .collection('feed')
-            .doc('posts')
-            .collection('items')
-            .doc(postId);
+      // ✅ PERFORMANCE FIX: Get FCM tokens in PARALLEL
+      const tokens = [];
+      const filteredMemberIds = memberIds.filter(id => id !== message.senderId);
 
-        await postRef.update({
-          commentCount: FieldValue.increment(1),
-        });
-
-        // Get post data for notification
-        const postSnap = await postRef.get();
-        if (!postSnap.exists) return;
-        const post = postSnap.data();
-
-        // Don't send notification if user comments on their own post
-        if (post.authorId === comment.authorId) return;
-
-        // Get post author's FCM token from subcollection
-        const tokenDoc = await db
+      const tokenFetchPromises = filteredMemberIds.map(async (memberId) => {
+        try {
+          // FCM tokens are stored in users/{userId}/fcm_tokens/tokens
+          const tokenDoc = await db
             .collection('users')
-            .doc(post.authorId)
+            .doc(memberId)
             .collection('fcm_tokens')
             .doc('tokens')
             .get();
 
-        if (!tokenDoc.exists) return;
-        const tokenData = tokenDoc.data();
-        const userTokens = tokenData?.tokens || [];
-        if (!Array.isArray(userTokens) || userTokens.length === 0) return;
+          if (tokenDoc.exists) {
+            const tokenData = tokenDoc.data();
+            const userTokens = tokenData.tokens || [];
+            // Add all tokens for this user (users can have multiple devices)
+            if (Array.isArray(userTokens) && userTokens.length > 0) {
+              return userTokens;
+            }
+          }
+          return [];
+        } catch (error) {
+          info(`Failed to get FCM token for user ${memberId}: ${error}`);
+          return [];
+        }
+      });
 
-        const fcmToken = userTokens[0]; // Use first token
+      const tokenArrays = await Promise.all(tokenFetchPromises);
+      tokens.push(...tokenArrays.flat());
 
-        const payload = {
-          notification: {
-            title: `💬 ${user?.name || 'מישהו'} הגיב לפוסט שלך`,
-            body: comment.text,
-          },
-          token: fcmToken,
-          data: {
-            type: 'new_comment',
-            postId: postId,
-            hubId: hubId,
-          },
-        };
+      if (tokens.length === 0) return;
+      const uniqueTokens = [...new Set(tokens)];
 
-        await messaging.send(payload);
-        info(`Sent comment notification for post ${postId} to user ${post.authorId}.`);
-      } catch (error) {
-        info(`Error in onCommentCreated for post ${postId}:`, error);
+      const payload = {
+        notification: {
+          title: `💬 הודעה חדשה ב-${hubName}`,
+          body: `${message.senderName}: ${message.text}`,
+        },
+        tokens: uniqueTokens,
+        data: {
+          type: 'hub_chat',
+          hubId: hubId,
+        },
+      };
+
+      await messaging.sendEachForMulticast(payload);
+      info(`Sent chat notification for hub ${hubId} to ${uniqueTokens.length} tokens.`);
+    } catch (error) {
+      info(`Error in onHubMessageCreated for hub ${hubId}:`, error);
+    }
+  },
+);
+
+exports.onCommentCreated = onDocumentCreated(
+  'hubs/{hubId}/feed/posts/items/{postId}/comments/{commentId}',
+  async (event) => {
+    const comment = event.data.data();
+    const hubId = event.params.hubId;
+    const postId = event.params.postId;
+    const commentId = event.params.commentId;
+
+    info(`New comment on post: ${postId} by ${comment.authorId}`);
+
+    try {
+      // Fetch user data for denormalization
+      const userSnap = await db.collection('users').doc(comment.authorId).get();
+      const user = userSnap.exists ? userSnap.data() : null;
+
+      // Denormalize user data into comment document
+      const commentUpdate = {};
+      if (user) {
+        commentUpdate.authorName = user.name || null;
+        commentUpdate.authorPhotoUrl = user.photoUrl || null;
       }
-    },
+
+      // Update comment with denormalized data
+      if (Object.keys(commentUpdate).length > 0) {
+        await db
+          .collection('hubs')
+          .doc(hubId)
+          .collection('feed')
+          .doc('posts')
+          .collection('items')
+          .doc(postId)
+          .collection('comments')
+          .doc(commentId)
+          .update(commentUpdate);
+      }
+
+      // Increment comment count on post
+      const postRef = db
+        .collection('hubs')
+        .doc(hubId)
+        .collection('feed')
+        .doc('posts')
+        .collection('items')
+        .doc(postId);
+
+      await postRef.update({
+        commentCount: FieldValue.increment(1),
+      });
+
+      // Get post data for notification
+      const postSnap = await postRef.get();
+      if (!postSnap.exists) return;
+      const post = postSnap.data();
+
+      // Don't send notification if user comments on their own post
+      if (post.authorId === comment.authorId) return;
+
+      // Get post author's FCM token from subcollection
+      const tokenDoc = await db
+        .collection('users')
+        .doc(post.authorId)
+        .collection('fcm_tokens')
+        .doc('tokens')
+        .get();
+
+      if (!tokenDoc.exists) return;
+      const tokenData = tokenDoc.data();
+      const userTokens = tokenData?.tokens || [];
+      if (!Array.isArray(userTokens) || userTokens.length === 0) return;
+
+      const fcmToken = userTokens[0]; // Use first token
+
+      const payload = {
+        notification: {
+          title: `💬 ${user?.name || 'מישהו'} הגיב לפוסט שלך`,
+          body: comment.text,
+        },
+        token: fcmToken,
+        data: {
+          type: 'new_comment',
+          postId: postId,
+          hubId: hubId,
+        },
+      };
+
+      await messaging.send(payload);
+      info(`Sent comment notification for post ${postId} to user ${post.authorId}.`);
+    } catch (error) {
+      info(`Error in onCommentCreated for post ${postId}:`, error);
+    }
+  },
 );
 
 // --- Recruiting Posts: Regional Duplication + Notifications ---
 exports.onRecruitingPostCreated = onDocumentCreated(
-    'hubs/{hubId}/feed/posts/items/{postId}',
-    async (event) => {
-      const post = event.data.data();
-      const postId = event.params.postId;
-      const hubId = event.params.hubId;
+  'hubs/{hubId}/feed/posts/items/{postId}',
+  async (event) => {
+    const post = event.data.data();
+    const postId = event.params.postId;
+    const hubId = event.params.hubId;
 
-      // Only process recruiting posts
-      if (post.type !== 'hub_recruiting') return;
+    // Only process recruiting posts
+    if (post.type !== 'hub_recruiting') return;
 
-      info(`Recruiting post ${postId} created in hub ${hubId}. Creating regional feed post...`);
+    info(`Recruiting post ${postId} created in hub ${hubId}. Creating regional feed post...`);
 
-      try {
-        // Get hub data
-        const hubDoc = await db.collection('hubs').doc(hubId).get();
-        if (!hubDoc.exists) return;
+    try {
+      // Get hub data
+      const hubDoc = await db.collection('hubs').doc(hubId).get();
+      if (!hubDoc.exists) return;
 
-        const hubData = hubDoc.data();
-        const region = hubData.region;
+      const hubData = hubDoc.data();
+      const region = hubData.region;
 
-        if (!region) {
-          info('Hub has no region, skipping regional feed post');
-          return;
-        }
-
-        // Create regional feed post
-        const regionalPostRef = db.collection('feedPosts').doc();
-        await regionalPostRef.set({
-          postId: regionalPostRef.id,
-          hubId: hubId,
-          hubName: hubData.name,
-          hubLogoUrl: hubData.logoUrl || null,
-          type: 'hub_recruiting',
-          content: post.content,
-          photoUrls: post.photoUrls || [],
-          createdAt: post.createdAt,
-          authorId: post.authorId,
-          authorName: post.authorName || null,
-          authorPhotoUrl: post.authorPhotoUrl || null,
-          region: region,
-          gameId: post.gameId || null,
-          eventId: post.eventId || null,
-          isUrgent: post.isUrgent || false,
-          recruitingUntil: post.recruitingUntil || null,
-          neededPlayers: post.neededPlayers || 0,
-          likeCount: 0,
-          commentCount: 0,
-        });
-
-        info(`Created regional feed post ${regionalPostRef.id} for recruiting post ${postId}`);
-
-        // Optional: Send notifications to nearby players
-        const usersSnapshot = await db.collection('users')
-            .where('region', '==', region)
-            .where('isActive', '==', true)
-            .limit(100)
-            .get();
-
-        let memberIds = hubData.memberIds || [];
-        if (!memberIds.length) {
-          memberIds = await getHubMemberIds(hubId);
-        }
-
-        const tokens = [];
-        for (const userDoc of usersSnapshot.docs) {
-          const userId = userDoc.id;
-
-          // Skip hub members
-          if (memberIds.includes(userId)) continue;
-
-          try {
-            const tokenDoc = await db
-                .collection('users')
-                .doc(userId)
-                .collection('fcm_tokens')
-                .doc('tokens')
-                .get();
-
-            if (tokenDoc.exists) {
-              const tokenData = tokenDoc.data();
-              const userTokens = tokenData?.tokens || [];
-              if (Array.isArray(userTokens) && userTokens.length > 0) {
-                tokens.push(...userTokens);
-              }
-            }
-          } catch (error) {
-            info(`Failed to get FCM token for user ${userId}: ${error}`);
-          }
-        }
-
-        if (tokens.length > 0) {
-          const uniqueTokens = [...new Set(tokens)];
-
-          const message = {
-            notification: {
-              title: `⚽ ${hubData.name} מחפש שחקנים!`,
-              body: post.content || 'לחץ לפרטים נוספים',
-            },
-            tokens: uniqueTokens,
-            data: {
-              type: 'hub_recruiting',
-              postId: regionalPostRef.id,
-              hubId: hubId,
-            },
-          };
-
-          await messaging.sendEachForMulticast(message);
-          info(`Sent recruiting notification to ${uniqueTokens.length} users in region ${region}`);
-        }
-      } catch (error) {
-        info(`Error creating regional feed post for recruiting post ${postId}:`, error);
+      if (!region) {
+        info('Hub has no region, skipping regional feed post');
+        return;
       }
-    },
-);
 
-// --- Contact Messages: Notify Hub Managers ---
-exports.onContactMessageCreated = onDocumentCreated(
-    'hubs/{hubId}/contactMessages/{messageId}',
-    async (event) => {
-      const message = event.data.data();
-      const hubId = event.params.hubId;
-      const messageId = event.params.messageId;
+      // Create regional feed post
+      const regionalPostRef = db.collection('feedPosts').doc();
+      await regionalPostRef.set({
+        postId: regionalPostRef.id,
+        hubId: hubId,
+        hubName: hubData.name,
+        hubLogoUrl: hubData.logoUrl || null,
+        type: 'hub_recruiting',
+        content: post.content,
+        photoUrls: post.photoUrls || [],
+        createdAt: post.createdAt,
+        authorId: post.authorId,
+        authorName: post.authorName || null,
+        authorPhotoUrl: post.authorPhotoUrl || null,
+        region: region,
+        gameId: post.gameId || null,
+        eventId: post.eventId || null,
+        isUrgent: post.isUrgent || false,
+        recruitingUntil: post.recruitingUntil || null,
+        neededPlayers: post.neededPlayers || 0,
+        likeCount: 0,
+        commentCount: 0,
+      });
 
-      info(`New contact message ${messageId} in hub ${hubId} from ${message.senderId}`);
+      info(`Created regional feed post ${regionalPostRef.id} for recruiting post ${postId}`);
 
-      try {
-        // Get hub data
-        const hubDoc = await db.collection('hubs').doc(hubId).get();
-        if (!hubDoc.exists) return;
+      // Optional: Send notifications to nearby players
+      const usersSnapshot = await db.collection('users')
+        .where('region', '==', region)
+        .where('isActive', '==', true)
+        .limit(100)
+        .get();
 
-        const hubData = hubDoc.data();
-        const creatorId = hubData.createdBy;
-
-        // Get all hub admins/managers
-        const managerIds = [creatorId];
-        if (hubData.roles) {
-          Object.entries(hubData.roles).forEach(([userId, role]) => {
-            if (role === 'admin' || role === 'manager') {
-              managerIds.push(userId);
-            }
-          });
-        }
-
-        // Send notification to all managers
-        for (const managerId of [...new Set(managerIds)]) {
-          try {
-            const tokenDoc = await db
-                .collection('users')
-                .doc(managerId)
-                .collection('fcm_tokens')
-                .doc('tokens')
-                .get();
-
-            if (!tokenDoc.exists) continue;
-
-            const tokenData = tokenDoc.data();
-            const userTokens = tokenData?.tokens || [];
-            if (!Array.isArray(userTokens) || userTokens.length === 0) continue;
-
-            const notification = {
-              notification: {
-                title: `💬 הודעה חדשה מ-${message.senderName || 'שחקן'}`,
-                body: (message.message || '').substring(0, 100),
-              },
-              tokens: userTokens,
-              data: {
-                type: 'contact_message',
-                hubId: hubId,
-                messageId: messageId,
-              },
-            };
-
-            await messaging.sendEachForMulticast(notification);
-            info(`Sent contact message notification to manager ${managerId}`);
-          } catch (error) {
-            info(`Error sending notification to manager ${managerId}: ${error}`);
-          }
-        }
-      } catch (error) {
-        info(`Error sending contact message notification: ${error}`);
+      let memberIds = hubData.memberIds || [];
+      if (!memberIds.length) {
+        memberIds = await getHubMemberIds(hubId);
       }
-    },
-);
 
-exports.onFollowCreated = onDocumentCreated(
-    'users/{followedId}/followers/{followerId}',
-    async (event) => {
-      const follower = event.data.data();
-      const followedId = event.params.followedId;
-      info(`User ${follower.followerId} started following ${followedId}`);
+      // ✅ PERFORMANCE FIX: Get FCM tokens in PARALLEL
+      const nonMemberUserIds = usersSnapshot.docs
+        .map(doc => doc.id)
+        .filter(userId => !memberIds.includes(userId));
 
-      try {
-        const userRef = db.collection('users').doc(followedId);
-        const userSnap = await userRef.get();
-        if (!userSnap.exists) return;
-
-        // ... (rest of your logic is identical)
-        await userRef.update({
-          followerCount: FieldValue.increment(1),
-        });
-
-        // Get FCM token from subcollection
-        const tokenDoc = await db
+      const tokenFetchPromises = nonMemberUserIds.map(async (userId) => {
+        try {
+          const tokenDoc = await db
             .collection('users')
-            .doc(followedId)
+            .doc(userId)
             .collection('fcm_tokens')
             .doc('tokens')
             .get();
 
-        if (!tokenDoc.exists) {
-          info('Followed user does not have FCM token. No notification sent.');
-          return;
+          if (tokenDoc.exists) {
+            const tokenData = tokenDoc.data();
+            const userTokens = tokenData?.tokens || [];
+            if (Array.isArray(userTokens) && userTokens.length > 0) {
+              return userTokens;
+            }
+          }
+          return [];
+        } catch (error) {
+          info(`Failed to get FCM token for user ${userId}: ${error}`);
+          return [];
         }
+      });
 
-        const tokenData = tokenDoc.data();
-        const userTokens = tokenData?.tokens || [];
-        if (!Array.isArray(userTokens) || userTokens.length === 0) {
-          info('Followed user does not have FCM token. No notification sent.');
-          return;
-        }
+      const tokenArrays = await Promise.all(tokenFetchPromises);
+      const tokens = tokenArrays.flat();
 
-        const fcmToken = userTokens[0]; // Use first token
+      if (tokens.length > 0) {
+        const uniqueTokens = [...new Set(tokens)];
 
-        const payload = {
+        const message = {
           notification: {
-            title: 'עוקב חדש!',
-            body: `${follower.followerName} התחיל לעקוב אחריך.`,
+            title: `⚽ ${hubData.name} מחפש שחקנים!`,
+            body: post.content || 'לחץ לפרטים נוספים',
           },
-          token: fcmToken,
+          tokens: uniqueTokens,
           data: {
-            type: 'new_follower',
-            followerId: follower.followerId,
+            type: 'hub_recruiting',
+            postId: regionalPostRef.id,
+            hubId: hubId,
           },
         };
 
-        await messaging.send(payload);
-        info(`Sent follower notification to user ${followedId}.`);
-      } catch (error) {
-        info(`Error in onFollowCreated for user ${followedId}:`, error);
+        await messaging.sendEachForMulticast(message);
+        info(`Sent recruiting notification to ${uniqueTokens.length} users in region ${region}`);
       }
-    },
+    } catch (error) {
+      info(`Error creating regional feed post for recruiting post ${postId}:`, error);
+    }
+  },
+);
+
+// --- Contact Messages: Notify Hub Managers ---
+exports.onContactMessageCreated = onDocumentCreated(
+  'hubs/{hubId}/contactMessages/{messageId}',
+  async (event) => {
+    const message = event.data.data();
+    const hubId = event.params.hubId;
+    const messageId = event.params.messageId;
+
+    info(`New contact message ${messageId} in hub ${hubId} from ${message.senderId}`);
+
+    try {
+      // Get hub data
+      const hubDoc = await db.collection('hubs').doc(hubId).get();
+      if (!hubDoc.exists) return;
+
+      const hubData = hubDoc.data();
+      const creatorId = hubData.createdBy;
+
+      // Get all hub admins/managers
+      const managerIds = [creatorId];
+      if (hubData.roles) {
+        Object.entries(hubData.roles).forEach(([userId, role]) => {
+          if (role === 'admin' || role === 'manager') {
+            managerIds.push(userId);
+          }
+        });
+      }
+
+      // ✅ PERFORMANCE FIX: Send notifications in PARALLEL
+      const uniqueManagerIds = [...new Set(managerIds)];
+      const notificationPromises = uniqueManagerIds.map(async (managerId) => {
+        try {
+          const tokenDoc = await db
+            .collection('users')
+            .doc(managerId)
+            .collection('fcm_tokens')
+            .doc('tokens')
+            .get();
+
+          if (!tokenDoc.exists) return;
+
+          const tokenData = tokenDoc.data();
+          const userTokens = tokenData?.tokens || [];
+          if (!Array.isArray(userTokens) || userTokens.length === 0) return;
+
+          const notification = {
+            notification: {
+              title: `💬 הודעה חדשה מ-${message.senderName || 'שחקן'}`,
+              body: (message.message || '').substring(0, 100),
+            },
+            tokens: userTokens,
+            data: {
+              type: 'contact_message',
+              hubId: hubId,
+              messageId: messageId,
+            },
+          };
+
+          await messaging.sendEachForMulticast(notification);
+          info(`Sent contact message notification to manager ${managerId}`);
+        } catch (error) {
+          info(`Error sending notification to manager ${managerId}: ${error}`);
+        }
+      });
+
+      await Promise.all(notificationPromises);
+    } catch (error) {
+      info(`Error sending contact message notification: ${error}`);
+    }
+  },
+);
+
+exports.onFollowCreated = onDocumentCreated(
+  'users/{followedId}/followers/{followerId}',
+  async (event) => {
+    const follower = event.data.data();
+    const followedId = event.params.followedId;
+    info(`User ${follower.followerId} started following ${followedId}`);
+
+    try {
+      const userRef = db.collection('users').doc(followedId);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) return;
+
+      // ... (rest of your logic is identical)
+      await userRef.update({
+        followerCount: FieldValue.increment(1),
+      });
+
+      // Get FCM token from subcollection
+      const tokenDoc = await db
+        .collection('users')
+        .doc(followedId)
+        .collection('fcm_tokens')
+        .doc('tokens')
+        .get();
+
+      if (!tokenDoc.exists) {
+        info('Followed user does not have FCM token. No notification sent.');
+        return;
+      }
+
+      const tokenData = tokenDoc.data();
+      const userTokens = tokenData?.tokens || [];
+      if (!Array.isArray(userTokens) || userTokens.length === 0) {
+        info('Followed user does not have FCM token. No notification sent.');
+        return;
+      }
+
+      const fcmToken = userTokens[0]; // Use first token
+
+      const payload = {
+        notification: {
+          title: 'עוקב חדש!',
+          body: `${follower.followerName} התחיל לעקוב אחריך.`,
+        },
+        token: fcmToken,
+        data: {
+          type: 'new_follower',
+          followerId: follower.followerId,
+        },
+      };
+
+      await messaging.send(payload);
+      info(`Sent follower notification to user ${followedId}.`);
+    } catch (error) {
+      info(`Error in onFollowCreated for user ${followedId}:`, error);
+    }
+  },
 );
 
 exports.onVenueChanged = onDocumentWritten(
-    'venues/{venueId}',
-    async (event) => {
+  'venues/{venueId}',
+  async (event) => {
     // This trigger handles create, update, and delete
-      const venueId = event.params.venueId;
+    const venueId = event.params.venueId;
 
-      // On delete
-      if (!event.data.after.exists) {
-        info(`Venue ${venueId} deleted. Triggering hub updates.`);
-        // ... (rest of your logic is identical)
-        const hubsSnap = await db
-            .collection('hubs')
-            .where('venueIds', 'array-contains', venueId)
-            .get();
-        if (hubsSnap.empty) return;
-
-        const batch = db.batch();
-        hubsSnap.forEach((doc) => {
-          batch.update(doc.ref, {
-            venueIds: FieldValue.arrayRemove(venueId),
-          });
-        });
-        await batch.commit();
-        info(`Removed venue ${venueId} from ${hubsSnap.size} hubs.`);
-        return;
-      }
-
-      // On create or update
-      info(`Venue ${venueId} created or updated. Triggering hub updates.`);
-
+    // On delete
+    if (!event.data.after.exists) {
+      info(`Venue ${venueId} deleted. Triggering hub updates.`);
       // ... (rest of your logic is identical)
       const hubsSnap = await db
-          .collection('hubs')
-          .where('venueIds', 'array-contains', venueId)
-          .get();
-      if (hubsSnap.empty) {
-        info('No hubs found using this venue.');
-        return;
-      }
+        .collection('hubs')
+        .where('venueIds', 'array-contains', venueId)
+        .get();
+      if (hubsSnap.empty) return;
 
-      // Note: Hub model uses venueIds array, not venues array
-      // Venue updates are handled by the client when needed
-      // No batch update needed here since we only track venueIds, not full venue objects
-      info(`Venue ${venueId} updated. Hubs using this venue: ${hubsSnap.size}.`);
-    },
+      const batch = db.batch();
+      hubsSnap.forEach((doc) => {
+        batch.update(doc.ref, {
+          venueIds: FieldValue.arrayRemove(venueId),
+        });
+      });
+      await batch.commit();
+      info(`Removed venue ${venueId} from ${hubsSnap.size} hubs.`);
+      return;
+    }
+
+    // On create or update
+    info(`Venue ${venueId} created or updated. Triggering hub updates.`);
+
+    // ... (rest of your logic is identical)
+    const hubsSnap = await db
+      .collection('hubs')
+      .where('venueIds', 'array-contains', venueId)
+      .get();
+    if (hubsSnap.empty) {
+      info('No hubs found using this venue.');
+      return;
+    }
+
+    // Note: Hub model uses venueIds array, not venues array
+    // Venue updates are handled by the client when needed
+    // No batch update needed here since we only track venueIds, not full venue objects
+    info(`Venue ${venueId} updated. Hubs using this venue: ${hubsSnap.size}.`);
+  },
 );
 
 // --- Rating Calculation Function (moved from client to server) ---
 // This function automatically calculates and updates a user's average rating
 // whenever a new rating snapshot is added
 exports.onRatingSnapshotCreated = onDocumentCreated(
-    'ratings/{userId}/history/{ratingId}',
-    async (event) => {
-      const userId = event.params.userId;
-      const ratingId = event.params.ratingId;
+  'ratings/{userId}/history/{ratingId}',
+  async (event) => {
+    const userId = event.params.userId;
+    const ratingId = event.params.ratingId;
 
-      info(`New rating snapshot created: ${ratingId} for user ${userId}`);
+    info(`New rating snapshot created: ${ratingId} for user ${userId}`);
 
-      try {
+    try {
       // Get user's hub settings to determine rating mode
-        const userSnap = await db.collection('users').doc(userId).get();
-        if (!userSnap.exists) {
-          info('User does not exist');
-          return;
-        }
+      const userSnap = await db.collection('users').doc(userId).get();
+      if (!userSnap.exists) {
+        info('User does not exist');
+        return;
+      }
 
-        // Get all rating history for this user
-        const historySnap = await db
-            .collection('ratings')
-            .doc(userId)
-            .collection('history')
-            .orderBy('submittedAt', 'desc')
-            .limit(10) // Last 10 games
-            .get();
+      // Get all rating history for this user
+      const historySnap = await db
+        .collection('ratings')
+        .doc(userId)
+        .collection('history')
+        .orderBy('submittedAt', 'desc')
+        .limit(10) // Last 10 games
+        .get();
 
-        if (historySnap.empty) {
-          info('No rating history found');
-          return;
-        }
+      if (historySnap.empty) {
+        info('No rating history found');
+        return;
+      }
 
-        // Calculate average rating based on rating mode
-        // For simplicity, we'll use the last 10 games
-        let totalRating = 0.0;
-        let count = 0;
+      // Calculate average rating based on rating mode
+      // For simplicity, we'll use the last 10 games
+      let totalRating = 0.0;
+      let count = 0;
 
-        historySnap.forEach((doc) => {
-          const snapshot = doc.data();
-          if (snapshot.basicScore != null) {
+      historySnap.forEach((doc) => {
+        const snapshot = doc.data();
+        if (snapshot.basicScore != null) {
           // Basic mode: use basicScore
-            totalRating += snapshot.basicScore;
-            count += 1;
-          } else {
+          totalRating += snapshot.basicScore;
+          count += 1;
+        } else {
           // Advanced mode: average of 8 categories
-            totalRating +=
+          totalRating +=
             (snapshot.defense +
               snapshot.passing +
               snapshot.shooting +
@@ -894,487 +920,488 @@ exports.onRatingSnapshotCreated = onDocumentCreated(
               snapshot.teamPlay +
               snapshot.consistency) /
             8.0;
-            count += 1;
-          }
-        });
-
-        if (count === 0) {
-          info('No valid ratings to calculate average');
-          return;
+          count += 1;
         }
+      });
 
-        const averageRating = totalRating / count;
-
-        // Update user's currentRankScore (denormalized)
-        await db.collection('users').doc(userId).update({
-          currentRankScore: averageRating,
-        });
-
-        info(`Updated user ${userId} rating to ${averageRating} (from ${count} games).`);
-      } catch (error) {
-        info(`Error in onRatingSnapshotCreated for user ${userId}:`, error);
+      if (count === 0) {
+        info('No valid ratings to calculate average');
+        return;
       }
-    },
+
+      const averageRating = totalRating / count;
+
+      // Update user's currentRankScore (denormalized)
+      await db.collection('users').doc(userId).update({
+        currentRankScore: averageRating,
+      });
+
+      info(`Updated user ${userId} rating to ${averageRating} (from ${count} games).`);
+    } catch (error) {
+      info(`Error in onRatingSnapshotCreated for user ${userId}:`, error);
+    }
+  },
 );
 
 // --- Game Completion Handler ---
 // When a game status changes to 'completed', calculate and update player statistics
 exports.onGameCompleted = onDocumentUpdated(
-    'games/{gameId}',
-    async (event) => {
-      const gameId = event.params.gameId;
-      const beforeData = event.data.before.data();
-      const afterData = event.data.after.data();
+  'games/{gameId}',
+  async (event) => {
+    const gameId = event.params.gameId;
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
 
-      // Only process if status changed to 'completed'
-      const beforeStatus = beforeData?.status;
-      const afterStatus = afterData?.status;
+    // Only process if status changed to 'completed'
+    const beforeStatus = beforeData?.status;
+    const afterStatus = afterData?.status;
 
-      if (afterStatus !== 'completed' || beforeStatus === 'completed') {
-        // Status didn't change to completed, skip
+    if (afterStatus !== 'completed' || beforeStatus === 'completed') {
+      // Status didn't change to completed, skip
+      return;
+    }
+
+    info(`Game ${gameId} completed. Calculating player statistics.`);
+
+    try {
+      // Get game data to read teams and scores
+      const gameData = afterData;
+      const teams = gameData.teams || [];
+      const teamAScore = gameData.teamAScore ?? 0;
+      const teamBScore = gameData.teamBScore ?? 0;
+
+      // Determine winning team based on scores
+      let winningTeamId = null;
+      if (teams.length >= 2) {
+        if (teamAScore > teamBScore) {
+          winningTeamId = teams[0]?.teamId || null;
+        } else if (teamBScore > teamAScore) {
+          winningTeamId = teams[1]?.teamId || null;
+        }
+        // If tie, winningTeamId remains null (no winner)
+      }
+
+      // Get all signups to know which players participated
+      const signupsSnapshot = await db
+        .collection('games')
+        .doc(gameId)
+        .collection('signups')
+        .where('status', '==', 'confirmed')
+        .get();
+
+      if (signupsSnapshot.empty) {
+        info(`No confirmed signups found for game ${gameId}. Skipping statistics calculation.`);
         return;
       }
 
-      info(`Game ${gameId} completed. Calculating player statistics.`);
+      const participantIds = signupsSnapshot.docs.map((doc) => doc.id);
 
-      try {
-        // Get game data to read teams and scores
-        const gameData = afterData;
-        const teams = gameData.teams || [];
-        const teamAScore = gameData.teamAScore ?? 0;
-        const teamBScore = gameData.teamBScore ?? 0;
-
-        // Determine winning team based on scores
-        let winningTeamId = null;
-        if (teams.length >= 2) {
-          if (teamAScore > teamBScore) {
-            winningTeamId = teams[0]?.teamId || null;
-          } else if (teamBScore > teamAScore) {
-            winningTeamId = teams[1]?.teamId || null;
-          }
-          // If tie, winningTeamId remains null (no winner)
-        }
-
-        // Get all signups to know which players participated
-        const signupsSnapshot = await db
-            .collection('games')
-            .doc(gameId)
-            .collection('signups')
-            .where('status', '==', 'confirmed')
-            .get();
-
-        if (signupsSnapshot.empty) {
-          info(`No confirmed signups found for game ${gameId}. Skipping statistics calculation.`);
-          return;
-        }
-
-        const participantIds = signupsSnapshot.docs.map((doc) => doc.id);
-
-        // Create a map of playerId -> teamId for quick lookup
-        const playerToTeamMap = {};
-        teams.forEach((team) => {
-          if (team.playerIds && Array.isArray(team.playerIds)) {
-            team.playerIds.forEach((playerId) => {
-              playerToTeamMap[playerId] = team.teamId;
-            });
-          }
-        });
-
-        // Initialize statistics for each participant
-        const playerStats = {};
-        participantIds.forEach((playerId) => {
-          playerStats[playerId] = {
-            goals: 0,
-            assists: 0,
-            saves: 0,
-            mvpVotes: 0,
-            teamId: playerToTeamMap[playerId] || null,
-          };
-        });
-
-        // Get all game events for this game (if any)
-        // For retroactive games, events may be empty, which is fine
-        const eventsSnapshot = await db
-            .collection('games')
-            .doc(gameId)
-            .collection('events')
-            .get();
-
-        // Process all events and aggregate statistics (if events exist)
-        if (!eventsSnapshot.empty) {
-          eventsSnapshot.forEach((eventDoc) => {
-            const event = eventDoc.data();
-            const playerId = event.playerId;
-            const eventType = event.type;
-
-            if (!playerStats[playerId]) {
-              // Player not in signups but has events (edge case)
-              playerStats[playerId] = {
-                goals: 0,
-                assists: 0,
-                saves: 0,
-                mvpVotes: 0,
-                teamId: playerToTeamMap[playerId] || null,
-              };
-            }
-
-            // Count events by type
-            switch (eventType) {
-              case 'goal':
-                playerStats[playerId].goals += 1;
-                break;
-              case 'assist':
-                playerStats[playerId].assists += 1;
-                break;
-              case 'save':
-                playerStats[playerId].saves += 1;
-                break;
-              case 'mvpVote':
-                playerStats[playerId].mvpVotes += 1;
-                break;
-            }
+      // Create a map of playerId -> teamId for quick lookup
+      const playerToTeamMap = {};
+      teams.forEach((team) => {
+        if (team.playerIds && Array.isArray(team.playerIds)) {
+          team.playerIds.forEach((playerId) => {
+            playerToTeamMap[playerId] = team.teamId;
           });
-        } else {
-          info(`No events found for game ${gameId}. Using base statistics (goals/assists/saves = 0).`);
         }
+      });
 
-        // Update gamification stats for each player using batch writes
-        const batch = db.batch();
+      // Initialize statistics for each participant
+      const playerStats = {};
+      participantIds.forEach((playerId) => {
+        playerStats[playerId] = {
+          goals: 0,
+          assists: 0,
+          saves: 0,
+          mvpVotes: 0,
+          teamId: playerToTeamMap[playerId] || null,
+        };
+      });
 
-        for (const [playerId, stats] of Object.entries(playerStats)) {
-          const gamificationRef = db
-              .collection('users')
-              .doc(playerId)
-              .collection('gamification')
-              .doc('stats');
+      // Get all game events for this game (if any)
+      // For retroactive games, events may be empty, which is fine
+      const eventsSnapshot = await db
+        .collection('games')
+        .doc(gameId)
+        .collection('events')
+        .get();
 
-          // Get current gamification data
-          const gamificationDoc = await gamificationRef.get();
-          const currentData = gamificationDoc.exists ? gamificationDoc.data() : {
-            points: 0,
-            level: 1,
-            badges: [],
-            achievements: {},
-            stats: {
-              gamesPlayed: 0,
-              gamesWon: 0,
+      // Process all events and aggregate statistics (if events exist)
+      if (!eventsSnapshot.empty) {
+        eventsSnapshot.forEach((eventDoc) => {
+          const event = eventDoc.data();
+          const playerId = event.playerId;
+          const eventType = event.type;
+
+          if (!playerStats[playerId]) {
+            // Player not in signups but has events (edge case)
+            playerStats[playerId] = {
               goals: 0,
               assists: 0,
               saves: 0,
-            },
-          };
-
-          // Determine if player won (check if their team is the winning team)
-          const playerWon = winningTeamId !== null && stats.teamId === winningTeamId;
-
-          // Calculate new stats
-          const newStats = {
-            gamesPlayed: (currentData.stats?.gamesPlayed || 0) + 1,
-            gamesWon: (currentData.stats?.gamesWon || 0) + (playerWon ? 1 : 0),
-            goals: (currentData.stats?.goals || 0) + stats.goals,
-            assists: (currentData.stats?.assists || 0) + stats.assists,
-            saves: (currentData.stats?.saves || 0) + stats.saves,
-          };
-
-          // SIMPLIFIED: No points, no levels - just participation tracking
-          // Only increment stats and check for milestone badges
-
-          // Check for milestone badges (based on gamesPlayed count only)
-          const badgesToAward = [];
-          if (newStats.gamesPlayed === 1 && !(currentData.badges || []).includes('firstGame')) {
-            badgesToAward.push('firstGame');
-          }
-          if (newStats.gamesPlayed === 10 && !(currentData.badges || []).includes('tenGames')) {
-            badgesToAward.push('tenGames');
-          }
-          if (newStats.gamesPlayed === 50 && !(currentData.badges || []).includes('fiftyGames')) {
-            badgesToAward.push('fiftyGames');
-          }
-          if (newStats.gamesPlayed === 100 && !(currentData.badges || []).includes('hundredGames')) {
-            badgesToAward.push('hundredGames');
+              mvpVotes: 0,
+              teamId: playerToTeamMap[playerId] || null,
+            };
           }
 
-          // Goal badges (optional - for display only, no points)
-          if (newStats.goals >= 1 && !(currentData.badges || []).includes('firstGoal')) {
-            badgesToAward.push('firstGoal');
+          // Count events by type
+          switch (eventType) {
+            case 'goal':
+              playerStats[playerId].goals += 1;
+              break;
+            case 'assist':
+              playerStats[playerId].assists += 1;
+              break;
+            case 'save':
+              playerStats[playerId].saves += 1;
+              break;
+            case 'mvpVote':
+              playerStats[playerId].mvpVotes += 1;
+              break;
           }
-          if (newStats.goals >= 3 && !(currentData.badges || []).includes('hatTrick')) {
-            badgesToAward.push('hatTrick');
-          }
-
-          // Update gamification document (keep points/level for backward compatibility, but don't update them)
-          const updatedBadges = [...(currentData.badges || []), ...badgesToAward];
-          batch.set(gamificationRef, {
-            userId: playerId,
-            // Keep existing points/level (for backward compatibility with old data)
-            points: currentData.points || 0,
-            level: currentData.level || 1,
-            badges: updatedBadges,
-            achievements: currentData.achievements || {},
-            stats: newStats,
-            updatedAt: FieldValue.serverTimestamp(),
-          }, {merge: true});
-
-          // Log badge awards
-          if (badgesToAward.length > 0) {
-            info(`Player ${playerId} earned badges: ${badgesToAward.join(', ')}`);
-          }
-
-          // Also update user's totalParticipations
-          const userRef = db.collection('users').doc(playerId);
-          batch.update(userRef, {
-            totalParticipations: FieldValue.increment(1),
-          });
-        }
-
-        // Commit all updates
-        await batch.commit();
-        info(`Updated statistics for ${Object.keys(playerStats).length} players after game ${gameId} completion.`);
-
-        // Update denormalized data in game document
-        try {
-          // Get goal scorers
-          const goalScorerIds = [];
-          const goalScorerNames = [];
-          for (const [playerId, stats] of Object.entries(playerStats)) {
-            if (stats.goals > 0) {
-              goalScorerIds.push(playerId);
-              // Get player name
-              const userDoc = await db.collection('users').doc(playerId).get();
-              if (userDoc.exists) {
-                const userData = userDoc.data();
-                goalScorerNames.push(userData?.name || playerId);
-              }
-            }
-          }
-
-          // Get MVP (player with most MVP votes)
-          let mvpPlayerId = null;
-          let mvpPlayerName = null;
-          let maxMvpVotes = 0;
-          for (const [playerId, stats] of Object.entries(playerStats)) {
-            if (stats.mvpVotes > maxMvpVotes) {
-              maxMvpVotes = stats.mvpVotes;
-              mvpPlayerId = playerId;
-            }
-          }
-          if (mvpPlayerId) {
-            const mvpDoc = await db.collection('users').doc(mvpPlayerId).get();
-            if (mvpDoc.exists) {
-              const mvpData = mvpDoc.data();
-              mvpPlayerName = mvpData?.name || mvpPlayerId;
-            }
-          }
-
-          // Get venue name
-          let venueName = null;
-          if (gameData.venueId) {
-            const venueDoc = await db.collection('venues').doc(gameData.venueId).get();
-            if (venueDoc.exists) {
-              const venueData = venueDoc.data();
-              venueName = venueData?.name || null;
-            }
-          } else if (gameData.eventId) {
-            // Try to get venue from event
-            const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
-            if (hubDoc.exists) {
-              const eventDoc = await hubDoc.ref.collection('events').doc(gameData.eventId).get();
-              if (eventDoc.exists) {
-                const eventData = eventDoc.data();
-                venueName = eventData?.location || null;
-              }
-            }
-          }
-
-          // Update game with denormalized data
-          await db.collection('games').doc(gameId).update({
-            goalScorerIds: goalScorerIds,
-            goalScorerNames: goalScorerNames,
-            mvpPlayerId: mvpPlayerId,
-            mvpPlayerName: mvpPlayerName,
-            venueName: venueName,
-          });
-          info(`Updated denormalized data for game ${gameId}.`);
-        } catch (denormError) {
-          info(`Failed to update denormalized data for game ${gameId}:`, denormError);
-        }
-
-        // Update Hub Leaderboard (denormalized for fast reads)
-        try {
-          const hubRef = db.collection('hubs').doc(gameData.hubId);
-          const hubDoc = await hubRef.get();
-
-          if (hubDoc.exists) {
-            // Calculate hub-level aggregations
-            const hubGamesSnapshot = await db.collection('games')
-                .where('hubId', '==', gameData.hubId)
-                .where('status', '==', 'completed')
-                .get();
-
-            const totalHubGames = hubGamesSnapshot.size;
-            const totalHubGoals = hubGamesSnapshot.docs.reduce((sum, doc) => {
-              const g = doc.data();
-              return sum + (g.teamAScore || 0) + (g.teamBScore || 0);
-            }, 0);
-
-            // Update hub with aggregated stats
-            await hubRef.update({
-              totalGames: totalHubGames,
-              totalGoals: totalHubGoals,
-              lastGameCompleted: FieldValue.serverTimestamp(),
-            });
-
-            info(`Updated hub ${gameData.hubId} leaderboard stats.`);
-          }
-        } catch (leaderboardError) {
-          info(`Failed to update hub leaderboard for game ${gameId}:`, leaderboardError);
-        }
-
-        // Send "Game Summary" notification to all attendees
-        try {
-          const notificationPromises = participantIds.map(async (playerId) => {
-            try {
-              const tokenDoc = await db
-                  .collection('users')
-                  .doc(playerId)
-                  .collection('fcm_tokens')
-                  .doc('tokens')
-                  .get();
-
-              if (tokenDoc.exists) {
-                const tokenData = tokenDoc.data();
-                const fcmToken = tokenData?.token;
-
-                if (fcmToken) {
-                  const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
-                  const hubName = hubDoc.exists ? hubDoc.data()?.name || 'האב' : 'האב';
-
-                  const message = {
-                    token: fcmToken,
-                    notification: {
-                      title: 'סיכום משחק',
-                      body: `משחק הושלם ב-${hubName}! תוצאה: ${teamAScore}-${teamBScore}`,
-                    },
-                    data: {
-                      type: 'game_summary',
-                      gameId: gameId,
-                      hubId: gameData.hubId,
-                    },
-                    android: {priority: 'normal'},
-                    apns: {headers: {'apns-priority': '5'}},
-                  };
-
-                  await messaging.send(message);
-                }
-              }
-            } catch (err) {
-              info(`Failed to send notification to player ${playerId}:`, err);
-            }
-          });
-
-          await Promise.all(notificationPromises);
-          info(`Sent game summary notifications to ${participantIds.length} players.`);
-        } catch (notificationError) {
-          info(`Failed to send game summary notifications:`, notificationError);
-        }
-
-        // Create regional feed post in feedPosts collection (root level)
-        const gameRegion = gameData.region;
-        if (gameRegion) {
-          try {
-            const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
-            const hubData = hubDoc.exists ? hubDoc.data() : null;
-
-            const feedPostRef = db.collection('feedPosts').doc();
-            await feedPostRef.set({
-              postId: feedPostRef.id,
-              hubId: gameData.hubId,
-              hubName: hubData?.name || 'האב',
-              hubLogoUrl: hubData?.logoUrl || null,
-              type: 'game_completed',
-              text: `משחק הושלם ב-${hubData?.name || 'האב'}! תוצאה: ${teamAScore}-${teamBScore}`,
-              createdAt: FieldValue.serverTimestamp(),
-              authorId: gameData.createdBy,
-              authorName: null, // Can be denormalized if needed
-              authorPhotoUrl: null,
-              entityId: gameId,
-              gameId: gameId,
-              region: gameRegion, // Copy region from game
-              likeCount: 0,
-              commentCount: 0,
-              likes: [],
-              comments: [],
-            });
-            info(`Created regional feed post for game ${gameId} in region ${gameRegion}.`);
-          } catch (feedError) {
-            info(`Failed to create regional feed post for game ${gameId}:`, feedError);
-          }
-        }
-      } catch (error) {
-        info(`Error in onGameCompleted for game ${gameId}:`, error);
+        });
+      } else {
+        info(`No events found for game ${gameId}. Using base statistics (goals/assists/saves = 0).`);
       }
-    },
+
+      // Update gamification stats for each player using batch writes
+      const batch = db.batch();
+
+      for (const [playerId, stats] of Object.entries(playerStats)) {
+        const gamificationRef = db
+          .collection('users')
+          .doc(playerId)
+          .collection('gamification')
+          .doc('stats');
+
+        // Get current gamification data
+        const gamificationDoc = await gamificationRef.get();
+        const currentData = gamificationDoc.exists ? gamificationDoc.data() : {
+          points: 0,
+          level: 1,
+          badges: [],
+          achievements: {},
+          stats: {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            goals: 0,
+            assists: 0,
+            saves: 0,
+          },
+        };
+
+        // Determine if player won (check if their team is the winning team)
+        const playerWon = winningTeamId !== null && stats.teamId === winningTeamId;
+
+        // Calculate new stats
+        const newStats = {
+          gamesPlayed: (currentData.stats?.gamesPlayed || 0) + 1,
+          gamesWon: (currentData.stats?.gamesWon || 0) + (playerWon ? 1 : 0),
+          goals: (currentData.stats?.goals || 0) + stats.goals,
+          assists: (currentData.stats?.assists || 0) + stats.assists,
+          saves: (currentData.stats?.saves || 0) + stats.saves,
+        };
+
+        // SIMPLIFIED: No points, no levels - just participation tracking
+        // Only increment stats and check for milestone badges
+
+        // Check for milestone badges (based on gamesPlayed count only)
+        const badgesToAward = [];
+        if (newStats.gamesPlayed === 1 && !(currentData.badges || []).includes('firstGame')) {
+          badgesToAward.push('firstGame');
+        }
+        if (newStats.gamesPlayed === 10 && !(currentData.badges || []).includes('tenGames')) {
+          badgesToAward.push('tenGames');
+        }
+        if (newStats.gamesPlayed === 50 && !(currentData.badges || []).includes('fiftyGames')) {
+          badgesToAward.push('fiftyGames');
+        }
+        if (newStats.gamesPlayed === 100 && !(currentData.badges || []).includes('hundredGames')) {
+          badgesToAward.push('hundredGames');
+        }
+
+        // Goal badges (optional - for display only, no points)
+        if (newStats.goals >= 1 && !(currentData.badges || []).includes('firstGoal')) {
+          badgesToAward.push('firstGoal');
+        }
+        if (newStats.goals >= 3 && !(currentData.badges || []).includes('hatTrick')) {
+          badgesToAward.push('hatTrick');
+        }
+
+        // Update gamification document (keep points/level for backward compatibility, but don't update them)
+        const updatedBadges = [...(currentData.badges || []), ...badgesToAward];
+        batch.set(gamificationRef, {
+          userId: playerId,
+          // Keep existing points/level (for backward compatibility with old data)
+          points: currentData.points || 0,
+          level: currentData.level || 1,
+          badges: updatedBadges,
+          achievements: currentData.achievements || {},
+          stats: newStats,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+
+        // Log badge awards
+        if (badgesToAward.length > 0) {
+          info(`Player ${playerId} earned badges: ${badgesToAward.join(', ')}`);
+        }
+
+        // Also update user's totalParticipations
+        const userRef = db.collection('users').doc(playerId);
+        batch.update(userRef, {
+          totalParticipations: FieldValue.increment(1),
+        });
+      }
+
+      // Commit all updates
+      await batch.commit();
+      info(`Updated statistics for ${Object.keys(playerStats).length} players after game ${gameId} completion.`);
+
+      // Update denormalized data in game document
+      try {
+        // Get goal scorers
+        const goalScorerIds = [];
+        const goalScorerNames = [];
+        for (const [playerId, stats] of Object.entries(playerStats)) {
+          if (stats.goals > 0) {
+            goalScorerIds.push(playerId);
+            // Get player name
+            const userDoc = await db.collection('users').doc(playerId).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              goalScorerNames.push(userData?.name || playerId);
+            }
+          }
+        }
+
+        // Get MVP (player with most MVP votes)
+        let mvpPlayerId = null;
+        let mvpPlayerName = null;
+        let maxMvpVotes = 0;
+        for (const [playerId, stats] of Object.entries(playerStats)) {
+          if (stats.mvpVotes > maxMvpVotes) {
+            maxMvpVotes = stats.mvpVotes;
+            mvpPlayerId = playerId;
+          }
+        }
+        if (mvpPlayerId) {
+          const mvpDoc = await db.collection('users').doc(mvpPlayerId).get();
+          if (mvpDoc.exists) {
+            const mvpData = mvpDoc.data();
+            mvpPlayerName = mvpData?.name || mvpPlayerId;
+          }
+        }
+
+        // Get venue name
+        let venueName = null;
+        if (gameData.venueId) {
+          const venueDoc = await db.collection('venues').doc(gameData.venueId).get();
+          if (venueDoc.exists) {
+            const venueData = venueDoc.data();
+            venueName = venueData?.name || null;
+          }
+        } else if (gameData.eventId) {
+          // Try to get venue from event
+          const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
+          if (hubDoc.exists) {
+            const eventDoc = await hubDoc.ref.collection('events').doc(gameData.eventId).get();
+            if (eventDoc.exists) {
+              const eventData = eventDoc.data();
+              venueName = eventData?.location || null;
+            }
+          }
+        }
+
+        // Update game with denormalized data
+        await db.collection('games').doc(gameId).update({
+          goalScorerIds: goalScorerIds,
+          goalScorerNames: goalScorerNames,
+          mvpPlayerId: mvpPlayerId,
+          mvpPlayerName: mvpPlayerName,
+          venueName: venueName,
+        });
+        info(`Updated denormalized data for game ${gameId}.`);
+      } catch (denormError) {
+        info(`Failed to update denormalized data for game ${gameId}:`, denormError);
+      }
+
+      // Update Hub Leaderboard (denormalized for fast reads)
+      try {
+        const hubRef = db.collection('hubs').doc(gameData.hubId);
+        const hubDoc = await hubRef.get();
+
+        if (hubDoc.exists) {
+          // Calculate hub-level aggregations
+          const hubGamesSnapshot = await db.collection('games')
+            .where('hubId', '==', gameData.hubId)
+            .where('status', '==', 'completed')
+            .get();
+
+          const totalHubGames = hubGamesSnapshot.size;
+          const totalHubGoals = hubGamesSnapshot.docs.reduce((sum, doc) => {
+            const g = doc.data();
+            return sum + (g.teamAScore || 0) + (g.teamBScore || 0);
+          }, 0);
+
+          // Update hub with aggregated stats
+          await hubRef.update({
+            totalGames: totalHubGames,
+            totalGoals: totalHubGoals,
+            lastGameCompleted: FieldValue.serverTimestamp(),
+          });
+
+          info(`Updated hub ${gameData.hubId} leaderboard stats.`);
+        }
+      } catch (leaderboardError) {
+        info(`Failed to update hub leaderboard for game ${gameId}:`, leaderboardError);
+      }
+
+      // Send "Game Summary" notification to all attendees
+      try {
+        const notificationPromises = participantIds.map(async (playerId) => {
+          try {
+            const tokenDoc = await db
+              .collection('users')
+              .doc(playerId)
+              .collection('fcm_tokens')
+              .doc('tokens')
+              .get();
+
+            if (tokenDoc.exists) {
+              const tokenData = tokenDoc.data();
+              const userTokens = tokenData?.tokens || [];
+              const fcmToken = Array.isArray(userTokens) && userTokens.length > 0 ? userTokens[0] : null;
+
+              if (fcmToken) {
+                const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
+                const hubName = hubDoc.exists ? hubDoc.data()?.name || 'האב' : 'האב';
+
+                const message = {
+                  token: fcmToken,
+                  notification: {
+                    title: 'סיכום משחק',
+                    body: `משחק הושלם ב-${hubName}! תוצאה: ${teamAScore}-${teamBScore}`,
+                  },
+                  data: {
+                    type: 'game_summary',
+                    gameId: gameId,
+                    hubId: gameData.hubId,
+                  },
+                  android: { priority: 'normal' },
+                  apns: { headers: { 'apns-priority': '5' } },
+                };
+
+                await messaging.send(message);
+              }
+            }
+          } catch (err) {
+            info(`Failed to send notification to player ${playerId}:`, err);
+          }
+        });
+
+        await Promise.all(notificationPromises);
+        info(`Sent game summary notifications to ${participantIds.length} players.`);
+      } catch (notificationError) {
+        info(`Failed to send game summary notifications:`, notificationError);
+      }
+
+      // Create regional feed post in feedPosts collection (root level)
+      const gameRegion = gameData.region;
+      if (gameRegion) {
+        try {
+          const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
+          const hubData = hubDoc.exists ? hubDoc.data() : null;
+
+          const feedPostRef = db.collection('feedPosts').doc();
+          await feedPostRef.set({
+            postId: feedPostRef.id,
+            hubId: gameData.hubId,
+            hubName: hubData?.name || 'האב',
+            hubLogoUrl: hubData?.logoUrl || null,
+            type: 'game_completed',
+            text: `משחק הושלם ב-${hubData?.name || 'האב'}! תוצאה: ${teamAScore}-${teamBScore}`,
+            createdAt: FieldValue.serverTimestamp(),
+            authorId: gameData.createdBy,
+            authorName: null, // Can be denormalized if needed
+            authorPhotoUrl: null,
+            entityId: gameId,
+            gameId: gameId,
+            region: gameRegion, // Copy region from game
+            likeCount: 0,
+            commentCount: 0,
+            likes: [],
+            comments: [],
+          });
+          info(`Created regional feed post for game ${gameId} in region ${gameRegion}.`);
+        } catch (feedError) {
+          info(`Failed to create regional feed post for game ${gameId}:`, feedError);
+        }
+      }
+    } catch (error) {
+      info(`Error in onGameCompleted for game ${gameId}:`, error);
+    }
+  },
 );
 
 // --- Game Signup Denormalization Handler ---
 // When a signup is created/updated/deleted, update denormalized data in game document
 // This avoids N+1 queries when checking game capacity or player lists
 exports.onGameSignupChanged = onDocumentWritten(
-    'games/{gameId}/signups/{userId}',
-    async (event) => {
-      const gameId = event.params.gameId;
-      const userId = event.params.userId;
-      const signupData = event.data?.after?.data();
-      const beforeData = event.data?.before?.data();
+  'games/{gameId}/signups/{userId}',
+  async (event) => {
+    const gameId = event.params.gameId;
+    const userId = event.params.userId;
+    const signupData = event.data?.after?.data();
+    const beforeData = event.data?.before?.data();
 
-      // Only process if signup was created or deleted (not just updated)
-      const isCreated = !beforeData && signupData;
-      const isDeleted = beforeData && !signupData;
-      const statusChanged = beforeData?.status !== signupData?.status;
+    // Only process if signup was created or deleted (not just updated)
+    const isCreated = !beforeData && signupData;
+    const isDeleted = beforeData && !signupData;
+    const statusChanged = beforeData?.status !== signupData?.status;
 
-      if (!isCreated && !isDeleted && !statusChanged) {
-        // Signup was just updated without status change, skip
+    if (!isCreated && !isDeleted && !statusChanged) {
+      // Signup was just updated without status change, skip
+      return;
+    }
+
+    info(`Game signup ${userId} ${isCreated ? 'created' : isDeleted ? 'deleted' : 'updated'} for game ${gameId}. Updating denormalized data.`);
+
+    try {
+      // Get all confirmed signups for this game
+      const signupsSnapshot = await db
+        .collection('games')
+        .doc(gameId)
+        .collection('signups')
+        .where('status', '==', 'confirmed')
+        .get();
+
+      const confirmedPlayerIds = signupsSnapshot.docs.map((doc) => doc.id);
+      const confirmedPlayerCount = confirmedPlayerIds.length;
+
+      // Get game document to check maxPlayers
+      const gameDoc = await db.collection('games').doc(gameId).get();
+      if (!gameDoc.exists) {
+        info(`Game ${gameId} not found. Skipping denormalization.`);
         return;
       }
 
-      info(`Game signup ${userId} ${isCreated ? 'created' : isDeleted ? 'deleted' : 'updated'} for game ${gameId}. Updating denormalized data.`);
+      const gameData = gameDoc.data();
+      const teamCount = gameData?.teamCount ?? 2;
+      const maxPlayers = gameData?.maxParticipants ?? (teamCount * 3); // Default: 3 per team
 
-      try {
-        // Get all confirmed signups for this game
-        const signupsSnapshot = await db
-            .collection('games')
-            .doc(gameId)
-            .collection('signups')
-            .where('status', '==', 'confirmed')
-            .get();
+      // Update game with denormalized data
+      await db.collection('games').doc(gameId).update({
+        confirmedPlayerIds: confirmedPlayerIds,
+        confirmedPlayerCount: confirmedPlayerCount,
+        isFull: confirmedPlayerCount >= maxPlayers,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
-        const confirmedPlayerIds = signupsSnapshot.docs.map((doc) => doc.id);
-        const confirmedPlayerCount = confirmedPlayerIds.length;
-
-        // Get game document to check maxPlayers
-        const gameDoc = await db.collection('games').doc(gameId).get();
-        if (!gameDoc.exists) {
-          info(`Game ${gameId} not found. Skipping denormalization.`);
-          return;
-        }
-
-        const gameData = gameDoc.data();
-        const teamCount = gameData?.teamCount ?? 2;
-        const maxPlayers = gameData?.maxParticipants ?? (teamCount * 3); // Default: 3 per team
-
-        // Update game with denormalized data
-        await db.collection('games').doc(gameId).update({
-          confirmedPlayerIds: confirmedPlayerIds,
-          confirmedPlayerCount: confirmedPlayerCount,
-          isFull: confirmedPlayerCount >= maxPlayers,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-
-        info(`Updated denormalized data for game ${gameId}: ${confirmedPlayerCount}/${maxPlayers} players confirmed.`);
-      } catch (error) {
-        info(`Error in onGameSignupChanged for game ${gameId}, user ${userId}:`, error);
-      }
-    },
+      info(`Updated denormalized data for game ${gameId}: ${confirmedPlayerCount}/${maxPlayers} players confirmed.`);
+    } catch (error) {
+      info(`Error in onGameSignupChanged for game ${gameId}, user ${userId}:`, error);
+    }
+  },
 );
 
 // --- Hub Event Registration Denormalization Handler ---
@@ -1386,102 +1413,102 @@ exports.onGameSignupChanged = onDocumentWritten(
 // --- Game Events Denormalization Handler ---
 // When a game event is created/updated/deleted, update denormalized data in game document
 exports.onGameEventChanged = onDocumentWritten(
-    'games/{gameId}/events/{eventId}',
-    async (event) => {
-      const gameId = event.params.gameId;
-      const eventId = event.params.eventId;
-      const eventData = event.data?.after?.data();
-      const beforeData = event.data?.before?.data();
+  'games/{gameId}/events/{eventId}',
+  async (event) => {
+    const gameId = event.params.gameId;
+    const eventId = event.params.eventId;
+    const eventData = event.data?.after?.data();
+    const beforeData = event.data?.before?.data();
 
-      // Only process if event was created or deleted (not just updated)
-      const isCreated = !beforeData && eventData;
-      const isDeleted = beforeData && !eventData;
+    // Only process if event was created or deleted (not just updated)
+    const isCreated = !beforeData && eventData;
+    const isDeleted = beforeData && !eventData;
 
-      if (!isCreated && !isDeleted) {
-        // Event was just updated, skip
+    if (!isCreated && !isDeleted) {
+      // Event was just updated, skip
+      return;
+    }
+
+    info(`Game event ${eventId} ${isCreated ? 'created' : 'deleted'} for game ${gameId}. Updating denormalized data.`);
+
+    try {
+      // Get all events for this game
+      const eventsSnapshot = await db
+        .collection('games')
+        .doc(gameId)
+        .collection('events')
+        .get();
+
+      if (eventsSnapshot.empty) {
+        // No events, clear denormalized data
+        await db.collection('games').doc(gameId).update({
+          goalScorerIds: [],
+          goalScorerNames: [],
+          mvpPlayerId: null,
+          mvpPlayerName: null,
+        });
         return;
       }
 
-      info(`Game event ${eventId} ${isCreated ? 'created' : 'deleted'} for game ${gameId}. Updating denormalized data.`);
+      // Process events
+      const goalScorerIds = [];
+      const goalScorerIdsSet = new Set();
+      let mvpPlayerId = null;
 
-      try {
-        // Get all events for this game
-        const eventsSnapshot = await db
-            .collection('games')
-            .doc(gameId)
-            .collection('events')
-            .get();
+      eventsSnapshot.forEach((eventDoc) => {
+        const event = eventDoc.data();
+        const eventType = event.type;
+        const playerId = event.playerId;
 
-        if (eventsSnapshot.empty) {
-          // No events, clear denormalized data
-          await db.collection('games').doc(gameId).update({
-            goalScorerIds: [],
-            goalScorerNames: [],
-            mvpPlayerId: null,
-            mvpPlayerName: null,
-          });
-          return;
+        if (eventType === 'goal' && !goalScorerIdsSet.has(playerId)) {
+          goalScorerIds.push(playerId);
+          goalScorerIdsSet.add(playerId);
+        } else if (eventType === 'mvpVote') {
+          mvpPlayerId = playerId;
         }
+      });
 
-        // Process events
-        const goalScorerIds = [];
-        const goalScorerIdsSet = new Set();
-        let mvpPlayerId = null;
-
-        eventsSnapshot.forEach((eventDoc) => {
-          const event = eventDoc.data();
-          const eventType = event.type;
-          const playerId = event.playerId;
-
-          if (eventType === 'goal' && !goalScorerIdsSet.has(playerId)) {
-            goalScorerIds.push(playerId);
-            goalScorerIdsSet.add(playerId);
-          } else if (eventType === 'mvpVote') {
-            mvpPlayerId = playerId;
+      // Get player names for goal scorers
+      const goalScorerNames = [];
+      for (const playerId of goalScorerIds) {
+        try {
+          const userDoc = await db.collection('users').doc(playerId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            goalScorerNames.push(userData?.name || playerId);
           }
-        });
-
-        // Get player names for goal scorers
-        const goalScorerNames = [];
-        for (const playerId of goalScorerIds) {
-          try {
-            const userDoc = await db.collection('users').doc(playerId).get();
-            if (userDoc.exists) {
-              const userData = userDoc.data();
-              goalScorerNames.push(userData?.name || playerId);
-            }
-          } catch (e) {
-            info(`Failed to get name for player ${playerId}:`, e);
-          }
+        } catch (e) {
+          info(`Failed to get name for player ${playerId}:`, e);
         }
-
-        // Get MVP name
-        let mvpPlayerName = null;
-        if (mvpPlayerId) {
-          try {
-            const mvpDoc = await db.collection('users').doc(mvpPlayerId).get();
-            if (mvpDoc.exists) {
-              const mvpData = mvpDoc.data();
-              mvpPlayerName = mvpData?.name || mvpPlayerId;
-            }
-          } catch (e) {
-            info(`Failed to get MVP name for player ${mvpPlayerId}:`, e);
-          }
-        }
-
-        // Update game with denormalized data
-        await db.collection('games').doc(gameId).update({
-          goalScorerIds: goalScorerIds,
-          goalScorerNames: goalScorerNames,
-          mvpPlayerId: mvpPlayerId,
-          mvpPlayerName: mvpPlayerName,
-        });
-
-        info(`Updated denormalized data for game ${gameId} after event change.`);
-      } catch (error) {
-        info(`Error in onGameEventChanged for game ${gameId}, event ${eventId}:`, error);
       }
-    },
+
+      // Get MVP name
+      let mvpPlayerName = null;
+      if (mvpPlayerId) {
+        try {
+          const mvpDoc = await db.collection('users').doc(mvpPlayerId).get();
+          if (mvpDoc.exists) {
+            const mvpData = mvpDoc.data();
+            mvpPlayerName = mvpData?.name || mvpPlayerId;
+          }
+        } catch (e) {
+          info(`Failed to get MVP name for player ${mvpPlayerId}:`, e);
+        }
+      }
+
+      // Update game with denormalized data
+      await db.collection('games').doc(gameId).update({
+        goalScorerIds: goalScorerIds,
+        goalScorerNames: goalScorerNames,
+        mvpPlayerId: mvpPlayerId,
+        mvpPlayerName: mvpPlayerName,
+      });
+
+      info(`Updated denormalized data for game ${gameId} after event change.`);
+    } catch (error) {
+      info(`Error in onGameEventChanged for game ${gameId}, event ${eventId}:`, error);
+    }
+  },
 );
 
 // --- Notify Hub on New Game ---
@@ -1494,114 +1521,130 @@ exports.onGameEventChanged = onDocumentWritten(
  * @return {Object} Result with success status and notification count
  */
 exports.notifyHubOnNewGame = onCall(
-    {
-      // Allow unauthenticated calls (can be restricted later if needed)
-      invoker: 'public',
-    },
-    async (request) => {
-      const {hubId, gameId, gameTitle, gameTime} = request.data;
+  {
+    invoker: 'authenticated', // ✅ Requires authentication
+    memory: '256MiB', // ✅ Reduced from default (512MB not needed)
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
+    const { hubId, gameId, gameTitle, gameTime } = request.data;
 
-      if (!hubId || !gameId) {
-        throw new HttpsError(
-            'invalid-argument',
-            'Missing \'hubId\' or \'gameId\' parameter.',
-        );
+    if (!hubId || !gameId) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Missing \'hubId\' or \'gameId\' parameter.',
+      );
+    }
+
+    info(`Notifying hub ${hubId} about new game ${gameId}`);
+
+    try {
+      // 1. Get hub to get name and memberIds
+      const hubDoc = await db.collection('hubs').doc(hubId).get();
+      if (!hubDoc.exists) {
+        throw new HttpsError('not-found', 'Hub not found');
       }
 
-      info(`Notifying hub ${hubId} about new game ${gameId}`);
-
-      try {
-        // 1. Get hub to get name and memberIds
-        const hubDoc = await db.collection('hubs').doc(hubId).get();
-        if (!hubDoc.exists) {
-          throw new HttpsError('not-found', 'Hub not found');
-        }
-
-        const hubData = hubDoc.data();
-        const hubName = hubData.name || 'האב';
-        let memberIds = hubData.memberIds || [];
-        if (!memberIds.length) {
-          memberIds = await getHubMemberIds(hubId);
-        }
-
-        if (memberIds.length === 0) {
-          info(`Hub ${hubId} has no members to notify`);
-          return {success: true, notifiedCount: 0};
-        }
-
-        // 2. Get game details if not provided
-        let title = gameTitle;
-        let time = gameTime;
-
-        if (!title || !time) {
-          const gameDoc = await db.collection('games').doc(gameId).get();
-          if (gameDoc.exists) {
-            const gameData = gameDoc.data();
-            if (!title) {
-              title = `משחק חדש ב-${hubName}`;
-            }
-            if (!time && gameData.gameDate) {
-              const gameDate = gameData.gameDate.toDate();
-              time = gameDate.toLocaleString('he-IL', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              });
-            }
-          }
-        }
-
-        // 3. Get FCM tokens for all hub members
-        const tokens = [];
-        const userDocs = await Promise.all(
-            memberIds.map((userId) => db.collection('users').doc(userId).get()),
-        );
-
-        for (const userDoc of userDocs) {
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            // Get FCM token from user document or from a tokens subcollection
-            // Note: In a real implementation, you might store tokens in a subcollection
-            if (userData.fcmToken) {
-              tokens.push(userData.fcmToken);
-            }
-          }
-        }
-
-        if (tokens.length === 0) {
-          info(`No FCM tokens found for hub ${hubId} members`);
-          return {success: true, notifiedCount: 0};
-        }
-
-        // 4. Send push notifications
-        const message = {
-          notification: {
-            title: 'הרשמה למשחק חדש נפתחה!',
-            body: `${title}${time ? ` - ${time}` : ''}`,
-          },
-          data: {
-            type: 'new_game',
-            hubId: hubId,
-            gameId: gameId,
-          },
-          tokens: tokens,
-        };
-
-        const response = await messaging.sendEachForMulticast(message);
-        info(`Sent ${response.successCount} notifications to hub ${hubId} members`);
-
-        return {
-          success: true,
-          notifiedCount: response.successCount,
-          failedCount: response.failureCount,
-        };
-      } catch (error) {
-        info(`Error in notifyHubOnNewGame for hub ${hubId}:`, error);
-        throw new HttpsError('internal', 'Failed to notify hub members.', error);
+      const hubData = hubDoc.data();
+      const hubName = hubData.name || 'האב';
+      let memberIds = hubData.memberIds || [];
+      if (!memberIds.length) {
+        memberIds = await getHubMemberIds(hubId);
       }
-    },
+
+      if (memberIds.length === 0) {
+        info(`Hub ${hubId} has no members to notify`);
+        return { success: true, notifiedCount: 0 };
+      }
+
+      // 2. Get game details if not provided
+      let title = gameTitle;
+      let time = gameTime;
+
+      if (!title || !time) {
+        const gameDoc = await db.collection('games').doc(gameId).get();
+        if (gameDoc.exists) {
+          const gameData = gameDoc.data();
+          if (!title) {
+            title = `משחק חדש ב-${hubName}`;
+          }
+          if (!time && gameData.gameDate) {
+            const gameDate = gameData.gameDate.toDate();
+            time = gameDate.toLocaleString('he-IL', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          }
+        }
+      }
+
+      // 3. ✅ PERFORMANCE FIX: Get FCM tokens in PARALLEL
+      const tokenFetchPromises = memberIds.map(async (userId) => {
+        try {
+          // FCM tokens are stored in users/{userId}/fcm_tokens/tokens
+          const tokenDoc = await db
+            .collection('users')
+            .doc(userId)
+            .collection('fcm_tokens')
+            .doc('tokens')
+            .get();
+
+          if (tokenDoc.exists) {
+            const tokenData = tokenDoc.data();
+            const userTokens = tokenData?.tokens || [];
+            // Add all tokens for this user (users can have multiple devices)
+            if (Array.isArray(userTokens) && userTokens.length > 0) {
+              return userTokens;
+            }
+          }
+          return [];
+        } catch (error) {
+          info(`Failed to get FCM token for user ${userId}: ${error}`);
+          return [];
+        }
+      });
+
+      const tokenArrays = await Promise.all(tokenFetchPromises);
+      const tokens = tokenArrays.flat();
+
+      if (tokens.length === 0) {
+        info(`No FCM tokens found for hub ${hubId} members`);
+        return { success: true, notifiedCount: 0 };
+      }
+
+      // 4. Send push notifications
+      const message = {
+        notification: {
+          title: 'הרשמה למשחק חדש נפתחה!',
+          body: `${title}${time ? ` - ${time}` : ''}`,
+        },
+        data: {
+          type: 'new_game',
+          hubId: hubId,
+          gameId: gameId,
+        },
+        tokens: tokens,
+      };
+
+      const response = await messaging.sendEachForMulticast(message);
+      info(`Sent ${response.successCount} notifications to hub ${hubId} members`);
+
+      return {
+        success: true,
+        notifiedCount: response.successCount,
+        failedCount: response.failureCount,
+      };
+    } catch (error) {
+      info(`Error in notifyHubOnNewGame for hub ${hubId}:`, error);
+      throw new HttpsError('internal', 'Failed to notify hub members.', error);
+    }
+  },
 );
 
 // --- v2 Callable Functions (already v2, no change needed) ---
@@ -1640,7 +1683,7 @@ function determineVenueType(place) {
 
   // Check for school first (most specific)
   if (schoolKeywords.some((keyword) => allText.includes(keyword)) ||
-      types.includes('school') || types.includes('primary_school')) {
+    types.includes('school') || types.includes('primary_school')) {
     return 'school';
   }
 
@@ -1651,14 +1694,14 @@ function determineVenueType(place) {
 
   // Check for public (default for parks, municipal facilities)
   if (publicKeywords.some((keyword) => allText.includes(keyword)) ||
-      types.includes('park') || types.includes('stadium') ||
-      types.includes('sports_complex')) {
+    types.includes('park') || types.includes('stadium') ||
+    types.includes('sports_complex')) {
     return 'public';
   }
 
   // Default: if it's a stadium or sports complex, assume public
   if (types.includes('stadium') || types.includes('sports_complex') ||
-      types.includes('gym') || types.includes('establishment')) {
+    types.includes('gym') || types.includes('establishment')) {
     return 'public';
   }
 
@@ -1666,81 +1709,122 @@ function determineVenueType(place) {
 }
 
 exports.searchVenues = onCall(
-    {
-      secrets: [googleApisKey],
-      invoker: 'public', // Allow unauthenticated calls
-    },
-    async (request) => {
-      const {query, lat, lng} = request.data;
-      if (!query) {
-        throw new HttpsError('invalid-argument', 'Missing \'query\' parameter.');
+  {
+    secrets: [googleApisKey],
+    invoker: 'authenticated', // ✅ Requires login
+    memory: '256MiB', // ✅ Optimized: Reduced from 512MB
+  },
+  async (request) => {
+    // Validate authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
+
+    // ✅ Rate limit: 10 requests per minute
+    await checkRateLimit(request.auth.uid, 'searchVenues', 10, 1);
+
+    const { query, lat, lng } = request.data;
+    if (!query) {
+      throw new HttpsError('invalid-argument', 'Missing \'query\' parameter.');
+    }
+
+    // ✅ Check cache first
+    const cacheKey = getSearchCacheKey(query, lat || 0, lng || 0);
+    const cachedResult = getCachedSearch(cacheKey);
+    if (cachedResult) {
+      info(`Cache hit for search: ${query}`);
+      return cachedResult;
+    }
+
+    const apiKey = googleApisKey.value();
+    if (!apiKey) {
+      throw new HttpsError(
+        'failed-precondition',
+        'GOOGLE_APIS_KEY is not set.',
+      );
+    }
+
+    let url = `${PLACES_API_URL}/textsearch/json?query=${encodeURIComponent(
+      query,
+    )}&key=${apiKey}&language=iw`;
+    if (lat && lng) {
+      url += `&location=${lat},${lng}&radius=5000`; // 5km radius
+    }
+
+    try {
+      const response = await axios.get(url);
+      const data = response.data;
+
+      // Add venueType to each result
+      if (data.results && Array.isArray(data.results)) {
+        data.results = data.results.map((place) => {
+          const venueType = determineVenueType(place);
+          return {
+            ...place,
+            venueType: venueType,
+          };
+        });
       }
 
-      const apiKey = googleApisKey.value();
-      if (!apiKey) {
-        throw new HttpsError(
-            'failed-precondition',
-            'GOOGLE_APIS_KEY is not set.',
-        );
-      }
+      // ✅ Cache the result
+      cacheSearch(cacheKey, data);
 
-      let url = `${PLACES_API_URL}/textsearch/json?query=${encodeURIComponent(
-          query,
-      )}&key=${apiKey}&language=iw`;
-      if (lat && lng) {
-        url += `&location=${lat},${lng}&radius=5000`; // 5km radius
-      }
-
-      try {
-        const response = await axios.get(url);
-        const data = response.data;
-
-        // Add venueType to each result
-        if (data.results && Array.isArray(data.results)) {
-          data.results = data.results.map((place) => {
-            const venueType = determineVenueType(place);
-            return {
-              ...place,
-              venueType: venueType,
-            };
-          });
-        }
-
-        return data;
-      } catch (error) {
-        throw new HttpsError('internal', 'Failed to call Google Places API.', error);
-      }
-    },
+      return data;
+    } catch (error) {
+      throw new HttpsError('internal', 'Failed to call Google Places API.', error);
+    }
+  },
 );
 
 exports.getPlaceDetails = onCall(
-    {
-      secrets: [googleApisKey],
-      invoker: 'public', // Allow unauthenticated calls
-    },
-    async (request) => {
-      const {placeId} = request.data;
-      if (!placeId) {
-        throw new HttpsError('invalid-argument', 'Missing \'placeId\' parameter.');
-      }
+  {
+    secrets: [googleApisKey],
+    invoker: 'authenticated', // ✅ Requires login
+    memory: '256MiB', // ✅ Optimized: Reduced from 512MB
+  },
+  async (request) => {
+    // Validate authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
 
-      const apiKey = googleApisKey.value();
-      if (!apiKey) {
-        throw new HttpsError(
-            'failed-precondition',
-            'GOOGLE_APIS_KEY is not set.',
-        );
-      }
+    // ✅ Rate limit: 20 requests per minute
+    await checkRateLimit(request.auth.uid, 'getPlaceDetails', 20, 1);
 
-      const url = `${PLACES_API_URL}/details/json?place_id=${placeId}&key=${apiKey}&language=iw&fields=place_id,name,formatted_address,geometry,photos,formatted_phone_number`;
+    const { placeId } = request.data;
+    if (!placeId) {
+      throw new HttpsError('invalid-argument', 'Missing \'placeId\' parameter.');
+    }
 
-      try {
-        const response = await axios.get(url);
-        return response.data;
-      } catch (error) {
-        throw new HttpsError('internal', 'Failed to call Google Places API.', error);
-      }
-    },
+    // ✅ Check cache first
+    const cachedDetails = getCachedDetails(placeId);
+    if (cachedDetails) {
+      info(`Cache hit for place details: ${placeId}`);
+      return cachedDetails;
+    }
+
+    const apiKey = googleApisKey.value();
+    if (!apiKey) {
+      throw new HttpsError(
+        'failed-precondition',
+        'GOOGLE_APIS_KEY is not set.',
+      );
+    }
+
+    const url = `${PLACES_API_URL}/details/json?place_id=${placeId}&key=${apiKey}&language=iw&fields=place_id,name,formatted_address,geometry,photos,formatted_phone_number`;
+
+    try {
+      const response = await axios.get(url);
+      const data = response.data;
+      
+      // ✅ Cache the result
+      cacheDetails(placeId, data);
+      
+      return data;
+    } catch (error) {
+      throw new HttpsError('internal', 'Failed to call Google Places API.', error);
+    }
+  },
 );
 
 // --- Get Hubs for Place Function ---
@@ -1750,53 +1834,62 @@ exports.getPlaceDetails = onCall(
  * @return {Array} Array of hub objects with hubId, name, and logoUrl
  */
 exports.getHubsForPlace = onCall(
-    {
-      secrets: [googleApisKey],
-      invoker: 'public', // Allow unauthenticated calls
-    },
-    async (request) => {
-      const {placeId} = request.data;
-      if (!placeId) {
-        throw new HttpsError('invalid-argument', 'Missing \'placeId\' parameter.');
+  {
+    secrets: [googleApisKey],
+    invoker: 'authenticated', // ✅ Requires login
+    memory: '256MiB', // ✅ Optimized: Reduced from 512MB
+  },
+  async (request) => {
+    // Validate authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
+
+    // ✅ Rate limit: 15 requests per minute
+    await checkRateLimit(request.auth.uid, 'getHubsForPlace', 15, 1);
+
+    const { placeId } = request.data;
+    if (!placeId) {
+      throw new HttpsError('invalid-argument', 'Missing \'placeId\' parameter.');
+    }
+
+    try{
+      // 1. Find our internal venue doc using the Google placeId
+      const venuesSnapshot = await db.collection('venues')
+        .where('googlePlaceId', '==', placeId) // Venue model uses googlePlaceId, not placeId
+        .limit(1)
+        .get();
+
+      if (venuesSnapshot.empty) {
+        // No hubs are using this venue (because we don't even have it saved)
+        return [];
       }
 
-      try {
-        // 1. Find our internal venue doc using the Google placeId
-        const venuesSnapshot = await db.collection('venues')
-            .where('googlePlaceId', '==', placeId) // Venue model uses googlePlaceId, not placeId
-            .limit(1)
-            .get();
+      const venueDoc = venuesSnapshot.docs[0];
+      const ourVenueId = venueDoc.id;
 
-        if (venuesSnapshot.empty) {
-          // No hubs are using this venue (because we don't even have it saved)
-          return [];
-        }
+      // 2. Find all hubs that use this internal venueId
+      const hubsSnapshot = await db.collection('hubs')
+        .where('venueIds', 'array-contains', ourVenueId)
+        .get();
 
-        const venueDoc = venuesSnapshot.docs[0];
-        const ourVenueId = venueDoc.id;
-
-        // 2. Find all hubs that use this internal venueId
-        const hubsSnapshot = await db.collection('hubs')
-            .where('venueIds', 'array-contains', ourVenueId)
-            .get();
-
-        if (hubsSnapshot.empty) {
-          return [];
-        }
-
-        // 3. Return a light version of the hubs
-        const hubs = hubsSnapshot.docs.map((doc) => ({
-          hubId: doc.id,
-          name: doc.data().name,
-          logoUrl: doc.data().logoUrl || null,
-        }));
-
-        return hubs;
-      } catch (error) {
-        info(`Error finding hubs for placeId ${placeId}:`, error);
-        throw new HttpsError('internal', 'Failed to find hubs for this venue.');
+      if (hubsSnapshot.empty) {
+        return [];
       }
-    },
+
+      // 3. Return a light version of the hubs
+      const hubs = hubsSnapshot.docs.map((doc) => ({
+        hubId: doc.id,
+        name: doc.data().name,
+        logoUrl: doc.data().logoUrl || null,
+      }));
+
+      return hubs;
+    } catch (error) {
+      info(`Error finding hubs for placeId ${placeId}:`, error);
+      throw new HttpsError('internal', 'Failed to find hubs for this venue.');
+    }
+  },
 );
 
 // --- Weather & Vibe Function ---
@@ -1816,8 +1909,8 @@ function getVibeMessage(temp, condition, aqi) {
   const conditionLower = condition ? condition.toLowerCase() : 'clear';
   const isClear = conditionLower === 'clear' || conditionLower.includes('clear');
   const isPartlyCloudy = conditionLower === 'partly_cloudy' ||
-                         conditionLower.includes('partly') ||
-                         conditionLower.includes('partially');
+    conditionLower.includes('partly') ||
+    conditionLower.includes('partially');
 
   // Perfect conditions
   if (aqi <= 50 && temp >= 15 && temp <= 25 && isClear) {
@@ -1834,11 +1927,11 @@ function getVibeMessage(temp, condition, aqi) {
     // Handle various condition codes from Google Weather API
     const conditionLower = condition ? condition.toLowerCase() : 'clear';
     if (conditionLower.includes('rain') || conditionLower.includes('drizzle') ||
-        conditionLower === 'rain' || conditionLower === 'drizzle') {
+      conditionLower === 'rain' || conditionLower === 'drizzle') {
       return 'יום גשום, אבל כדורגל זה תמיד כיף! 🌧️';
     }
     if (conditionLower.includes('cloud') || conditionLower === 'cloudy' ||
-        conditionLower === 'partly_cloudy') {
+      conditionLower === 'partly_cloudy') {
       return 'יום מעונן אבל נעים למשחק.';
     }
     return 'יום טוב לכדורגל!';
@@ -1867,284 +1960,294 @@ function getVibeMessage(temp, condition, aqi) {
 // Home Dashboard Data Function
 // Returns weather and vibe data for the home screen
 exports.getHomeDashboardData = onCall(
-    {
-      secrets: [googleApisKey],
-      invoker: 'public', // Allow unauthenticated calls
-    },
-    async (request) => {
-      const {lat, lon} = request.data;
+  {
+    secrets: [googleApisKey],
+    invoker: 'authenticated', // ✅ Requires login
+    memory: '256MiB', // ✅ Optimized: Reduced from 512MB
+  },
+  async (request) => {
+    // Validate authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
 
-      // Validate input
-      if (lat === undefined || lon === undefined) {
+    // ✅ Rate limit: 5 requests per minute
+    await checkRateLimit(request.auth.uid, 'getHomeDashboardData', 5, 1);
+
+    const { lat, lon } = request.data;
+
+    // Validate input
+    if (lat === undefined || lon === undefined) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Missing \'lat\' or \'lon\' parameter.',
+      );
+    }
+
+    info(`Getting home dashboard data for location: ${lat}, ${lon}`);
+
+    try {
+      const apiKey = googleApisKey.value();
+
+      if (!apiKey) {
         throw new HttpsError(
-            'invalid-argument',
-            'Missing \'lat\' or \'lon\' parameter.',
+          'failed-precondition',
+          'GOOGLE_APIS_KEY is not set. Please configure it as a Firebase Secret.',
         );
       }
 
-      info(`Getting home dashboard data for location: ${lat}, ${lon}`);
+      // 1. Call Google Weather API
+      const weatherUrl = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`;
+
+      let weatherData;
+      let temperature = null;
+      let conditionCode = 'clear';
 
       try {
-        const apiKey = googleApisKey.value();
+        const weatherResponse = await axios.post(weatherUrl, {
+          location: {
+            latitude: lat,
+            longitude: lon,
+          },
+          languageCode: 'iw',
+        });
 
-        if (!apiKey) {
-          throw new HttpsError(
-              'failed-precondition',
-              'GOOGLE_APIS_KEY is not set. Please configure it as a Firebase Secret.',
-          );
-        }
-
-        // 1. Call Google Weather API
-        const weatherUrl = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`;
-
-        let weatherData;
-        let temperature = null;
-        let conditionCode = 'clear';
-
-        try {
-          const weatherResponse = await axios.post(weatherUrl, {
-            location: {
-              latitude: lat,
-              longitude: lon,
-            },
-            languageCode: 'iw',
-          });
-
-          if (weatherResponse.data && weatherResponse.data.currentConditions) {
-            weatherData = weatherResponse.data.currentConditions;
-            // Temperature might be in different units, convert to Celsius if needed
-            temperature = weatherData.temperature;
-            if (weatherData.temperatureUnit === 'FAHRENHEIT') {
-              temperature = (temperature - 32) * 5 / 9;
-            }
-            // conditionCode might be in different formats, normalize it
-            conditionCode = weatherData.conditionCode || weatherData.condition || 'clear';
-          } else {
-            info('Weather API returned unexpected format, using defaults');
+        if (weatherResponse.data && weatherResponse.data.currentConditions) {
+          weatherData = weatherResponse.data.currentConditions;
+          // Temperature might be in different units, convert to Celsius if needed
+          temperature = weatherData.temperature;
+          if (weatherData.temperatureUnit === 'FAHRENHEIT') {
+            temperature = (temperature - 32) * 5 / 9;
           }
-        } catch (weatherError) {
-          info(`Error calling Weather API: ${weatherError.message}`);
-          // Fallback to default values if API fails
-          temperature = 22;
-          conditionCode = 'clear';
+          // conditionCode might be in different formats, normalize it
+          conditionCode = weatherData.conditionCode || weatherData.condition || 'clear';
+        } else {
+          info('Weather API returned unexpected format, using defaults');
         }
-
-        // 2. Call Google Air Quality API
-        const aqiUrl = `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`;
-
-        let aqiIndex = 40; // Default to good air quality
-
-        try {
-          const aqiResponse = await axios.post(aqiUrl, {
-            location: {
-              latitude: lat,
-              longitude: lon,
-            },
-          });
-
-          if (aqiResponse.data && aqiResponse.data.indexes && aqiResponse.data.indexes.length > 0) {
-            // Get the main AQI index (usually the first one)
-            const mainIndex = aqiResponse.data.indexes[0];
-            aqiIndex = mainIndex.aqi || mainIndex.index || 40;
-          } else {
-            info('Air Quality API returned unexpected format, using default');
-          }
-        } catch (aqiError) {
-          info(`Error calling Air Quality API: ${aqiError.message}`);
-          // Fallback to default value if API fails
-          aqiIndex = 40;
-        }
-
-        // 3. Generate vibe message using the helper function with real data
-        const vibeMessage = getVibeMessage(
-            temperature || 22,
-            conditionCode,
-            aqiIndex,
-        );
-
-        // 4. Return real data to the app
-        return {
-          vibeMessage: vibeMessage,
-          temperature: temperature ? Math.round(temperature) : null,
-          condition: conditionCode,
-          aqiIndex: aqiIndex,
-          timestamp: new Date().toISOString(),
-        };
-      } catch (error) {
-        info(`Error in getHomeDashboardData:`, error);
-        // Return default values on error instead of throwing
-        // This ensures the app still works even if APIs fail
-        return {
-          vibeMessage: 'יום טוב לכדורגל! ☀️',
-          temperature: null,
-          condition: 'clear',
-          aqiIndex: null,
-          timestamp: new Date().toISOString(),
-        };
+      } catch (weatherError) {
+        info(`Error calling Weather API: ${weatherError.message}`);
+        // Fallback to default values if API fails
+        temperature = 22;
+        conditionCode = 'clear';
       }
-    },
+
+      // 2. Call Google Air Quality API
+      const aqiUrl = `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`;
+
+      let aqiIndex = 40; // Default to good air quality
+
+      try {
+        const aqiResponse = await axios.post(aqiUrl, {
+          location: {
+            latitude: lat,
+            longitude: lon,
+          },
+        });
+
+        if (aqiResponse.data && aqiResponse.data.indexes && aqiResponse.data.indexes.length > 0) {
+          // Get the main AQI index (usually the first one)
+          const mainIndex = aqiResponse.data.indexes[0];
+          aqiIndex = mainIndex.aqi || mainIndex.index || 40;
+        } else {
+          info('Air Quality API returned unexpected format, using default');
+        }
+      } catch (aqiError) {
+        info(`Error calling Air Quality API: ${aqiError.message}`);
+        // Fallback to default value if API fails
+        aqiIndex = 40;
+      }
+
+      // 3. Generate vibe message using the helper function with real data
+      const vibeMessage = getVibeMessage(
+        temperature || 22,
+        conditionCode,
+        aqiIndex,
+      );
+
+      // 4. Return real data to the app
+      return {
+        vibeMessage: vibeMessage,
+        temperature: temperature ? Math.round(temperature) : null,
+        condition: conditionCode,
+        aqiIndex: aqiIndex,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      info(`Error in getHomeDashboardData:`, error);
+      // Return default values on error instead of throwing
+      // This ensures the app still works even if APIs fail
+      return {
+        vibeMessage: 'יום טוב לכדורגל! ☀️',
+        temperature: null,
+        condition: 'clear',
+        aqiIndex: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
 );
 
 // --- Custom Claims Update for Hub Members (Subcollection-aware) ---
 exports.onHubMemberChanged = onDocumentUpdated(
-    'hubs/{hubId}',
-    async (event) => {
-      const hubId = event.params.hubId;
-      const afterData = event.data.after.data();
-      if (!afterData) return;
+  'hubs/{hubId}',
+  async (event) => {
+    const hubId = event.params.hubId;
+    const afterData = event.data.after.data();
+    if (!afterData) return;
 
-      const afterRoles = afterData.roles || {};
-      const affectedUserIds = new Set(Object.keys(afterRoles));
+    const afterRoles = afterData.roles || {};
+    const affectedUserIds = new Set(Object.keys(afterRoles));
 
-      if (affectedUserIds.size === 0) return;
+    if (affectedUserIds.size === 0) return;
 
-      info(`Hub ${hubId} role map changed. Updating custom claims for ${affectedUserIds.size} users.`);
+    info(`Hub ${hubId} role map changed. Updating custom claims for ${affectedUserIds.size} users.`);
 
-      try {
-        const updatePromises = Array.from(affectedUserIds).map(async (userId) => {
-          try {
-            const userDoc = await db.collection('users').doc(userId).get();
-            if (!userDoc.exists) return;
-            const hubIds = userDoc.data().hubIds || [];
+    try {
+      const updatePromises = Array.from(affectedUserIds).map(async (userId) => {
+        try {
+          const userDoc = await db.collection('users').doc(userId).get();
+          if (!userDoc.exists) return;
+          const hubIds = userDoc.data().hubIds || [];
 
-            const hubsClaims = {};
-            for (const hid of hubIds) {
-              const memberDoc = await db
-                  .collection('hubs')
-                  .doc(hid)
-                  .collection('members')
-                  .doc(userId)
-                  .get();
-              if (memberDoc.exists) {
-                hubsClaims[hid] = memberDoc.data().role || 'member';
-              }
+          const hubsClaims = {};
+          for (const hid of hubIds) {
+            const memberDoc = await db
+              .collection('hubs')
+              .doc(hid)
+              .collection('members')
+              .doc(userId)
+              .get();
+            if (memberDoc.exists) {
+              hubsClaims[hid] = memberDoc.data().role || 'member';
             }
-
-            await admin.auth.setCustomUserClaims(userId, {hubs: hubsClaims});
-            info(`Updated custom claims for user ${userId}`);
-          } catch (error) {
-            info(`Error updating custom claims for user ${userId}:`, error);
           }
-        });
 
-        await Promise.all(updatePromises);
-      } catch (error) {
-        info(`Error in onHubMemberChanged for hub ${hubId}:`, error);
-      }
-    },
+          await admin.auth.setCustomUserClaims(userId, { hubs: hubsClaims });
+          info(`Updated custom claims for user ${userId}`);
+        } catch (error) {
+          info(`Error updating custom claims for user ${userId}:`, error);
+        }
+      });
+
+      await Promise.all(updatePromises);
+    } catch (error) {
+      info(`Error in onHubMemberChanged for hub ${hubId}:`, error);
+    }
+  },
 );
 
 // Automated Waitlist Management
 // Trigger: When a signup status changes from 'confirmed' to 'cancelled'
 // Action: Automatically promote the first waitlist user to 'confirmed'
 exports.onSignupStatusChanged = onDocumentUpdated(
-    'games/{gameId}/signups/{userId}',
-    async (event) => {
-      const gameId = event.params.gameId;
-      const userId = event.params.userId;
-      const beforeData = event.data.before.data();
-      const afterData = event.data.after.data();
+  'games/{gameId}/signups/{userId}',
+  async (event) => {
+    const gameId = event.params.gameId;
+    const userId = event.params.userId;
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
 
-      if (!beforeData || !afterData) {
-        // Signup was created or deleted, skip
+    if (!beforeData || !afterData) {
+      // Signup was created or deleted, skip
+      return;
+    }
+
+    const beforeStatus = beforeData.status;
+    const afterStatus = afterData.status;
+
+    // Only process if status changed from 'confirmed' to 'cancelled'
+    if (beforeStatus !== 'confirmed' || afterStatus !== 'cancelled') {
+      return;
+    }
+
+    info(`Signup ${userId} cancelled for game ${gameId}. Checking waitlist...`);
+
+    try {
+      // Get all waitlist signups for this game, sorted by signedUpAt (FIFO)
+      const waitlistSnapshot = await db
+        .collection('games')
+        .doc(gameId)
+        .collection('signups')
+        .where('status', '==', 'waitlist')
+        .orderBy('signedUpAt', 'asc')
+        .limit(1)
+        .get();
+
+      if (waitlistSnapshot.empty) {
+        info(`No waitlist users found for game ${gameId}.`);
         return;
       }
 
-      const beforeStatus = beforeData.status;
-      const afterStatus = afterData.status;
+      // Get the first waitlist user (FIFO)
+      const firstWaitlistDoc = waitlistSnapshot.docs[0];
+      const waitlistUserId = firstWaitlistDoc.id;
 
-      // Only process if status changed from 'confirmed' to 'cancelled'
-      if (beforeStatus !== 'confirmed' || afterStatus !== 'cancelled') {
-        return;
-      }
+      // Update waitlist user to confirmed
+      await firstWaitlistDoc.ref.update({
+        status: 'confirmed',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
-      info(`Signup ${userId} cancelled for game ${gameId}. Checking waitlist...`);
+      info(`Promoted waitlist user ${waitlistUserId} to confirmed for game ${gameId}.`);
 
+      // Update game playerCount
+      const gameRef = db.collection('games').doc(gameId);
+      await gameRef.update({
+        confirmedPlayerCount: FieldValue.increment(1),
+      });
+
+      // Send FCM push notification to the promoted user
       try {
-        // Get all waitlist signups for this game, sorted by signedUpAt (FIFO)
-        const waitlistSnapshot = await db
-            .collection('games')
-            .doc(gameId)
-            .collection('signups')
-            .where('status', '==', 'waitlist')
-            .orderBy('signedUpAt', 'asc')
-            .limit(1)
-            .get();
+        const tokenDoc = await db
+          .collection('users')
+          .doc(waitlistUserId)
+          .collection('fcm_tokens')
+          .doc('tokens')
+          .get();
 
-        if (waitlistSnapshot.empty) {
-          info(`No waitlist users found for game ${gameId}.`);
-          return;
-        }
+        if (tokenDoc.exists) {
+          const tokenData = tokenDoc.data();
+          const userTokens = tokenData?.tokens || [];
+          const fcmToken = Array.isArray(userTokens) && userTokens.length > 0 ? userTokens[0] : null;
 
-        // Get the first waitlist user (FIFO)
-        const firstWaitlistDoc = waitlistSnapshot.docs[0];
-        const waitlistUserId = firstWaitlistDoc.id;
+          if (fcmToken) {
+            const gameDoc = await gameRef.get();
+            const gameData = gameDoc.data();
+            const gameDate = gameData?.gameDate?.toDate();
 
-        // Update waitlist user to confirmed
-        await firstWaitlistDoc.ref.update({
-          status: 'confirmed',
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-
-        info(`Promoted waitlist user ${waitlistUserId} to confirmed for game ${gameId}.`);
-
-        // Update game playerCount
-        const gameRef = db.collection('games').doc(gameId);
-        await gameRef.update({
-          confirmedPlayerCount: FieldValue.increment(1),
-        });
-
-        // Send FCM push notification to the promoted user
-        try {
-          const tokenDoc = await db
-              .collection('users')
-              .doc(waitlistUserId)
-              .collection('fcm_tokens')
-              .doc('tokens')
-              .get();
-
-          if (tokenDoc.exists) {
-            const tokenData = tokenDoc.data();
-            const fcmToken = tokenData?.token;
-
-            if (fcmToken) {
-              const gameDoc = await gameRef.get();
-              const gameData = gameDoc.data();
-              const gameDate = gameData?.gameDate?.toDate();
-
-              const message = {
-                token: fcmToken,
-                notification: {
-                  title: 'מקום נפתח!',
-                  body: `אתה עכשיו ברשימת המשתתפים למשחק ב-${gameDate ? gameDate.toLocaleDateString('he-IL') : 'תאריך לא ידוע'}`,
+            const message = {
+              token: fcmToken,
+              notification: {
+                title: 'מקום נפתח!',
+                body: `אתה עכשיו ברשימת המשתתפים למשחק ב-${gameDate ? gameDate.toLocaleDateString('he-IL') : 'תאריך לא ידוע'}`,
+              },
+              data: {
+                type: 'game_signup_promoted',
+                gameId: gameId,
+              },
+              android: {
+                priority: 'high',
+              },
+              apns: {
+                headers: {
+                  'apns-priority': '10',
                 },
-                data: {
-                  type: 'game_signup_promoted',
-                  gameId: gameId,
-                },
-                android: {
-                  priority: 'high',
-                },
-                apns: {
-                  headers: {
-                    'apns-priority': '10',
-                  },
-                },
-              };
+              },
+            };
 
-              await messaging.send(message);
-              info(`Sent push notification to user ${waitlistUserId} about game ${gameId}.`);
-            }
+            await messaging.send(message);
+            info(`Sent push notification to user ${waitlistUserId} about game ${gameId}.`);
           }
-        } catch (notificationError) {
-          info(`Error sending notification to user ${waitlistUserId}:`, notificationError);
-          // Don't fail the whole function if notification fails
         }
-      } catch (error) {
-        info(`Error in onSignupStatusChanged for game ${gameId}, user ${userId}:`, error);
-        // Don't throw - we don't want to retry this function
+      } catch (notificationError) {
+        info(`Error sending notification to user ${waitlistUserId}:`, notificationError);
+        // Don't fail the whole function if notification fails
       }
-    },
+    } catch (error) {
+      info(`Error in onSignupStatusChanged for game ${gameId}, user ${userId}:`, error);
+      // Don't throw - we don't want to retry this function
+    }
+  },
 );
 
 // ============================================
@@ -2152,73 +2255,191 @@ exports.onSignupStatusChanged = onDocumentUpdated(
 // ============================================
 // Automatically resize profile/hub images to 500x500px to save bandwidth
 exports.onImageUploaded = onObjectFinalized(
-    {
-      maxInstances: 10,
-    },
-    async (event) => {
-      const filePath = event.data.name;
-      const contentType = event.data.contentType;
-      const bucket = storage.bucket(event.data.bucket);
+  {
+    maxInstances: 10,
+  },
+  async (event) => {
+    const filePath = event.data.name;
+    const contentType = event.data.contentType;
+    const bucket = storage.bucket(event.data.bucket);
 
-      // Only process images
-      if (!contentType || !contentType.startsWith('image/')) {
-        info(`File ${filePath} is not an image, skipping resize.`);
-        return;
-      }
+    // Only process images
+    if (!contentType || !contentType.startsWith('image/')) {
+      info(`File ${filePath} is not an image, skipping resize.`);
+      return;
+    }
 
-      // Only process profile_photos and hub images
-      if (!filePath.includes('profile_photos') &&
-          !filePath.includes('hub_photos') &&
-          !filePath.includes('hub_images')) {
-        info(`File ${filePath} is not a profile or hub image, skipping resize.`);
-        return;
-      }
+    // Only process profile_photos and hub images
+    if (!filePath.includes('profile_photos') &&
+      !filePath.includes('hub_photos') &&
+      !filePath.includes('hub_images')) {
+      info(`File ${filePath} is not a profile or hub image, skipping resize.`);
+      return;
+    }
 
-      // Skip if already resized (contains _resized suffix)
-      if (filePath.includes('_resized')) {
-        info(`File ${filePath} is already resized, skipping.`);
-        return;
-      }
+    // Skip if already resized (contains _resized suffix)
+    if (filePath.includes('_resized')) {
+      info(`File ${filePath} is already resized, skipping.`);
+      return;
+    }
 
-      if (!sharp) {
-        info('Sharp not available, skipping image resize.');
-        return;
-      }
+    if (!sharp) {
+      info('Sharp not available, skipping image resize.');
+      return;
+    }
 
-      info(`Processing image resize for ${filePath}`);
+    info(`Processing image resize for ${filePath}`);
 
-      try {
-        const file = bucket.file(filePath);
-        const [fileBuffer] = await file.download();
+    try {
+      const file = bucket.file(filePath);
+      const [fileBuffer] = await file.download();
 
-        // Resize to 500x500px (maintain aspect ratio, crop to fit)
-        const resizedBuffer = await sharp(fileBuffer)
-            .resize(500, 500, {
-              fit: 'cover',
-              position: 'center',
-            })
-            .jpeg({quality: 85}) // Convert to JPEG with 85% quality
-            .toBuffer();
+      // Resize to 500x500px (maintain aspect ratio, crop to fit)
+      const resizedBuffer = await sharp(fileBuffer)
+        .resize(500, 500, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .jpeg({ quality: 85 }) // Convert to JPEG with 85% quality
+        .toBuffer();
 
-        // Upload resized image with _resized suffix
-        const resizedPath = filePath.replace(/\.[^/.]+$/, '_resized.jpg');
-        const resizedFile = bucket.file(resizedPath);
+      // Upload resized image with _resized suffix
+      const resizedPath = filePath.replace(/\.[^/.]+$/, '_resized.jpg');
+      const resizedFile = bucket.file(resizedPath);
 
-        await resizedFile.save(resizedBuffer, {
-          metadata: {
-            contentType: 'image/jpeg',
-            cacheControl: 'public, max-age=31536000', // 1 year cache
-          },
-        });
+      await resizedFile.save(resizedBuffer, {
+        metadata: {
+          contentType: 'image/jpeg',
+          cacheControl: 'public, max-age=31536000', // 1 year cache
+        },
+      });
 
-        info(`Resized image saved to ${resizedPath}`);
+      info(`Resized image saved to ${resizedPath}`);
 
-        // Optional: Delete original if you want to save storage
-        // await file.delete();
-        // info(`Deleted original image ${filePath}`);
-      } catch (error) {
-        info(`Error resizing image ${filePath}:`, error);
-        // Don't throw - we don't want to fail the upload
-      }
-    },
+      // Optional: Delete original if you want to save storage
+      // await file.delete();
+      // info(`Deleted original image ${filePath}`);
+    } catch (error) {
+      info(`Error resizing image ${filePath}:`, error);
+      // Don't throw - we don't want to fail the upload
+    }
+  },
 );
+
+// ========================================
+// ✅ NEW: Auto-Close Logic (Gap Analysis #8)
+// ========================================
+const autoClose = require('./scheduledGameAutoClose');
+exports.scheduledGameAutoClose = autoClose.scheduledGameAutoClose;
+
+// ========================================
+// ✅ NEW: Attendance Confirmation Reminders (Gap Analysis #5)
+// ========================================
+const reminders = require('./scheduledGameReminders');
+exports.scheduledGameReminders = reminders.scheduledGameReminders;
+
+// ========================================
+// ✅ NEW: Start Game Early (Gap Analysis #7)
+// Callable Function: Start a game up to 30 minutes early
+// ========================================
+exports.startGameEarly = onCall(
+  {
+    invoker: 'authenticated',
+    memory: '256MiB',
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
+
+    // ✅ Rate limit: 3 requests per minute (prevent abuse)
+    await checkRateLimit(request.auth.uid, 'startGameEarly', 3, 1);
+
+    const { gameId } = request.data;
+    const userId = request.auth.uid;
+
+    if (!gameId) {
+      throw new HttpsError('invalid-argument', 'Missing gameId');
+    }
+
+    try {
+      const gameRef = db.collection('games').doc(gameId);
+      const gameDoc = await gameRef.get();
+
+      if (!gameDoc.exists) {
+        throw new HttpsError('not-found', 'Game not found');
+      }
+
+      const game = gameDoc.data();
+
+      // Check if user is organizer
+      if (game.organizerId !== userId) {
+        throw new HttpsError(
+          'permission-denied',
+          'Only the organizer can start the game',
+        );
+      }
+
+      // Check if game is pending
+      if (game.status !== 'pending') {
+        throw new HttpsError(
+          'failed-precondition',
+          `Game is already ${game.status}`,
+        );
+      }
+
+      // ✅ Gap Analysis #7: Can start up to 30 minutes EARLY
+      const scheduledAt = game.scheduledAt.toDate();
+      const now = new Date();
+      const thirtyMinutesEarly = new Date(
+        scheduledAt.getTime() - 30 * 60 * 1000,
+      );
+
+      if (now < thirtyMinutesEarly) {
+        const minutesUntilAllowed = Math.ceil(
+          (thirtyMinutesEarly - now) / (60 * 1000),
+        );
+        throw new HttpsError(
+          'failed-precondition',
+          `Cannot start game yet. Wait ${minutesUntilAllowed} more minutes (can start 30 min early)`,
+        );
+      }
+
+      // Start the game: pending → active
+      await gameRef.update({
+        status: 'active',
+        startedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      info(`Game ${gameId} started early by ${userId}`);
+
+      return {
+        success: true,
+        message: 'Game started successfully',
+        gameId: gameId,
+      };
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError('internal', `Failed to start game: ${error.message}`);
+    }
+  },
+);
+
+// ============================================
+// Poll Functions
+// ============================================
+const {
+  votePoll,
+  closePoll,
+  onPollCreated,
+  scheduledPollAutoClose,
+} = require('./pollFunctions');
+
+exports.votePoll = votePoll;
+exports.closePoll = closePoll;
+exports.onPollCreated = onPollCreated;
+exports.scheduledPollAutoClose = scheduledPollAutoClose;

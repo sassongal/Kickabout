@@ -12,7 +12,7 @@ Widget Function(BuildContext, GoRouterState) lazyRouteBuilder(
 }
 
 /// Deferred import helper for code splitting
-/// Usage: final screen = await lazyImport(() => import('package:kickadoor/screens/...'));
+/// Usage: final screen = await lazyImport(() => import('package:kattrick/screens/...'));
 Future<T> lazyImport<T>(Future<dynamic> Function() importFunction) async {
   final module = await importFunction();
   return module as T;

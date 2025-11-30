@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/gamification_service.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/gamification_service.dart';
 
 /// Repository for Gamification operations
 class GamificationRepository {

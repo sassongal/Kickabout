@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/config/env.dart';
 
 /// Service for gamification - simplified to participation tracking only
 /// No points, no levels, just milestone badges and stats

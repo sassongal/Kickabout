@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/firestore_paths.dart';
-import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/firestore_paths.dart';
+import 'package:kattrick/utils/geohash_utils.dart';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 

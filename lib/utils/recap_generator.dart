@@ -1,5 +1,5 @@
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/data/repositories.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/data/repositories.dart';
 
 /// AI-powered narrative recap generator - creates engaging Hebrew summaries
 class RecapGenerator {

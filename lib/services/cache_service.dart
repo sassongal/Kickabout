@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Cache entry with expiration

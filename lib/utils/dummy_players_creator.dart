@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/models/models.dart';
 
 /// Create dummy players for testing
 /// This is a development utility - run once to populate test data

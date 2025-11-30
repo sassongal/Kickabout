@@ -11,9 +11,13 @@ class Env {
   static bool useEmulators = false;
 
   /// Google Maps API Key
-  /// Set this in your environment or config file
-  static const String googleMapsApiKey =
-      'AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU';
+  /// Set via environment variable: GOOGLE_MAPS_API_KEY
+  /// For production, use: flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY
+  /// Or create .env file (NOT committed to git!)
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: '', // Empty in production - must be set via environment!
+  );
 
   /// Custom API base URL (for your custom API integration)
   static String? customApiBaseUrl;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/data/users_repository.dart';
-import 'package:kickadoor/services/player_merge_service.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/services/player_merge_service.dart';
 
 /// Dialog for merging a manual player into a real user account
 ///

@@ -1,13 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/models/venue.dart';
-import 'package:kickadoor/models/hub.dart';
-import 'package:kickadoor/services/firestore_paths.dart';
-import 'package:kickadoor/services/google_places_service.dart';
-import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/models/venue.dart';
+import 'package:kattrick/models/hub.dart';
+import 'package:kattrick/services/firestore_paths.dart';
+import 'package:kattrick/services/google_places_service.dart';
+import 'package:kattrick/utils/geohash_utils.dart';
 
-import 'package:kickadoor/models/venue_edit_request.dart';
+import 'package:kattrick/models/venue_edit_request.dart';
 
 /// Repository for Venue operations
 class VenuesRepository {
@@ -540,20 +542,38 @@ class VenuesRepository {
           .limit(10)
           .get();
 
-      // 2. Search Google Places (concurrently)
-      final googlePlacesService = GooglePlacesService();
-      final googleFuture = googlePlacesService.searchVenues(
-        query: query,
-        latitude: lat,
-        longitude: lng,
-        radius: 50000, // 50km search radius
-      );
+      // 2. Search Google Places via Cloud Function (concurrently)
+      // Use Cloud Function to avoid API key restrictions
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+      final googleFuture = functions.httpsCallable('searchVenues').call({
+        'query': query,
+        'lat': lat,
+        'lng': lng,
+      }).then((result) {
+        final data = result.data as Map<String, dynamic>;
+        final results = data['results'] as List<dynamic>? ?? [];
+        return results.map((place) {
+          final geometry = place['geometry'] as Map<String, dynamic>?;
+          final location = geometry?['location'] as Map<String, dynamic>?;
+          return PlaceResult(
+            placeId: place['place_id'] as String,
+            name: place['name'] as String,
+            address: place['formatted_address'] as String?,
+            latitude: (location?['lat'] as num?)?.toDouble() ?? 0.0,
+            longitude: (location?['lng'] as num?)?.toDouble() ?? 0.0,
+            types: List<String>.from(place['types'] ?? []),
+            isPublic: true,
+          );
+        }).toList();
+      });
 
       // Wait for both results
       final results = await Future.wait([
         firestoreFuture,
-        googleFuture.catchError(
-            (_) => <PlaceResult>[]), // Handle Google errors gracefully
+        googleFuture.catchError((error) {
+          debugPrint('Google Places search error: $error');
+          return <PlaceResult>[]; // Handle Google errors gracefully
+        }),
       ]);
 
       final firestoreSnapshot = results[0] as QuerySnapshot;

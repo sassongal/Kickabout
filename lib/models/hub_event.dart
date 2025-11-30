@@ -1,9 +1,9 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:kickadoor/models/converters/timestamp_converter.dart';
-import 'package:kickadoor/models/converters/geopoint_converter.dart';
+import 'package:kattrick/models/converters/timestamp_converter.dart';
+import 'package:kattrick/models/converters/geopoint_converter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/team.dart';
-import 'package:kickadoor/models/match_result.dart';
+import 'package:kattrick/models/team.dart';
+import 'package:kattrick/models/match_result.dart';
 
 part 'hub_event.freezed.dart';
 part 'hub_event.g.dart';

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-// import removed: unused
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/utils/game_stopwatch.dart';
+import 'package:kattrick/widgets/game/game_stopwatch_widget.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 
 class GameRecordingScreen extends ConsumerStatefulWidget {
   final String hubId;
@@ -27,11 +30,23 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
   final List<User> _teamB = [];
   List<User> _unassignedPlayers = [];
   bool _isLoading = true;
+  bool _gameStarted = false;
+  late GameStopwatch _gameStopwatch;
 
   @override
   void initState() {
     super.initState();
+    _gameStopwatch = GameStopwatch(
+      gameId: widget.event.eventId,
+      hubId: widget.hubId,
+    );
     _loadPlayers();
+  }
+
+  @override
+  void dispose() {
+    _gameStopwatch.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPlayers() async {
@@ -76,71 +91,186 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
   @override
   Widget build(BuildContext context) {
     return FuturisticScaffold(
-      title: 'תיעוד משחקים',
+      title: _gameStarted ? 'תיעוד משחק - פעיל' : 'תיעוד משחקים',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Unassigned Players
-                Container(
-                  height: 100,
-                  padding: const EdgeInsets.all(8),
-                  color: FuturisticColors.surfaceVariant.withAlpha(127),
-                  child: _buildPlayerList(
-                      _unassignedPlayers, 'שחקנים לא משובצים',
-                      isHorizontal: true),
-                ),
-
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Team A
-                      Expanded(
-                        child: _buildTeamDropZone(
-                          'קבוצה כתומה',
-                          _teamA,
-                          Colors.orange,
-                          FuturisticColors.surface,
-                        ),
-                      ),
-
-                      // Team B
-                      Expanded(
-                        child: _buildTeamDropZone(
-                          'קבוצה כחולה',
-                          _teamB,
-                          Colors.blue,
-                          FuturisticColors.surface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Actions
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ElevatedButton.icon(
-                    onPressed: _teamA.isNotEmpty && _teamB.isNotEmpty
-                        ? () {
-                            // TODO: Start game logic
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('התחלת משחק...')),
-                            );
-                          }
-                        : null,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('התחל משחק'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: FuturisticColors.success,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          : _gameStarted
+              ? _buildGameActiveView()
+              : _buildTeamSetupView(),
     );
+  }
+
+  Widget _buildTeamSetupView() {
+    return Column(
+      children: [
+        // Unassigned Players
+        Container(
+          height: 100,
+          padding: const EdgeInsets.all(8),
+          color: FuturisticColors.surfaceVariant.withAlpha(127),
+          child: _buildPlayerList(
+              _unassignedPlayers, 'שחקנים לא משובצים',
+              isHorizontal: true),
+        ),
+
+        Expanded(
+          child: Row(
+            children: [
+              // Team A
+              Expanded(
+                child: _buildTeamDropZone(
+                  'קבוצה כתומה',
+                  _teamA,
+                  Colors.orange,
+                  FuturisticColors.surface,
+                ),
+              ),
+
+              // Team B
+              Expanded(
+                child: _buildTeamDropZone(
+                  'קבוצה כחולה',
+                  _teamB,
+                  Colors.blue,
+                  FuturisticColors.surface,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Actions
+        if (!_gameStarted)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton.icon(
+              onPressed: _teamA.isNotEmpty && _teamB.isNotEmpty
+                  ? () {
+                      setState(() {
+                        _gameStarted = true;
+                      });
+                      _gameStopwatch.start();
+                      SnackbarHelper.showSuccess(
+                        context,
+                        'המשחק התחיל! ניתן כעת להקליט אירועים',
+                      );
+                    }
+                  : null,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('התחל משחק'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: FuturisticColors.success,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildGameActiveView() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Back to Setup Button
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('סיום משחק'),
+                      content: const Text('האם אתה בטוח שברצונך לסיים את המשחק?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('ביטול'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            await _finishGame();
+                          },
+                          child: const Text('סיום'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.stop),
+                label: const Text('סיום משחק'),
+                style: TextButton.styleFrom(
+                  foregroundColor: FuturisticColors.error,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Stopwatch Widget
+          Expanded(
+            child: GameStopwatchWidget(
+              stopwatch: _gameStopwatch,
+              teamAPlayers: _teamA,
+              teamBPlayers: _teamB,
+              onEventsRecorded: (events) {
+                // Events are automatically tracked in stopwatch
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _finishGame() async {
+    try {
+      final gamesRepo = ref.read(gamesRepositoryProvider);
+      final eventsRepo = ref.read(eventsRepositoryProvider);
+
+      // Get final score
+      final teamAScore = _gameStopwatch.getScoreForTeam('A');
+      final teamBScore = _gameStopwatch.getScoreForTeam('B');
+
+      // Get goal scorers
+      final goalScorerIds = _gameStopwatch.goals
+          .map((g) => g.playerId)
+          .toSet()
+          .toList();
+
+      // Export events
+      final gameEvents = _gameStopwatch.exportAsGameEvents();
+
+      // Create game from event
+      final gameId = await gamesRepo.convertEventToGame(
+        eventId: widget.event.eventId,
+        hubId: widget.hubId,
+        teamAScore: teamAScore,
+        teamBScore: teamBScore,
+        presentPlayerIds: [..._teamA.map((p) => p.uid), ..._teamB.map((p) => p.uid)],
+        goalScorerIds: goalScorerIds.isNotEmpty ? goalScorerIds : null,
+        mvpPlayerId: null, // TODO: Add MVP selection
+      );
+
+      // Save events to Firestore
+      for (final event in gameEvents) {
+        await eventsRepo.addEvent(gameId, event);
+      }
+
+      // Stop stopwatch
+      _gameStopwatch.stop();
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'המשחק נשמר בהצלחה!');
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בשמירת המשחק: $e');
+      }
+    }
   }
 
   Widget _buildPlayerList(List<User> players, String title,

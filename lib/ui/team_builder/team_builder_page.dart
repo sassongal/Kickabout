@@ -2,9 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/logic/team_maker.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/models/models.dart';
 
 /// Top-level function for compute isolate - balances teams in background
 List<Team> _computeBalanceTeams(Map<String, dynamic> params) {

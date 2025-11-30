@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kickadoor/l10n/app_localizations.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -139,7 +139,7 @@ class _EditManualPlayerDialogState
       // Get invitation code or use hub ID
       final invitationCode = hub.settings['invitationCode'] as String? ??
           widget.hubId.substring(0, 8).toUpperCase();
-      final invitationLink = 'https://kickadoor.app/invite/$invitationCode';
+      final invitationLink = 'https://kattrick.app/invite/$invitationCode';
 
       // Create email subject and body
       final subject = l10n.hubInvitationEmailSubject(hub.name);

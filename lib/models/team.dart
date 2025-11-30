@@ -30,3 +30,18 @@ class TeamConverter implements JsonConverter<Team, Map<String, dynamic>> {
   Map<String, dynamic> toJson(Team object) => object.toJson();
 }
 
+/// Firestore converter for List<Team>
+class TeamListConverter implements JsonConverter<List<Team>, List<dynamic>> {
+  const TeamListConverter();
+
+  @override
+  List<Team> fromJson(List<dynamic> json) {
+    return json.map((e) => Team.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  @override
+  List<dynamic> toJson(List<Team> object) {
+    return object.map((e) => e.toJson()).toList();
+  }
+}
+

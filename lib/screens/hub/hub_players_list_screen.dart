@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
-import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
-import 'package:kickadoor/widgets/dialogs/merge_player_dialog.dart';
-import 'package:kickadoor/widgets/dialogs/set_player_rating_dialog.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/screens/hub/add_manual_player_dialog.dart';
+import 'package:kattrick/screens/hub/edit_manual_player_dialog.dart';
+import 'package:kattrick/widgets/dialogs/merge_player_dialog.dart';
+import 'package:kattrick/widgets/dialogs/set_player_rating_dialog.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:kickadoor/services/error_handler_service.dart';
-import 'package:kickadoor/models/hub_role.dart';
+import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/models/hub_role.dart';
 
 class HubMember {
   final User user;

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/hub_role.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
 
 /// Screen for managing hub roles (managers only)
 class ManageRolesScreen extends ConsumerStatefulWidget {

@@ -1,6 +1,6 @@
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/hub.dart';
-import 'package:kickadoor/models/user.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/hub.dart';
+import 'package:kattrick/models/user.dart';
 
 /// Simple user role enum for permission checks
 enum UserRole {
@@ -87,10 +87,10 @@ enum HubRole {
 
   /// Check if role has permission to perform action
   ///
-  /// Permission Matrix:
+  /// Permission Matrix (Gap Analysis #1):
   /// - Manager: Full access to everything
   /// - Moderator: Can manage members, create games/events, moderate content
-  /// - Veteran: Can create games, view analytics (future), invite players (future)
+  /// - Veteran: ✅ Can RECORD GAME RESULTS (new!), create games, view analytics, invite players
   /// - Member: Can create games, view content, participate
   /// - Guest: Read-only
   bool canManageMembers() =>
@@ -115,6 +115,14 @@ enum HubRole {
       this == HubRole.manager ||
       this == HubRole.moderator ||
       this == HubRole.veteran;
+  
+  /// ✅ NEW: Can record game results (Gap Analysis #1)
+  /// Veterans can start game recording alongside Managers
+  bool canRecordGame() =>
+      this == HubRole.manager ||
+      this == HubRole.moderator ||
+      this == HubRole.veteran;
+  
   bool canEditHubInfo() => this == HubRole.manager;
   bool canDeletePosts() => this == HubRole.manager || this == HubRole.moderator;
   bool canDeleteComments() =>
@@ -253,6 +261,9 @@ class HubPermissions {
   bool canEditHubInfo() => userRole.canEditHubInfo();
   bool canDeletePosts() => userRole.canDeletePosts();
   bool canDeleteComments() => userRole.canDeleteComments();
+  
+  /// ✅ NEW: Can record game results (Veterans can do this!)
+  bool canRecordGame() => userRole.canRecordGame();
 
   // Role check methods
   bool isManager() => userRole == HubRole.manager;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/widgets/futuristic/offline_indicator.dart';
-import 'package:kickadoor/widgets/notifications_badge_button.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/offline_indicator.dart';
+import 'package:kattrick/widgets/notifications_badge_button.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// AppBar with KICKA BALL logo

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/widgets/futuristic/bottom_navigation_bar.dart';
-import 'package:kickadoor/widgets/futuristic/offline_indicator.dart';
+import 'package:kattrick/widgets/futuristic/bottom_navigation_bar.dart';
+import 'package:kattrick/widgets/futuristic/offline_indicator.dart';
 
 /// App scaffold with AppBar and Hebrew titles
 class AppScaffold extends StatelessWidget {

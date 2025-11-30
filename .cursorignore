@@ -1,0 +1,45 @@
+# Generated files
+*.g.dart
+*.freezed.dart
+*.config.dart
+
+# Firebase
+firebase-debug.log
+firestore-debug.log
+functions/node_modules/
+functions/lib/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+ios/Pods/
+ios/.symlinks/
+android/.gradle/
+
+# Tests
+coverage/
+test/.test_coverage.dart
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Large files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.mov
+
+# Environment files
+.env
+.env.local
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+

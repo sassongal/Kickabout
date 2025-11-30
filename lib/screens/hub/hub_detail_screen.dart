@@ -2,27 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/utils/geohash_utils.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/utils/geohash_utils.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/models/models.dart' hide Notification;
-import 'package:kickadoor/models/notification.dart' as app_models;
-import 'package:kickadoor/screens/social/hub_chat_screen.dart';
-import 'package:kickadoor/screens/hub/add_manual_player_dialog.dart';
-import 'package:kickadoor/screens/hub/edit_manual_player_dialog.dart';
-import 'package:kickadoor/screens/hub/hub_events_tab.dart';
-import 'package:kickadoor/services/analytics_service.dart';
-import 'package:kickadoor/services/error_handler_service.dart';
-import 'package:kickadoor/models/hub_role.dart';
-import 'package:kickadoor/widgets/optimized_image.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/models/models.dart' hide Notification;
+import 'package:kattrick/models/notification.dart' as app_models;
+import 'package:kattrick/screens/social/hub_chat_screen.dart';
+import 'package:kattrick/screens/hub/add_manual_player_dialog.dart';
+import 'package:kattrick/screens/hub/edit_manual_player_dialog.dart';
+import 'package:kattrick/screens/hub/hub_events_tab.dart';
+import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/widgets/optimized_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/widgets/polls/polls_list_widget.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
   void initState() {
     super.initState();
     _tabController =
-        TabController(length: 3, vsync: this); // Removed Members and Feed tabs
+        TabController(length: 4, vsync: this); // Events, Chat, Games, Polls
   }
 
   @override
@@ -547,6 +548,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                             Tab(
                                 icon: Icon(Icons.sports_soccer),
                                 text: 'משחקים'),
+                            Tab(icon: Icon(Icons.poll), text: 'סקרים'),
                           ],
                         ),
                       ),
@@ -566,6 +568,8 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                     HubChatScreen(hubId: widget.hubId),
                     // Games tab (third)
                     _GamesTab(hubId: widget.hubId),
+                    // Polls tab (fourth)
+                    _PollsTab(hubId: widget.hubId, isManager: isAdminRole),
                   ],
                 ),
               ),
@@ -591,9 +595,9 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
   Future<void> _shareHubOnWhatsApp(Hub hub) async {
     try {
       // Generate deep link
-      final deepLink = 'kickabout://hub/${hub.hubId}';
+      final deepLink = 'kattrick://hub/${hub.hubId}';
       final webLink =
-          'https://kickabout.app/hub/${hub.hubId}'; // Fallback web link
+          'https://kattrick.app/hub/${hub.hubId}'; // Fallback web link
 
       final message =
           'בוא לשחק איתנו ב-${hub.name}!\nהצטרף כאן: $webLink\n\n$deepLink';
@@ -2316,6 +2320,25 @@ class _HubAdminSpeedDial extends StatelessWidget {
             onTap: () => context.push('/hubs/$hubId/scouting'),
           ),
       ],
+    );
+  }
+}
+
+/// Polls Tab Widget
+class _PollsTab extends StatelessWidget {
+  final String hubId;
+  final bool isManager;
+
+  const _PollsTab({
+    required this.hubId,
+    required this.isManager,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PollsListWidget(
+      hubId: hubId,
+      showCreateButton: isManager,
     );
   }
 }

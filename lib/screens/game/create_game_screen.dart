@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/services/analytics_service.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/core/constants.dart';
-import 'package:kickadoor/screens/location/map_picker_screen.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/screens/location/map_picker_screen.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// Create game screen

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/utils/snackbar_helper.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Dialog for hub manager to add a manual player (without app)

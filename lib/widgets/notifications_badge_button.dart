@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
 
 /// Notification badge button widget
 /// Shows notification icon with unread count badge

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/widgets/optimized_image.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/optimized_image.dart';
 
 /// Futuristic player avatar with level indicator
 class PlayerAvatarFuturistic extends StatelessWidget {

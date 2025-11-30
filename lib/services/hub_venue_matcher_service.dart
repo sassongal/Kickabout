@@ -1,7 +1,7 @@
 import 'package:geolocator/geolocator.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Service for matching players with relevant hubs based on venues

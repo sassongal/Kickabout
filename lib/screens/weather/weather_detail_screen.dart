@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:kickadoor/widgets/app_scaffold.dart';
-import 'package:kickadoor/services/weather_service.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/widgets/futuristic/loading_state.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/services/weather_service.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 

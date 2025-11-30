@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/core/app_assets.dart';
+import 'package:kattrick/core/app_assets.dart';
 
-/// KICKADOOR Logo Widget - Uses the official logo image
+/// Kattrick Logo Widget - Uses the official logo image
 class KickaBallLogo extends StatelessWidget {
   final double? width;
   final double? height;
@@ -50,7 +50,7 @@ class KickaBallLogo extends StatelessWidget {
         if (showText) ...[
           const SizedBox(height: 8),
           Text(
-            'KICKADOOR',
+            'KATTRICK',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

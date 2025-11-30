@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/venue.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/venue.dart';
 
 /// A reusable widget for searching venues with smart autocomplete.
 ///

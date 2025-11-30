@@ -3,126 +3,132 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 
-import 'package:kickadoor/routing/app_paths.dart';
-import 'package:kickadoor/routing/go_router_refresh_stream.dart';
-import 'package:kickadoor/utils/performance_utils.dart';
-import 'package:kickadoor/screens/auth/auth_screen.dart';
-import 'package:kickadoor/screens/welcome/welcome_screen.dart';
-import 'package:kickadoor/screens/profile/profile_setup_wizard.dart';
-import 'package:kickadoor/screens/hub/hub_list_screen.dart';
-import 'package:kickadoor/screens/hub/create_hub_screen.dart';
-import 'package:kickadoor/screens/hub/hub_detail_screen.dart'
+import 'package:kattrick/routing/app_paths.dart';
+import 'package:kattrick/routing/go_router_refresh_stream.dart';
+import 'package:kattrick/utils/performance_utils.dart';
+import 'package:kattrick/screens/auth/auth_screen.dart';
+import 'package:kattrick/screens/welcome/welcome_screen.dart';
+import 'package:kattrick/screens/profile/profile_setup_wizard.dart';
+import 'package:kattrick/screens/hub/hub_list_screen.dart';
+import 'package:kattrick/screens/hub/create_hub_screen.dart';
+import 'package:kattrick/screens/hub/hub_detail_screen.dart'
     deferred as hub_detail_screen;
-import 'package:kickadoor/screens/hub/create_hub_event_screen.dart'
+import 'package:kattrick/screens/hub/create_hub_event_screen.dart'
     deferred as create_hub_event_screen;
-import 'package:kickadoor/screens/hub/edit_hub_event_screen.dart'
+import 'package:kattrick/screens/hub/edit_hub_event_screen.dart'
     deferred as edit_hub_event_screen;
-import 'package:kickadoor/screens/events/event_management_screen.dart'
+import 'package:kattrick/screens/events/event_management_screen.dart'
     deferred as hub_event_management_screen;
-import 'package:kickadoor/screens/game/game_list_screen.dart'
+import 'package:kattrick/screens/hub/create_poll_screen.dart';
+import 'package:kattrick/screens/hub/poll_detail_screen.dart';
+import 'package:kattrick/screens/game/game_list_screen.dart'
     deferred as game_list_screen;
-import 'package:kickadoor/screens/game/create_game_screen.dart'
+import 'package:kattrick/screens/game/create_game_screen.dart'
     deferred as create_game_screen;
-import 'package:kickadoor/screens/game/game_detail_screen.dart'
+import 'package:kattrick/screens/game/game_detail_screen.dart'
     deferred as game_detail_screen;
-import 'package:kickadoor/screens/game/team_maker_screen.dart'
+import 'package:kattrick/screens/game/team_maker_screen.dart'
     deferred as team_maker_screen;
-import 'package:kickadoor/screens/game/log_game_screen.dart'
+import 'package:kattrick/screens/game/log_game_screen.dart'
     deferred as log_game_screen;
-import 'package:kickadoor/screens/profile/player_profile_screen_futuristic.dart'
+import 'package:kattrick/screens/profile/player_profile_screen_futuristic.dart'
     deferred as player_profile_screen;
-import 'package:kickadoor/screens/profile/edit_profile_screen.dart'
+import 'package:kattrick/screens/profile/edit_profile_screen.dart'
     deferred as edit_profile_screen;
-import 'package:kickadoor/screens/profile/privacy_settings_screen.dart'
+import 'package:kattrick/screens/profile/privacy_settings_screen.dart'
     deferred as privacy_settings_screen;
-import 'package:kickadoor/screens/profile/performance_breakdown_screen.dart'
+import 'package:kattrick/screens/profile/settings_screen.dart'
+    deferred as settings_screen;
+import 'package:kattrick/screens/profile/notification_settings_screen.dart'
+    deferred as notification_settings_screen;
+import 'package:kattrick/screens/profile/performance_breakdown_screen.dart'
     deferred as performance_breakdown_screen;
-import 'package:kickadoor/screens/profile/hub_stats_screen.dart'
+import 'package:kattrick/screens/profile/hub_stats_screen.dart'
     deferred as hub_stats_screen;
-import 'package:kickadoor/screens/location/discover_hubs_screen.dart'
+import 'package:kattrick/screens/location/discover_hubs_screen.dart'
     deferred as discover_hubs_screen;
-import 'package:kickadoor/screens/location/map_screen.dart'
+import 'package:kattrick/screens/location/map_screen.dart'
     deferred as map_screen;
-import 'package:kickadoor/screens/social/notifications_screen.dart'
+import 'package:kattrick/screens/social/notifications_screen.dart'
     deferred as notifications_screen;
-import 'package:kickadoor/screens/social/post_detail_screen.dart'
+import 'package:kattrick/screens/social/post_detail_screen.dart'
     deferred as post_detail_screen;
-import 'package:kickadoor/screens/social/following_screen.dart'
+import 'package:kattrick/screens/social/following_screen.dart'
     deferred as following_screen;
-import 'package:kickadoor/screens/social/followers_screen.dart'
+import 'package:kattrick/screens/social/followers_screen.dart'
     deferred as followers_screen;
-import 'package:kickadoor/screens/home_screen_futuristic_figma.dart';
-import 'package:kickadoor/screens/game/game_chat_screen.dart'
+import 'package:kattrick/screens/home_screen_futuristic_figma.dart';
+import 'package:kattrick/screens/game/game_chat_screen.dart'
     deferred as game_chat_screen;
-import 'package:kickadoor/screens/community/community_screen.dart';
+import 'package:kattrick/screens/community/community_screen.dart';
 
-import 'package:kickadoor/screens/social/messages_list_screen.dart'
+import 'package:kattrick/screens/social/messages_list_screen.dart'
     deferred as messages_list_screen;
-import 'package:kickadoor/screens/social/private_chat_screen.dart'
+import 'package:kattrick/screens/social/private_chat_screen.dart'
     deferred as private_chat_screen;
-import 'package:kickadoor/screens/gamification/leaderboard_screen.dart'
+import 'package:kattrick/screens/gamification/leaderboard_screen.dart'
     deferred as leaderboard_screen;
-import 'package:kickadoor/screens/splash/splash_screen.dart';
-import 'package:kickadoor/screens/players/players_list_screen.dart'
+import 'package:kattrick/screens/splash/splash_screen.dart';
+import 'package:kattrick/screens/players/players_list_screen.dart'
     deferred as players_list_screen;
-import 'package:kickadoor/screens/players/players_map_screen.dart'
+import 'package:kattrick/screens/players/players_map_screen.dart'
     deferred as players_map_screen;
-import 'package:kickadoor/screens/hubs/hubs_board_screen.dart'
+import 'package:kattrick/screens/hubs/hubs_board_screen.dart'
     deferred as hubs_board_screen;
-import 'package:kickadoor/screens/admin/admin_dashboard_screen.dart'
+import 'package:kattrick/screens/admin/admin_dashboard_screen.dart'
     deferred as admin_dashboard_screen;
-import 'package:kickadoor/screens/admin/generate_dummy_data_screen.dart'
+import 'package:kattrick/screens/admin/generate_dummy_data_screen.dart'
     deferred as generate_dummy_data_screen;
-import 'package:kickadoor/screens/hub/manage_roles_screen.dart'
+import 'package:kattrick/screens/hub/manage_roles_screen.dart'
     deferred as manage_roles_screen;
-import 'package:kickadoor/screens/hub/hub_settings_screen.dart';
-import 'package:kickadoor/screens/hub/join_by_invite_screen.dart'
+import 'package:kattrick/screens/hub/hub_settings_screen.dart';
+import 'package:kattrick/screens/hub/join_by_invite_screen.dart'
     deferred as join_by_invite_screen;
-import 'package:kickadoor/screens/game/game_calendar_screen.dart'
+import 'package:kattrick/screens/game/game_calendar_screen.dart'
     deferred as game_calendar_screen;
-import 'package:kickadoor/screens/social/create_post_screen.dart'
+import 'package:kattrick/screens/social/create_post_screen.dart'
     deferred as create_post_screen;
-import 'package:kickadoor/screens/hub/scouting_screen.dart'
+import 'package:kattrick/screens/hub/scouting_screen.dart'
     deferred as scouting_screen;
-import 'package:kickadoor/screens/hub/hub_players_list_screen.dart'
+import 'package:kattrick/screens/hub/hub_players_list_screen.dart'
     deferred as hub_players_list_screen;
-import 'package:kickadoor/screens/hub/hub_rules_screen.dart'
+import 'package:kattrick/screens/hub/hub_rules_screen.dart'
     deferred as hub_rules_screen;
-import 'package:kickadoor/screens/hub/edit_game_screen.dart'
+import 'package:kattrick/screens/hub/edit_game_screen.dart'
     deferred as edit_game_screen;
-import 'package:kickadoor/screens/hub/hub_manage_requests_screen.dart'
+import 'package:kattrick/screens/hub/hub_manage_requests_screen.dart'
     deferred as hub_manage_requests_screen;
-import 'package:kickadoor/screens/venue/venue_search_screen.dart'
+import 'package:kattrick/screens/venue/venue_search_screen.dart'
     deferred as venue_search_screen;
-import 'package:kickadoor/screens/venue/create_manual_venue_screen.dart'
+import 'package:kattrick/screens/venue/create_manual_venue_screen.dart'
     deferred as create_manual_venue_screen;
-import 'package:kickadoor/screens/venues/discover_venues_screen.dart'
+import 'package:kattrick/screens/venues/discover_venues_screen.dart'
     deferred as discover_venues_screen;
-import 'package:kickadoor/screens/location/map_picker_screen.dart';
-import 'package:kickadoor/screens/game/log_past_game_screen.dart'
+import 'package:kattrick/screens/location/map_picker_screen.dart';
+import 'package:kattrick/screens/game/log_past_game_screen.dart'
     deferred as log_past_game_screen;
-import 'package:kickadoor/screens/hub/hub_analytics_screen.dart'
+import 'package:kattrick/screens/hub/hub_analytics_screen.dart'
     deferred as hub_analytics_screen;
-import 'package:kickadoor/screens/social/create_recruiting_post_screen.dart'
+import 'package:kattrick/screens/social/create_recruiting_post_screen.dart'
     deferred as create_recruiting_post_screen;
-import 'package:kickadoor/screens/activity/community_activity_feed_screen.dart'
+import 'package:kattrick/screens/activity/community_activity_feed_screen.dart'
     deferred as community_activity_feed_screen;
-import 'package:kickadoor/screens/weather/weather_detail_screen.dart';
-import 'package:kickadoor/screens/game/game_recording_screen.dart'
+import 'package:kattrick/screens/weather/weather_detail_screen.dart';
+import 'package:kattrick/screens/game/game_recording_screen.dart'
     deferred as game_recording_screen;
-import 'package:kickadoor/screens/event/event_management_screen.dart'
+import 'package:kattrick/screens/event/event_management_screen.dart'
     deferred as event_management_screen;
-import 'package:kickadoor/screens/event/team_generator_config_screen.dart'
+import 'package:kattrick/screens/event/team_generator_config_screen.dart'
     deferred as team_generator_config_screen;
-import 'package:kickadoor/screens/event/team_generator_result_screen.dart'
+import 'package:kattrick/screens/event/team_generator_result_screen.dart'
     deferred as team_generator_result_screen;
-import 'package:kickadoor/screens/debug/create_dummy_players_screen.dart'
+import 'package:kattrick/screens/debug/create_dummy_players_screen.dart'
     deferred as create_dummy_players_screen;
 
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kickadoor/logic/team_maker.dart';
+import 'package:kattrick/logic/team_maker.dart';
 
 /// Auth state stream provider
 final authStateProvider = StreamProvider<firebase_auth.User?>((ref) {
@@ -176,8 +182,6 @@ class _LazyRouteLoaderState extends State<LazyRouteLoader> {
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final authService = ref.watch(authServiceProvider);
-
-  final currentUserAsync = ref.watch(currentUserProvider);
 
   return GoRouter(
     debugLogDiagnostics: PerformanceUtils.isDebugMode,
@@ -656,6 +660,23 @@ final routerProvider = Provider<GoRouter>((ref) {
                           hubId: hubId, eventId: eventId);
                     }),
               ),
+              // Polls routes
+              GoRoute(
+                path: 'polls/create',
+                name: 'createPoll',
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return CreatePollScreen(hubId: hubId);
+                },
+              ),
+              GoRoute(
+                path: 'polls/:pollId',
+                name: 'pollDetail',
+                builder: (context, state) {
+                  final pollId = state.pathParameters['pollId']!;
+                  return PollDetailScreen(pollId: pollId);
+                },
+              ),
               GoRoute(
                 path: 'events/:eventId/manage',
                 name: 'manageHubEvent',
@@ -881,6 +902,30 @@ final routerProvider = Provider<GoRouter>((ref) {
                   final userId = state.pathParameters['uid']!;
                   return privacy_settings_screen.PrivacySettingsScreen(
                       userId: userId);
+                }),
+          ),
+          GoRoute(
+            path: 'settings',
+            name: 'settings',
+            builder: (context, state) => LazyRouteLoader(
+                loader: settings_screen.loadLibrary(),
+                builder: () {
+                  final userId = state.pathParameters['uid']!;
+                  return settings_screen.SettingsScreen(
+                    userId: userId,
+                  );
+                }),
+          ),
+          GoRoute(
+            path: 'notifications',
+            name: 'notificationSettings',
+            builder: (context, state) => LazyRouteLoader(
+                loader: notification_settings_screen.loadLibrary(),
+                builder: () {
+                  final userId = state.pathParameters['uid']!;
+                  return notification_settings_screen.NotificationSettingsScreen(
+                    userId: userId,
+                  );
                 }),
           ),
           GoRoute(

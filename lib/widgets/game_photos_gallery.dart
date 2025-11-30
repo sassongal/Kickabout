@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kickadoor/widgets/optimized_image.dart';
+import 'package:kattrick/widgets/optimized_image.dart';
 
 /// Widget for displaying game photos in a grid gallery
 class GamePhotosGallery extends StatelessWidget {

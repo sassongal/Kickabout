@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appName => 'Kickadoor';
+  String get appName => 'Kattrick';
 
   @override
   String get welcome => 'Welcome';
@@ -387,13 +387,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String hubInvitationEmailSubject(String hubName) {
-    return 'Invitation to join $hubName on Kickabout';
+    return 'Invitation to join $hubName on Kattrick';
   }
 
   @override
   String hubInvitationEmailBody(
       String playerName, String hubName, String link, String code) {
-    return 'Hi!\n\n$playerName invited you to join $hubName on Kickabout.\n\nClick the link to join:\n$link\n\nOr use code: $code';
+    return 'Hi!\n\n$playerName invited you to join $hubName on Kattrick.\n\nClick the link to join:\n$link\n\nOr use code: $code';
   }
 
   @override

@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/services/location_service.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/location_service.dart';
 
 /// Scouting criteria
 class ScoutingCriteria {

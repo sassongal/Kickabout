@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/core/constants.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/core/constants.dart';
 
 /// Service for Firebase Storage operations
 class StorageService {

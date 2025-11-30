@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:kickadoor/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/theme/futuristic_theme.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
-import 'package:kickadoor/widgets/futuristic/empty_state.dart';
-import 'package:kickadoor/widgets/futuristic/skeleton_loader.dart';
-import 'package:kickadoor/widgets/player_avatar.dart';
-import 'package:kickadoor/services/location_service.dart';
-import 'package:kickadoor/services/error_handler_service.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/services/location_service.dart';
+import 'package:kattrick/services/error_handler_service.dart';
 import 'package:geolocator/geolocator.dart';
 
 /// Players List Screen - לוח שחקנים

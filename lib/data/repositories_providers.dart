@@ -1,19 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kickadoor/data/repositories.dart';
-import 'package:kickadoor/models/models.dart';
-import 'package:kickadoor/models/hub_role.dart';
-import 'package:kickadoor/services/auth_service.dart';
-import 'package:kickadoor/services/storage_service.dart';
-import 'package:kickadoor/services/location_service.dart';
-import 'package:kickadoor/services/push_notification_service.dart';
-import 'package:kickadoor/services/game_reminder_service.dart';
-import 'package:kickadoor/services/push_notification_integration_service.dart';
-import 'package:kickadoor/services/scouting_service.dart';
-import 'package:kickadoor/services/google_places_service.dart';
-import 'package:kickadoor/services/custom_api_service.dart';
-import 'package:kickadoor/services/weather_service.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/services/auth_service.dart';
+import 'package:kattrick/services/storage_service.dart';
+import 'package:kattrick/services/location_service.dart';
+import 'package:kattrick/services/push_notification_service.dart';
+import 'package:kattrick/services/game_reminder_service.dart';
+import 'package:kattrick/services/push_notification_integration_service.dart';
+import 'package:kattrick/services/scouting_service.dart';
+import 'package:kattrick/services/google_places_service.dart';
+import 'package:kattrick/services/custom_api_service.dart';
+import 'package:kattrick/services/weather_service.dart';
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
