@@ -70,7 +70,12 @@ mixin _$Hub {
   int? get gameCount =>
       throw _privateConstructorUsedError; // Denormalized: Total games created (updated by onGameCreated)
   @TimestampConverter()
-  DateTime? get lastActivity => throw _privateConstructorUsedError;
+  DateTime? get lastActivity =>
+      throw _privateConstructorUsedError; // Denormalized: Last activity time (updated by Cloud Functions)
+// Banned users - users banned from this hub
+  List<String> get bannedUserIds =>
+      throw _privateConstructorUsedError; // Activity score - measures hub activity (updated by Cloud Functions)
+  double get activityScore => throw _privateConstructorUsedError;
 
   /// Serializes this Hub to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -112,7 +117,9 @@ abstract class $HubCopyWith<$Res> {
       Map<String, double> managerRatings,
       String? paymentLink,
       int? gameCount,
-      @TimestampConverter() DateTime? lastActivity});
+      @TimestampConverter() DateTime? lastActivity,
+      List<String> bannedUserIds,
+      double activityScore});
 }
 
 /// @nodoc
@@ -155,6 +162,8 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? paymentLink = freezed,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
+    Object? bannedUserIds = null,
+    Object? activityScore = null,
   }) {
     return _then(_value.copyWith(
       hubId: null == hubId
@@ -261,6 +270,14 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.lastActivity
           : lastActivity // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      bannedUserIds: null == bannedUserIds
+          ? _value.bannedUserIds
+          : bannedUserIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      activityScore: null == activityScore
+          ? _value.activityScore
+          : activityScore // ignore: cast_nullable_to_non_nullable
+              as double,
     ) as $Val);
   }
 }
@@ -297,7 +314,9 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       Map<String, double> managerRatings,
       String? paymentLink,
       int? gameCount,
-      @TimestampConverter() DateTime? lastActivity});
+      @TimestampConverter() DateTime? lastActivity,
+      List<String> bannedUserIds,
+      double activityScore});
 }
 
 /// @nodoc
@@ -337,6 +356,8 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? paymentLink = freezed,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
+    Object? bannedUserIds = null,
+    Object? activityScore = null,
   }) {
     return _then(_$HubImpl(
       hubId: null == hubId
@@ -443,6 +464,14 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.lastActivity
           : lastActivity // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      bannedUserIds: null == bannedUserIds
+          ? _value._bannedUserIds
+          : bannedUserIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      activityScore: null == activityScore
+          ? _value.activityScore
+          : activityScore // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
@@ -481,13 +510,16 @@ class _$HubImpl implements _Hub {
       final Map<String, double> managerRatings = const {},
       this.paymentLink,
       this.gameCount,
-      @TimestampConverter() this.lastActivity})
+      @TimestampConverter() this.lastActivity,
+      final List<String> bannedUserIds = const [],
+      this.activityScore = 0})
       : _memberJoinDates = memberJoinDates,
         _settings = settings,
         _roles = roles,
         _permissions = permissions,
         _venueIds = venueIds,
-        _managerRatings = managerRatings;
+        _managerRatings = managerRatings,
+        _bannedUserIds = bannedUserIds;
 
   factory _$HubImpl.fromJson(Map<String, dynamic> json) =>
       _$$HubImplFromJson(json);
@@ -619,10 +651,27 @@ class _$HubImpl implements _Hub {
   @override
   @TimestampConverter()
   final DateTime? lastActivity;
+// Denormalized: Last activity time (updated by Cloud Functions)
+// Banned users - users banned from this hub
+  final List<String> _bannedUserIds;
+// Denormalized: Last activity time (updated by Cloud Functions)
+// Banned users - users banned from this hub
+  @override
+  @JsonKey()
+  List<String> get bannedUserIds {
+    if (_bannedUserIds is EqualUnmodifiableListView) return _bannedUserIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_bannedUserIds);
+  }
+
+// Activity score - measures hub activity (updated by Cloud Functions)
+  @override
+  @JsonKey()
+  final double activityScore;
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, bannedUserIds: $bannedUserIds, activityScore: $activityScore)';
   }
 
   @override
@@ -672,7 +721,11 @@ class _$HubImpl implements _Hub {
             (identical(other.gameCount, gameCount) ||
                 other.gameCount == gameCount) &&
             (identical(other.lastActivity, lastActivity) ||
-                other.lastActivity == lastActivity));
+                other.lastActivity == lastActivity) &&
+            const DeepCollectionEquality()
+                .equals(other._bannedUserIds, _bannedUserIds) &&
+            (identical(other.activityScore, activityScore) ||
+                other.activityScore == activityScore));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -704,7 +757,9 @@ class _$HubImpl implements _Hub {
         const DeepCollectionEquality().hash(_managerRatings),
         paymentLink,
         gameCount,
-        lastActivity
+        lastActivity,
+        const DeepCollectionEquality().hash(_bannedUserIds),
+        activityScore
       ]);
 
   /// Create a copy of Hub
@@ -750,7 +805,9 @@ abstract class _Hub implements Hub {
       final Map<String, double> managerRatings,
       final String? paymentLink,
       final int? gameCount,
-      @TimestampConverter() final DateTime? lastActivity}) = _$HubImpl;
+      @TimestampConverter() final DateTime? lastActivity,
+      final List<String> bannedUserIds,
+      final double activityScore}) = _$HubImpl;
 
   factory _Hub.fromJson(Map<String, dynamic> json) = _$HubImpl.fromJson;
 
@@ -820,7 +877,14 @@ abstract class _Hub implements Hub {
       get gameCount; // Denormalized: Total games created (updated by onGameCreated)
   @override
   @TimestampConverter()
-  DateTime? get lastActivity;
+  DateTime?
+      get lastActivity; // Denormalized: Last activity time (updated by Cloud Functions)
+// Banned users - users banned from this hub
+  @override
+  List<String>
+      get bannedUserIds; // Activity score - measures hub activity (updated by Cloud Functions)
+  @override
+  double get activityScore;
 
   /// Create a copy of Hub
   /// with the given fields replaced by the non-null parameter values.

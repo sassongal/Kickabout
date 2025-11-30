@@ -111,7 +111,14 @@ mixin _$Game {
       throw _privateConstructorUsedError; // Count of confirmed players (denormalized)
   bool get isFull =>
       throw _privateConstructorUsedError; // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
-  int? get maxParticipants => throw _privateConstructorUsedError;
+  int? get maxParticipants =>
+      throw _privateConstructorUsedError; // Maximum number of participants (for games created from events)
+// Attendance confirmation settings
+  bool get enableAttendanceReminder =>
+      throw _privateConstructorUsedError; // Organizer can choose to send 2h reminders
+  bool? get reminderSent2Hours =>
+      throw _privateConstructorUsedError; // Whether reminder was already sent (set by Cloud Function)
+  DateTime? get reminderSent2HoursAt => throw _privateConstructorUsedError;
 
   /// Serializes this Game to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -167,7 +174,10 @@ abstract class $GameCopyWith<$Res> {
       List<String> confirmedPlayerIds,
       int confirmedPlayerCount,
       bool isFull,
-      int? maxParticipants});
+      int? maxParticipants,
+      bool enableAttendanceReminder,
+      bool? reminderSent2Hours,
+      DateTime? reminderSent2HoursAt});
 }
 
 /// @nodoc
@@ -225,6 +235,9 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? confirmedPlayerCount = null,
     Object? isFull = null,
     Object? maxParticipants = freezed,
+    Object? enableAttendanceReminder = null,
+    Object? reminderSent2Hours = freezed,
+    Object? reminderSent2HoursAt = freezed,
   }) {
     return _then(_value.copyWith(
       gameId: null == gameId
@@ -387,6 +400,18 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.maxParticipants
           : maxParticipants // ignore: cast_nullable_to_non_nullable
               as int?,
+      enableAttendanceReminder: null == enableAttendanceReminder
+          ? _value.enableAttendanceReminder
+          : enableAttendanceReminder // ignore: cast_nullable_to_non_nullable
+              as bool,
+      reminderSent2Hours: freezed == reminderSent2Hours
+          ? _value.reminderSent2Hours
+          : reminderSent2Hours // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      reminderSent2HoursAt: freezed == reminderSent2HoursAt
+          ? _value.reminderSent2HoursAt
+          : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -438,7 +463,10 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       List<String> confirmedPlayerIds,
       int confirmedPlayerCount,
       bool isFull,
-      int? maxParticipants});
+      int? maxParticipants,
+      bool enableAttendanceReminder,
+      bool? reminderSent2Hours,
+      DateTime? reminderSent2HoursAt});
 }
 
 /// @nodoc
@@ -493,6 +521,9 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? confirmedPlayerCount = null,
     Object? isFull = null,
     Object? maxParticipants = freezed,
+    Object? enableAttendanceReminder = null,
+    Object? reminderSent2Hours = freezed,
+    Object? reminderSent2HoursAt = freezed,
   }) {
     return _then(_$GameImpl(
       gameId: null == gameId
@@ -655,6 +686,18 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.maxParticipants
           : maxParticipants // ignore: cast_nullable_to_non_nullable
               as int?,
+      enableAttendanceReminder: null == enableAttendanceReminder
+          ? _value.enableAttendanceReminder
+          : enableAttendanceReminder // ignore: cast_nullable_to_non_nullable
+              as bool,
+      reminderSent2Hours: freezed == reminderSent2Hours
+          ? _value.reminderSent2Hours
+          : reminderSent2Hours // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      reminderSent2HoursAt: freezed == reminderSent2HoursAt
+          ? _value.reminderSent2HoursAt
+          : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -702,7 +745,10 @@ class _$GameImpl implements _Game {
       final List<String> confirmedPlayerIds = const [],
       this.confirmedPlayerCount = 0,
       this.isFull = false,
-      this.maxParticipants})
+      this.maxParticipants,
+      this.enableAttendanceReminder = true,
+      this.reminderSent2Hours,
+      this.reminderSent2HoursAt})
       : _photoUrls = photoUrls,
         _teams = teams,
         _matches = matches,
@@ -915,10 +961,21 @@ class _$GameImpl implements _Game {
 // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
   @override
   final int? maxParticipants;
+// Maximum number of participants (for games created from events)
+// Attendance confirmation settings
+  @override
+  @JsonKey()
+  final bool enableAttendanceReminder;
+// Organizer can choose to send 2h reminders
+  @override
+  final bool? reminderSent2Hours;
+// Whether reminder was already sent (set by Cloud Function)
+  @override
+  final DateTime? reminderSent2HoursAt;
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt)';
   }
 
   @override
@@ -994,7 +1051,14 @@ class _$GameImpl implements _Game {
                 other.confirmedPlayerCount == confirmedPlayerCount) &&
             (identical(other.isFull, isFull) || other.isFull == isFull) &&
             (identical(other.maxParticipants, maxParticipants) ||
-                other.maxParticipants == maxParticipants));
+                other.maxParticipants == maxParticipants) &&
+            (identical(
+                    other.enableAttendanceReminder, enableAttendanceReminder) ||
+                other.enableAttendanceReminder == enableAttendanceReminder) &&
+            (identical(other.reminderSent2Hours, reminderSent2Hours) ||
+                other.reminderSent2Hours == reminderSent2Hours) &&
+            (identical(other.reminderSent2HoursAt, reminderSent2HoursAt) ||
+                other.reminderSent2HoursAt == reminderSent2HoursAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1040,7 +1104,10 @@ class _$GameImpl implements _Game {
         const DeepCollectionEquality().hash(_confirmedPlayerIds),
         confirmedPlayerCount,
         isFull,
-        maxParticipants
+        maxParticipants,
+        enableAttendanceReminder,
+        reminderSent2Hours,
+        reminderSent2HoursAt
       ]);
 
   /// Create a copy of Game
@@ -1100,7 +1167,10 @@ abstract class _Game implements Game {
       final List<String> confirmedPlayerIds,
       final int confirmedPlayerCount,
       final bool isFull,
-      final int? maxParticipants}) = _$GameImpl;
+      final int? maxParticipants,
+      final bool enableAttendanceReminder,
+      final bool? reminderSent2Hours,
+      final DateTime? reminderSent2HoursAt}) = _$GameImpl;
 
   factory _Game.fromJson(Map<String, dynamic> json) = _$GameImpl.fromJson;
 
@@ -1219,7 +1289,17 @@ abstract class _Game implements Game {
   bool
       get isFull; // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
   @override
-  int? get maxParticipants;
+  int?
+      get maxParticipants; // Maximum number of participants (for games created from events)
+// Attendance confirmation settings
+  @override
+  bool
+      get enableAttendanceReminder; // Organizer can choose to send 2h reminders
+  @override
+  bool?
+      get reminderSent2Hours; // Whether reminder was already sent (set by Cloud Function)
+  @override
+  DateTime? get reminderSent2HoursAt;
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.

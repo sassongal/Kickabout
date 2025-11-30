@@ -164,6 +164,13 @@ class DeepLinkService {
           }
           break;
 
+        case 'game_reminder_2h':
+          final gameId = data['gameId'] as String?;
+          if (gameId != null) {
+            _router!.go('/games/$gameId/confirm-attendance');
+          }
+          break;
+
         default:
           debugPrint('Unknown notification type: $type');
       }

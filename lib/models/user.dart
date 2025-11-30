@@ -81,6 +81,8 @@ class User with _$User {
       'new_game': true,
     })
     Map<String, bool> notificationPreferences,
+    // Blocked users - users this user has blocked
+    @Default([]) List<String> blockedUserIds,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

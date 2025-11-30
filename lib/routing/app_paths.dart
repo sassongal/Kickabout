@@ -46,6 +46,10 @@ class AppPaths {
   static const String privacySettings = '/profile/:uid/privacy';
   static const String settings = '/profile/:uid/settings';
   static const String notificationSettings = '/profile/:uid/notifications';
+  static const String blockedUsers = '/profile/:uid/blocked';
+  
+  // Hub Management
+  static const String bannedUsers = '/hubs/:id/banned';
 
   // Social
   static const String notifications = '/notifications';

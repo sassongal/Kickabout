@@ -78,6 +78,12 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
           (json['confirmedPlayerCount'] as num?)?.toInt() ?? 0,
       isFull: json['isFull'] as bool? ?? false,
       maxParticipants: (json['maxParticipants'] as num?)?.toInt(),
+      enableAttendanceReminder:
+          json['enableAttendanceReminder'] as bool? ?? true,
+      reminderSent2Hours: json['reminderSent2Hours'] as bool?,
+      reminderSent2HoursAt: json['reminderSent2HoursAt'] == null
+          ? null
+          : DateTime.parse(json['reminderSent2HoursAt'] as String),
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -124,4 +130,7 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'confirmedPlayerCount': instance.confirmedPlayerCount,
       'isFull': instance.isFull,
       'maxParticipants': instance.maxParticipants,
+      'enableAttendanceReminder': instance.enableAttendanceReminder,
+      'reminderSent2Hours': instance.reminderSent2Hours,
+      'reminderSent2HoursAt': instance.reminderSent2HoursAt?.toIso8601String(),
     };

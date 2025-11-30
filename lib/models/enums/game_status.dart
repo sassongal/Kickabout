@@ -4,7 +4,8 @@ enum GameStatus {
   teamsFormed,
   inProgress,
   completed,
-  statsInput;
+  statsInput,
+  archivedNotPlayed; // Game was scheduled but never started (auto-closed after 3h)
 
   /// Convert to Firestore string
   String toFirestore() => name;

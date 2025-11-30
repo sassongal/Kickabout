@@ -76,7 +76,8 @@ mixin _$User {
   Map<String, bool> get privacySettings =>
       throw _privateConstructorUsedError; // Notification preferences - control which notifications user wants to receive
   Map<String, bool> get notificationPreferences =>
-      throw _privateConstructorUsedError;
+      throw _privateConstructorUsedError; // Blocked users - users this user has blocked
+  List<String> get blockedUserIds => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -126,7 +127,8 @@ abstract class $UserCopyWith<$Res> {
       int goals,
       int assists,
       Map<String, bool> privacySettings,
-      Map<String, bool> notificationPreferences});
+      Map<String, bool> notificationPreferences,
+      List<String> blockedUserIds});
 }
 
 /// @nodoc
@@ -178,6 +180,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? assists = null,
     Object? privacySettings = null,
     Object? notificationPreferences = null,
+    Object? blockedUserIds = null,
   }) {
     return _then(_value.copyWith(
       uid: null == uid
@@ -316,6 +319,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.notificationPreferences
           : notificationPreferences // ignore: cast_nullable_to_non_nullable
               as Map<String, bool>,
+      blockedUserIds: null == blockedUserIds
+          ? _value.blockedUserIds
+          : blockedUserIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ) as $Val);
   }
 }
@@ -361,7 +368,8 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       int goals,
       int assists,
       Map<String, bool> privacySettings,
-      Map<String, bool> notificationPreferences});
+      Map<String, bool> notificationPreferences,
+      List<String> blockedUserIds});
 }
 
 /// @nodoc
@@ -410,6 +418,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? assists = null,
     Object? privacySettings = null,
     Object? notificationPreferences = null,
+    Object? blockedUserIds = null,
   }) {
     return _then(_$UserImpl(
       uid: null == uid
@@ -548,6 +557,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value._notificationPreferences
           : notificationPreferences // ignore: cast_nullable_to_non_nullable
               as Map<String, bool>,
+      blockedUserIds: null == blockedUserIds
+          ? _value._blockedUserIds
+          : blockedUserIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }
@@ -606,10 +619,12 @@ class _$UserImpl implements _User {
         'hub_chat': true,
         'new_comment': true,
         'new_game': true
-      }})
+      },
+      final List<String> blockedUserIds = const []})
       : _hubIds = hubIds,
         _privacySettings = privacySettings,
-        _notificationPreferences = notificationPreferences;
+        _notificationPreferences = notificationPreferences,
+        _blockedUserIds = blockedUserIds;
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserImplFromJson(json);
@@ -742,9 +757,20 @@ class _$UserImpl implements _User {
     return EqualUnmodifiableMapView(_notificationPreferences);
   }
 
+// Blocked users - users this user has blocked
+  final List<String> _blockedUserIds;
+// Blocked users - users this user has blocked
+  @override
+  @JsonKey()
+  List<String> get blockedUserIds {
+    if (_blockedUserIds is EqualUnmodifiableListView) return _blockedUserIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_blockedUserIds);
+  }
+
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, notificationPreferences: $notificationPreferences)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, notificationPreferences: $notificationPreferences, blockedUserIds: $blockedUserIds)';
   }
 
   @override
@@ -807,7 +833,9 @@ class _$UserImpl implements _User {
             const DeepCollectionEquality()
                 .equals(other._privacySettings, _privacySettings) &&
             const DeepCollectionEquality().equals(
-                other._notificationPreferences, _notificationPreferences));
+                other._notificationPreferences, _notificationPreferences) &&
+            const DeepCollectionEquality()
+                .equals(other._blockedUserIds, _blockedUserIds));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -847,7 +875,8 @@ class _$UserImpl implements _User {
         goals,
         assists,
         const DeepCollectionEquality().hash(_privacySettings),
-        const DeepCollectionEquality().hash(_notificationPreferences)
+        const DeepCollectionEquality().hash(_notificationPreferences),
+        const DeepCollectionEquality().hash(_blockedUserIds)
       ]);
 
   /// Create a copy of User
@@ -901,7 +930,8 @@ abstract class _User implements User {
       final int goals,
       final int assists,
       final Map<String, bool> privacySettings,
-      final Map<String, bool> notificationPreferences}) = _$UserImpl;
+      final Map<String, bool> notificationPreferences,
+      final List<String> blockedUserIds}) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
 
@@ -985,7 +1015,10 @@ abstract class _User implements User {
   Map<String, bool>
       get privacySettings; // Notification preferences - control which notifications user wants to receive
   @override
-  Map<String, bool> get notificationPreferences;
+  Map<String, bool>
+      get notificationPreferences; // Blocked users - users this user has blocked
+  @override
+  List<String> get blockedUserIds;
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.

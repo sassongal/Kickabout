@@ -40,6 +40,8 @@ class HubEvent with _$HubEvent {
         notifyMembers, // Send notification to all hub members when event is created
     @Default(false)
     bool showInCommunityFeed, // Show this event in the community activity feed
+    // Attendance confirmation settings
+    @Default(true) bool enableAttendanceReminder, // Organizer can choose to send 2h reminders
     // Teams planned for this event (manager-only, saved when using TeamMaker)
     @Default([])
     List<Team> teams, // Teams planned for this event (manager-only)

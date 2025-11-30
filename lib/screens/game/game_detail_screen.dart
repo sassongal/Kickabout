@@ -413,6 +413,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         return 'הושלם';
       case GameStatus.statsInput:
         return 'הזנת סטטיסטיקות';
+      case GameStatus.archivedNotPlayed:
+        return 'ארכיון - לא שוחק';
     }
   }
 
@@ -481,6 +483,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           game,
           role,
           isCreator,
+          confirmedSignups,
+          usersRepo,
+        );
+
+      case GameStatus.archivedNotPlayed:
+        return _buildCompletedState(
+          context,
+          game,
+          role,
           confirmedSignups,
           usersRepo,
         );

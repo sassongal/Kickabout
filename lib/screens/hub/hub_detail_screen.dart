@@ -336,6 +336,16 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                 );
                                               },
                                             ),
+                                            if (hubPermissions
+                                                .canManageMembers())
+                                              IconButton(
+                                                icon: const Icon(Icons.gpp_bad,
+                                                    size: 20),
+                                                tooltip: 'משתמשים מנופים',
+                                                onPressed: () => context.push(
+                                                    '/hubs/${hub.hubId}/banned'),
+                                                color: Colors.red,
+                                              ),
                                             IconButton(
                                               icon: const Icon(Icons.share,
                                                   size: 20),

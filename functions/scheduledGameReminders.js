@@ -53,14 +53,26 @@ exports.scheduledGameReminders = onSchedule(
         const game = gameDoc.data();
 
         try {
+          // Check if organizer enabled attendance reminders
+          if (game.enableAttendanceReminder === false) {
+            info(`Attendance reminders disabled for game ${gameId}`);
+            return;
+          }
+
           // Check if reminder already sent (prevent duplicates)
           if (game.reminderSent2Hours) {
             info(`Reminder already sent for game ${gameId}`);
             return;
           }
 
-          // Get participants (signed up players)
-          const participants = game.participants || [];
+          // Get participants (signed up players) from signups subcollection
+          const signupsSnapshot = await db
+            .collection('games')
+            .doc(gameId)
+            .collection('signups')
+            .get();
+          
+          const participants = signupsSnapshot.docs.map(doc => doc.id);
           if (participants.length === 0) {
             info(`No participants for game ${gameId}`);
             return;

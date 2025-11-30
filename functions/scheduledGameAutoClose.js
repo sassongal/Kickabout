@@ -37,8 +37,8 @@ exports.scheduledGameAutoClose = onSchedule(
       
       const pendingGamesSnapshot = await db
         .collection('games')
-        .where('status', '==', 'pending')
-        .where('scheduledAt', '<=', threeHoursAgo)
+        .where('status', '==', 'teamSelection')
+        .where('gameDate', '<=', threeHoursAgo)
         .limit(50)
         .get();
 
@@ -49,9 +49,9 @@ exports.scheduledGameAutoClose = onSchedule(
         const game = gameDoc.data();
         
         try {
-          // Update game status to archived_not_played
+          // Update game status to archivedNotPlayed
           await gameDoc.ref.update({
-            status: 'archived_not_played',
+            status: 'archivedNotPlayed',
             updatedAt: FieldValue.serverTimestamp(),
             autoClosedAt: FieldValue.serverTimestamp(),
             autoCloseReason: 'not_started_within_3h',
@@ -82,7 +82,7 @@ exports.scheduledGameAutoClose = onSchedule(
       
       const activeGamesSnapshot = await db
         .collection('games')
-        .where('status', '==', 'active')
+        .where('status', '==', 'inProgress')
         .where('startedAt', '<=', fiveHoursAgo)
         .limit(50)
         .get();
@@ -106,9 +106,9 @@ exports.scheduledGameAutoClose = onSchedule(
           info(`Auto-completed active game ${gameId} (not ended within 5h)`);
 
           // Notify organizer to record results
-          if (game.organizerId) {
+          if (game.createdBy) {
             await notifyGameAutoClose(
-              game.organizerId,
+              game.createdBy,
               gameId,
               game.hubId,
               'המשחק שלך הסתיים אוטומטית. נא לרשום תוצאות',

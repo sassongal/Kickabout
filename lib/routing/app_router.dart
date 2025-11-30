@@ -27,6 +27,8 @@ import 'package:kattrick/screens/game/create_game_screen.dart'
     deferred as create_game_screen;
 import 'package:kattrick/screens/game/game_detail_screen.dart'
     deferred as game_detail_screen;
+import 'package:kattrick/screens/game/confirm_attendance_screen.dart';
+import 'package:kattrick/screens/game/attendance_monitoring_screen.dart';
 import 'package:kattrick/screens/game/team_maker_screen.dart'
     deferred as team_maker_screen;
 import 'package:kattrick/screens/game/log_game_screen.dart'
@@ -41,6 +43,7 @@ import 'package:kattrick/screens/profile/settings_screen.dart'
     deferred as settings_screen;
 import 'package:kattrick/screens/profile/notification_settings_screen.dart'
     deferred as notification_settings_screen;
+import 'package:kattrick/screens/profile/blocked_users_screen.dart';
 import 'package:kattrick/screens/profile/performance_breakdown_screen.dart'
     deferred as performance_breakdown_screen;
 import 'package:kattrick/screens/profile/hub_stats_screen.dart'
@@ -836,6 +839,22 @@ final routerProvider = Provider<GoRouter>((ref) {
                 }),
             routes: [
               GoRoute(
+                path: 'confirm-attendance',
+                name: 'confirmAttendance',
+                builder: (context, state) {
+                  final gameId = state.pathParameters['id']!;
+                  return ConfirmAttendanceScreen(gameId: gameId);
+                },
+              ),
+              GoRoute(
+                path: 'attendance',
+                name: 'attendanceMonitoring',
+                builder: (context, state) {
+                  final gameId = state.pathParameters['id']!;
+                  return AttendanceMonitoringScreen(gameId: gameId);
+                },
+              ),
+              GoRoute(
                 path: 'team-maker',
                 name: 'teamMaker',
                 builder: (context, state) => LazyRouteLoader(
@@ -927,6 +946,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                     userId: userId,
                   );
                 }),
+          ),
+          GoRoute(
+            path: 'blocked',
+            name: 'blockedUsers',
+            builder: (context, state) => const BlockedUsersScreen(),
           ),
           GoRoute(
             path: 'performance',

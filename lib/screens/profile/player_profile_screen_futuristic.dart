@@ -86,16 +86,59 @@ class _PlayerProfileScreenFuturisticState
 
     return FuturisticScaffold(
       title: 'פרופיל שחקן',
-      actions: isOwnProfile && !isAnonymous
-          ? [
-              IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () =>
-                    context.push('/profile/${widget.playerId}/settings'),
-                tooltip: 'הגדרות',
-              ),
-            ]
-          : null,
+      actions: [
+        if (isOwnProfile && !isAnonymous)
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () =>
+                context.push('/profile/${widget.playerId}/settings'),
+            tooltip: 'הגדרות',
+          ),
+        if (!isOwnProfile && !isAnonymous && currentUserId != null)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) async {
+              if (value == 'block') {
+                await _handleBlockUser(context, currentUserId!, widget.playerId);
+              } else if (value == 'unblock') {
+                await _handleUnblockUser(
+                    context, currentUserId!, widget.playerId);
+              }
+            },
+            itemBuilder: (context) {
+              return FutureBuilder<bool>(
+                future: usersRepo.isUserBlocked(currentUserId!, widget.playerId),
+                builder: (context, snapshot) {
+                  final isBlocked = snapshot.data ?? false;
+                  return [
+                    if (isBlocked)
+                      const PopupMenuItem(
+                        value: 'unblock',
+                        child: Row(
+                          children: [
+                            Icon(Icons.block, color: Colors.orange),
+                            SizedBox(width: 8),
+                            Text('בטל חסימה'),
+                          ],
+                        ),
+                      )
+                    else
+                      const PopupMenuItem(
+                        value: 'block',
+                        child: Row(
+                          children: [
+                            Icon(Icons.block, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('חסום משתמש'),
+                          ],
+                        ),
+                      ),
+                  ];
+                },
+              );
+            },
+          ),
+      ],
       body: StreamBuilder<User?>(
         stream: userStream,
         builder: (context, userSnapshot) {
@@ -1175,4 +1218,101 @@ class _PlayerProfileScreenFuturisticState
     );
   }
 
+  Future<void> _handleBlockUser(
+      BuildContext context, String currentUserId, String userIdToBlock) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('חסימת משתמש'),
+        content: const Text(
+          'האם אתה בטוח שברצונך לחסום משתמש זה? המשתמש לא יוכל לראות את הפרופיל שלך ולשלוח לך הודעות.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('חסום', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final usersRepo = ref.read(usersRepositoryProvider);
+      await usersRepo.blockUser(currentUserId, userIdToBlock);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('המשתמש נחסם בהצלחה'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh the screen
+        setState(() {});
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה בחסימת משתמש: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleUnblockUser(
+      BuildContext context, String currentUserId, String userIdToUnblock) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ביטול חסימה'),
+        content: const Text('האם אתה בטוח שברצונך לבטל את החסימה?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('אישור'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final usersRepo = ref.read(usersRepositoryProvider);
+      await usersRepo.unblockUser(currentUserId, userIdToUnblock);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('החסימה בוטלה בהצלחה'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh the screen
+        setState(() {});
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה בביטול חסימה: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 }

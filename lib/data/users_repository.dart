@@ -344,4 +344,51 @@ class UsersRepository {
       return [];
     }
   }
+
+  /// Block a user
+  Future<void> blockUser(String currentUserId, String userToBlockId) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+    try {
+      await _firestore.collection(FirestorePaths.users()).doc(currentUserId).update({
+        'blockedUserIds': FieldValue.arrayUnion([userToBlockId]),
+      });
+    } catch (e) {
+      debugPrint('Error blocking user: $e');
+      rethrow;
+    }
+  }
+
+  /// Unblock a user
+  Future<void> unblockUser(String currentUserId, String userToUnblockId) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+    try {
+      await _firestore.collection(FirestorePaths.users()).doc(currentUserId).update({
+        'blockedUserIds': FieldValue.arrayRemove([userToUnblockId]),
+      });
+    } catch (e) {
+      debugPrint('Error unblocking user: $e');
+      rethrow;
+    }
+  }
+
+  /// Get blocked users for a given user
+  Future<List<User>> getBlockedUsers(String userId) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      final user = await getUser(userId);
+      if (user == null || user.blockedUserIds.isEmpty) {
+        return [];
+      }
+
+      return await getUsers(user.blockedUserIds);
+    } catch (e) {
+      debugPrint('Error getting blocked users: $e');
+      return [];
+    }
+  }
 }

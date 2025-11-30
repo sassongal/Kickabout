@@ -38,6 +38,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   int _maxParticipants = 15; // Default: 15, required
   bool _notifyMembers = false;
   bool _showInCommunityFeed = false;
+  bool _enableAttendanceReminder = true;
 
   bool _isLoading = false;
   Hub? _hub;
@@ -226,6 +227,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
         maxParticipants: _maxParticipants,
         notifyMembers: _notifyMembers,
         showInCommunityFeed: _showInCommunityFeed,
+        enableAttendanceReminder: _enableAttendanceReminder,
       );
 
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
@@ -510,6 +512,20 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
                 onChanged: (value) {
                   setState(() {
                     _showInCommunityFeed = value ?? false;
+                  });
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              const SizedBox(height: 8),
+              // Attendance reminder option
+              CheckboxListTile(
+                title: const Text('שלח תזכורת הגעה'),
+                subtitle: const Text(
+                    'שלח תזכורת למשתתפים 2 שעות לפני האירוע לאישור הגעה'),
+                value: _enableAttendanceReminder,
+                onChanged: (value) {
+                  setState(() {
+                    _enableAttendanceReminder = value ?? true;
                   });
                 },
                 controlAffinity: ListTileControlAffinity.leading,

@@ -68,6 +68,10 @@ class Game with _$Game {
     @Default(0) int confirmedPlayerCount, // Count of confirmed players (denormalized)
     @Default(false) bool isFull, // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
     int? maxParticipants, // Maximum number of participants (for games created from events)
+    // Attendance confirmation settings
+    @Default(true) bool enableAttendanceReminder, // Organizer can choose to send 2h reminders
+    bool? reminderSent2Hours, // Whether reminder was already sent (set by Cloud Function)
+    DateTime? reminderSent2HoursAt, // When reminder was sent
   }) = _Game;
 
   factory Game.fromJson(Map<String, dynamic> json) => _$GameFromJson(json);

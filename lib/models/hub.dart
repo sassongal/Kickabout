@@ -61,6 +61,10 @@ class Hub with _$Hub {
     @TimestampConverter()
     DateTime?
         lastActivity, // Denormalized: Last activity time (updated by Cloud Functions)
+    // Banned users - users banned from this hub
+    @Default([]) List<String> bannedUserIds,
+    // Activity score - measures hub activity (updated by Cloud Functions)
+    @Default(0) double activityScore,
   }) = _Hub;
 
   factory Hub.fromJson(Map<String, dynamic> json) => _$HubFromJson(json);

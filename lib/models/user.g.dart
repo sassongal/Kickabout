@@ -70,6 +70,10 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
                 'new_comment': true,
                 'new_game': true
               },
+      blockedUserIds: (json['blockedUserIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
@@ -109,6 +113,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'assists': instance.assists,
       'privacySettings': instance.privacySettings,
       'notificationPreferences': instance.notificationPreferences,
+      'blockedUserIds': instance.blockedUserIds,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

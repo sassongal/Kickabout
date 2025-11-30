@@ -42,6 +42,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   // Game rules fields
   int _durationMinutes = 8;
   final _gameEndConditionController = TextEditingController();
+  // Attendance reminder setting
+  bool _enableAttendanceReminder = true;
 
   @override
   void initState() {
@@ -234,6 +236,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
             ? _gameEndConditionController.text.trim()
             : null,
         region: hubRegion, // Copy region from hub
+        enableAttendanceReminder: _enableAttendanceReminder,
       );
 
       final gameId = await gamesRepo.createGame(game);
@@ -667,6 +670,31 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                           helperText: 'תיאור תנאי סיום המשחק',
                         ),
                         maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Attendance reminder option
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        title: const Text('שלח תזכורת הגעה'),
+                        subtitle: const Text(
+                          'שלח תזכורת למשתתפים 2 שעות לפני המשחק לאישור הגעה',
+                        ),
+                        value: _enableAttendanceReminder,
+                        onChanged: (value) {
+                          setState(() {
+                            _enableAttendanceReminder = value;
+                          });
+                        },
                       ),
                     ],
                   ),

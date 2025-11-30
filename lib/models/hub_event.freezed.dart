@@ -58,6 +58,9 @@ mixin _$HubEvent {
       throw _privateConstructorUsedError; // Send notification to all hub members when event is created
   bool get showInCommunityFeed =>
       throw _privateConstructorUsedError; // Show this event in the community activity feed
+// Attendance confirmation settings
+  bool get enableAttendanceReminder =>
+      throw _privateConstructorUsedError; // Organizer can choose to send 2h reminders
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   List<Team> get teams =>
       throw _privateConstructorUsedError; // Teams planned for this event (manager-only)
@@ -107,6 +110,7 @@ abstract class $HubEventCopyWith<$Res> {
       int maxParticipants,
       bool notifyMembers,
       bool showInCommunityFeed,
+      bool enableAttendanceReminder,
       List<Team> teams,
       List<MatchResult> matches,
       Map<String, int> aggregateWins,
@@ -150,6 +154,7 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
     Object? maxParticipants = null,
     Object? notifyMembers = null,
     Object? showInCommunityFeed = null,
+    Object? enableAttendanceReminder = null,
     Object? teams = null,
     Object? matches = null,
     Object? aggregateWins = null,
@@ -244,6 +249,10 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
           ? _value.showInCommunityFeed
           : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
               as bool,
+      enableAttendanceReminder: null == enableAttendanceReminder
+          ? _value.enableAttendanceReminder
+          : enableAttendanceReminder // ignore: cast_nullable_to_non_nullable
+              as bool,
       teams: null == teams
           ? _value.teams
           : teams // ignore: cast_nullable_to_non_nullable
@@ -295,6 +304,7 @@ abstract class _$$HubEventImplCopyWith<$Res>
       int maxParticipants,
       bool notifyMembers,
       bool showInCommunityFeed,
+      bool enableAttendanceReminder,
       List<Team> teams,
       List<MatchResult> matches,
       Map<String, int> aggregateWins,
@@ -336,6 +346,7 @@ class __$$HubEventImplCopyWithImpl<$Res>
     Object? maxParticipants = null,
     Object? notifyMembers = null,
     Object? showInCommunityFeed = null,
+    Object? enableAttendanceReminder = null,
     Object? teams = null,
     Object? matches = null,
     Object? aggregateWins = null,
@@ -430,6 +441,10 @@ class __$$HubEventImplCopyWithImpl<$Res>
           ? _value.showInCommunityFeed
           : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
               as bool,
+      enableAttendanceReminder: null == enableAttendanceReminder
+          ? _value.enableAttendanceReminder
+          : enableAttendanceReminder // ignore: cast_nullable_to_non_nullable
+              as bool,
       teams: null == teams
           ? _value._teams
           : teams // ignore: cast_nullable_to_non_nullable
@@ -476,6 +491,7 @@ class _$HubEventImpl implements _HubEvent {
       this.maxParticipants = 15,
       this.notifyMembers = false,
       this.showInCommunityFeed = false,
+      this.enableAttendanceReminder = true,
       final List<Team> teams = const [],
       final List<MatchResult> matches = const [],
       final Map<String, int> aggregateWins = const {},
@@ -562,9 +578,14 @@ class _$HubEventImpl implements _HubEvent {
   @JsonKey()
   final bool showInCommunityFeed;
 // Show this event in the community activity feed
+// Attendance confirmation settings
+  @override
+  @JsonKey()
+  final bool enableAttendanceReminder;
+// Organizer can choose to send 2h reminders
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   final List<Team> _teams;
-// Show this event in the community activity feed
+// Organizer can choose to send 2h reminders
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   @override
   @JsonKey()
@@ -605,7 +626,7 @@ class _$HubEventImpl implements _HubEvent {
 
   @override
   String toString() {
-    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, isStarted: $isStarted, startedAt: $startedAt, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, isStarted: $isStarted, startedAt: $startedAt, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
   }
 
   @override
@@ -651,6 +672,9 @@ class _$HubEventImpl implements _HubEvent {
                 other.notifyMembers == notifyMembers) &&
             (identical(other.showInCommunityFeed, showInCommunityFeed) ||
                 other.showInCommunityFeed == showInCommunityFeed) &&
+            (identical(
+                    other.enableAttendanceReminder, enableAttendanceReminder) ||
+                other.enableAttendanceReminder == enableAttendanceReminder) &&
             const DeepCollectionEquality().equals(other._teams, _teams) &&
             const DeepCollectionEquality().equals(other._matches, _matches) &&
             const DeepCollectionEquality()
@@ -684,6 +708,7 @@ class _$HubEventImpl implements _HubEvent {
         maxParticipants,
         notifyMembers,
         showInCommunityFeed,
+        enableAttendanceReminder,
         const DeepCollectionEquality().hash(_teams),
         const DeepCollectionEquality().hash(_matches),
         const DeepCollectionEquality().hash(_aggregateWins),
@@ -730,6 +755,7 @@ abstract class _HubEvent implements HubEvent {
       final int maxParticipants,
       final bool notifyMembers,
       final bool showInCommunityFeed,
+      final bool enableAttendanceReminder,
       final List<Team> teams,
       final List<MatchResult> matches,
       final Map<String, int> aggregateWins,
@@ -789,6 +815,10 @@ abstract class _HubEvent implements HubEvent {
   @override
   bool
       get showInCommunityFeed; // Show this event in the community activity feed
+// Attendance confirmation settings
+  @override
+  bool
+      get enableAttendanceReminder; // Organizer can choose to send 2h reminders
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   @override
   List<Team> get teams; // Teams planned for this event (manager-only)

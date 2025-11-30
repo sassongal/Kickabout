@@ -174,6 +174,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: 'נהל את הגדרות הפרטיות שלך',
                     onTap: () => context.push('/profile/${widget.userId}/privacy'),
                   ),
+                  const Divider(height: 1, color: FuturisticColors.surfaceVariant),
+                  _buildSettingTile(
+                    icon: Icons.block,
+                    title: 'משתמשים חסומים',
+                    subtitle: 'נהל את רשימת המשתמשים החסומים',
+                    onTap: () => context.push('/profile/${widget.userId}/blocked'),
+                  ),
                 ],
               ),
             ),
