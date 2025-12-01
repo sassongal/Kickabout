@@ -170,17 +170,8 @@ class _HomeScreenFuturisticFigmaState
                           ],
                         ),
                         onAvailabilityChanged: (value) async {
-                          if (currentUserId == null) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('יש להתחבר כדי לעדכן זמינות'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                            return;
-                          }
+                          // currentUserId is guaranteed to be non-null here (checked at line 48)
+                          if (!context.mounted) return;
                           try {
                             // Update availability status without triggering navigation
                             await ref.read(usersRepositoryProvider).updateUser(
@@ -370,45 +361,125 @@ class _HomeScreenFuturisticFigmaState
                     Row(
                       children: [
                         Expanded(
-                          child: StreamBuilder<List<Hub>>(
-                            stream: hubsRepo.watchHubsByCreator(currentUserId),
-                            builder: (context, snapshot) {
-                              final myHubs = snapshot.data ?? [];
-                              return FuturisticCard(
-                                onTap: () => _showMyHubs(context, myHubs),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        gradient:
-                                            FuturisticColors.primaryGradient,
-                                        borderRadius: BorderRadius.circular(12),
+                          child: Consumer(
+                            builder: (context, ref, child) {
+                              // FIX: Use provider with keepAlive instead of direct StreamBuilder
+                              final myHubsAsync = ref.watch(hubsByCreatorStreamProvider(currentUserId));
+                              return myHubsAsync.when(
+                                data: (myHubs) => FuturisticCard(
+                                  onTap: () => _showMyHubs(context, myHubs),
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient:
+                                              FuturisticColors.primaryGradient,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.group,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
                                       ),
-                                      child: const Icon(
-                                        Icons.group,
-                                        color: Colors.white,
-                                        size: 24,
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Hubs שפתחתי',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF212121),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Hubs שפתחתי',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF212121),
+                                      Text(
+                                        '${myHubs.length}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: const Color(0xFF757575),
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      '${myHubs.length}',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: const Color(0xFF757575),
+                                    ],
+                                  ),
+                                ),
+                                loading: () => FuturisticCard(
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient:
+                                              FuturisticColors.primaryGradient,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Hubs שפתחתי',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF212121),
+                                        ),
+                                      ),
+                                      Text(
+                                        '...',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: const Color(0xFF757575),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                error: (error, stack) => FuturisticCard(
+                                  onTap: () => _showMyHubs(context, []),
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient:
+                                              FuturisticColors.primaryGradient,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.error_outline,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Hubs שפתחתי',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF212121),
+                                        ),
+                                      ),
+                                      Text(
+                                        '0',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: const Color(0xFF757575),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },

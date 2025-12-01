@@ -4,6 +4,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { info, warn, error: logError } = require('firebase-functions/logger');
 const { checkRateLimit } = require('./rateLimit');
+const { getUserFCMTokens } = require('./src/utils');
 
 /**
  * Vote on a poll
@@ -268,23 +269,10 @@ exports.onPollCreated = onDocumentCreated(
         return;
       }
 
-      // Fetch FCM tokens in parallel
-      const tokenPromises = recipientIds.map(async (memberId) => {
-        const tokensSnapshot = await db
-          .collection('users')
-          .doc(memberId)
-          .collection('fcm_tokens')
-          .doc('tokens')
-          .get();
-
-        if (tokensSnapshot.exists) {
-          const data = tokensSnapshot.data();
-          return data.tokens || [];
-        }
-        return [];
-      });
-
-      const allTokensArrays = await Promise.all(tokenPromises);
+      // ✅ Fetch FCM tokens in parallel using helper
+      const allTokensArrays = await Promise.all(
+        recipientIds.map((memberId) => getUserFCMTokens(memberId))
+      );
       const tokens = allTokensArrays.flat();
 
       if (tokens.length === 0) {
@@ -420,23 +408,10 @@ async function sendPollResultsNotification(pollId, poll) {
     const hub = hubDoc.data();
     const memberIds = hub.memberIds || [];
 
-    // Fetch FCM tokens
-    const tokenPromises = memberIds.map(async (memberId) => {
-      const tokensSnapshot = await db
-        .collection('users')
-        .doc(memberId)
-        .collection('fcm_tokens')
-        .doc('tokens')
-        .get();
-
-      if (tokensSnapshot.exists) {
-        const data = tokensSnapshot.data();
-        return data.tokens || [];
-      }
-      return [];
-    });
-
-    const allTokensArrays = await Promise.all(tokenPromises);
+    // ✅ Fetch FCM tokens using helper
+    const allTokensArrays = await Promise.all(
+      memberIds.map((memberId) => getUserFCMTokens(memberId))
+    );
     const tokens = allTokensArrays.flat();
 
     if (tokens.length === 0) {

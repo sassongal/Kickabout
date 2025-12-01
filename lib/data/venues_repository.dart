@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/config/env.dart';
@@ -529,6 +530,7 @@ class VenuesRepository {
         lng = position.longitude;
       } catch (e) {
         // Ignore location errors, use default
+        debugPrint('⚠️ Could not get current location, using default: $e');
       }
 
       // 1. Search Firestore (concurrently)
@@ -544,40 +546,80 @@ class VenuesRepository {
 
       // 2. Search Google Places via Cloud Function (concurrently)
       // Use Cloud Function to avoid API key restrictions
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      final googleFuture = functions.httpsCallable('searchVenues').call({
-        'query': query,
-        'lat': lat,
-        'lng': lng,
-      }).then((result) {
-        final data = result.data as Map<String, dynamic>;
-        final results = data['results'] as List<dynamic>? ?? [];
-        return results.map((place) {
-          final geometry = place['geometry'] as Map<String, dynamic>?;
-          final location = geometry?['location'] as Map<String, dynamic>?;
-          return PlaceResult(
-            placeId: place['place_id'] as String,
-            name: place['name'] as String,
-            address: place['formatted_address'] as String?,
-            latitude: (location?['lat'] as num?)?.toDouble() ?? 0.0,
-            longitude: (location?['lng'] as num?)?.toDouble() ?? 0.0,
-            types: List<String>.from(place['types'] ?? []),
-            isPublic: true,
-          );
-        }).toList();
-      });
+      // Check authentication first
+      Future<List<PlaceResult>> googleFuture;
+      
+      try {
+        // Check if user is authenticated before calling Cloud Function
+        final auth = FirebaseAuth.instance;
+        if (auth.currentUser == null) {
+          debugPrint('⚠️ User not authenticated - skipping Google Places search');
+          googleFuture = Future.value(<PlaceResult>[]);
+        } else {
+          final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+          googleFuture = functions.httpsCallable('searchVenues').call({
+            'query': query,
+            'lat': lat,
+            'lng': lng,
+          }).then((result) {
+            final data = result.data as Map<String, dynamic>?;
+            if (data == null) {
+              debugPrint('⚠️ searchVenues returned null data');
+              return <PlaceResult>[];
+            }
+            
+            final results = data['results'] as List<dynamic>? ?? [];
+            debugPrint('✅ Found ${results.length} Google Places results for "$query"');
+            
+            return results.map((place) {
+              try {
+                final geometry = place['geometry'] as Map<String, dynamic>?;
+                final location = geometry?['location'] as Map<String, dynamic>?;
+                return PlaceResult(
+                  placeId: place['place_id'] as String? ?? '',
+                  name: place['name'] as String? ?? '',
+                  address: place['formatted_address'] as String?,
+                  latitude: (location?['lat'] as num?)?.toDouble() ?? 0.0,
+                  longitude: (location?['lng'] as num?)?.toDouble() ?? 0.0,
+                  types: List<String>.from(place['types'] ?? []),
+                  isPublic: true,
+                );
+              } catch (e) {
+                debugPrint('⚠️ Error parsing place result: $e');
+                return null;
+              }
+            }).whereType<PlaceResult>().toList();
+          }).catchError((error) {
+            // Better error handling
+            if (error is FirebaseFunctionsException) {
+              if (error.code == 'unauthenticated') {
+                debugPrint('❌ Authentication required for venue search');
+              } else if (error.code == 'resource-exhausted') {
+                debugPrint('❌ Rate limit exceeded for venue search');
+              } else {
+                debugPrint('❌ Firebase Functions error: ${error.code} - ${error.message}');
+              }
+            } else {
+              debugPrint('❌ Google Places search error: $error');
+            }
+            return <PlaceResult>[]; // Return empty list on error
+          });
+        }
+      } catch (e) {
+        debugPrint('❌ Error setting up Google Places search: $e');
+        googleFuture = Future.value(<PlaceResult>[]);
+      }
 
       // Wait for both results
       final results = await Future.wait([
         firestoreFuture,
-        googleFuture.catchError((error) {
-          debugPrint('Google Places search error: $error');
-          return <PlaceResult>[]; // Handle Google errors gracefully
-        }),
+        googleFuture,
       ]);
 
       final firestoreSnapshot = results[0] as QuerySnapshot;
       final googleResults = results[1] as List<PlaceResult>;
+
+      debugPrint('📊 Search results: ${firestoreSnapshot.docs.length} from Firestore, ${googleResults.length} from Google');
 
       final venues = <Venue>[];
       final existingGooglePlaceIds = <String>{};
@@ -592,6 +634,7 @@ class VenuesRepository {
             existingGooglePlaceIds.add(venue.googlePlaceId!);
           }
         } catch (e) {
+          debugPrint('⚠️ Error parsing Firestore venue: $e');
           // Skip invalid documents
         }
       }
@@ -608,8 +651,11 @@ class VenuesRepository {
         venues.add(place.toVenue(hubId: ''));
       }
 
+      debugPrint('✅ Returning ${venues.length} total venues for "$query"');
       return venues;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in searchVenuesCombined: $e');
+      debugPrint('Stack trace: $stackTrace');
       // If everything fails, return empty list
       return [];
     }

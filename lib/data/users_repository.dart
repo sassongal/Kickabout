@@ -391,4 +391,18 @@ class UsersRepository {
       return [];
     }
   }
+
+  /// Check if a user is blocked by another user
+  Future<bool> isUserBlocked(String currentUserId, String targetUserId) async {
+    if (!Env.isFirebaseAvailable) return false;
+
+    try {
+      final user = await getUser(currentUserId);
+      if (user == null) return false;
+      return user.blockedUserIds.contains(targetUserId);
+    } catch (e) {
+      debugPrint('Error checking if user is blocked: $e');
+      return false;
+    }
+  }
 }

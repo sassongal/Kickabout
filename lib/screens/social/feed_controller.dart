@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/data/feed_repository.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 
 part 'feed_controller.g.dart';

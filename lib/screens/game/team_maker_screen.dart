@@ -670,11 +670,40 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      user.displayName ?? user.name,
-                      style: FuturisticTypography.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            user.displayName ?? user.name,
+                            style: FuturisticTypography.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        // Social media icons (if enabled and links exist)
+                        if (user.showSocialLinks) ...[
+                          if (user.facebookProfileUrl != null &&
+                              user.facebookProfileUrl!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.facebook,
+                                size: 14,
+                                color: const Color(0xFF1877F2),
+                              ),
+                            ),
+                          if (user.instagramProfileUrl != null &&
+                              user.instagramProfileUrl!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.camera_alt,
+                                size: 14,
+                                color: const Color(0xFFE4405F),
+                              ),
+                            ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Row(

@@ -6,7 +6,6 @@ import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/models/hub_role.dart';
 
 /// Screen for managing banned users in a hub
 class BannedUsersScreen extends ConsumerStatefulWidget {
@@ -18,8 +17,7 @@ class BannedUsersScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<BannedUsersScreen> createState() =>
-      _BannedUsersScreenState();
+  ConsumerState<BannedUsersScreen> createState() => _BannedUsersScreenState();
 }
 
 class _BannedUsersScreenState extends ConsumerState<BannedUsersScreen> {
@@ -150,5 +148,3 @@ class _BannedUsersScreenState extends ConsumerState<BannedUsersScreen> {
     );
   }
 }
-
-

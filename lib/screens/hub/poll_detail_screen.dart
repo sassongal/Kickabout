@@ -69,7 +69,7 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
       });
     } on FirebaseFunctionsException catch (e) {
       if (!mounted) return;
-      
+
       String message = 'שגיאה בהצבעה';
       if (e.code == 'already-voted') {
         message = 'כבר הצבעת בסקר זה';
@@ -80,7 +80,7 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
       } else if (e.message != null) {
         message = e.message!;
       }
-      
+
       SnackbarHelper.showError(context, message);
     } catch (e) {
       if (!mounted) return;
@@ -93,8 +93,6 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
   }
 
   Widget _buildVotingInterface(Poll poll, String? userId) {
-    final summary = PollSummary.fromPoll(poll, userId: userId);
-
     switch (poll.type) {
       case PollType.singleChoice:
         return Column(
@@ -102,7 +100,8 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
             return RadioListTile<String>(
               title: Text(option.text),
               value: option.optionId,
-              groupValue: _selectedOptions.isEmpty ? null : _selectedOptions.first,
+              groupValue:
+                  _selectedOptions.isEmpty ? null : _selectedOptions.first,
               onChanged: poll.status == PollStatus.active
                   ? (value) {
                       setState(() {
@@ -274,7 +273,8 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pollStream = ref.watch(pollsRepositoryProvider).watchPoll(widget.pollId);
+    final pollStream =
+        ref.watch(pollsRepositoryProvider).watchPoll(widget.pollId);
     final userAsync = ref.watch(currentUserProvider);
     final user = userAsync.valueOrNull;
 
@@ -298,8 +298,8 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
 
           final poll = snapshot.data!;
           final summary = PollSummary.fromPoll(poll, userId: user?.uid);
-          final hasEnded = poll.endsAt != null &&
-              poll.endsAt!.isBefore(DateTime.now());
+          final hasEnded =
+              poll.endsAt != null && poll.endsAt!.isBefore(DateTime.now());
           final canVote = poll.status == PollStatus.active &&
               !hasEnded &&
               (!summary.hasVoted || poll.allowMultipleVotes);
@@ -409,4 +409,3 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
     );
   }
 }
-

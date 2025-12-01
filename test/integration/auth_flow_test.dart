@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:kickadoor/firebase_options.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/firebase_options.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Integration tests for authentication flow
@@ -44,9 +44,9 @@ void main() {
         expect(true, true); // Pass test but skip actual Firebase operations
         return;
       }
-      
+
       final authService = container.read(authServiceProvider);
-      
+
       // Note: This test requires Firebase to be configured
       // In a real test environment, you'd use Firebase emulators
       try {
@@ -65,12 +65,13 @@ void main() {
         expect(true, true); // Pass test but skip actual Firebase operations
         return;
       }
-      
+
       final authService = container.read(authServiceProvider);
       final usersRepo = container.read(usersRepositoryProvider);
-      
+
       // Generate unique email for test
-      final testEmail = 'test_${DateTime.now().millisecondsSinceEpoch}@test.com';
+      final testEmail =
+          'test_${DateTime.now().millisecondsSinceEpoch}@test.com';
       final testPassword = 'TestPassword123!';
       final testName = 'Test User';
 
@@ -80,7 +81,7 @@ void main() {
           testEmail,
           testPassword,
         );
-        
+
         expect(userCredential.user, isNotNull);
         expect(userCredential.user?.email, testEmail);
 
@@ -91,9 +92,9 @@ void main() {
           email: testEmail,
           createdAt: DateTime.now(),
         );
-        
+
         await usersRepo.setUser(user);
-        
+
         // Verify user was created
         final savedUser = await usersRepo.getUser(userCredential.user!.uid);
         expect(savedUser, isNotNull);
@@ -111,16 +112,16 @@ void main() {
         expect(true, true); // Pass test but skip actual Firebase operations
         return;
       }
-      
+
       final authService = container.read(authServiceProvider);
-      
+
       try {
         // Sign in anonymously first
         await authService.signInAnonymously();
-        
+
         // Sign out
         await authService.signOut();
-        
+
         // Verify signed out
         final currentUser = authService.currentUser;
         expect(currentUser, isNull);
@@ -131,4 +132,3 @@ void main() {
     });
   });
 }
-

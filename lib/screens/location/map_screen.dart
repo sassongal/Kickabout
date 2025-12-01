@@ -18,7 +18,6 @@ import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:kattrick/utils/venue_seeder_service.dart';
-import 'package:kattrick/services/map_cache_service.dart';
 
 /// Map screen - shows hubs and games on map
 class MapScreen extends ConsumerStatefulWidget {
@@ -911,7 +910,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         onCameraIdle: () {
                           // Reload markers when camera stops moving
                           _cameraUpdateTimer?.cancel();
-                          _cameraUpdateTimer = Timer(const Duration(milliseconds: 500), () {
+                          _cameraUpdateTimer =
+                              Timer(const Duration(milliseconds: 500), () {
                             if (mounted) {
                               _loadMarkers();
                             }
@@ -1045,8 +1045,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         debugPrint('⚠️ No results from Google Places');
       }
     } on FirebaseFunctionsException catch (e) {
-      debugPrint('❌ Firebase Functions error loading venues: ${e.code} - ${e.message}');
-      
+      debugPrint(
+          '❌ Firebase Functions error loading venues: ${e.code} - ${e.message}');
+
       // ✅ Handle rate limiting specifically
       if (e.code == 'resource-exhausted') {
         if (mounted) {
@@ -1116,7 +1117,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // Handle Firebase Functions errors
       if (!mounted) return;
       Navigator.pop(context);
-      
+
       // ✅ Handle rate limiting specifically
       if (e.code == 'resource-exhausted') {
         SnackbarHelper.showWarning(
@@ -1126,7 +1127,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       } else if (e.code == 'unauthenticated') {
         SnackbarHelper.showError(context, 'נדרשת התחברות לצפייה בפרטי מגרש');
       } else {
-        SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי המגרש: ${e.message}');
+        SnackbarHelper.showError(
+            context, 'שגיאה בטעינת פרטי המגרש: ${e.message}');
       }
     } catch (e) {
       // Handle other errors

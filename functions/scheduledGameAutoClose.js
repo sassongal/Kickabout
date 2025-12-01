@@ -14,6 +14,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { info, error } = require('firebase-functions/logger');
+const { getUserFCMTokens } = require('./src/utils');
 
 const db = getFirestore();
 const messaging = getMessaging();
@@ -60,9 +61,9 @@ exports.scheduledGameAutoClose = onSchedule(
           info(`Auto-closed pending game ${gameId} (not started within 3h)`);
 
           // Notify organizer
-          if (game.organizerId) {
+          if (game.createdBy) {
             await notifyGameAutoClose(
-              game.organizerId,
+              game.createdBy,
               gameId,
               game.hubId,
               'המשחק שלך בוטל אוטומטית מכיוון שלא התחיל תוך 3 שעות',
@@ -135,26 +136,16 @@ exports.scheduledGameAutoClose = onSchedule(
  */
 async function notifyGameAutoClose(userId, gameId, hubId, message) {
   try {
-    const tokenDoc = await db
-      .collection('users')
-      .doc(userId)
-      .collection('fcm_tokens')
-      .doc('tokens')
-      .get();
-
-    if (!tokenDoc.exists) return;
-
-    const tokenData = tokenDoc.data();
-    const userTokens = tokenData?.tokens || [];
-    
-    if (!Array.isArray(userTokens) || userTokens.length === 0) return;
+    // ✅ Use helper to get FCM tokens
+    const tokens = await getUserFCMTokens(userId);
+    if (tokens.length === 0) return;
 
     const notification = {
       notification: {
         title: '⚽ סגירה אוטומטית של משחק',
         body: message,
       },
-      tokens: userTokens,
+      tokens: tokens,
       data: {
         type: 'game_auto_close',
         gameId: gameId,

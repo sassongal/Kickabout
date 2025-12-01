@@ -117,7 +117,66 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
-                                if (game.location?.isNotEmpty ?? false) ...[
+                                // Load and display venue if venueId exists, otherwise show text location
+                                if (game.venueId != null && game.venueId!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  StreamBuilder<Venue?>(
+                                    stream: ref
+                                        .read(venuesRepositoryProvider)
+                                        .watchVenue(game.venueId!),
+                                    builder: (context, venueSnapshot) {
+                                      final venue = venueSnapshot.data;
+                                      final locationText = venue?.name ?? 
+                                                          game.location ?? 
+                                                          'מיקום לא צוין';
+                                      
+                                      if (locationText.isEmpty || locationText == 'מיקום לא צוין') {
+                                        return const SizedBox.shrink();
+                                      }
+                                      
+                                      return Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on,
+                                            size: 20,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  locationText,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium,
+                                                ),
+                                                if (venue?.address != null && 
+                                                    venue!.address != locationText)
+                                                  Text(
+                                                    venue.address!,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.copyWith(
+                                                          color: Theme.of(context)
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withValues(alpha: 0.6),
+                                                        ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ] else if (game.location?.isNotEmpty ?? false) ...[
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
@@ -130,7 +189,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                             .withValues(alpha: 0.6),
                                       ),
                                       const SizedBox(width: 8),
-                                      Text(game.location ?? ''),
+                                      Expanded(
+                                        child: Text(game.location ?? ''),
+                                      ),
                                     ],
                                   ),
                                 ],
@@ -1000,6 +1061,90 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   /// Build weather widget for game date and location
   Widget _buildGameWeatherWidget(Game game) {
+    // If no locationPoint but we have venueId, load venue to get location
+    if (game.locationPoint == null && game.venueId != null && game.venueId!.isNotEmpty) {
+      return StreamBuilder<Venue?>(
+        stream: ref.read(venuesRepositoryProvider).watchVenue(game.venueId!),
+        builder: (context, venueSnapshot) {
+          final venue = venueSnapshot.data;
+          if (venue?.location == null) {
+            return const SizedBox.shrink();
+          }
+          // Use venue location for weather
+          final weatherService = ref.read(weatherServiceProvider);
+          final weatherFuture = weatherService.getWeatherForDate(
+            latitude: venue!.location.latitude,
+            longitude: venue.location.longitude,
+            date: game.gameDate,
+          );
+          
+          return FutureBuilder<WeatherData?>(
+            future: weatherFuture,
+            builder: (context, weatherSnapshot) {
+              if (weatherSnapshot.connectionState == ConnectionState.waiting) {
+                return FuturisticCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'טוען תנאי מזג אוויר...',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final weather = weatherSnapshot.data;
+              if (weather == null) return const SizedBox.shrink();
+
+              return FuturisticCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.wb_sunny,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'תנאי מזג אוויר למשחק',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            weather.summary,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${weather.temperature}°C',
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
+    
     final locationPoint = game.locationPoint;
     if (locationPoint == null) return const SizedBox.shrink();
 

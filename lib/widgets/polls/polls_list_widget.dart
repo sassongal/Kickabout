@@ -92,7 +92,7 @@ class PollsListWidget extends ConsumerWidget {
                     ),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        final result = await Navigator.of(context).push(
+                        await Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) =>
                                 CreatePollScreen(hubId: hubId),
@@ -133,4 +133,3 @@ class PollsListWidget extends ConsumerWidget {
     );
   }
 }
-

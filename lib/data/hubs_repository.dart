@@ -606,26 +606,36 @@ class HubsRepository {
           .orderBy('createdAt', descending: true)
           .snapshots()
           .map((snapshot) {
-        debugPrint(
-            'watchHubsByCreator: Found ${snapshot.docs.length} hubs for user $uid');
+        // FIX: Only print in debug mode and reduce verbosity
+        if (kDebugMode && snapshot.docs.length > 0) {
+          // Only print if there are actual changes (not on every rebuild)
+          debugPrint(
+              'watchHubsByCreator: Found ${snapshot.docs.length} hubs for user $uid');
+        }
         return snapshot.docs
             .map((doc) {
               try {
                 return Hub.fromJson({...doc.data(), 'hubId': doc.id});
               } catch (e) {
-                debugPrint('Error parsing hub ${doc.id}: $e');
+                if (kDebugMode) {
+                  debugPrint('Error parsing hub ${doc.id}: $e');
+                }
                 return null;
               }
             })
             .whereType<Hub>()
             .toList();
       }).handleError((error) {
-        debugPrint('Error in watchHubsByCreator: $error');
+        if (kDebugMode) {
+          debugPrint('Error in watchHubsByCreator: $error');
+        }
         // Return empty list on error instead of crashing
         return <Hub>[];
       });
     } catch (e) {
-      debugPrint('Exception in watchHubsByCreator: $e');
+      if (kDebugMode) {
+        debugPrint('Exception in watchHubsByCreator: $e');
+      }
       return Stream.value(<Hub>[]);
     }
   }
@@ -954,6 +964,61 @@ class HubsRepository {
     } catch (e) {
       debugPrint('Error updating contact message status: $e');
       rethrow;
+    }
+  }
+
+  /// Unban user from hub
+  /// Removes user ID from hub's bannedUserIds array
+  Future<void> unbanUserFromHub(String hubId, String userId) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      await _firestore.doc(FirestorePaths.hub(hubId)).update({
+        'bannedUserIds': FieldValue.arrayRemove([userId]),
+      });
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.hub(hubId));
+    } catch (e) {
+      throw Exception('Failed to unban user: $e');
+    }
+  }
+
+  /// Get list of banned users for a hub
+  /// Returns list of User objects for users in hub's bannedUserIds
+  Future<List<User>> getBannedUsers(String hubId) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      final hub = await getHub(hubId);
+      if (hub == null || hub.bannedUserIds.isEmpty) return [];
+
+      // Fetch user documents for all banned user IDs
+      // Firestore 'in' query is limited to 10 items, but banned users should be rare
+      final bannedUserIds = hub.bannedUserIds;
+      if (bannedUserIds.isEmpty) return [];
+
+      // Split into chunks of 10 to handle Firestore limit
+      final List<User> bannedUsers = [];
+      for (var i = 0; i < bannedUserIds.length; i += 10) {
+        final chunk = bannedUserIds.skip(i).take(10).toList();
+        final snapshot = await _firestore
+            .collection(FirestorePaths.users())
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+
+        final users = snapshot.docs
+            .map((doc) => User.fromJson({...doc.data(), 'uid': doc.id}))
+            .toList();
+        bannedUsers.addAll(users);
+      }
+
+      return bannedUsers;
+    } catch (e) {
+      debugPrint('Error getting banned users: $e');
+      return [];
     }
   }
 }

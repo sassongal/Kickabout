@@ -108,29 +108,61 @@ class CacheService {
       
       // Handle complex objects (User, Hub) with proper deserialization
       final rawData = data['data'];
-      if (rawData is Map<String, dynamic>) {
-        // Try to deserialize based on key prefix
-        if (key.startsWith('user:')) {
-          try {
-            return User.fromJson(rawData) as T?;
-          } catch (e) {
-            debugPrint('⚠️ Error deserializing User from persistent cache: $e');
+      if (rawData is Map<String, dynamic> || rawData is Map) {
+        try {
+          // Convert JSON back to Firestore types (GeoPoint, Timestamp)
+          final convertedData = _convertJsonToTimestamps(rawData);
+          
+          // FIX: Ensure convertedData is Map<String, dynamic>
+          if (convertedData is! Map<String, dynamic>) {
+            debugPrint('⚠️ Converted data is not Map<String, dynamic>, skipping cache entry: $key');
+            // Clear corrupted cache entry
+            _prefs?.remove(key);
             return null;
           }
-        } else if (key.startsWith('hub:')) {
-          try {
-            return Hub.fromJson(rawData) as T?;
-          } catch (e) {
-            debugPrint('⚠️ Error deserializing Hub from persistent cache: $e');
-            return null;
+          
+          // Try to deserialize based on key prefix
+          if (key.startsWith('user:')) {
+            try {
+              return User.fromJson(convertedData) as T?;
+            } catch (e, stackTrace) {
+              debugPrint('⚠️ Error deserializing User from persistent cache: $e');
+              debugPrint('Stack trace: $stackTrace');
+              // Clear corrupted cache entry
+              _prefs?.remove(key);
+              return null;
+            }
+          } else if (key.startsWith('hub:')) {
+            try {
+              return Hub.fromJson(convertedData) as T?;
+            } catch (e, stackTrace) {
+              debugPrint('⚠️ Error deserializing Hub from persistent cache: $e');
+              debugPrint('Stack trace: $stackTrace');
+              // Clear corrupted cache entry
+              _prefs?.remove(key);
+              return null;
+            }
           }
+        } catch (e, stackTrace) {
+          debugPrint('⚠️ Error converting JSON to timestamps for cache entry $key: $e');
+          debugPrint('Stack trace: $stackTrace');
+          // Clear corrupted cache entry
+          _prefs?.remove(key);
+          return null;
         }
       }
       
       // Fallback for simple types
       return rawData as T?;
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('⚠️ Error reading from persistent cache: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // Clear corrupted cache entry if possible
+      try {
+        _prefs?.remove(key);
+      } catch (_) {
+        // Ignore errors during cleanup
+      }
       _persistentCacheMisses++;
       return null;
     }
@@ -382,15 +414,58 @@ class CacheService {
     _persistentCacheMisses = 0;
   }
 
-  /// Convert Timestamp objects to JSON-serializable format
-  /// Recursively converts all Timestamp objects in a Map to ISO8601 strings
+  /// Convert Timestamp and GeoPoint objects to JSON-serializable format
+  /// Recursively converts all Timestamp and GeoPoint objects in a Map
   dynamic _convertTimestampsToJson(dynamic data) {
     if (data is Timestamp) {
       return data.toDate().toIso8601String();
+    } else if (data is GeoPoint) {
+      // Convert GeoPoint to Map for JSON serialization
+      return {
+        'latitude': data.latitude,
+        'longitude': data.longitude,
+      };
     } else if (data is Map) {
       return data.map((key, value) => MapEntry(key, _convertTimestampsToJson(value)));
     } else if (data is List) {
       return data.map((item) => _convertTimestampsToJson(item)).toList();
+    } else {
+      return data;
+    }
+  }
+
+  /// Convert JSON-serializable format back to Timestamp and GeoPoint objects
+  /// Recursively converts all serialized Timestamp and GeoPoint objects
+  dynamic _convertJsonToTimestamps(dynamic data) {
+    if (data is Map) {
+      // Check if it's a GeoPoint (has latitude and longitude, and only 2 keys)
+      if (data.containsKey('latitude') && 
+          data.containsKey('longitude') && 
+          data.length == 2 &&
+          data['latitude'] is num &&
+          data['longitude'] is num) {
+        return GeoPoint(
+          (data['latitude'] as num).toDouble(),
+          (data['longitude'] as num).toDouble(),
+        );
+      }
+      // FIX: Convert to Map<String, dynamic> explicitly to avoid type errors
+      final result = <String, dynamic>{};
+      data.forEach((key, value) {
+        final stringKey = key is String ? key : key.toString();
+        result[stringKey] = _convertJsonToTimestamps(value);
+      });
+      return result;
+    } else if (data is List) {
+      return data.map((item) => _convertJsonToTimestamps(item)).toList();
+    } else if (data is String) {
+      // Try to parse as ISO8601 timestamp
+      try {
+        final dateTime = DateTime.parse(data);
+        return Timestamp.fromDate(dateTime);
+      } catch (e) {
+        return data; // Not a timestamp, return as-is
+      }
     } else {
       return data;
     }

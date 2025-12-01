@@ -41,9 +41,10 @@ service cloud.firestore {
 
     function isHubMember(hubId) {
       let user = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isAuthenticated() && (
-        (user.data.hubIds != null && hubId in user.data.hubIds)
-      );
+      let hub = getHubData(hubId);
+      return isAuthenticated() && 
+        !(hub.bannedUserIds != null && hub.bannedUserIds is list && request.auth.uid in hub.bannedUserIds) &&
+        (user.data.hubIds != null && hubId in user.data.hubIds);
     }
 
     function isHubModerator(hubId) {
@@ -54,13 +55,18 @@ service cloud.firestore {
       );
     }
 
+    function isHubManager(hubId) {
+      let hub = getHubData(hubId);
+      return isAuthenticated() && (
+        hub.createdBy == request.auth.uid ||
+        (getRole(hub) in ['manager', 'admin'])
+      );
+    }
+
     function canManageGames(hubId) {
       return isHubManagerOrModerator(hubId);
     }
 
-    function canManageRoles(hubId) {
-      return isHubManagerOrModerator(hubId);
-    }
 
     function canModerateContent(hubId) {
       return isHubManagerOrModerator(hubId);
@@ -72,7 +78,8 @@ service cloud.firestore {
 
     function canCreateEvents(hubId) {
       let hub = getHubData(hubId);
-      return isAuthenticated() && (
+      return isAuthenticated() && 
+        !(hub.bannedUserIds != null && hub.bannedUserIds is list && request.auth.uid in hub.bannedUserIds) && (
         hub.createdBy == request.auth.uid ||
         (hub.roles != null && request.auth.uid in hub.roles && hub.roles[request.auth.uid] in ['manager', 'moderator', 'admin']) ||
         (hub.permissions != null &&
@@ -84,8 +91,9 @@ service cloud.firestore {
 
     function canCreatePosts(hubId) {
       let hub = getHubData(hubId);
-      return isAuthenticated() &&
-        (request.auth.uid in hub.memberIds || hub.createdBy == request.auth.uid) && (
+      return isAuthenticated() && 
+        !(hub.bannedUserIds != null && hub.bannedUserIds is list && request.auth.uid in hub.bannedUserIds) &&
+        (isHubMember(hubId) || hub.createdBy == request.auth.uid) && (
         hub.permissions == null ||
         hub.permissions.canCreatePosts == null ||
         !(hub.permissions.canCreatePosts is list) ||
@@ -137,7 +145,9 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated() && 
                      (request.auth.uid == userId || 
-                      !(userId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds || []));
+                      !(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds != null && 
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds is list &&
+                        userId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds));
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && request.auth.uid == userId;
       allow delete: if isAuthenticated() && request.auth.uid == userId;
@@ -163,8 +173,9 @@ service cloud.firestore {
     // Hubs Collection
     // ============================================
     match /hubs/{hubId} {
-      allow read: if isAuthenticated() && 
-                     !(request.auth.uid in getHubData(hubId).bannedUserIds || []);
+      // Allow authenticated users to read hubs
+      // Note: bannedUserIds filtering is done client-side since getHubData() doesn't work in queries
+      allow read: if isAuthenticated();
 
       allow create: if isAuthenticated() &&
         request.resource.data.keys().hasAll(['hubId', 'name', 'createdBy', 'createdAt']) &&
@@ -172,7 +183,6 @@ service cloud.firestore {
         request.resource.data.createdBy == request.auth.uid &&
         request.resource.data.createdBy is string &&
         request.resource.data.createdAt is timestamp &&
-        request.resource.data.memberIds is list &&
         // Check user hub limit (10) - since creator joins automatically
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hubIds.size() < 10;
 
@@ -185,12 +195,14 @@ service cloud.firestore {
 
       match /members/{userId} {
         allow read: if isAuthenticated();
-        allow write: if isAuthenticated() && isOwner(userId) &&
-          // Check hub capacity
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.memberCount < 50 &&
+        // Allow create without checking hub capacity (hub doesn't exist yet during batch write)
+        allow create: if isAuthenticated() && isOwner(userId) &&
           request.resource.data.keys().hasAll(['joinedAt', 'role']) &&
           request.resource.data.role in ['member', 'admin', 'manager'];
-        allow update, delete: if isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId));
+        // Allow update with hub capacity check (hub exists by then)
+        allow update: if isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId)) &&
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.memberCount < 50;
+        allow delete: if isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId));
       }
 
       match /requests/{userId} {
@@ -267,7 +279,7 @@ service cloud.firestore {
 
       match /events/{eventId} {
         allow read: if isAuthenticated();
-        allow create: if isHubAdmin(hubId) &&
+        allow create: if canCreateEvents(hubId) &&
           isValidHubEvent(request.resource.data) &&
           request.resource.data.eventId == eventId &&
           request.resource.data.hubId == hubId;

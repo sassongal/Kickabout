@@ -8,6 +8,7 @@ import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
+import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 
 /// Create hub event screen
 class CreateHubEventScreen extends ConsumerStatefulWidget {
@@ -153,21 +154,14 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
     }
   }
 
-  Future<void> _selectVenue() async {
-    final selectedVenue = await context.push<Venue?>(
-      '/venues/search?hubId=${widget.hubId}&select=true',
-    );
-
-    if (selectedVenue != null) {
-      setState(() {
-        _selectedVenue = selectedVenue;
-        _locationController.text = selectedVenue.name;
-      });
-    }
-  }
-
   Future<void> _createEvent() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Validate venue is selected
+    if (_selectedVenue == null) {
+      SnackbarHelper.showError(context, 'נא לבחור מגרש');
+      return;
+    }
 
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) return;
@@ -240,8 +234,9 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ref.read(pushNotificationIntegrationServiceProvider);
           final usersRepo = ref.read(usersRepositoryProvider);
           final currentUser = await usersRepo.getUser(currentUserId);
-          final memberIds =
-              await ref.read(hubsRepositoryProvider).getHubMemberIds(widget.hubId);
+          final memberIds = await ref
+              .read(hubsRepositoryProvider)
+              .getHubMemberIds(widget.hubId);
 
           await pushIntegration.notifyNewEvent(
             eventId: eventId,
@@ -377,19 +372,31 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Location
-              ListTile(
-                title: const Text('מיקום *'),
-                subtitle: Text(_locationController.text.isNotEmpty
-                    ? _locationController.text
-                    : 'בחר מיקום'),
-                trailing: const Icon(Icons.place),
-                onTap: _selectVenue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Colors.grey.shade300),
-                ),
+              // Location - Replace ListTile with SmartVenueSearchField
+              SmartVenueSearchField(
+                label: 'מגרש *',
+                hint: 'חפש מגרש...',
+                initialValue: _locationController.text,
+                onVenueSelected: (venue) {
+                  setState(() {
+                    _selectedVenue = venue;
+                    _locationController.text = venue.name;
+                  });
+                },
               ),
+              // Add validator widget
+              if (_selectedVenue == null &&
+                  _formKey.currentState?.validate() == false)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, right: 12),
+                  child: Text(
+                    'נא לבחור מגרש',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 16),
 
               // Date

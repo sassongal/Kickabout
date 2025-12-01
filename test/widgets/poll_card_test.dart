@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kattrick/models/poll.dart';
 import 'package:kattrick/models/user.dart';
-import 'package:kattrick/providers/auth_notifier.dart';
+import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/widgets/polls/poll_card.dart';
 
 void main() {
@@ -13,15 +13,12 @@ void main() {
 
     setUp(() {
       testUser = User(
-        userId: 'user1',
+        uid: 'user1',
+        name: 'Test User',
         email: 'test@test.com',
-        displayName: 'Test User',
         photoUrl: null,
         hubIds: ['hub1'],
         createdAt: DateTime.now(),
-        lastSeenAt: DateTime.now(),
-        pushToken: null,
-        emailVerified: false,
       );
 
       testPoll = Poll(
@@ -58,20 +55,18 @@ void main() {
     });
 
     testWidgets('displays poll question', (tester) async {
-      bool tapped = false;
-
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
             home: Scaffold(
               body: PollCard(
                 poll: testPoll,
-                onTap: () => tapped = true,
+                onTap: () {},
               ),
             ),
           ),
@@ -85,8 +80,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -107,8 +102,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -133,8 +128,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -159,8 +154,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -177,7 +172,8 @@ void main() {
       expect(find.text('סגור'), findsOneWidget);
     });
 
-    testWidgets('displays winning option when showResultsBeforeVote', (tester) async {
+    testWidgets('displays winning option when showResultsBeforeVote',
+        (tester) async {
       final pollWithResults = testPoll.copyWith(
         showResultsBeforeVote: true,
       );
@@ -185,8 +181,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -211,8 +207,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -241,8 +237,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -269,8 +265,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authNotifierProvider.overrideWith((ref) => 
-              AuthNotifier()..state = AsyncValue.data(testUser)
+            currentUserProvider.overrideWith(
+              (ref) => Stream.value(testUser),
             ),
           ],
           child: MaterialApp(
@@ -288,4 +284,3 @@ void main() {
     });
   });
 }
-

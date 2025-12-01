@@ -215,6 +215,29 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
+            // Social media icons (if enabled and links exist)
+            if (player.showSocialLinks) ...[
+              if (player.facebookProfileUrl != null &&
+                  player.facebookProfileUrl!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Icon(
+                    Icons.facebook,
+                    size: 16,
+                    color: const Color(0xFF1877F2),
+                  ),
+                ),
+              if (player.instagramProfileUrl != null &&
+                  player.instagramProfileUrl!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Icon(
+                    Icons.camera_alt,
+                    size: 16,
+                    color: const Color(0xFFE4405F),
+                  ),
+                ),
+            ],
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -238,10 +261,6 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.star, size: 16, color: Colors.amber),
-                const SizedBox(width: 4),
-                Text(player.currentRankScore.toStringAsFixed(1)),
-                const SizedBox(width: 16),
                 Icon(Icons.sports_soccer, size: 16),
                 const SizedBox(width: 4),
                 Text(_getPositionName(player.preferredPosition)),

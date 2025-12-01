@@ -85,42 +85,67 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
       return;
     }
 
-    if (_selectedVenues.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('נא לבחור לפחות מגרש אחד')),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
 
-      // Determine main venue and its location
+      // Determine main venue and its location (optional)
       Venue? mainVenue;
-      if (_mainVenueId != null) {
-        mainVenue = _selectedVenues.firstWhere(
-          (v) => v.venueId == _mainVenueId,
-          orElse: () => _selectedVenues.first,
-        );
+      if (_mainVenueId != null &&
+          _mainVenueId!.isNotEmpty &&
+          _selectedVenues.isNotEmpty) {
+        try {
+          mainVenue = _selectedVenues.firstWhere(
+            (v) => v.venueId == _mainVenueId && v.venueId.isNotEmpty,
+          );
+          debugPrint('✅ Found main venue: ${mainVenue.name} ($_mainVenueId)');
+        } catch (e) {
+          // If not found, use first venue if available
+          debugPrint(
+              '⚠️ Main venue ${_mainVenueId} not found in selected venues, using first');
+          if (_selectedVenues.isNotEmpty) {
+            mainVenue = _selectedVenues.first;
+            _mainVenueId = mainVenue.venueId;
+            debugPrint('✅ Setting main venue to first venue: ${_mainVenueId}');
+          }
+        }
       } else if (_selectedVenues.isNotEmpty) {
+        // If no main venue selected but venues exist, use first one
         mainVenue = _selectedVenues.first;
         _mainVenueId = mainVenue.venueId;
+        debugPrint('✅ Setting main venue to first venue: ${_mainVenueId}');
       }
 
-      // Generate geohash if location is provided
+      // Generate geohash and location if venue is provided (optional)
       String? geohash;
       GeoPoint? location;
 
-      if (mainVenue != null) {
+      if (mainVenue != null && mainVenue.location != null) {
         location = mainVenue.location;
         geohash = locationService.generateGeohash(
           location.latitude,
           location.longitude,
         );
+        debugPrint(
+            '✅ Main venue location: ${location.latitude}, ${location.longitude}');
+      } else {
+        debugPrint(
+            'ℹ️ No venue selected - hub will be created without location');
       }
+
+      // Filter out any venues with empty IDs
+      final validVenueIds = _selectedVenues
+          .map((v) => v.venueId)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      debugPrint('📝 Creating hub with:');
+      debugPrint('   mainVenueId: $_mainVenueId');
+      debugPrint('   primaryVenueId: $_mainVenueId');
+      debugPrint('   venueIds: $validVenueIds');
+      debugPrint('   location: $location');
 
       final hub = Hub(
         hubId: '', // Will be generated
@@ -134,31 +159,42 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         location: location,
         geohash: geohash,
         region: _selectedRegion,
-        venueIds: _selectedVenues.map((v) => v.venueId).toList(),
+        venueIds: validVenueIds,
         mainVenueId: _mainVenueId,
         primaryVenueId: _mainVenueId,
         primaryVenueLocation: location,
       );
 
+      debugPrint('📦 Hub object created:');
+      debugPrint('   hub.mainVenueId: ${hub.mainVenueId}');
+      debugPrint('   hub.primaryVenueId: ${hub.primaryVenueId}');
+      debugPrint('   hub.venueIds: ${hub.venueIds}');
+
       final hubId = await hubsRepo.createHub(hub);
+      debugPrint('✅ Hub created with ID: $hubId');
+      debugPrint('   Verifying hub data...');
 
-      // Update hubCount for selected venues
-      // Note: createHub doesn't do this automatically yet, so we might need to do it here
-      // or update createHub. Since createHub is generic, let's do it here or via a separate call.
-      // Ideally HubsRepository should handle this, but for now let's use VenuesRepository or HubsRepository helper.
-      // Actually, setHubPrimaryVenue handles the primary one.
-      // But we are creating a new hub.
+      // Verify the hub was created correctly
+      final createdHub = await hubsRepo.getHub(hubId);
+      if (createdHub != null) {
+        debugPrint('✅ Hub verification:');
+        debugPrint(
+            '   mainVenueId: ${createdHub.mainVenueId ?? 'null (optional)'}');
+        debugPrint(
+            '   primaryVenueId: ${createdHub.primaryVenueId ?? 'null (optional)'}');
+        debugPrint('   venueIds: ${createdHub.venueIds}');
+      } else {
+        debugPrint('❌ ERROR: Could not retrieve created hub!');
+      }
 
-      // Let's manually increment hubCount for all venues
-      final venuesRepo = ref.read(venuesRepositoryProvider);
-      for (final venue in _selectedVenues) {
-        // We can use linkSecondaryVenueToHub which increments hubCount
-        // But we need to be careful not to double add to venueIds (createHub already added them)
-        // Actually linkSecondaryVenueToHub adds to venueIds AND increments hubCount.
-        // Since createHub added venueIds, we just need to increment hubCount.
-        // But we don't have a method just for that exposed easily.
-        // Let's rely on a future update or just call linkSecondaryVenueToHub which checks for existence.
-        await venuesRepo.linkSecondaryVenueToHub(hubId, venue.venueId);
+      // Update hubCount for selected venues (if any)
+      if (_selectedVenues.isNotEmpty) {
+        final venuesRepo = ref.read(venuesRepositoryProvider);
+        for (final venue in _selectedVenues) {
+          // linkSecondaryVenueToHub increments hubCount and adds to venueIds
+          // Since createHub already added venueIds, this will just increment hubCount
+          await venuesRepo.linkSecondaryVenueToHub(hubId, venue.venueId);
+        }
       }
 
       // Log analytics
@@ -174,7 +210,8 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
           SnackBar(
               content: Text(AppLocalizations.of(context)!.hubCreatedSuccess)),
         );
-        context.pop();
+        // Navigate to the newly created hub's detail screen
+        context.go('/hubs/$hubId');
       }
     } catch (e, stackTrace) {
       debugPrint('Error creating hub: $e');
@@ -282,14 +319,55 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
               }),
               const SizedBox(height: 24),
 
-              // Hub Venues Manager
+              // Hub Venues Manager (optional)
+              Text(
+                'מגרשים (אופציונלי)',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'ניתן להוסיף מגרשים מאוחר יותר במסך ההאב',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 8),
               HubVenuesManager(
                 initialVenues: _selectedVenues,
                 initialMainVenueId: _mainVenueId,
                 onChanged: (venues, mainVenueId) {
                   setState(() {
-                    _selectedVenues = venues;
+                    // Validate venue IDs are not empty
+                    _selectedVenues =
+                        venues.where((v) => v.venueId.isNotEmpty).toList();
                     _mainVenueId = mainVenueId;
+
+                    // Verify main venue is still in selected venues (optional)
+                    if (_mainVenueId != null && _mainVenueId!.isNotEmpty) {
+                      final mainVenueExists =
+                          _selectedVenues.any((v) => v.venueId == _mainVenueId);
+                      if (!mainVenueExists && _selectedVenues.isNotEmpty) {
+                        _mainVenueId = _selectedVenues.first.venueId;
+                        debugPrint(
+                            '⚠️ Main venue not found in selected venues, resetting to first venue: $_mainVenueId');
+                      } else if (!mainVenueExists) {
+                        // If no venues selected, clear main venue
+                        _mainVenueId = null;
+                        debugPrint(
+                            'ℹ️ No venues selected, clearing main venue');
+                      }
+                    } else if (_selectedVenues.isNotEmpty) {
+                      // If no main venue selected but venues exist, use first one
+                      _mainVenueId = _selectedVenues.first.venueId;
+                      debugPrint(
+                          '✅ Setting main venue to first venue: $_mainVenueId');
+                    } else {
+                      // No venues selected - clear main venue
+                      _mainVenueId = null;
+                      debugPrint('ℹ️ No venues selected, clearing main venue');
+                    }
                   });
                 },
               ),

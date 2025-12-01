@@ -11,6 +11,7 @@ import 'package:kattrick/services/storage_service.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/utils/city_utils.dart';
+import 'package:kattrick/utils/url_validator.dart';
 
 /// Edit profile screen
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -31,12 +32,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _cityController = TextEditingController();
+  final _facebookController = TextEditingController();
+  final _instagramController = TextEditingController();
 
   // Replaces _positionController and _selectedPlayingStyle
   String? _selectedPosition;
   String? _selectedRegion;
   String? _selectedAvatarColor;
   DateTime? _selectedBirthDate;
+  bool _showSocialLinks = false;
 
   XFile? _selectedImage;
   bool _isLoading = false;
@@ -80,6 +84,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _cityController.dispose();
+    _facebookController.dispose();
+    _instagramController.dispose();
     super.dispose();
   }
 
@@ -107,6 +113,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           _selectedRegion = user.region;
           _selectedAvatarColor = user.avatarColor;
           _selectedBirthDate = user.birthDate;
+          _facebookController.text = user.facebookProfileUrl ?? '';
+          _instagramController.text = user.instagramProfileUrl ?? '';
+          _showSocialLinks = user.showSocialLinks;
         });
       }
     } catch (e) {
@@ -176,6 +185,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         photoUrl: photoUrl,
         avatarColor: _selectedAvatarColor,
         birthDate: _selectedBirthDate,
+        facebookProfileUrl: _facebookController.text.trim().isEmpty
+            ? null
+            : UrlValidator.validateAndCleanFacebookUrl(_facebookController.text.trim()),
+        instagramProfileUrl: _instagramController.text.trim().isEmpty
+            ? null
+            : UrlValidator.validateAndCleanInstagramUrl(_instagramController.text.trim()),
+        showSocialLinks: _showSocialLinks,
       );
 
       await usersRepo.setUser(updatedUser);
@@ -450,6 +466,100 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       labelText: 'טלפון',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.phone)),
+                ),
+                const SizedBox(height: 24),
+
+                // Social Media Links Section
+                const Divider(),
+                const SizedBox(height: 8),
+                Text(
+                  'רשתות חברתיות',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'הוסף קישורים לפרופילים שלך ברשתות החברתיות',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+
+                // Facebook URL
+                TextFormField(
+                  controller: _facebookController,
+                  decoration: InputDecoration(
+                    labelText: 'קישור פייסבוק',
+                    hintText: 'facebook.com/username או fb.com/username',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.facebook, color: Color(0xFF1877F2)),
+                    suffixIcon: _facebookController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              setState(() {
+                                _facebookController.clear();
+                              });
+                            },
+                          )
+                        : null,
+                  ),
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      if (!UrlValidator.isValidFacebookUrl(value.trim())) {
+                        return UrlValidator.getFacebookUrlErrorMessage();
+                      }
+                    }
+                    return null;
+                  },
+                  onChanged: (value) => setState(() {}),
+                ),
+                const SizedBox(height: 16),
+
+                // Instagram URL
+                TextFormField(
+                  controller: _instagramController,
+                  decoration: InputDecoration(
+                    labelText: 'קישור אינסטגרם',
+                    hintText: 'instagram.com/username',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.camera_alt, color: Color(0xFFE4405F)),
+                    suffixIcon: _instagramController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              setState(() {
+                                _instagramController.clear();
+                              });
+                            },
+                          )
+                        : null,
+                  ),
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      if (!UrlValidator.isValidInstagramUrl(value.trim())) {
+                        return UrlValidator.getInstagramUrlErrorMessage();
+                      }
+                    }
+                    return null;
+                  },
+                  onChanged: (value) => setState(() {}),
+                ),
+                const SizedBox(height: 16),
+
+                // Show Social Links Switch
+                SwitchListTile(
+                  title: const Text('הצג קישורים למשתמשים אחרים'),
+                  subtitle: const Text(
+                    'אם מופעל, משתמשים אחרים יוכלו לראות את קישורי הרשתות החברתיות שלך',
+                  ),
+                  value: _showSocialLinks,
+                  onChanged: (value) {
+                    setState(() {
+                      _showSocialLinks = value;
+                    });
+                  },
+                  secondary: const Icon(Icons.share),
                 ),
                 const SizedBox(height: 16),
 

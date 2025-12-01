@@ -22,6 +22,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       favoriteTeamId: json['favoriteTeamId'] as String?,
       facebookProfileUrl: json['facebookProfileUrl'] as String?,
       instagramProfileUrl: json['instagramProfileUrl'] as String?,
+      showSocialLinks: json['showSocialLinks'] as bool? ?? false,
       availabilityStatus: json['availabilityStatus'] as String? ?? 'available',
       isActive: json['isActive'] as bool? ?? true,
       createdAt:
@@ -93,6 +94,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'favoriteTeamId': instance.favoriteTeamId,
       'facebookProfileUrl': instance.facebookProfileUrl,
       'instagramProfileUrl': instance.instagramProfileUrl,
+      'showSocialLinks': instance.showSocialLinks,
       'availabilityStatus': instance.availabilityStatus,
       'isActive': instance.isActive,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),

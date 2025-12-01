@@ -176,16 +176,33 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                 HubPermissions(
                                                     hub: hub,
                                                     userId: currentUserId);
-                                            final roleName = hubPermissions
-                                                .getRoleDisplayName();
+                                            final role = hubPermissions.userRole;
+                                            final roleName = role.displayName;
+                                            
+                                            // Set icon based on actual role
+                                            IconData roleIcon;
+                                            switch (role) {
+                                              case HubRole.manager:
+                                                roleIcon = Icons.admin_panel_settings;
+                                                break;
+                                              case HubRole.moderator:
+                                                roleIcon = Icons.shield;
+                                                break;
+                                              case HubRole.veteran:
+                                                roleIcon = Icons.star;
+                                                break;
+                                              case HubRole.member:
+                                                roleIcon = Icons.person;
+                                                break;
+                                              case HubRole.guest:
+                                                roleIcon = Icons.person_outline;
+                                                break;
+                                            }
+                                            
                                             return Chip(
                                               label: Text(roleName),
                                               avatar: Icon(
-                                                roleName == 'מנהל'
-                                                    ? Icons.admin_panel_settings
-                                                    : roleName == 'מנחה'
-                                                        ? Icons.shield
-                                                        : Icons.person,
+                                                roleIcon,
                                                 size: 16,
                                               ),
                                               backgroundColor: Theme.of(context)
@@ -447,7 +464,6 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                     // Row 3: Home Venue
                                     _HomeVenueSelector(
                                       hubId: widget.hubId,
-                                      hub: hub,
                                       venuesRepo: venuesRepo,
                                     ),
                                     const SizedBox(height: 8),
@@ -1197,35 +1213,37 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
                   try {
                     final role = hubPermissions.userRole;
+                    // Use the actual role display name from HubRole enum
                     roleDisplayName = role.displayName;
 
-                    // Determine if user is "שחקן משפיע" (influential player)
-                    // Based on: high rank score (>= 7.0) or many participations (>= 10)
-                    final isInfluential = user.currentRankScore >= 7.0 ||
-                        user.totalParticipations >= 10;
-
-                    if (role == HubRole.manager) {
-                      roleIcon = Icons.admin_panel_settings;
-                      roleColor = Colors.blue;
-                      roleDisplayName = 'מנהל';
-                    } else if (role == HubRole.moderator) {
-                      roleIcon = Icons.shield;
-                      roleColor = Colors.purple;
-                      roleDisplayName = 'מנחה';
-                    } else if (isInfluential) {
-                      roleIcon = Icons.star;
-                      roleColor = Colors.amber;
-                      roleDisplayName = 'שחקן משפיע';
-                    } else {
-                      roleIcon = Icons.person;
-                      roleColor = Colors.grey;
-                      roleDisplayName = 'שחקן רגיל';
+                    // Set icon and color based on actual role
+                    switch (role) {
+                      case HubRole.manager:
+                        roleIcon = Icons.admin_panel_settings;
+                        roleColor = Colors.blue;
+                        break;
+                      case HubRole.moderator:
+                        roleIcon = Icons.shield;
+                        roleColor = Colors.purple;
+                        break;
+                      case HubRole.veteran:
+                        roleIcon = Icons.star;
+                        roleColor = Colors.amber;
+                        break;
+                      case HubRole.member:
+                        roleIcon = Icons.person;
+                        roleColor = Colors.grey;
+                        break;
+                      case HubRole.guest:
+                        roleIcon = Icons.person_outline;
+                        roleColor = Colors.grey.shade400;
+                        break;
                     }
                   } catch (e) {
-                    // User is not a member, show as regular player
-                    roleIcon = Icons.person;
-                    roleColor = Colors.grey;
-                    roleDisplayName = 'שחקן רגיל';
+                    // User is not a member, show as guest
+                    roleIcon = Icons.person_outline;
+                    roleColor = Colors.grey.shade400;
+                    roleDisplayName = 'אורח';
                   }
 
                   return Card(
@@ -1262,12 +1280,41 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                               )
                             : null,
                       ),
-                      title: Text(
-                        firstName,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              firstName,
+                              style:
+                                  Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                            ),
+                          ),
+                          // Social media icons (if enabled and links exist)
+                          if (user.showSocialLinks) ...[
+                            if (user.facebookProfileUrl != null &&
+                                user.facebookProfileUrl!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.facebook,
+                                  size: 16,
+                                  color: const Color(0xFF1877F2),
                                 ),
+                              ),
+                            if (user.instagramProfileUrl != null &&
+                                user.instagramProfileUrl!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.camera_alt,
+                                  size: 16,
+                                  color: const Color(0xFFE4405F),
+                                ),
+                              ),
+                          ],
+                        ],
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1353,22 +1400,54 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
 /// Venues list widget
 /// Home Venue Selector - allows managers to select the hub's home field
-class _HomeVenueSelector extends ConsumerStatefulWidget {
+class _HomeVenueSelector extends ConsumerWidget {
+  final String hubId;
+  final VenuesRepository venuesRepo;
+
+  const _HomeVenueSelector({
+    required this.hubId,
+    required this.venuesRepo,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final hubStream = hubsRepo.watchHub(hubId);
+
+    return StreamBuilder<Hub?>(
+      stream: hubStream,
+      builder: (context, hubSnapshot) {
+        final hub = hubSnapshot.data;
+        if (hub == null) {
+          return const SizedBox.shrink();
+        }
+
+        return _HomeVenueSelectorContent(
+          hubId: hubId,
+          hub: hub,
+          venuesRepo: venuesRepo,
+        );
+      },
+    );
+  }
+}
+
+class _HomeVenueSelectorContent extends ConsumerStatefulWidget {
   final String hubId;
   final Hub hub;
   final VenuesRepository venuesRepo;
 
-  const _HomeVenueSelector({
+  const _HomeVenueSelectorContent({
     required this.hubId,
     required this.hub,
     required this.venuesRepo,
   });
 
   @override
-  ConsumerState<_HomeVenueSelector> createState() => _HomeVenueSelectorState();
+  ConsumerState<_HomeVenueSelectorContent> createState() => _HomeVenueSelectorContentState();
 }
 
-class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
+class _HomeVenueSelectorContentState extends ConsumerState<_HomeVenueSelectorContent> {
   bool _isLoading = false;
 
   Future<void> _selectHomeVenue() async {
@@ -1459,7 +1538,7 @@ class _HomeVenueSelectorState extends ConsumerState<_HomeVenueSelector> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Venue?>(
-      future: widget.hub.mainVenueId != null
+      future: widget.hub.mainVenueId != null && widget.hub.mainVenueId!.isNotEmpty
           ? widget.venuesRepo.getVenue(widget.hub.mainVenueId!)
           : Future.value(null),
       builder: (context, snapshot) {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/config/env.dart';
 
 /// Smoke test to ensure app initialization doesn't crash
 /// This is a minimal integration test that verifies the app can start
@@ -11,7 +11,8 @@ void main() {
       Env.limitedMode = true;
     });
 
-    testWidgets('app should initialize without crashing', (WidgetTester tester) async {
+    testWidgets('app should initialize without crashing',
+        (WidgetTester tester) async {
       // Arrange
       TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -23,16 +24,16 @@ void main() {
       // Assert - If we get here without exceptions, initialization succeeded
     });
 
-    testWidgets('ProviderScope should initialize without crashing', (WidgetTester tester) async {
+    testWidgets('ProviderScope should initialize without crashing',
+        (WidgetTester tester) async {
       // Arrange
       final container = ProviderContainer();
 
       // Act & Assert - If we get here without exceptions, ProviderScope works
       expect(container, isNotNull);
-      
+
       // Cleanup
       container.dispose();
     });
   });
 }
-

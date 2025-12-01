@@ -39,6 +39,8 @@ mixin _$User {
       throw _privateConstructorUsedError; // ID of favorite team from Firestore
   String? get facebookProfileUrl => throw _privateConstructorUsedError;
   String? get instagramProfileUrl => throw _privateConstructorUsedError;
+  bool get showSocialLinks =>
+      throw _privateConstructorUsedError; // Control visibility of social links to other users
   String get availabilityStatus =>
       throw _privateConstructorUsedError; // available, busy, notAvailable (deprecated, use isActive)
   bool get isActive =>
@@ -108,6 +110,7 @@ abstract class $UserCopyWith<$Res> {
       String? favoriteTeamId,
       String? facebookProfileUrl,
       String? instagramProfileUrl,
+      bool showSocialLinks,
       String availabilityStatus,
       bool isActive,
       @TimestampConverter() DateTime createdAt,
@@ -160,6 +163,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? favoriteTeamId = freezed,
     Object? facebookProfileUrl = freezed,
     Object? instagramProfileUrl = freezed,
+    Object? showSocialLinks = null,
     Object? availabilityStatus = null,
     Object? isActive = null,
     Object? createdAt = null,
@@ -239,6 +243,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.instagramProfileUrl
           : instagramProfileUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      showSocialLinks: null == showSocialLinks
+          ? _value.showSocialLinks
+          : showSocialLinks // ignore: cast_nullable_to_non_nullable
+              as bool,
       availabilityStatus: null == availabilityStatus
           ? _value.availabilityStatus
           : availabilityStatus // ignore: cast_nullable_to_non_nullable
@@ -349,6 +357,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String? favoriteTeamId,
       String? facebookProfileUrl,
       String? instagramProfileUrl,
+      bool showSocialLinks,
       String availabilityStatus,
       bool isActive,
       @TimestampConverter() DateTime createdAt,
@@ -398,6 +407,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? favoriteTeamId = freezed,
     Object? facebookProfileUrl = freezed,
     Object? instagramProfileUrl = freezed,
+    Object? showSocialLinks = null,
     Object? availabilityStatus = null,
     Object? isActive = null,
     Object? createdAt = null,
@@ -477,6 +487,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.instagramProfileUrl
           : instagramProfileUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      showSocialLinks: null == showSocialLinks
+          ? _value.showSocialLinks
+          : showSocialLinks // ignore: cast_nullable_to_non_nullable
+              as bool,
       availabilityStatus: null == availabilityStatus
           ? _value.availabilityStatus
           : availabilityStatus // ignore: cast_nullable_to_non_nullable
@@ -583,6 +597,7 @@ class _$UserImpl implements _User {
       this.favoriteTeamId,
       this.facebookProfileUrl,
       this.instagramProfileUrl,
+      this.showSocialLinks = false,
       this.availabilityStatus = 'available',
       this.isActive = true,
       @TimestampConverter() required this.createdAt,
@@ -663,6 +678,10 @@ class _$UserImpl implements _User {
   final String? facebookProfileUrl;
   @override
   final String? instagramProfileUrl;
+  @override
+  @JsonKey()
+  final bool showSocialLinks;
+// Control visibility of social links to other users
   @override
   @JsonKey()
   final String availabilityStatus;
@@ -770,7 +789,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, notificationPreferences: $notificationPreferences, blockedUserIds: $blockedUserIds)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, showSocialLinks: $showSocialLinks, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, notificationPreferences: $notificationPreferences, blockedUserIds: $blockedUserIds)';
   }
 
   @override
@@ -802,6 +821,8 @@ class _$UserImpl implements _User {
                 other.facebookProfileUrl == facebookProfileUrl) &&
             (identical(other.instagramProfileUrl, instagramProfileUrl) ||
                 other.instagramProfileUrl == instagramProfileUrl) &&
+            (identical(other.showSocialLinks, showSocialLinks) ||
+                other.showSocialLinks == showSocialLinks) &&
             (identical(other.availabilityStatus, availabilityStatus) ||
                 other.availabilityStatus == availabilityStatus) &&
             (identical(other.isActive, isActive) ||
@@ -856,6 +877,7 @@ class _$UserImpl implements _User {
         favoriteTeamId,
         facebookProfileUrl,
         instagramProfileUrl,
+        showSocialLinks,
         availabilityStatus,
         isActive,
         createdAt,
@@ -911,6 +933,7 @@ abstract class _User implements User {
       final String? favoriteTeamId,
       final String? facebookProfileUrl,
       final String? instagramProfileUrl,
+      final bool showSocialLinks,
       final String availabilityStatus,
       final bool isActive,
       @TimestampConverter() required final DateTime createdAt,
@@ -966,6 +989,8 @@ abstract class _User implements User {
   String? get facebookProfileUrl;
   @override
   String? get instagramProfileUrl;
+  @override
+  bool get showSocialLinks; // Control visibility of social links to other users
   @override
   String
       get availabilityStatus; // available, busy, notAvailable (deprecated, use isActive)

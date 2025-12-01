@@ -54,10 +54,14 @@ class OptimizedImage extends StatelessWidget {
                 color: Colors.grey,
               ),
             ),
-        memCacheWidth: width?.toInt(),
-        memCacheHeight: height?.toInt(),
+        // FIX: Cap memory cache at 500px default to prevent buffer overflow
+        memCacheWidth: width?.toInt() ?? 500,
+        memCacheHeight: height?.toInt() ?? 500,
         maxWidthDiskCache: 1000,
         maxHeightDiskCache: 1000,
+        // FIX: Add fade effects to reduce visual jank
+        fadeInDuration: const Duration(milliseconds: 200),
+        fadeOutDuration: const Duration(milliseconds: 100),
       );
     } else {
       // Use asset image for local assets

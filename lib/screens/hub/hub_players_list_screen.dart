@@ -149,7 +149,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     }
   }
 
-  List<HubMember> _filterAndSort(List<HubMember> members, Hub? hub) {
+  List<HubMember> _filterAndSort(List<HubMember> members, Hub? hub, bool isHubManager) {
     var filtered = List<HubMember>.from(members);
 
     // Search filter
@@ -176,10 +176,14 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
       // Priority 2: Sort by selected criterion
       switch (_sortBy) {
         case 'rating':
-          final aRating =
-              (hub?.managerRatings[a.user.uid]) ?? a.user.currentRankScore;
-          final bRating =
-              (hub?.managerRatings[b.user.uid]) ?? b.user.currentRankScore;
+          // Only managers can see and use manager ratings for sorting
+          // Non-managers always use global rating
+          final aRating = isHubManager && hub != null
+              ? (hub.managerRatings[a.user.uid] ?? a.user.currentRankScore)
+              : a.user.currentRankScore;
+          final bRating = isHubManager && hub != null
+              ? (hub.managerRatings[b.user.uid] ?? b.user.currentRankScore)
+              : b.user.currentRankScore;
           return bRating.compareTo(aRating);
         case 'name':
           return a.user.name.compareTo(b.user.name);
@@ -330,7 +334,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 );
               }
 
-              final filteredMembers = _filterAndSort(_members, hub);
+              final filteredMembers = _filterAndSort(_members, hub, isHubManager);
               final membersToShow = filteredMembers;
               final hasMoreToShow = _hasMore;
 
@@ -506,7 +510,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                               );
 
                               if (result == true && mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                final messenger = ScaffoldMessenger.of(context);
+                                messenger.showSnackBar(
                                   const SnackBar(
                                     content: Text('השחקנים מוזגו בהצלחה!'),
                                     backgroundColor: Colors.green,
@@ -624,9 +629,13 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
   Widget _buildNormalModeTile(User user, String role, bool isManualPlayer,
       bool isCreator, bool isHubManager, Hub hub) {
-    // Get manager rating if it exists, otherwise use global rating
-    final managerRating = hub.managerRatings[user.uid];
-    final displayRating = managerRating ?? user.currentRankScore;
+    // Get manager rating if it exists, but only show it to managers
+    final managerRating = isHubManager ? hub.managerRatings[user.uid] : null;
+    // For non-managers, always show global rating
+    // For managers, show manager rating if exists, otherwise global rating
+    final displayRating = isHubManager 
+        ? (managerRating ?? user.currentRankScore)
+        : user.currentRankScore;
     final hasManagerRating = managerRating != null;
     final isManagerRole = role == 'manager' || role == 'admin';
 
@@ -671,6 +680,29 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
               style: FuturisticTypography.labelLarge,
             ),
           ),
+          // Social media icons (if enabled and links exist)
+          if (user.showSocialLinks) ...[
+            if (user.facebookProfileUrl != null &&
+                user.facebookProfileUrl!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Icon(
+                  Icons.facebook,
+                  size: 16,
+                  color: const Color(0xFF1877F2),
+                ),
+              ),
+            if (user.instagramProfileUrl != null &&
+                user.instagramProfileUrl!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Icon(
+                  Icons.camera_alt,
+                  size: 16,
+                  color: const Color(0xFFE4405F),
+                ),
+              ),
+          ],
           if (isManagerRole)
             Container(
               padding: const EdgeInsets.symmetric(
@@ -774,19 +806,19 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 Icons.star,
                 size: 16,
                 color:
-                    hasManagerRating ? Colors.orange : FuturisticColors.warning,
+                    (isHubManager && hasManagerRating) ? Colors.orange : FuturisticColors.warning,
               ),
               const SizedBox(width: 4),
               Text(
                 displayRating.toStringAsFixed(1),
                 style: FuturisticTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: hasManagerRating
+                  color: (isHubManager && hasManagerRating)
                       ? Colors.orange
                       : FuturisticColors.warning,
                 ),
               ),
-              if (hasManagerRating) ...[
+              if (isHubManager && hasManagerRating) ...[
                 const SizedBox(width: 4),
                 Icon(
                   Icons.verified,
@@ -794,7 +826,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                   color: Colors.orange,
                 ),
               ],
-              if (!hasManagerRating && isHubManager) ...[
+              if (isHubManager && !hasManagerRating) ...[
                 const SizedBox(width: 4),
                 Text(
                   '(גלובלי)',

@@ -25,11 +25,10 @@ class PlayersListScreen extends ConsumerStatefulWidget {
 
 class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
   String _searchQuery = '';
-  String _sortBy = 'rating'; // rating, distance, name
+  String _sortBy = 'name'; // distance, name
   bool _showAvailableOnly = false;
   String? _selectedCity;
   String? _selectedPosition;
-  double? _minRating;
 
   final Map<String, double> _playerDistances = {};
   final ScrollController _scrollController = ScrollController();
@@ -95,8 +94,9 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       title: 'לוח שחקנים',
       actions: [
         IconButton(
-          icon: Icon(
-              _showAvailableOnly ? Icons.check_circle : Icons.check_circle_outline),
+          icon: Icon(_showAvailableOnly
+              ? Icons.check_circle
+              : Icons.check_circle_outline),
           onPressed: () {
             setState(() {
               _showAvailableOnly = !_showAvailableOnly;
@@ -146,11 +146,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                     Expanded(
                       child: SegmentedButton<String>(
                         segments: const [
-                          ButtonSegment(
-                            value: 'rating',
-                            label: Text('דירוג'),
-                            icon: Icon(Icons.star),
-                          ),
                           ButtonSegment(
                             value: 'distance',
                             label: Text('מרחק'),
@@ -270,9 +265,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                         final managerHub = managerHubCandidates.isNotEmpty
                             ? managerHubCandidates.first
                             : null;
-                        final managerRating = managerHub != null
-                            ? managerHub.managerRatings[player.uid]
-                            : null;
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
@@ -299,7 +291,8 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                 player.availabilityStatus),
                                             shape: BoxShape.circle,
                                             border: Border.all(
-                                              color: FuturisticColors.background,
+                                              color:
+                                                  FuturisticColors.background,
                                               width: 2,
                                             ),
                                           ),
@@ -313,9 +306,49 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          player.name,
-                                          style: FuturisticTypography.heading3,
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                player.name,
+                                                style: FuturisticTypography
+                                                    .heading3,
+                                              ),
+                                            ),
+                                            // Social media icons (if enabled and links exist)
+                                            if (player.showSocialLinks) ...[
+                                              if (player.facebookProfileUrl !=
+                                                      null &&
+                                                  player.facebookProfileUrl!
+                                                      .isNotEmpty)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 4),
+                                                  child: Icon(
+                                                    Icons.facebook,
+                                                    size: 16,
+                                                    color:
+                                                        const Color(0xFF1877F2),
+                                                  ),
+                                                ),
+                                              if (player.instagramProfileUrl !=
+                                                      null &&
+                                                  player.instagramProfileUrl!
+                                                      .isNotEmpty)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 4),
+                                                  child: Icon(
+                                                    Icons.camera_alt,
+                                                    size: 16,
+                                                    color:
+                                                        const Color(0xFFE4405F),
+                                                  ),
+                                                ),
+                                            ],
+                                          ],
                                         ),
                                         const SizedBox(height: 4),
                                         Wrap(
@@ -336,9 +369,8 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     player.city!,
-                                                    style:
-                                                        FuturisticTypography
-                                                            .bodySmall,
+                                                    style: FuturisticTypography
+                                                        .bodySmall,
                                                   ),
                                                 ],
                                               ),
@@ -356,9 +388,8 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     player.preferredPosition,
-                                                    style:
-                                                        FuturisticTypography
-                                                            .bodySmall,
+                                                    style: FuturisticTypography
+                                                        .bodySmall,
                                                   ),
                                                 ],
                                               ),
@@ -375,9 +406,8 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     'קבוצה אהודה',
-                                                    style:
-                                                        FuturisticTypography
-                                                            .bodySmall,
+                                                    style: FuturisticTypography
+                                                        .bodySmall,
                                                   ),
                                                 ],
                                               ),
@@ -393,9 +423,8 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                 const SizedBox(width: 4),
                                                 Text(
                                                   '${player.hubIds.length} הובים',
-                                                  style:
-                                                      FuturisticTypography
-                                                          .bodySmall,
+                                                  style: FuturisticTypography
+                                                      .bodySmall,
                                                 ),
                                               ],
                                             ),
@@ -418,31 +447,26 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                             ),
                                           ],
                                         ),
-                                        if (managerRating != null ||
-                                            sharedHubs.isNotEmpty) ...[
+                                        // Only show shared hubs info, not manager rating (manager ratings are private)
+                                        if (sharedHubs.isNotEmpty) ...[
                                           const SizedBox(height: 4),
                                           Row(
                                             children: [
                                               Icon(
-                                                managerRating != null
-                                                    ? Icons.shield_outlined
-                                                    : Icons.handshake,
+                                                Icons.handshake,
                                                 size: 14,
-                                                color:
-                                                    FuturisticColors.primary,
+                                                color: FuturisticColors.primary,
                                               ),
                                               const SizedBox(width: 6),
                                               Expanded(
                                                 child: Text(
-                                                  managerRating != null
-                                                      ? 'דירוג מנהל (${managerHub!.name}): ${managerRating.toStringAsFixed(1)}'
-                                                      : 'אתם יחד ב${sharedHubs.first.name}',
+                                                  'אתם יחד ב${sharedHubs.first.name}',
                                                   style: FuturisticTypography
                                                       .bodySmall
                                                       .copyWith(
                                                     fontWeight: FontWeight.w600,
-                                                    color:
-                                                        FuturisticColors.primary,
+                                                    color: FuturisticColors
+                                                        .primary,
                                                   ),
                                                   overflow:
                                                       TextOverflow.ellipsis,
@@ -458,20 +482,18 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                               Icon(
                                                 Icons.location_on,
                                                 size: 14,
-                                                color:
-                                                    FuturisticColors.primary,
+                                                color: FuturisticColors.primary,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 distance < 1000
                                                     ? 'מרחק: ${distance.toStringAsFixed(0)} מ\''
-                                                    : 'מרחק: ${(distance / 1000).toStringAsFixed(1)} ק\"מ',
-                                                style:
-                                                    FuturisticTypography
-                                                        .bodySmall
-                                                        .copyWith(
-                                                  color: FuturisticColors
-                                                      .primary,
+                                                    : 'מרחק: ${(distance / 1000).toStringAsFixed(1)} ק"מ',
+                                                style: FuturisticTypography
+                                                    .bodySmall
+                                                    .copyWith(
+                                                  color:
+                                                      FuturisticColors.primary,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
@@ -559,11 +581,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
             .toList();
       }
 
-      if (_minRating != null) {
-        players =
-            players.where((p) => p.currentRankScore >= _minRating!).toList();
-      }
-
       _playerDistances.clear();
       if (position != null) {
         for (final player in players) {
@@ -580,10 +597,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       }
 
       switch (_sortBy) {
-        case 'rating':
-          players
-              .sort((a, b) => b.currentRankScore.compareTo(a.currentRankScore));
-          break;
         case 'name':
           players.sort((a, b) => a.name.compareTo(b.name));
           break;
@@ -598,9 +611,13 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
               return distA.compareTo(distB);
             });
           } else {
-            players.sort(
-                (a, b) => b.currentRankScore.compareTo(a.currentRankScore));
+            // If no position, sort by name
+            players.sort((a, b) => a.name.compareTo(b.name));
           }
+          break;
+        default:
+          // Default to name sorting
+          players.sort((a, b) => a.name.compareTo(b.name));
           break;
       }
 
@@ -685,21 +702,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                       });
                     },
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                      'דירוג מינימלי: ${_minRating?.toStringAsFixed(1) ?? "כל הדירוגים"}'),
-                  Slider(
-                    value: _minRating ?? 0.0,
-                    min: 0.0,
-                    max: 10.0,
-                    divisions: 20,
-                    label: _minRating?.toStringAsFixed(1) ?? 'כל הדירוגים',
-                    onChanged: (value) {
-                      setDialogState(() {
-                        _minRating = value > 0 ? value : null;
-                      });
-                    },
-                  ),
                 ],
               ),
             );
@@ -711,7 +713,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
               setState(() {
                 _selectedCity = null;
                 _selectedPosition = null;
-                _minRating = null;
               });
               Navigator.pop(context);
             },

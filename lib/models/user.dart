@@ -27,6 +27,7 @@ class User with _$User {
     String? favoriteTeamId, // ID of favorite team from Firestore
     String? facebookProfileUrl,
     String? instagramProfileUrl,
+    @Default(false) bool showSocialLinks, // Control visibility of social links to other users
     @Default('available')
     String
         availabilityStatus, // available, busy, notAvailable (deprecated, use isActive)

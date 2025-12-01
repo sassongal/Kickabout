@@ -11,6 +11,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 // ignore_for_file: unused_element
 
 /// Enhanced Player Profile Screen with Futuristic Design
@@ -95,21 +96,23 @@ class _PlayerProfileScreenFuturisticState
             tooltip: 'הגדרות',
           ),
         if (!isOwnProfile && !isAnonymous && currentUserId != null)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) async {
-              if (value == 'block') {
-                await _handleBlockUser(context, currentUserId!, widget.playerId);
-              } else if (value == 'unblock') {
-                await _handleUnblockUser(
-                    context, currentUserId!, widget.playerId);
-              }
-            },
-            itemBuilder: (context) {
-              return FutureBuilder<bool>(
-                future: usersRepo.isUserBlocked(currentUserId!, widget.playerId),
-                builder: (context, snapshot) {
-                  final isBlocked = snapshot.data ?? false;
+          StreamBuilder<User?>(
+            stream: usersRepo.watchUser(currentUserId),
+            builder: (context, currentUserSnapshot) {
+              final currentUser = currentUserSnapshot.data;
+              final isBlocked = currentUser?.blockedUserIds.contains(widget.playerId) ?? false;
+              
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) async {
+                  if (value == 'block') {
+                    await _handleBlockUser(context, currentUserId, widget.playerId);
+                  } else if (value == 'unblock') {
+                    await _handleUnblockUser(
+                        context, currentUserId, widget.playerId);
+                  }
+                },
+                itemBuilder: (context) {
                   return [
                     if (isBlocked)
                       const PopupMenuItem(
@@ -687,6 +690,60 @@ class _PlayerProfileScreenFuturisticState
     );
   }
 
+  Widget _buildSocialLinkButton(
+    BuildContext context,
+    String label,
+    IconData icon,
+    Color color,
+    String url,
+  ) {
+    return InkWell(
+      onTap: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('לא ניתן לפתוח את הקישור: $url'),
+              ),
+            );
+          }
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: FuturisticTypography.labelMedium.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: color.withValues(alpha: 0.7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildOverviewTab(
     BuildContext context,
     User user,
@@ -759,6 +816,52 @@ class _PlayerProfileScreenFuturisticState
           ),
 
           const SizedBox(height: 24),
+
+          // Social Media Links Section (if enabled and links exist)
+          if (user.showSocialLinks &&
+              ((user.facebookProfileUrl != null &&
+                      user.facebookProfileUrl!.isNotEmpty) ||
+                  (user.instagramProfileUrl != null &&
+                      user.instagramProfileUrl!.isNotEmpty)))
+            FuturisticCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'רשתות חברתיות',
+                    style: FuturisticTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      if (user.facebookProfileUrl != null &&
+                          user.facebookProfileUrl!.isNotEmpty)
+                        _buildSocialLinkButton(
+                          context,
+                          'פייסבוק',
+                          Icons.facebook,
+                          const Color(0xFF1877F2),
+                          user.facebookProfileUrl!,
+                        ),
+                      if (user.instagramProfileUrl != null &&
+                          user.instagramProfileUrl!.isNotEmpty)
+                        _buildSocialLinkButton(
+                          context,
+                          'אינסטגרם',
+                          Icons.camera_alt,
+                          const Color(0xFFE4405F),
+                          user.instagramProfileUrl!,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
           // Player meta info card (no rating)
           FuturisticCard(
@@ -1175,7 +1278,7 @@ class _PlayerProfileScreenFuturisticState
                       child: CircleAvatar(
                         radius: 24,
                         backgroundColor:
-                            FuturisticColors.primary.withOpacity(0.2),
+                            FuturisticColors.primary.withValues(alpha: 0.2),
                         child: Icon(
                           Icons.group,
                           color: FuturisticColors.primary,

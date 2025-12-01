@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kickadoor/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 
 void main() {
   group('FuturisticCard', () {
@@ -20,7 +20,7 @@ void main() {
 
     testWidgets('should call onTap when tapped', (WidgetTester tester) async {
       bool tapped = false;
-      
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -59,4 +59,3 @@ void main() {
     });
   });
 }
-

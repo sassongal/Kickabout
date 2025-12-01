@@ -13,6 +13,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { info, error } = require('firebase-functions/logger');
+const { getUserFCMTokens } = require('./src/utils');
 
 const db = getFirestore();
 const messaging = getMessaging();
@@ -35,9 +36,9 @@ exports.scheduledGameReminders = onSchedule(
     try {
       const gamesSnapshot = await db
         .collection('games')
-        .where('status', '==', 'pending')
-        .where('scheduledAt', '>=', oneAndHalfHoursFromNow)
-        .where('scheduledAt', '<=', twoAndHalfHoursFromNow)
+        .where('status', '==', 'teamSelection')
+        .where('gameDate', '>=', oneAndHalfHoursFromNow)
+        .where('gameDate', '<=', twoAndHalfHoursFromNow)
         .limit(100)
         .get();
 
@@ -92,31 +93,10 @@ exports.scheduledGameReminders = onSchedule(
             info(`Could not fetch hub name for game ${gameId}:`, err);
           }
 
-          // ✅ Fetch FCM tokens in PARALLEL (performance optimization)
-          const tokenFetchPromises = participants.map(async (userId) => {
-            try {
-              const tokenDoc = await db
-                .collection('users')
-                .doc(userId)
-                .collection('fcm_tokens')
-                .doc('tokens')
-                .get();
-
-              if (tokenDoc.exists) {
-                const tokenData = tokenDoc.data();
-                const userTokens = tokenData?.tokens || [];
-                if (Array.isArray(userTokens) && userTokens.length > 0) {
-                  return userTokens;
-                }
-              }
-              return [];
-            } catch (err) {
-              info(`Failed to get FCM token for user ${userId}:`, err);
-              return [];
-            }
-          });
-
-          const tokenArrays = await Promise.all(tokenFetchPromises);
+          // ✅ Fetch FCM tokens in PARALLEL using helper
+          const tokenArrays = await Promise.all(
+            participants.map((userId) => getUserFCMTokens(userId))
+          );
           const tokens = tokenArrays.flat();
 
           if (tokens.length === 0) {

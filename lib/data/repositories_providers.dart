@@ -14,6 +14,9 @@ import 'package:kattrick/services/scouting_service.dart';
 import 'package:kattrick/services/google_places_service.dart';
 import 'package:kattrick/services/custom_api_service.dart';
 import 'package:kattrick/services/weather_service.dart';
+import 'package:kattrick/services/cache_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 /// Providers for repositories
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -137,10 +140,29 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
 
-/// Current user ID provider
+/// Auth state stream provider for cache clearing
+final _authStateForCacheProvider = StreamProvider<firebase_auth.User?>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return authService.authStateChanges;
+});
+
+/// Current user ID provider with cache clearing on user change
 final currentUserIdProvider = Provider<String?>((ref) {
   final authService = ref.watch(authServiceProvider);
-  return authService.currentUserId;
+  final currentUserId = authService.currentUserId;
+  
+  // FIX: Clear cache when user changes
+  final authStateAsync = ref.watch(_authStateForCacheProvider);
+  authStateAsync.whenData((firebaseUser) {
+    final newUserId = firebaseUser?.uid;
+    // Clear cache for any user change (handled in login screen too, but this is a safety net)
+    if (newUserId != null && newUserId != currentUserId) {
+      CacheService().clear(CacheKeys.user(newUserId));
+      debugPrint('🧹 Cleared cache for user change: $newUserId');
+    }
+  });
+  
+  return currentUserId;
 });
 
 /// Check if current user is anonymous
@@ -216,6 +238,14 @@ final unreadNotificationsCountProvider =
   ref.keepAlive(); // Prevent disposal during navigation
   final notificationsRepo = ref.watch(notificationsRepositoryProvider);
   return notificationsRepo.watchUnreadCount(userId);
+});
+
+/// Hubs by creator stream provider with keepAlive for performance
+final hubsByCreatorStreamProvider =
+    StreamProvider.family<List<Hub>, String>((ref, uid) {
+  ref.keepAlive(); // Prevent disposal and reduce rebuilds
+  final hubsRepo = ref.watch(hubsRepositoryProvider);
+  return hubsRepo.watchHubsByCreator(uid);
 });
 
 /// Home dashboard data provider (weather & vibe) - using Open-Meteo (free)

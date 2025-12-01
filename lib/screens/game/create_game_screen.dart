@@ -34,6 +34,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   bool _isLoading = false;
   GeoPoint? _selectedLocation;
   String? _locationAddress;
+  String? _selectedVenueId; // Venue ID for proper venue reference
   bool _isLoadingLocation = false;
   // Recurring game fields
   bool _isRecurring = false;
@@ -207,6 +208,26 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         );
       }
 
+      // Validate venue ID if provided
+      if (_selectedVenueId != null && _selectedVenueId!.isNotEmpty) {
+        final venuesRepo = ref.read(venuesRepositoryProvider);
+        final venue = await venuesRepo.getVenue(_selectedVenueId!);
+        if (venue == null) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            SnackbarHelper.showError(
+              context,
+              'המגרש שנבחר לא נמצא. אנא בחר מגרש אחר.',
+            );
+          }
+          return;
+        }
+        // Ensure venue has valid location if locationPoint is missing
+        if (_selectedLocation == null && venue.location != null) {
+          _selectedLocation = venue.location;
+        }
+      }
+
       // Get hub to copy region (optional)
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = selectedHubId.isNotEmpty
@@ -224,6 +245,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
             : _locationController.text.trim(), // Legacy text location
         locationPoint: _selectedLocation, // New geographic location
         geohash: geohash,
+        venueId: _selectedVenueId, // Save venue ID for proper venue reference
         teamCount: _teamCount,
         status: GameStatus.teamSelection,
         createdAt: DateTime.now(),
@@ -238,6 +260,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         region: hubRegion, // Copy region from hub
         enableAttendanceReminder: _enableAttendanceReminder,
       );
+      
+      debugPrint('📝 Creating game with venueId: $_selectedVenueId');
 
       final gameId = await gamesRepo.createGame(game);
 
@@ -743,16 +767,33 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                                       .read(venuesRepositoryProvider)
                                       .getOrCreateVenueFromGooglePlace(
                                           selection);
+                                  debugPrint('✅ Venue saved with ID: ${venue.venueId}');
                                 } catch (e) {
-                                  debugPrint('Error creating venue: $e');
+                                  debugPrint('❌ Error creating venue: $e');
+                                  // Don't proceed if venue creation failed
+                                  return;
                                 }
+                              }
+
+                              // Verify venue has valid ID
+                              if (venue.venueId.isEmpty) {
+                                debugPrint('⚠️ Venue still has empty ID after processing');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('שגיאה: לא ניתן להוסיף מגרש ללא מזהה תקין'),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                                return;
                               }
 
                               setState(() {
                                 _selectedLocation = venue.location;
                                 _locationAddress = venue.address ?? venue.name;
                                 _locationController.text = venue.name;
+                                _selectedVenueId = venue.venueId; // Save venue ID
                               });
+                              debugPrint('✅ Selected venue: ${venue.name} (${venue.venueId})');
                               // Unfocus to close keyboard
                               _locationFocusNode.unfocus();
                             },

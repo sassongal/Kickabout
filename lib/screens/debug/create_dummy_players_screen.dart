@@ -19,6 +19,7 @@ class _CreateDummyPlayersScreenState
     extends ConsumerState<CreateDummyPlayersScreen> {
   final _hubIdController = TextEditingController();
   final _eventIdController = TextEditingController();
+  final _playerCountController = TextEditingController(text: '15');
   bool _isRunning = false;
   String? _statusMessage;
 
@@ -26,12 +27,14 @@ class _CreateDummyPlayersScreenState
   void dispose() {
     _hubIdController.dispose();
     _eventIdController.dispose();
+    _playerCountController.dispose();
     super.dispose();
   }
 
   Future<void> _run() async {
     final hubId = _hubIdController.text.trim();
     final eventId = _eventIdController.text.trim();
+    final playerCountText = _playerCountController.text.trim();
 
     // Get current user UID
     final authService = ref.read(authServiceProvider);
@@ -47,9 +50,20 @@ class _CreateDummyPlayersScreenState
       return;
     }
 
+    int playerCount = 15; // Default for events
+    if (playerCountText.isNotEmpty) {
+      playerCount = int.tryParse(playerCountText) ?? 15;
+      if (playerCount < 1 || playerCount > 50) {
+        setState(() => _statusMessage = '❌ Player count must be between 1-50');
+        return;
+      }
+    } else if (eventId.isEmpty) {
+      playerCount = 10; // Default when no event specified
+    }
+
     setState(() {
       _isRunning = true;
-      _statusMessage = 'Creating dummy players...';
+      _statusMessage = 'יוצר $playerCount שחקני דמה...';
     });
 
     try {
@@ -57,14 +71,24 @@ class _CreateDummyPlayersScreenState
         hubId: hubId,
         managerId: currentUser.uid,
       );
-      final playerIds = await creator.createDummyPlayers();
+
+      List<String> playerIds;
       if (eventId.isNotEmpty) {
-        await creator.registerPlayersToEvent(eventId, playerIds);
+        // Use convenience method to create and register in one call
+        playerIds = await creator.createAndRegisterToEvent(
+          eventId,
+          playerCount: playerCount,
+        );
+        setState(() => _statusMessage =
+            '✅ נוצרו $playerCount שחקני דמה ונרשמו לאירוע $eventId!');
+      } else {
+        // Just create players
+        playerIds = await creator.createDummyPlayers(count: playerCount);
+        setState(() => _statusMessage =
+            '✅ נוצרו ${playerIds.length} שחקני דמה בהאב $hubId!');
       }
-      setState(() => _statusMessage =
-          '✅ Created ${playerIds.length} dummy players${eventId.isNotEmpty ? ' and registered to event' : ''}!');
     } catch (e) {
-      setState(() => _statusMessage = '❌ Error: $e');
+      setState(() => _statusMessage = '❌ שגיאה: $e');
     } finally {
       setState(() => _isRunning = false);
     }
@@ -111,6 +135,15 @@ class _CreateDummyPlayersScreenState
                         labelText: 'Event ID (אופציונלי)',
                         hintText: 'אם תרצה לרשום את השחקנים לאירוע',
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _playerCountController,
+                      decoration: const InputDecoration(
+                        labelText: 'מספר שחקנים',
+                        hintText: 'ברירת מחדל: 15 לאירוע, 10 ללא אירוע',
+                      ),
+                      keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 24),
                     SizedBox(

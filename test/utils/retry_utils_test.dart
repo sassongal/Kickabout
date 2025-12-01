@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:kickadoor/firebase_options.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/utils/retry_utils.dart';
+import 'package:kattrick/firebase_options.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/utils/retry_utils.dart';
 
 void main() {
   setUpAll(() async {

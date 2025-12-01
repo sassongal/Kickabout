@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kattrick/widgets/futuristic/loading_state.dart';
@@ -386,6 +387,29 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  // Delete Hub (only for managers)
+                  Card(
+                    color: Colors.red.shade50,
+                    child: ListTile(
+                      leading:
+                          const Icon(Icons.delete_forever, color: Colors.red),
+                      title: const Text(
+                        'מחיקת ההאב',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'פעולה זו תמחק את ההאב לצמיתות. כל הנתונים יימחקו ולא ניתן לשחזר אותם.',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios,
+                          color: Colors.red),
+                      onTap: () => _showDeleteHubDialog(context, hub),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -430,6 +454,140 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       SnackbarHelper.showError(context, l10n.settingUpdateError(e.toString()));
+    }
+  }
+
+  /// Show confirmation dialog before deleting hub
+  Future<void> _showDeleteHubDialog(BuildContext context, Hub hub) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning, color: Colors.red, size: 28),
+            const SizedBox(width: 8),
+            const Text(
+              'מחיקת ההאב',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'האם אתה בטוח שאתה רוצה למחוק את ההאב "${hub.name}"?',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'פעולה זו תמחק לצמיתות:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text('• את ההאב וכל הנתונים שלו'),
+                  Text('• את כל האירועים והמשחקים'),
+                  Text('• את כל הפוסטים והתגובות'),
+                  Text('• את כל רשימת החברים'),
+                  SizedBox(height: 8),
+                  Text(
+                    'פעולה זו אינה הפיכה!',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'ביטול',
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'מחק לצמיתות',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      await hubsRepo.deleteHub(widget.hubId);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      SnackbarHelper.showSuccess(context, 'ההאב נמחק בהצלחה');
+
+      // Navigate back to home screen
+      if (mounted) {
+        context.go('/');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      SnackbarHelper.showError(
+        context,
+        'שגיאה במחיקת ההאב: ${e.toString()}',
+      );
     }
   }
 }

@@ -13,6 +13,7 @@ import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart' as model;
+import 'package:kattrick/services/cache_service.dart';
 
 /// Futuristic login screen with seamless one-tap sign-in
 class LoginScreen extends ConsumerStatefulWidget {
@@ -149,6 +150,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         _emailController.text,
         _passwordController.text,
       );
+
+      // FIX: Clear user cache after login to force fresh data load
+      final currentUserId = authService.currentUserId;
+      if (currentUserId != null) {
+        final cacheService = CacheService();
+        cacheService.clear(CacheKeys.user(currentUserId));
+        debugPrint('🧹 Cleared user cache after login for: $currentUserId');
+      }
 
       // Log analytics
       try {

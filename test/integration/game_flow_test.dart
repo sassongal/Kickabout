@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:kickadoor/firebase_options.dart';
-import 'package:kickadoor/config/env.dart';
-import 'package:kickadoor/data/repositories_providers.dart';
-import 'package:kickadoor/models/models.dart';
+import 'package:kattrick/firebase_options.dart';
+import 'package:kattrick/config/env.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Integration tests for game creation and management flow

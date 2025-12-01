@@ -2,7 +2,7 @@
 
 ## ⚠️ CRITICAL: Your API Key is Currently Exposed!
 
-**Current Key:** `AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU`
+**Current Key:** `AIzaSyAapcK84BybKhuATK6n9YEtBlENgJ068tM`
 
 **Exposed in:**
 - `lib/config/env.dart` ✅ **FIXED** - Now uses environment variables

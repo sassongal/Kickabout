@@ -7,7 +7,6 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/utils/game_stopwatch.dart';
 import 'package:kattrick/widgets/game/game_stopwatch_widget.dart';
-import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 
 class GameRecordingScreen extends ConsumerStatefulWidget {
@@ -108,8 +107,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
           height: 100,
           padding: const EdgeInsets.all(8),
           color: FuturisticColors.surfaceVariant.withAlpha(127),
-          child: _buildPlayerList(
-              _unassignedPlayers, 'שחקנים לא משובצים',
+          child: _buildPlayerList(_unassignedPlayers, 'שחקנים לא משובצים',
               isHorizontal: true),
         ),
 
@@ -183,7 +181,8 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('סיום משחק'),
-                      content: const Text('האם אתה בטוח שברצונך לסיים את המשחק?'),
+                      content:
+                          const Text('האם אתה בטוח שברצונך לסיים את המשחק?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
@@ -235,10 +234,8 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
       final teamBScore = _gameStopwatch.getScoreForTeam('B');
 
       // Get goal scorers
-      final goalScorerIds = _gameStopwatch.goals
-          .map((g) => g.playerId)
-          .toSet()
-          .toList();
+      final goalScorerIds =
+          _gameStopwatch.goals.map((g) => g.playerId).toSet().toList();
 
       // Export events
       final gameEvents = _gameStopwatch.exportAsGameEvents();
@@ -249,7 +246,10 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
         hubId: widget.hubId,
         teamAScore: teamAScore,
         teamBScore: teamBScore,
-        presentPlayerIds: [..._teamA.map((p) => p.uid), ..._teamB.map((p) => p.uid)],
+        presentPlayerIds: [
+          ..._teamA.map((p) => p.uid),
+          ..._teamB.map((p) => p.uid)
+        ],
         goalScorerIds: goalScorerIds.isNotEmpty ? goalScorerIds : null,
         mvpPlayerId: null, // TODO: Add MVP selection
       );

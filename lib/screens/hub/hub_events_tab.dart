@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/venue.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 import 'package:kattrick/widgets/futuristic/empty_state.dart';
@@ -198,8 +199,68 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                               ),
                             ],
                           ),
-                          // Location with navigation
-                          if (event.location != null) ...[
+                          // Location with navigation - load venue if venueId exists
+                          if (event.venueId != null && event.venueId!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            StreamBuilder<Venue?>(
+                              stream: ref
+                                  .read(venuesRepositoryProvider)
+                                  .watchVenue(event.venueId!),
+                              builder: (context, venueSnapshot) {
+                                final venue = venueSnapshot.data;
+                                final locationText = venue?.name ?? 
+                                                    event.location ?? 
+                                                    'מיקום לא צוין';
+                                final locationPoint = venue?.location ?? event.locationPoint;
+                                
+                                if (locationText.isEmpty || locationText == 'מיקום לא צוין') {
+                                  return const SizedBox.shrink();
+                                }
+                                
+                                return Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on,
+                                      size: 18,
+                                      color: FuturisticColors.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            locationText,
+                                            style: FuturisticTypography.bodyMedium,
+                                          ),
+                                          if (venue?.address != null && 
+                                              venue!.address != locationText)
+                                            Text(
+                                              venue.address!,
+                                              style: FuturisticTypography.bodySmall.copyWith(
+                                                color: FuturisticColors.textSecondary,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Navigation button
+                                    if (locationPoint != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.navigation, size: 20),
+                                        color: FuturisticColors.primary,
+                                        tooltip: 'נווט למגרש',
+                                        onPressed: () => _navigateToLocation(
+                                          locationPoint.latitude,
+                                          locationPoint.longitude,
+                                          locationText,
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ] else if (event.location != null) ...[
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -218,8 +279,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 // Navigation button
                                 if (event.locationPoint != null)
                                   IconButton(
-                                    icon:
-                                        const Icon(Icons.navigation, size: 20),
+                                    icon: const Icon(Icons.navigation, size: 20),
                                     color: FuturisticColors.primary,
                                     tooltip: 'נווט למגרש',
                                     onPressed: () => _navigateToLocation(
@@ -357,8 +417,12 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                   );
                                 } catch (e) {
                                   if (mounted) {
-                                    SnackbarHelper.showError(
-                                        context, 'שגיאה בעדכון אירוע: $e');
+                                    final messenger = ScaffoldMessenger.maybeOf(context);
+                                    if (messenger != null) {
+                                      messenger.showSnackBar(
+                                        SnackBar(content: Text('שגיאה בעדכון אירוע: $e')),
+                                      );
+                                    }
                                   }
                                 }
                               },

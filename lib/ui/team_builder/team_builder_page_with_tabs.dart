@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/ui/team_builder/team_builder_page.dart';
 import 'package:kattrick/ui/team_builder/manual_team_builder.dart';
@@ -29,10 +28,12 @@ class TeamBuilderPageWithTabs extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TeamBuilderPageWithTabs> createState() => _TeamBuilderPageWithTabsState();
+  ConsumerState<TeamBuilderPageWithTabs> createState() =>
+      _TeamBuilderPageWithTabsState();
 }
 
-class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTabs>
+class _TeamBuilderPageWithTabsState
+    extends ConsumerState<TeamBuilderPageWithTabs>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late List<String> _currentPlayerIds;
@@ -59,7 +60,7 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
       );
     }
     return;
-    
+
     /* Original code - needs refactoring
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
@@ -233,7 +234,7 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
             ),
           ),
         ),
-        
+
         // Tab bar
         TabBar(
           controller: _tabController,
@@ -248,7 +249,7 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
             ),
           ],
         ),
-        
+
         // Tab content
         Expanded(
           child: TabBarView(
@@ -261,7 +262,7 @@ class _TeamBuilderPageWithTabsState extends ConsumerState<TeamBuilderPageWithTab
                 teamCount: widget.teamCount,
                 playerIds: _currentPlayerIds,
               ),
-              
+
               // Manual division tab
               ManualTeamBuilder(
                 gameId: widget.gameId,

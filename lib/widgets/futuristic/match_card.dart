@@ -21,7 +21,7 @@ class MatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy');
     final timeFormat = DateFormat('HH:mm');
-    
+
     return FuturisticCard(
       onTap: onTap,
       showGlow: game.status == GameStatus.inProgress,
@@ -35,7 +35,8 @@ class MatchCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       gradient: FuturisticColors.primaryGradient,
                       borderRadius: BorderRadius.circular(8),
@@ -57,7 +58,8 @@ class MatchCard extends StatelessWidget {
               ),
               if (showStatus)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getStatusColor(game.status).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
@@ -128,6 +130,8 @@ class MatchCard extends StatelessWidget {
         return FuturisticColors.textSecondary;
       case GameStatus.statsInput:
         return FuturisticColors.accent;
+      case GameStatus.archivedNotPlayed:
+        return FuturisticColors.textSecondary;
     }
   }
 
@@ -143,7 +147,8 @@ class MatchCard extends StatelessWidget {
         return 'COMPLETED';
       case GameStatus.statsInput:
         return 'STATS INPUT';
+      case GameStatus.archivedNotPlayed:
+        return 'ARCHIVED';
     }
   }
 }
-

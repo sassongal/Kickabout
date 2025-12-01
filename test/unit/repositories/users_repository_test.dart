@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kickadoor/data/users_repository.dart';
-import 'package:kickadoor/config/env.dart';
+import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/config/env.dart';
 import '../../helpers/mock_firestore.dart';
 
 void main() {
@@ -17,11 +17,12 @@ void main() {
       mockUserRef = MockDocumentReference();
       mockUserDoc = MockDocumentSnapshot();
       repository = UsersRepository(firestore: mockFirestore);
-      
+
       // Setup default mocks
       when(() => mockFirestore.doc(any())).thenReturn(mockUserRef);
       when(() => mockUserRef.get()).thenAnswer((_) async => mockUserDoc);
-      when(() => mockUserRef.snapshots()).thenAnswer((_) => Stream.value(mockUserDoc));
+      when(() => mockUserRef.snapshots())
+          .thenAnswer((_) => Stream.value(mockUserDoc));
     });
 
     tearDown(() {
@@ -92,7 +93,8 @@ void main() {
       );
     });
 
-    test('watchUser should return null stream when Firebase is not available', () async {
+    test('watchUser should return null stream when Firebase is not available',
+        () async {
       // Arrange
       Env.limitedMode = true;
 
@@ -131,7 +133,8 @@ void main() {
       expect(result!.uid, 'user123');
     });
 
-    test('watchUser should return null stream when document does not exist', () async {
+    test('watchUser should return null stream when document does not exist',
+        () async {
       // Arrange
       Env.limitedMode = false;
       when(() => mockUserDoc.exists).thenReturn(false);
@@ -145,4 +148,3 @@ void main() {
     });
   });
 }
-
