@@ -25,6 +25,7 @@ mixin _$GameSignup {
   DateTime get signedUpAt => throw _privateConstructorUsedError;
   @SignupStatusConverter()
   SignupStatus get status => throw _privateConstructorUsedError;
+  String? get adminActionReason => throw _privateConstructorUsedError;
 
   /// Serializes this GameSignup to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -45,7 +46,8 @@ abstract class $GameSignupCopyWith<$Res> {
   $Res call(
       {String playerId,
       @TimestampConverter() DateTime signedUpAt,
-      @SignupStatusConverter() SignupStatus status});
+      @SignupStatusConverter() SignupStatus status,
+      String? adminActionReason});
 }
 
 /// @nodoc
@@ -66,6 +68,7 @@ class _$GameSignupCopyWithImpl<$Res, $Val extends GameSignup>
     Object? playerId = null,
     Object? signedUpAt = null,
     Object? status = null,
+    Object? adminActionReason = freezed,
   }) {
     return _then(_value.copyWith(
       playerId: null == playerId
@@ -80,6 +83,10 @@ class _$GameSignupCopyWithImpl<$Res, $Val extends GameSignup>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as SignupStatus,
+      adminActionReason: freezed == adminActionReason
+          ? _value.adminActionReason
+          : adminActionReason // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -95,7 +102,8 @@ abstract class _$$GameSignupImplCopyWith<$Res>
   $Res call(
       {String playerId,
       @TimestampConverter() DateTime signedUpAt,
-      @SignupStatusConverter() SignupStatus status});
+      @SignupStatusConverter() SignupStatus status,
+      String? adminActionReason});
 }
 
 /// @nodoc
@@ -114,6 +122,7 @@ class __$$GameSignupImplCopyWithImpl<$Res>
     Object? playerId = null,
     Object? signedUpAt = null,
     Object? status = null,
+    Object? adminActionReason = freezed,
   }) {
     return _then(_$GameSignupImpl(
       playerId: null == playerId
@@ -128,6 +137,10 @@ class __$$GameSignupImplCopyWithImpl<$Res>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as SignupStatus,
+      adminActionReason: freezed == adminActionReason
+          ? _value.adminActionReason
+          : adminActionReason // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -138,7 +151,8 @@ class _$GameSignupImpl implements _GameSignup {
   const _$GameSignupImpl(
       {required this.playerId,
       @TimestampConverter() required this.signedUpAt,
-      @SignupStatusConverter() this.status = SignupStatus.pending});
+      @SignupStatusConverter() this.status = SignupStatus.pending,
+      this.adminActionReason});
 
   factory _$GameSignupImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameSignupImplFromJson(json);
@@ -152,10 +166,12 @@ class _$GameSignupImpl implements _GameSignup {
   @JsonKey()
   @SignupStatusConverter()
   final SignupStatus status;
+  @override
+  final String? adminActionReason;
 
   @override
   String toString() {
-    return 'GameSignup(playerId: $playerId, signedUpAt: $signedUpAt, status: $status)';
+    return 'GameSignup(playerId: $playerId, signedUpAt: $signedUpAt, status: $status, adminActionReason: $adminActionReason)';
   }
 
   @override
@@ -167,12 +183,15 @@ class _$GameSignupImpl implements _GameSignup {
                 other.playerId == playerId) &&
             (identical(other.signedUpAt, signedUpAt) ||
                 other.signedUpAt == signedUpAt) &&
-            (identical(other.status, status) || other.status == status));
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.adminActionReason, adminActionReason) ||
+                other.adminActionReason == adminActionReason));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, playerId, signedUpAt, status);
+  int get hashCode =>
+      Object.hash(runtimeType, playerId, signedUpAt, status, adminActionReason);
 
   /// Create a copy of GameSignup
   /// with the given fields replaced by the non-null parameter values.
@@ -194,7 +213,8 @@ abstract class _GameSignup implements GameSignup {
   const factory _GameSignup(
       {required final String playerId,
       @TimestampConverter() required final DateTime signedUpAt,
-      @SignupStatusConverter() final SignupStatus status}) = _$GameSignupImpl;
+      @SignupStatusConverter() final SignupStatus status,
+      final String? adminActionReason}) = _$GameSignupImpl;
 
   factory _GameSignup.fromJson(Map<String, dynamic> json) =
       _$GameSignupImpl.fromJson;
@@ -207,6 +227,8 @@ abstract class _GameSignup implements GameSignup {
   @override
   @SignupStatusConverter()
   SignupStatus get status;
+  @override
+  String? get adminActionReason;
 
   /// Create a copy of GameSignup
   /// with the given fields replaced by the non-null parameter values.

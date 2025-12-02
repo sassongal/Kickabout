@@ -31,8 +31,10 @@ mixin _$HubEvent {
   DateTime get createdAt => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime get updatedAt => throw _privateConstructorUsedError;
+  @JsonKey(defaultValue: <String>[])
   List<String> get registeredPlayerIds =>
       throw _privateConstructorUsedError; // Players who registered
+  @JsonKey(defaultValue: <String>[])
   List<String> get waitingListPlayerIds =>
       throw _privateConstructorUsedError; // Players on waiting list
   String get status =>
@@ -64,11 +66,14 @@ mixin _$HubEvent {
   bool get enableAttendanceReminder =>
       throw _privateConstructorUsedError; // Organizer can choose to send 2h reminders
 // Teams planned for this event (manager-only, saved when using TeamMaker)
+  @JsonKey(defaultValue: <Team>[])
   List<Team> get teams =>
       throw _privateConstructorUsedError; // Teams planned for this event (manager-only)
 // Multi-match session support
+  @JsonKey(defaultValue: <MatchResult>[])
   List<MatchResult> get matches =>
       throw _privateConstructorUsedError; // List of individual match outcomes within this event
+  @JsonKey(defaultValue: <String, int>{})
   Map<String, int> get aggregateWins =>
       throw _privateConstructorUsedError; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Reference to Game if event was converted to game
@@ -98,8 +103,8 @@ abstract class $HubEventCopyWith<$Res> {
       @TimestampConverter() DateTime eventDate,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
-      List<String> registeredPlayerIds,
-      List<String> waitingListPlayerIds,
+      @JsonKey(defaultValue: <String>[]) List<String> registeredPlayerIds,
+      @JsonKey(defaultValue: <String>[]) List<String> waitingListPlayerIds,
       String status,
       bool isStarted,
       @TimestampConverter() DateTime? startedAt,
@@ -114,9 +119,9 @@ abstract class $HubEventCopyWith<$Res> {
       bool notifyMembers,
       bool showInCommunityFeed,
       bool enableAttendanceReminder,
-      List<Team> teams,
-      List<MatchResult> matches,
-      Map<String, int> aggregateWins,
+      @JsonKey(defaultValue: <Team>[]) List<Team> teams,
+      @JsonKey(defaultValue: <MatchResult>[]) List<MatchResult> matches,
+      @JsonKey(defaultValue: <String, int>{}) Map<String, int> aggregateWins,
       String? gameId});
 }
 
@@ -298,8 +303,8 @@ abstract class _$$HubEventImplCopyWith<$Res>
       @TimestampConverter() DateTime eventDate,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
-      List<String> registeredPlayerIds,
-      List<String> waitingListPlayerIds,
+      @JsonKey(defaultValue: <String>[]) List<String> registeredPlayerIds,
+      @JsonKey(defaultValue: <String>[]) List<String> waitingListPlayerIds,
       String status,
       bool isStarted,
       @TimestampConverter() DateTime? startedAt,
@@ -314,9 +319,9 @@ abstract class _$$HubEventImplCopyWith<$Res>
       bool notifyMembers,
       bool showInCommunityFeed,
       bool enableAttendanceReminder,
-      List<Team> teams,
-      List<MatchResult> matches,
-      Map<String, int> aggregateWins,
+      @JsonKey(defaultValue: <Team>[]) List<Team> teams,
+      @JsonKey(defaultValue: <MatchResult>[]) List<MatchResult> matches,
+      @JsonKey(defaultValue: <String, int>{}) Map<String, int> aggregateWins,
       String? gameId});
 }
 
@@ -491,8 +496,10 @@ class _$HubEventImpl implements _HubEvent {
       @TimestampConverter() required this.eventDate,
       @TimestampConverter() required this.createdAt,
       @TimestampConverter() required this.updatedAt,
-      final List<String> registeredPlayerIds = const [],
-      final List<String> waitingListPlayerIds = const [],
+      @JsonKey(defaultValue: <String>[])
+      final List<String> registeredPlayerIds = const <String>[],
+      @JsonKey(defaultValue: <String>[])
+      final List<String> waitingListPlayerIds = const <String>[],
       this.status = 'upcoming',
       this.isStarted = false,
       @TimestampConverter() this.startedAt,
@@ -507,9 +514,11 @@ class _$HubEventImpl implements _HubEvent {
       this.notifyMembers = false,
       this.showInCommunityFeed = false,
       this.enableAttendanceReminder = true,
-      final List<Team> teams = const [],
-      final List<MatchResult> matches = const [],
-      final Map<String, int> aggregateWins = const {},
+      @JsonKey(defaultValue: <Team>[]) final List<Team> teams = const <Team>[],
+      @JsonKey(defaultValue: <MatchResult>[])
+      final List<MatchResult> matches = const <MatchResult>[],
+      @JsonKey(defaultValue: <String, int>{})
+      final Map<String, int> aggregateWins = const <String, int>{},
       this.gameId})
       : _registeredPlayerIds = registeredPlayerIds,
         _waitingListPlayerIds = waitingListPlayerIds,
@@ -541,7 +550,7 @@ class _$HubEventImpl implements _HubEvent {
   final DateTime updatedAt;
   final List<String> _registeredPlayerIds;
   @override
-  @JsonKey()
+  @JsonKey(defaultValue: <String>[])
   List<String> get registeredPlayerIds {
     if (_registeredPlayerIds is EqualUnmodifiableListView)
       return _registeredPlayerIds;
@@ -553,7 +562,7 @@ class _$HubEventImpl implements _HubEvent {
   final List<String> _waitingListPlayerIds;
 // Players who registered
   @override
-  @JsonKey()
+  @JsonKey(defaultValue: <String>[])
   List<String> get waitingListPlayerIds {
     if (_waitingListPlayerIds is EqualUnmodifiableListView)
       return _waitingListPlayerIds;
@@ -616,7 +625,7 @@ class _$HubEventImpl implements _HubEvent {
 // Organizer can choose to send 2h reminders
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   @override
-  @JsonKey()
+  @JsonKey(defaultValue: <Team>[])
   List<Team> get teams {
     if (_teams is EqualUnmodifiableListView) return _teams;
     // ignore: implicit_dynamic_type
@@ -629,7 +638,7 @@ class _$HubEventImpl implements _HubEvent {
 // Teams planned for this event (manager-only)
 // Multi-match session support
   @override
-  @JsonKey()
+  @JsonKey(defaultValue: <MatchResult>[])
   List<MatchResult> get matches {
     if (_matches is EqualUnmodifiableListView) return _matches;
     // ignore: implicit_dynamic_type
@@ -640,7 +649,7 @@ class _$HubEventImpl implements _HubEvent {
   final Map<String, int> _aggregateWins;
 // List of individual match outcomes within this event
   @override
-  @JsonKey()
+  @JsonKey(defaultValue: <String, int>{})
   Map<String, int> get aggregateWins {
     if (_aggregateWins is EqualUnmodifiableMapView) return _aggregateWins;
     // ignore: implicit_dynamic_type
@@ -772,7 +781,8 @@ abstract class _HubEvent implements HubEvent {
       @TimestampConverter() required final DateTime eventDate,
       @TimestampConverter() required final DateTime createdAt,
       @TimestampConverter() required final DateTime updatedAt,
-      final List<String> registeredPlayerIds,
+      @JsonKey(defaultValue: <String>[]) final List<String> registeredPlayerIds,
+      @JsonKey(defaultValue: <String>[])
       final List<String> waitingListPlayerIds,
       final String status,
       final bool isStarted,
@@ -788,8 +798,9 @@ abstract class _HubEvent implements HubEvent {
       final bool notifyMembers,
       final bool showInCommunityFeed,
       final bool enableAttendanceReminder,
-      final List<Team> teams,
-      final List<MatchResult> matches,
+      @JsonKey(defaultValue: <Team>[]) final List<Team> teams,
+      @JsonKey(defaultValue: <MatchResult>[]) final List<MatchResult> matches,
+      @JsonKey(defaultValue: <String, int>{})
       final Map<String, int> aggregateWins,
       final String? gameId}) = _$HubEventImpl;
 
@@ -816,8 +827,10 @@ abstract class _HubEvent implements HubEvent {
   @TimestampConverter()
   DateTime get updatedAt;
   @override
+  @JsonKey(defaultValue: <String>[])
   List<String> get registeredPlayerIds; // Players who registered
   @override
+  @JsonKey(defaultValue: <String>[])
   List<String> get waitingListPlayerIds; // Players on waiting list
   @override
   String get status; // upcoming, ongoing, completed, cancelled
@@ -855,12 +868,15 @@ abstract class _HubEvent implements HubEvent {
       get enableAttendanceReminder; // Organizer can choose to send 2h reminders
 // Teams planned for this event (manager-only, saved when using TeamMaker)
   @override
+  @JsonKey(defaultValue: <Team>[])
   List<Team> get teams; // Teams planned for this event (manager-only)
 // Multi-match session support
   @override
+  @JsonKey(defaultValue: <MatchResult>[])
   List<MatchResult>
       get matches; // List of individual match outcomes within this event
   @override
+  @JsonKey(defaultValue: <String, int>{})
   Map<String, int>
       get aggregateWins; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
 // Reference to Game if event was converted to game

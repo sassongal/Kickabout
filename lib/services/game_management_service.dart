@@ -9,26 +9,339 @@ import 'package:kattrick/data/hubs_repository.dart';
 import 'package:kattrick/data/signups_repository.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/cache_service.dart';
+import 'package:kattrick/models/game_audit_event.dart';
+import 'package:kattrick/data/notifications_repository.dart';
 
-/// Service for game management operations (rollback, edit)
+/// Service for game management operations (rollback, edit, roster management)
 ///
 /// Handles critical operations like:
 /// - Rollback finalized game results
 /// - Edit game results (rollback + re-finalize)
 /// - Audit logging for game modifications
+/// - Roster management (approve/kick/reschedule)
 class GameManagementService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
   final GamesRepository _gamesRepo;
   final HubsRepository _hubsRepo;
   final SignupsRepository _signupsRepo;
+  final NotificationsRepository _notificationsRepo;
 
   GameManagementService({
     GamesRepository? gamesRepo,
     HubsRepository? hubsRepo,
     SignupsRepository? signupsRepo,
+    NotificationsRepository? notificationsRepo,
+    FirebaseFirestore? firestore,
   })  : _gamesRepo = gamesRepo ?? GamesRepository(),
         _hubsRepo = hubsRepo ?? HubsRepository(),
-        _signupsRepo = signupsRepo ?? SignupsRepository();
+        _signupsRepo = signupsRepo ?? SignupsRepository(),
+        _notificationsRepo = notificationsRepo ?? NotificationsRepository(),
+        _firestore = firestore ?? FirebaseFirestore.instance;
+
+  /// TRANSACTION: Approve a player to join a game
+  ///
+  /// This method:
+  /// 1. Checks if game has capacity
+  /// 2. Updates signup status to confirmed
+  /// 3. Increments confirmedPlayerCount
+  /// 4. Updates game status to fullyBooked if at capacity
+  /// 5. Adds audit log entry
+  /// 6. Sends notification to player
+  ///
+  /// Throws: Exception if game is full or transaction fails
+  Future<void> approvePlayer({
+    required String gameId,
+    required String userId,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    return _firestore.runTransaction((transaction) async {
+      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+      final signupRef =
+          _firestore.doc(FirestorePaths.gameSignup(gameId, userId));
+
+      final gameDoc = await transaction.get(gameRef);
+      if (!gameDoc.exists) {
+        throw Exception('Game not found');
+      }
+
+      final gameData = gameDoc.data()!;
+      final game = Game.fromJson({...gameData, 'gameId': gameId});
+
+      // Check capacity
+      if (game.maxPlayers != null &&
+          game.confirmedPlayerCount >= game.maxPlayers!) {
+        throw Exception(
+            'Game is full (${game.confirmedPlayerCount}/${game.maxPlayers})');
+      }
+
+      // Approve player
+      transaction.update(signupRef, {
+        'status': SignupStatus.confirmed.toFirestore(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(gameRef, {
+        'confirmedPlayerCount': FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Check if now full
+      final newCount = game.confirmedPlayerCount + 1;
+      if (game.maxPlayers != null && newCount >= game.maxPlayers!) {
+        transaction.update(gameRef, {
+          'status': GameStatus.fullyBooked.toFirestore(),
+        });
+      }
+
+      // Add audit log entry
+      final auditEntry = GameAuditEvent(
+        action: 'PLAYER_APPROVED',
+        userId: currentUserId,
+        timestamp: DateTime.now(),
+        reason: 'Approved by admin',
+      );
+
+      transaction.update(gameRef, {
+        'auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
+      });
+    }).then((_) async {
+      // Send notification (outside transaction)
+      try {
+        await _notificationsRepo.createNotification(
+          Notification(
+            notificationId: '',
+            userId: userId,
+            title: 'בקשתך אושרה!',
+            body: 'בקשתך להצטרף למשחק אושרה',
+            type: 'game_approval',
+            data: {'gameId': gameId},
+            read: false,
+            createdAt: DateTime.now(),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Failed to send approval notification: $e');
+      }
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.game(gameId));
+    });
+  }
+
+  /// TRANSACTION: Kick a player from a game
+  ///
+  /// This method:
+  /// 1. Updates signup status to rejected (with reason)
+  /// 2. Decrements confirmedPlayerCount
+  /// 3. Reopens game if it was fullyBooked
+  /// 4. Adds audit log entry
+  /// 5. Sends notification to player
+  ///
+  /// Parameters:
+  /// - gameId: The game ID
+  /// - userId: The player to kick
+  /// - reason: Mandatory reason for kicking (for audit trail)
+  Future<void> kickPlayer({
+    required String gameId,
+    required String userId,
+    required String reason,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    if (reason.trim().isEmpty) {
+      throw Exception('Reason is required for kicking players');
+    }
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    return _firestore.runTransaction((transaction) async {
+      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+      final signupRef =
+          _firestore.doc(FirestorePaths.gameSignup(gameId, userId));
+
+      final gameDoc = await transaction.get(gameRef);
+      if (!gameDoc.exists) {
+        throw Exception('Game not found');
+      }
+
+      final gameData = gameDoc.data()!;
+      final game = Game.fromJson({...gameData, 'gameId': gameId});
+
+      // Update signup to rejected with reason
+      transaction.update(signupRef, {
+        'status': SignupStatus.rejected.toFirestore(),
+        'adminActionReason': reason,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Decrement count
+      transaction.update(gameRef, {
+        'confirmedPlayerCount': FieldValue.increment(-1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Reopen if was full
+      if (game.status == GameStatus.fullyBooked) {
+        transaction.update(gameRef, {
+          'status': GameStatus.recruiting.toFirestore(),
+        });
+      }
+
+      // Add audit log entry
+      final auditEntry = GameAuditEvent(
+        action: 'PLAYER_KICKED',
+        userId: currentUserId,
+        timestamp: DateTime.now(),
+        reason: reason,
+      );
+
+      transaction.update(gameRef, {
+        'auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
+      });
+    }).then((_) async {
+      // Send notification (outside transaction)
+      try {
+        await _notificationsRepo.createNotification(
+          Notification(
+            notificationId: '',
+            userId: userId,
+            title: 'הוצאת ממשחק',
+            body: 'הוצאת מהמשחק. סיבה: $reason',
+            type: 'game_kicked',
+            data: {'gameId': gameId, 'reason': reason},
+            read: false,
+            createdAt: DateTime.now(),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Failed to send kick notification: $e');
+      }
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.game(gameId));
+    });
+  }
+
+  /// TRANSACTION: Reschedule a game
+  ///
+  /// If the date changes to a different calendar day:
+  /// - Resets all confirmed signups to pending
+  /// - Adds audit log entry
+  /// - Notifies all registered players
+  ///
+  /// Parameters:
+  /// - gameId: The game to reschedule
+  /// - newDate: The new game date
+  Future<void> rescheduleGame({
+    required String gameId,
+    required DateTime newDate,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Get game first to check if date actually changed
+    final game = await _gamesRepo.getGame(gameId);
+    if (game == null) {
+      throw Exception('Game not found');
+    }
+
+    // Check if date changed to different day
+    final oldDate = game.gameDate;
+    final isDifferentDay = oldDate.year != newDate.year ||
+        oldDate.month != newDate.month ||
+        oldDate.day != newDate.day;
+
+    if (!isDifferentDay) {
+      // Only time changed, just update the gameDate
+      await _gamesRepo.updateGame(gameId, {
+        'gameDate': Timestamp.fromDate(newDate),
+      });
+      return;
+    }
+
+    // Date changed - need to reset signups
+    final signups = await _signupsRepo.getSignups(gameId);
+    final confirmedPlayerIds = signups
+        .where((s) => s.status == SignupStatus.confirmed)
+        .map((s) => s.playerId)
+        .toList();
+
+    return _firestore.runTransaction((transaction) async {
+      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+
+      // Update game date
+      transaction.update(gameRef, {
+        'gameDate': Timestamp.fromDate(newDate),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Reset all confirmed signups to pending
+      for (final playerId in confirmedPlayerIds) {
+        final signupRef =
+            _firestore.doc(FirestorePaths.gameSignup(gameId, playerId));
+        transaction.update(signupRef, {
+          'status': SignupStatus.pending.toFirestore(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Add audit log entry
+      final auditEntry = GameAuditEvent(
+        action: 'GAME_RESCHEDULED',
+        userId: currentUserId,
+        timestamp: DateTime.now(),
+        reason:
+            'Date changed from ${oldDate.toIso8601String()} to ${newDate.toIso8601String()}',
+      );
+
+      transaction.update(gameRef, {
+        'auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
+      });
+    }).then((_) async {
+      // Notify all players (outside transaction)
+      for (final playerId in confirmedPlayerIds) {
+        try {
+          await _notificationsRepo.createNotification(
+            Notification(
+              notificationId: '',
+              userId: playerId,
+              title: 'המשחק נדחה',
+              body:
+                  'המשחק שבו נרשמת נדחה לתאריך חדש. אנא אשר את השתתפותך מחדש.',
+              type: 'game_rescheduled',
+              data: {'gameId': gameId, 'newDate': newDate.toIso8601String()},
+              read: false,
+              createdAt: DateTime.now(),
+            ),
+          );
+        } catch (e) {
+          debugPrint('Failed to send reschedule notification to $playerId: $e');
+        }
+      }
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.game(gameId));
+    });
+  }
 
   /// Rollback a finalized game result
   ///
@@ -67,8 +380,12 @@ class GameManagementService {
             'Cannot rollback: Game is not completed (status: ${game.status})');
       }
 
-      // Get hub to verify permissions
-      final hub = await _hubsRepo.getHub(game.hubId);
+      // Get hub to verify permissions (skip for public games)
+      if (game.hubId == null) {
+        throw Exception('Cannot rollback public games without hub');
+      }
+
+      final hub = await _hubsRepo.getHub(game.hubId!);
       if (hub == null) {
         throw Exception('Hub not found: ${game.hubId}');
       }
@@ -207,7 +524,9 @@ class GameManagementService {
 
       // Invalidate caches
       CacheService().clear(CacheKeys.game(gameId));
-      CacheService().clear(CacheKeys.gamesByHub(game.hubId));
+      if (game.hubId != null) {
+        CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
+      }
 
       debugPrint('✅ Game result rolled back: $gameId');
       return originalData;

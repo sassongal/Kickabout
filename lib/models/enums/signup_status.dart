@@ -1,7 +1,11 @@
 /// Signup status enum matching Firestore schema
 enum SignupStatus {
-  confirmed,
-  pending;
+  pending, // Initial state
+  pendingApproval, // Awaiting admin approval (for public games)
+  confirmed, // Approved and confirmed
+  rejected, // Denied by admin (with reason)
+  waitlist, // On waiting list
+  cancelled; // Player cancelled their signup
 
   /// Convert to Firestore string
   String toFirestore() => name;
@@ -14,4 +18,3 @@ enum SignupStatus {
     );
   }
 }
-

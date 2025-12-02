@@ -22,7 +22,6 @@ class GameListScreen extends ConsumerStatefulWidget {
 }
 
 class _GameListScreenState extends ConsumerState<GameListScreen> {
-
   @override
   Widget build(BuildContext context) {
     final selectedHubId = ref.watch(selectedHubProvider);
@@ -46,7 +45,8 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.calendar_today),
-          onPressed: () => context.push('/calendar${selectedHubId != null ? '?hubId=$selectedHubId' : ''}'),
+          onPressed: () => context.push(
+              '/calendar${selectedHubId != null ? '?hubId=$selectedHubId' : ''}'),
           tooltip: 'לוח שנה',
         ),
       ],
@@ -84,7 +84,8 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
               }
 
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: DropdownButtonFormField<String>(
                   initialValue: selectedHubId,
@@ -166,11 +167,11 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
                   itemBuilder: (context, index) {
                     final game = games[index];
                     final dateFormat = DateFormat('dd/MM/yyyy', 'he');
-                    
+
                     return _GameCard(
                       game: game,
                       dateFormat: dateFormat,
-                        onTap: () => context.push('/games/${game.gameId}'),
+                      onTap: () => context.push('/games/${game.gameId}'),
                     );
                   },
                 );
@@ -181,7 +182,6 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
       ),
     );
   }
-
 }
 
 /// Game card widget - displays game as bulletin board item
@@ -202,7 +202,7 @@ class _GameCard extends ConsumerWidget {
     final usersRepo = ref.read(usersRepositoryProvider);
     final eventsRepo = ref.read(hubEventsRepositoryProvider);
     final venuesRepo = ref.read(venuesRepositoryProvider);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -218,45 +218,55 @@ class _GameCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Score row (prominent)
-              if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
+              if (game.legacyTeamAScore != null &&
+                  game.legacyTeamBScore != null)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       '${game.legacyTeamAScore}',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         '-',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ),
                     Text(
                       '${game.legacyTeamBScore}',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                     ),
                   ],
                 ),
-              if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
+              if (game.legacyTeamAScore != null &&
+                  game.legacyTeamBScore != null)
                 const SizedBox(height: 12),
-              
+
               // Date
               Row(
                 children: [
                   Icon(
                     Icons.calendar_today,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -266,14 +276,16 @@ class _GameCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               // Location (from event, venue, or hub)
               FutureBuilder<Hub?>(
-                future: hubsRepo.getHub(game.hubId),
+                future: game.hubId != null
+                    ? hubsRepo.getHub(game.hubId!)
+                    : Future.value(null),
                 builder: (context, hubSnapshot) {
                   return FutureBuilder<List<HubEvent>>(
-                    future: game.eventId != null
-                        ? eventsRepo.getHubEvents(game.hubId)
+                    future: game.eventId != null && game.hubId != null
+                        ? eventsRepo.getHubEvents(game.hubId!)
                         : Future.value([]),
                     builder: (context, eventSnapshot) {
                       return FutureBuilder<Venue?>(
@@ -294,19 +306,21 @@ class _GameCard extends ConsumerWidget {
                             }
                           }
                           final venue = venueSnapshot.data;
-                          
+
                           // Get location: from event, or venue name, or game location, or hub name
                           String? location;
-                          if (event?.location != null && event!.location!.isNotEmpty) {
+                          if (event?.location != null &&
+                              event!.location!.isNotEmpty) {
                             location = event.location;
                           } else if (venue != null) {
                             location = venue.name;
-                          } else if (game.location != null && game.location!.isNotEmpty) {
+                          } else if (game.location != null &&
+                              game.location!.isNotEmpty) {
                             location = game.location;
                           } else if (hub?.name != null) {
                             location = hub!.name;
                           }
-                          
+
                           if (location != null && location.isNotEmpty) {
                             return Column(
                               children: [
@@ -315,13 +329,18 @@ class _GameCard extends ConsumerWidget {
                                     Icon(
                                       Icons.location_on,
                                       size: 16,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         location,
-                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -339,10 +358,12 @@ class _GameCard extends ConsumerWidget {
                   );
                 },
               ),
-              
+
               // Hub name
               FutureBuilder<Hub?>(
-                future: hubsRepo.getHub(game.hubId),
+                future: game.hubId != null
+                    ? hubsRepo.getHub(game.hubId!)
+                    : Future.value(null),
                 builder: (context, snapshot) {
                   if (snapshot.hasData && snapshot.data != null) {
                     return Row(
@@ -350,14 +371,18 @@ class _GameCard extends ConsumerWidget {
                         Icon(
                           Icons.group,
                           size: 16,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           snapshot.data!.name,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                         ),
                       ],
                     );
@@ -366,7 +391,7 @@ class _GameCard extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 12),
-              
+
               // Created by (who logged the game)
               FutureBuilder<User?>(
                 future: usersRepo.getUser(game.createdBy),
@@ -377,14 +402,21 @@ class _GameCard extends ConsumerWidget {
                         Icon(
                           Icons.person,
                           size: 16,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'תועד על ידי: ${snapshot.data!.name}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                  ),
                         ),
                       ],
                     );

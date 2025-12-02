@@ -15,10 +15,12 @@ class CommunityActivityFeedScreen extends ConsumerStatefulWidget {
   const CommunityActivityFeedScreen({super.key});
 
   @override
-  ConsumerState<CommunityActivityFeedScreen> createState() => _CommunityActivityFeedScreenState();
+  ConsumerState<CommunityActivityFeedScreen> createState() =>
+      _CommunityActivityFeedScreenState();
 }
 
-class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityFeedScreen> {
+class _CommunityActivityFeedScreenState
+    extends ConsumerState<CommunityActivityFeedScreen> {
   // Filters
   String? _selectedHubId;
   String? _selectedRegion;
@@ -26,7 +28,7 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
   DateTime? _startDate;
   DateTime? _endDate;
   String _contentType = 'all'; // 'all', 'games', 'events'
-  
+
   // Pagination state
   final ScrollController _scrollController = ScrollController();
   final int _pageSize = 20; // Load 20 items at a time
@@ -49,7 +51,7 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
 
   void _onScroll() {
     // Load more when user scrolls to 80% of the list
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent * 0.8) {
       _loadMore();
     }
@@ -57,11 +59,11 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
 
   void _loadMore() {
     if (_isLoadingMore) return;
-    
+
     setState(() {
       _isLoadingMore = true;
     });
-    
+
     // Load more will be handled in the stream builders
     // This is just a trigger
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -140,11 +142,11 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
                     selected: _contentType == 'games',
                     onSelected: (selected) {
                       if (selected) {
-                      setState(() {
-                        _contentType = 'games';
-                        _resetPagination();
-                      });
-                    }
+                        setState(() {
+                          _contentType = 'games';
+                          _resetPagination();
+                        });
+                      }
                     },
                   ),
                 ),
@@ -155,11 +157,11 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
                     selected: _contentType == 'events',
                     onSelected: (selected) {
                       if (selected) {
-                      setState(() {
-                        _contentType = 'events';
-                        _resetPagination();
-                      });
-                    }
+                        setState(() {
+                          _contentType = 'events';
+                          _resetPagination();
+                        });
+                      }
                     },
                   ),
                 ),
@@ -184,12 +186,13 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
     // Try to load from cache first
     final cacheKey = CacheKeys.publicGames(region: _selectedRegion);
     final cachedGames = CacheService().get<List<Game>>(cacheKey);
-    
+
     return StreamBuilder<List<Game>>(
       stream: gamesStream,
       initialData: cachedGames, // Use cached data as initial data
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            snapshot.data == null) {
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: 5,
@@ -222,7 +225,8 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
         // Only update if data actually changed
         if (games.isNotEmpty) {
           final firstGameId = games.first.gameId;
-          if (_loadedGames.isEmpty || _loadedGames.first.gameId != firstGameId) {
+          if (_loadedGames.isEmpty ||
+              _loadedGames.first.gameId != firstGameId) {
             // Use Future.microtask to update state after current build
             Future.microtask(() {
               if (mounted) {
@@ -241,7 +245,8 @@ class _CommunityActivityFeedScreenState extends ConsumerState<CommunityActivityF
         return ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.all(16),
-          itemCount: displayGames.length + (_hasMoreGames && _isLoadingMore ? 1 : 0),
+          itemCount:
+              displayGames.length + (_hasMoreGames && _isLoadingMore ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == displayGames.length) {
               return const Center(
@@ -426,25 +431,26 @@ class _GameFeedCard extends ConsumerWidget {
                   Text(
                     '${game.legacyTeamAScore}',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       '-',
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.displayMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                   ),
                   Text(
                     '${game.legacyTeamBScore}',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   ),
                 ],
               ),
@@ -453,14 +459,16 @@ class _GameFeedCard extends ConsumerWidget {
 
             // Hub name - medium size
             FutureBuilder<Hub?>(
-              future: hubsRepo.getHub(game.hubId),
+              future: game.hubId != null
+                  ? hubsRepo.getHub(game.hubId!)
+                  : Future.value(null),
               builder: (context, snapshot) {
                 if (snapshot.hasData && snapshot.data != null) {
                   return Text(
                     snapshot.data!.name,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -472,8 +480,11 @@ class _GameFeedCard extends ConsumerWidget {
             Text(
               DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
             ),
             const SizedBox(height: 8),
 
@@ -484,14 +495,20 @@ class _GameFeedCard extends ConsumerWidget {
                   Icon(
                     Icons.location_on,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     game.venueName!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                        ),
                   ),
                 ],
               )
@@ -501,14 +518,20 @@ class _GameFeedCard extends ConsumerWidget {
                   Icon(
                     Icons.location_on,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     game.location!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                        ),
                   ),
                 ],
               ),
@@ -521,14 +544,20 @@ class _GameFeedCard extends ConsumerWidget {
                 runSpacing: 4,
                 children: game.goalScorerNames.map((fullName) {
                   final nameParts = fullName.split(' ');
-                  final firstName = nameParts.isNotEmpty ? nameParts.first : fullName;
-                  final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+                  final firstName =
+                      nameParts.isNotEmpty ? nameParts.first : fullName;
+                  final lastName = nameParts.length > 1
+                      ? nameParts.sublist(1).join(' ')
+                      : '';
                   return Text(
                     '$firstName $lastName',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                      fontSize: 12,
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.8),
+                          fontSize: 12,
+                        ),
                   );
                 }).toList(),
               ),
@@ -549,14 +578,21 @@ class _GameFeedCard extends ConsumerWidget {
                     Builder(
                       builder: (context) {
                         final nameParts = game.mvpPlayerName!.split(' ');
-                        final firstName = nameParts.isNotEmpty ? nameParts.first : game.mvpPlayerName!;
-                        final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+                        final firstName = nameParts.isNotEmpty
+                            ? nameParts.first
+                            : game.mvpPlayerName!;
+                        final lastName = nameParts.length > 1
+                            ? nameParts.sublist(1).join(' ')
+                            : '';
                         return Text(
                           '$firstName $lastName',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                         );
                       },
                     ),
@@ -595,8 +631,8 @@ class _EventFeedCard extends ConsumerWidget {
             Text(
               event.title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 8),
 
@@ -608,8 +644,8 @@ class _EventFeedCard extends ConsumerWidget {
                   return Text(
                     snapshot.data!.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                          fontWeight: FontWeight.w500,
+                        ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -621,8 +657,11 @@ class _EventFeedCard extends ConsumerWidget {
             Text(
               DateFormat('dd/MM/yyyy HH:mm', 'he').format(event.eventDate),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
             ),
             const SizedBox(height: 8),
 
@@ -633,14 +672,20 @@ class _EventFeedCard extends ConsumerWidget {
                   Icon(
                     Icons.location_on,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     event.location!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                        ),
                   ),
                 ],
               ),
@@ -650,8 +695,11 @@ class _EventFeedCard extends ConsumerWidget {
             Text(
               '${event.registeredPlayerIds.length}/${event.maxParticipants} נרשמו',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
             ),
           ],
         ),
@@ -690,7 +738,17 @@ class _FiltersSheetState extends State<_FiltersSheet> {
   late DateTime? _endDate;
 
   final List<String> _regions = ['צפון', 'מרכז', 'דרום', 'ירושלים'];
-  final List<String> _gameTypes = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
+  final List<String> _gameTypes = [
+    '3v3',
+    '4v4',
+    '5v5',
+    '6v6',
+    '7v7',
+    '8v8',
+    '9v9',
+    '10v10',
+    '11v11'
+  ];
 
   @override
   void initState() {
@@ -729,9 +787,9 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                 child: Text('כל האיזורים'),
               ),
               ..._regions.map((r) => DropdownMenuItem<String>(
-                value: r,
-                child: Text(r),
-              )),
+                    value: r,
+                    child: Text(r),
+                  )),
             ],
             onChanged: (value) => setState(() => _region = value),
           ),
@@ -750,9 +808,9 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                 child: Text('כל הסוגים'),
               ),
               ..._gameTypes.map((t) => DropdownMenuItem<String>(
-                value: t,
-                child: Text(t),
-              )),
+                    value: t,
+                    child: Text(t),
+                  )),
             ],
             onChanged: (value) => setState(() => _gameType = value),
           ),

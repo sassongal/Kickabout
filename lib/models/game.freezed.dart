@@ -22,8 +22,9 @@ Game _$GameFromJson(Map<String, dynamic> json) {
 mixin _$Game {
   String get gameId => throw _privateConstructorUsedError;
   String get createdBy => throw _privateConstructorUsedError;
-  String get hubId =>
-      throw _privateConstructorUsedError; // Event reference - Game should always be created from an Event (legacy games may not have this)
+  String? get hubId =>
+      throw _privateConstructorUsedError; // Nullable for public pickup games
+// Event reference - Game should always be created from an Event (legacy games may not have this)
   String? get eventId =>
       throw _privateConstructorUsedError; // ID of the event this game belongs to (required for new games, optional for legacy)
   @TimestampConverter()
@@ -42,6 +43,15 @@ mixin _$Game {
   @GameVisibilityConverter()
   GameVisibility get visibility =>
       throw _privateConstructorUsedError; // private, public, or recruiting
+// Public game support
+  TargetingCriteria? get targetingCriteria =>
+      throw _privateConstructorUsedError; // Targeting criteria for public games
+  bool get requiresApproval =>
+      throw _privateConstructorUsedError; // Force true for public games
+  int get minPlayersToPlay =>
+      throw _privateConstructorUsedError; // Minimum players needed to start
+  int? get maxPlayers =>
+      throw _privateConstructorUsedError; // Maximum capacity (hard cap)
   List<String> get photoUrls =>
       throw _privateConstructorUsedError; // URLs of game photos
   @TimestampConverter()
@@ -116,7 +126,10 @@ mixin _$Game {
       throw _privateConstructorUsedError; // Organizer can choose to send 2h reminders
   bool? get reminderSent2Hours =>
       throw _privateConstructorUsedError; // Whether reminder was already sent (set by Cloud Function)
-  DateTime? get reminderSent2HoursAt => throw _privateConstructorUsedError;
+  DateTime? get reminderSent2HoursAt =>
+      throw _privateConstructorUsedError; // When reminder was sent
+// Audit trail for admin actions
+  List<GameAuditEvent> get auditLog => throw _privateConstructorUsedError;
 
   /// Serializes this Game to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -135,7 +148,7 @@ abstract class $GameCopyWith<$Res> {
   $Res call(
       {String gameId,
       String createdBy,
-      String hubId,
+      String? hubId,
       String? eventId,
       @TimestampConverter() DateTime gameDate,
       String? location,
@@ -145,6 +158,10 @@ abstract class $GameCopyWith<$Res> {
       int teamCount,
       @GameStatusConverter() GameStatus status,
       @GameVisibilityConverter() GameVisibility visibility,
+      TargetingCriteria? targetingCriteria,
+      bool requiresApproval,
+      int minPlayersToPlay,
+      int? maxPlayers,
       List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
@@ -175,7 +192,10 @@ abstract class $GameCopyWith<$Res> {
       int? maxParticipants,
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
-      DateTime? reminderSent2HoursAt});
+      DateTime? reminderSent2HoursAt,
+      List<GameAuditEvent> auditLog});
+
+  $TargetingCriteriaCopyWith<$Res>? get targetingCriteria;
 }
 
 /// @nodoc
@@ -195,7 +215,7 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
   $Res call({
     Object? gameId = null,
     Object? createdBy = null,
-    Object? hubId = null,
+    Object? hubId = freezed,
     Object? eventId = freezed,
     Object? gameDate = null,
     Object? location = freezed,
@@ -205,6 +225,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? teamCount = null,
     Object? status = null,
     Object? visibility = null,
+    Object? targetingCriteria = freezed,
+    Object? requiresApproval = null,
+    Object? minPlayersToPlay = null,
+    Object? maxPlayers = freezed,
     Object? photoUrls = null,
     Object? createdAt = null,
     Object? updatedAt = null,
@@ -236,6 +260,7 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
     Object? reminderSent2HoursAt = freezed,
+    Object? auditLog = null,
   }) {
     return _then(_value.copyWith(
       gameId: null == gameId
@@ -246,10 +271,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
               as String,
-      hubId: null == hubId
+      hubId: freezed == hubId
           ? _value.hubId
           : hubId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
       eventId: freezed == eventId
           ? _value.eventId
           : eventId // ignore: cast_nullable_to_non_nullable
@@ -286,6 +311,22 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.visibility
           : visibility // ignore: cast_nullable_to_non_nullable
               as GameVisibility,
+      targetingCriteria: freezed == targetingCriteria
+          ? _value.targetingCriteria
+          : targetingCriteria // ignore: cast_nullable_to_non_nullable
+              as TargetingCriteria?,
+      requiresApproval: null == requiresApproval
+          ? _value.requiresApproval
+          : requiresApproval // ignore: cast_nullable_to_non_nullable
+              as bool,
+      minPlayersToPlay: null == minPlayersToPlay
+          ? _value.minPlayersToPlay
+          : minPlayersToPlay // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxPlayers: freezed == maxPlayers
+          ? _value.maxPlayers
+          : maxPlayers // ignore: cast_nullable_to_non_nullable
+              as int?,
       photoUrls: null == photoUrls
           ? _value.photoUrls
           : photoUrls // ignore: cast_nullable_to_non_nullable
@@ -410,7 +451,25 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.reminderSent2HoursAt
           : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      auditLog: null == auditLog
+          ? _value.auditLog
+          : auditLog // ignore: cast_nullable_to_non_nullable
+              as List<GameAuditEvent>,
     ) as $Val);
+  }
+
+  /// Create a copy of Game
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $TargetingCriteriaCopyWith<$Res>? get targetingCriteria {
+    if (_value.targetingCriteria == null) {
+      return null;
+    }
+
+    return $TargetingCriteriaCopyWith<$Res>(_value.targetingCriteria!, (value) {
+      return _then(_value.copyWith(targetingCriteria: value) as $Val);
+    });
   }
 }
 
@@ -424,7 +483,7 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
   $Res call(
       {String gameId,
       String createdBy,
-      String hubId,
+      String? hubId,
       String? eventId,
       @TimestampConverter() DateTime gameDate,
       String? location,
@@ -434,6 +493,10 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       int teamCount,
       @GameStatusConverter() GameStatus status,
       @GameVisibilityConverter() GameVisibility visibility,
+      TargetingCriteria? targetingCriteria,
+      bool requiresApproval,
+      int minPlayersToPlay,
+      int? maxPlayers,
       List<String> photoUrls,
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
@@ -464,7 +527,11 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       int? maxParticipants,
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
-      DateTime? reminderSent2HoursAt});
+      DateTime? reminderSent2HoursAt,
+      List<GameAuditEvent> auditLog});
+
+  @override
+  $TargetingCriteriaCopyWith<$Res>? get targetingCriteria;
 }
 
 /// @nodoc
@@ -481,7 +548,7 @@ class __$$GameImplCopyWithImpl<$Res>
   $Res call({
     Object? gameId = null,
     Object? createdBy = null,
-    Object? hubId = null,
+    Object? hubId = freezed,
     Object? eventId = freezed,
     Object? gameDate = null,
     Object? location = freezed,
@@ -491,6 +558,10 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? teamCount = null,
     Object? status = null,
     Object? visibility = null,
+    Object? targetingCriteria = freezed,
+    Object? requiresApproval = null,
+    Object? minPlayersToPlay = null,
+    Object? maxPlayers = freezed,
     Object? photoUrls = null,
     Object? createdAt = null,
     Object? updatedAt = null,
@@ -522,6 +593,7 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
     Object? reminderSent2HoursAt = freezed,
+    Object? auditLog = null,
   }) {
     return _then(_$GameImpl(
       gameId: null == gameId
@@ -532,10 +604,10 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
               as String,
-      hubId: null == hubId
+      hubId: freezed == hubId
           ? _value.hubId
           : hubId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
       eventId: freezed == eventId
           ? _value.eventId
           : eventId // ignore: cast_nullable_to_non_nullable
@@ -572,6 +644,22 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.visibility
           : visibility // ignore: cast_nullable_to_non_nullable
               as GameVisibility,
+      targetingCriteria: freezed == targetingCriteria
+          ? _value.targetingCriteria
+          : targetingCriteria // ignore: cast_nullable_to_non_nullable
+              as TargetingCriteria?,
+      requiresApproval: null == requiresApproval
+          ? _value.requiresApproval
+          : requiresApproval // ignore: cast_nullable_to_non_nullable
+              as bool,
+      minPlayersToPlay: null == minPlayersToPlay
+          ? _value.minPlayersToPlay
+          : minPlayersToPlay // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxPlayers: freezed == maxPlayers
+          ? _value.maxPlayers
+          : maxPlayers // ignore: cast_nullable_to_non_nullable
+              as int?,
       photoUrls: null == photoUrls
           ? _value._photoUrls
           : photoUrls // ignore: cast_nullable_to_non_nullable
@@ -696,6 +784,10 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.reminderSent2HoursAt
           : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      auditLog: null == auditLog
+          ? _value._auditLog
+          : auditLog // ignore: cast_nullable_to_non_nullable
+              as List<GameAuditEvent>,
     ));
   }
 }
@@ -706,7 +798,7 @@ class _$GameImpl implements _Game {
   const _$GameImpl(
       {required this.gameId,
       required this.createdBy,
-      required this.hubId,
+      this.hubId,
       this.eventId,
       @TimestampConverter() required this.gameDate,
       this.location,
@@ -716,6 +808,10 @@ class _$GameImpl implements _Game {
       this.teamCount = 2,
       @GameStatusConverter() this.status = GameStatus.teamSelection,
       @GameVisibilityConverter() this.visibility = GameVisibility.private,
+      this.targetingCriteria,
+      this.requiresApproval = false,
+      this.minPlayersToPlay = 10,
+      this.maxPlayers,
       final List<String> photoUrls = const [],
       @TimestampConverter() required this.createdAt,
       @TimestampConverter() required this.updatedAt,
@@ -746,14 +842,16 @@ class _$GameImpl implements _Game {
       this.maxParticipants,
       this.enableAttendanceReminder = true,
       this.reminderSent2Hours,
-      this.reminderSent2HoursAt})
+      this.reminderSent2HoursAt,
+      final List<GameAuditEvent> auditLog = const []})
       : _photoUrls = photoUrls,
         _teams = teams,
         _matches = matches,
         _aggregateWins = aggregateWins,
         _goalScorerIds = goalScorerIds,
         _goalScorerNames = goalScorerNames,
-        _confirmedPlayerIds = confirmedPlayerIds;
+        _confirmedPlayerIds = confirmedPlayerIds,
+        _auditLog = auditLog;
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameImplFromJson(json);
@@ -763,7 +861,8 @@ class _$GameImpl implements _Game {
   @override
   final String createdBy;
   @override
-  final String hubId;
+  final String? hubId;
+// Nullable for public pickup games
 // Event reference - Game should always be created from an Event (legacy games may not have this)
   @override
   final String? eventId;
@@ -796,8 +895,23 @@ class _$GameImpl implements _Game {
   @GameVisibilityConverter()
   final GameVisibility visibility;
 // private, public, or recruiting
+// Public game support
+  @override
+  final TargetingCriteria? targetingCriteria;
+// Targeting criteria for public games
+  @override
+  @JsonKey()
+  final bool requiresApproval;
+// Force true for public games
+  @override
+  @JsonKey()
+  final int minPlayersToPlay;
+// Minimum players needed to start
+  @override
+  final int? maxPlayers;
+// Maximum capacity (hard cap)
   final List<String> _photoUrls;
-// private, public, or recruiting
+// Maximum capacity (hard cap)
   @override
   @JsonKey()
   List<String> get photoUrls {
@@ -968,10 +1082,22 @@ class _$GameImpl implements _Game {
 // Whether reminder was already sent (set by Cloud Function)
   @override
   final DateTime? reminderSent2HoursAt;
+// When reminder was sent
+// Audit trail for admin actions
+  final List<GameAuditEvent> _auditLog;
+// When reminder was sent
+// Audit trail for admin actions
+  @override
+  @JsonKey()
+  List<GameAuditEvent> get auditLog {
+    if (_auditLog is EqualUnmodifiableListView) return _auditLog;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_auditLog);
+  }
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, targetingCriteria: $targetingCriteria, requiresApproval: $requiresApproval, minPlayersToPlay: $minPlayersToPlay, maxPlayers: $maxPlayers, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt, auditLog: $auditLog)';
   }
 
   @override
@@ -997,6 +1123,14 @@ class _$GameImpl implements _Game {
             (identical(other.status, status) || other.status == status) &&
             (identical(other.visibility, visibility) ||
                 other.visibility == visibility) &&
+            (identical(other.targetingCriteria, targetingCriteria) ||
+                other.targetingCriteria == targetingCriteria) &&
+            (identical(other.requiresApproval, requiresApproval) ||
+                other.requiresApproval == requiresApproval) &&
+            (identical(other.minPlayersToPlay, minPlayersToPlay) ||
+                other.minPlayersToPlay == minPlayersToPlay) &&
+            (identical(other.maxPlayers, maxPlayers) ||
+                other.maxPlayers == maxPlayers) &&
             const DeepCollectionEquality()
                 .equals(other._photoUrls, _photoUrls) &&
             (identical(other.createdAt, createdAt) ||
@@ -1054,7 +1188,8 @@ class _$GameImpl implements _Game {
             (identical(other.reminderSent2Hours, reminderSent2Hours) ||
                 other.reminderSent2Hours == reminderSent2Hours) &&
             (identical(other.reminderSent2HoursAt, reminderSent2HoursAt) ||
-                other.reminderSent2HoursAt == reminderSent2HoursAt));
+                other.reminderSent2HoursAt == reminderSent2HoursAt) &&
+            const DeepCollectionEquality().equals(other._auditLog, _auditLog));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1073,6 +1208,10 @@ class _$GameImpl implements _Game {
         teamCount,
         status,
         visibility,
+        targetingCriteria,
+        requiresApproval,
+        minPlayersToPlay,
+        maxPlayers,
         const DeepCollectionEquality().hash(_photoUrls),
         createdAt,
         updatedAt,
@@ -1103,7 +1242,8 @@ class _$GameImpl implements _Game {
         maxParticipants,
         enableAttendanceReminder,
         reminderSent2Hours,
-        reminderSent2HoursAt
+        reminderSent2HoursAt,
+        const DeepCollectionEquality().hash(_auditLog)
       ]);
 
   /// Create a copy of Game
@@ -1126,7 +1266,7 @@ abstract class _Game implements Game {
   const factory _Game(
       {required final String gameId,
       required final String createdBy,
-      required final String hubId,
+      final String? hubId,
       final String? eventId,
       @TimestampConverter() required final DateTime gameDate,
       final String? location,
@@ -1136,6 +1276,10 @@ abstract class _Game implements Game {
       final int teamCount,
       @GameStatusConverter() final GameStatus status,
       @GameVisibilityConverter() final GameVisibility visibility,
+      final TargetingCriteria? targetingCriteria,
+      final bool requiresApproval,
+      final int minPlayersToPlay,
+      final int? maxPlayers,
       final List<String> photoUrls,
       @TimestampConverter() required final DateTime createdAt,
       @TimestampConverter() required final DateTime updatedAt,
@@ -1166,7 +1310,8 @@ abstract class _Game implements Game {
       final int? maxParticipants,
       final bool enableAttendanceReminder,
       final bool? reminderSent2Hours,
-      final DateTime? reminderSent2HoursAt}) = _$GameImpl;
+      final DateTime? reminderSent2HoursAt,
+      final List<GameAuditEvent> auditLog}) = _$GameImpl;
 
   factory _Game.fromJson(Map<String, dynamic> json) = _$GameImpl.fromJson;
 
@@ -1175,8 +1320,8 @@ abstract class _Game implements Game {
   @override
   String get createdBy;
   @override
-  String
-      get hubId; // Event reference - Game should always be created from an Event (legacy games may not have this)
+  String? get hubId; // Nullable for public pickup games
+// Event reference - Game should always be created from an Event (legacy games may not have this)
   @override
   String?
       get eventId; // ID of the event this game belongs to (required for new games, optional for legacy)
@@ -1202,6 +1347,16 @@ abstract class _Game implements Game {
   @override
   @GameVisibilityConverter()
   GameVisibility get visibility; // private, public, or recruiting
+// Public game support
+  @override
+  TargetingCriteria?
+      get targetingCriteria; // Targeting criteria for public games
+  @override
+  bool get requiresApproval; // Force true for public games
+  @override
+  int get minPlayersToPlay; // Minimum players needed to start
+  @override
+  int? get maxPlayers; // Maximum capacity (hard cap)
   @override
   List<String> get photoUrls; // URLs of game photos
   @override
@@ -1293,7 +1448,10 @@ abstract class _Game implements Game {
   bool?
       get reminderSent2Hours; // Whether reminder was already sent (set by Cloud Function)
   @override
-  DateTime? get reminderSent2HoursAt;
+  DateTime? get reminderSent2HoursAt; // When reminder was sent
+// Audit trail for admin actions
+  @override
+  List<GameAuditEvent> get auditLog;
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.

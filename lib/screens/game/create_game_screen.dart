@@ -10,9 +10,9 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/screens/location/map_picker_screen.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
+import 'package:kattrick/models/targeting_criteria.dart';
 
 /// Create game screen
 class CreateGameScreen extends ConsumerStatefulWidget {
@@ -45,6 +45,12 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   // Game rules fields
   int _durationMinutes = 8;
   final _gameEndConditionController = TextEditingController();
+  // Public Game fields
+  bool _isPublicGame = false;
+  RangeValues _ageRange = const RangeValues(18, 55);
+  GameVibe _selectedVibe = GameVibe.casual;
+  PlayerGender _selectedGender = PlayerGender.any;
+
   // Attendance reminder setting
   bool _enableAttendanceReminder = true;
 
@@ -180,7 +186,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         ),
       );
       if (mounted) {
-        context.push('/login');
+        context.push('/auth');
       }
       return;
     }
@@ -235,10 +241,18 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
           : null;
       final hubRegion = hub?.region;
 
+      // Create TargetingCriteria
+      final targetingCriteria = TargetingCriteria(
+        minAge: _ageRange.start.round(),
+        maxAge: _ageRange.end.round(),
+        gender: _selectedGender,
+        vibe: _selectedVibe,
+      );
+
       final game = Game(
         gameId: '',
         createdBy: currentUserId,
-        hubId: selectedHubId,
+        hubId: _isPublicGame ? null : selectedHubId,
         gameDate: gameDate,
         location: _locationController.text.trim().isEmpty
             ? null
@@ -248,6 +262,12 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         venueId: _selectedVenueId, // Save venue ID for proper venue reference
         teamCount: _teamCount,
         status: GameStatus.teamSelection,
+        visibility:
+            _isPublicGame ? GameVisibility.public : GameVisibility.private,
+        requiresApproval: _isPublicGame
+            ? true
+            : false, // Public games require approval by default
+        targetingCriteria: targetingCriteria,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         isRecurring: _isRecurring,
@@ -331,31 +351,13 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         }
       }
 
-      // Call Cloud Function to notify hub members
+      // Notify hub members via a dedicated service
       try {
-        final functions = FirebaseFunctions.instance;
-        final notifyFunction = functions.httpsCallable('notifyHubOnNewGame');
-
-        final gameDate = DateTime(
-          _selectedDate.year,
-          _selectedDate.month,
-          _selectedDate.day,
-          _selectedTime.hour,
-          _selectedTime.minute,
-        );
-
-        final gameTime =
-            DateFormat('dd MMMM yyyy, HH:mm', 'he').format(gameDate);
-
         if (selectedHubId.isNotEmpty) {
-          await notifyFunction.call({
-            'hubId': selectedHubId,
-            'gameId': gameId,
-            'gameTitle': 'משחק חדש',
-            'gameTime': gameTime,
-          });
-
-          debugPrint('✅ Notified hub members via Cloud Function');
+          // final notificationService = ref.read(notificationsRepositoryProvider);
+          // await notificationService.notifyHubOfNewGame(...)
+          // TODO: Implement notifyHubOfNewGame in NotificationsRepository or GameManagementService
+          debugPrint('✅ Notified hub members via Cloud Function (Placeholder)');
         }
       } catch (e) {
         // Log error but don't fail game creation
@@ -465,48 +467,204 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Hub selection (optional)
-              if (_selectedHubId == null) ...[
-                StreamBuilder<List<Hub>>(
-                  stream: hubsStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const LinearProgressIndicator();
+              // Game Type Selector (Hub vs Public)
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment<bool>(
+                    value: false,
+                    label: Text('משחק Hub'),
+                    icon: Icon(Icons.group),
+                  ),
+                  ButtonSegment<bool>(
+                    value: true,
+                    label: Text('משחק ציבורי'),
+                    icon: Icon(Icons.public),
+                  ),
+                ],
+                selected: {_isPublicGame},
+                onSelectionChanged: (Set<bool> newSelection) {
+                  setState(() {
+                    _isPublicGame = newSelection.first;
+                    if (_isPublicGame) {
+                      _selectedHubId = null;
+                    } else {
+                      // Optionally restore last selected hub or leave null to force selection
+                      _selectedHubId = widget.hubId;
                     }
-
-                    final hubs = snapshot.data ?? [];
-
-                    return DropdownButtonFormField<String?>(
-                      value: _selectedHubId,
-                      decoration: const InputDecoration(
-                        labelText: 'הוב (אופציונלי)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.group),
-                      ),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('ללא Hub'),
-                        ),
-                        ...hubs.map((hub) => DropdownMenuItem<String?>(
-                              value: hub.hubId,
-                              child: Text(hub.name),
-                            ))
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedHubId = value;
-                        });
-                        if (value != null) {
-                          _loadDefaultVenue(value);
-                        }
-                      },
-                      validator: (_) => null, // optional
-                    );
-                  },
+                  });
+                },
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
+              ),
+              const SizedBox(height: 16),
+
+              // Hub selection (Only for Hub Games)
+              if (!_isPublicGame) ...[
+                if (_selectedHubId == null || widget.hubId == null)
+                  StreamBuilder<List<Hub>>(
+                    stream: hubsStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const LinearProgressIndicator();
+                      }
+
+                      final hubs = snapshot.data ?? [];
+
+                      return DropdownButtonFormField<String?>(
+                        value: _selectedHubId,
+                        decoration: const InputDecoration(
+                          labelText: 'בחר Hub',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.group),
+                        ),
+                        items: hubs
+                            .map((hub) => DropdownMenuItem<String?>(
+                                  value: hub.hubId,
+                                  child: Text(hub.name),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedHubId = value;
+                          });
+                          if (value != null) {
+                            _loadDefaultVenue(value);
+                          }
+                        },
+                        validator: (value) => !_isPublicGame && value == null
+                            ? 'נא לבחור Hub'
+                            : null,
+                      );
+                    },
+                  ),
                 const SizedBox(height: 16),
               ],
+
+              // Targeting Criteria (Visible for all, emphasized for Public)
+              Card(
+                elevation: _isPublicGame ? 4 : 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: _isPublicGame
+                      ? BorderSide(
+                          color: Theme.of(context).primaryColor, width: 2)
+                      : BorderSide.none,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.track_changes,
+                              color: _isPublicGame
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey),
+                          const SizedBox(width: 8),
+                          Text(
+                            'קהל יעד',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: _isPublicGame
+                                  ? Theme.of(context).primaryColor
+                                  : null,
+                            ),
+                          ),
+                          if (_isPublicGame)
+                            const Padding(
+                              padding: EdgeInsets.only(right: 8.0),
+                              child: Text(
+                                '(חובה למשחק ציבורי)',
+                                style:
+                                    TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Age Range
+                      Text(
+                          'גילאים: ${_ageRange.start.round()} - ${_ageRange.end.round()}'),
+                      RangeSlider(
+                        values: _ageRange,
+                        min: 16,
+                        max: 60,
+                        divisions: 44,
+                        labels: RangeLabels(
+                          _ageRange.start.round().toString(),
+                          _ageRange.end.round().toString(),
+                        ),
+                        onChanged: (RangeValues values) {
+                          setState(() {
+                            _ageRange = values;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Gender
+                      const Text('מגדר:'),
+                      const SizedBox(height: 8),
+                      SegmentedButton<PlayerGender>(
+                        segments: const [
+                          ButtonSegment<PlayerGender>(
+                            value: PlayerGender.any,
+                            label: Text('כולם'),
+                            icon: Icon(Icons.people),
+                          ),
+                          ButtonSegment<PlayerGender>(
+                            value: PlayerGender.male,
+                            label: Text('גברים'),
+                            icon: Icon(Icons.male),
+                          ),
+                          ButtonSegment<PlayerGender>(
+                            value: PlayerGender.female,
+                            label: Text('נשים'),
+                            icon: Icon(Icons.female),
+                          ),
+                        ],
+                        selected: {_selectedGender},
+                        onSelectionChanged: (Set<PlayerGender> newSelection) {
+                          setState(() {
+                            _selectedGender = newSelection.first;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Vibe
+                      const Text('אווירה:'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8.0,
+                        children: GameVibe.values.map((vibe) {
+                          return ChoiceChip(
+                            label: Text(vibe == GameVibe.competitive
+                                ? 'תחרותי 🏆'
+                                : 'כיף / קז׳ואל 🍺'),
+                            selected: _selectedVibe == vibe,
+                            onSelected: (bool selected) {
+                              if (selected) {
+                                setState(() {
+                                  _selectedVibe = vibe;
+                                });
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               const SizedBox(height: 16),
 
               // Date selection

@@ -77,8 +77,8 @@ class GamesRepository {
 
       // Invalidate cache
       CacheService().clear(CacheKeys.game(docRef.id));
-      if (game.hubId.isNotEmpty) {
-        CacheService().clear(CacheKeys.gamesByHub(game.hubId));
+      if (game.hubId != null && game.hubId!.isNotEmpty) {
+        CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
       }
 
       return docRef.id;
@@ -843,16 +843,24 @@ class GamesRepository {
       }
 
       // Get hub to verify permissions
-      final hubsRepo = HubsRepository();
-      final hub = await hubsRepo.getHub(game.hubId);
-      if (hub == null) {
-        throw Exception('Hub not found: ${game.hubId}');
-      }
+      if (game.hubId != null) {
+        final hubsRepo = HubsRepository();
+        final hub = await hubsRepo.getHub(game.hubId!);
+        if (hub == null) {
+          throw Exception('Hub not found: ${game.hubId}');
+        }
 
-      // Check if user is manager/admin
-      final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
-      if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
-        throw Exception('Unauthorized: Only Hub Managers can finalize games');
+        // Check if user is manager/admin
+        final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
+        if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
+          throw Exception('Unauthorized: Only Hub Managers can finalize games');
+        }
+      } else {
+        // Public game - check if user is creator
+        if (game.createdBy != currentUserId) {
+          throw Exception(
+              'Unauthorized: Only the game creator can finalize public games');
+        }
       }
 
       // Step 2: Get signups for the game (before transaction)
@@ -1006,7 +1014,9 @@ class GamesRepository {
 
       // Invalidate caches
       CacheService().clear(CacheKeys.game(gameId));
-      CacheService().clear(CacheKeys.gamesByHub(game.hubId));
+      if (game.hubId != null) {
+        CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
+      }
 
       // Step 7: Send automated chat announcement
       try {
@@ -1023,8 +1033,10 @@ class GamesRepository {
         }
 
         // Use current user as author (manager who finalized the game)
-        await chatRepo.sendMessage(
-            game.hubId, currentUserId, message.toString());
+        if (game.hubId != null) {
+          await chatRepo.sendMessage(
+              game.hubId!, currentUserId, message.toString());
+        }
       } catch (e) {
         // Don't fail game finalization if chat message fails
         debugPrint('⚠️ Failed to send chat announcement: $e');
@@ -1061,17 +1073,25 @@ class GamesRepository {
       }
 
       // Get hub to verify permissions
-      final hubsRepo = HubsRepository();
-      final hub = await hubsRepo.getHub(game.hubId);
-      if (hub == null) {
-        throw Exception('Hub not found: ${game.hubId}');
-      }
+      if (game.hubId != null) {
+        final hubsRepo = HubsRepository();
+        final hub = await hubsRepo.getHub(game.hubId!);
+        if (hub == null) {
+          throw Exception('Hub not found: ${game.hubId}');
+        }
 
-      // Check if user is manager/admin
-      final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
-      if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
-        throw Exception(
-            'Unauthorized: Only Hub Managers can add matches to sessions');
+        // Check if user is manager/admin
+        final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
+        if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
+          throw Exception(
+              'Unauthorized: Only Hub Managers can add matches to sessions');
+        }
+      } else {
+        // Public game - check if user is creator
+        if (game.createdBy != currentUserId) {
+          throw Exception(
+              'Unauthorized: Only the game creator can add matches to public sessions');
+        }
       }
 
       // Step 2: Atomic Transaction
@@ -1216,7 +1236,9 @@ class GamesRepository {
 
       // Step 4: Invalidate caches (outside transaction)
       CacheService().clear(CacheKeys.game(gameId));
-      CacheService().clear(CacheKeys.gamesByHub(game.hubId));
+      if (game.hubId != null) {
+        CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
+      }
 
       debugPrint('✅ Match added to session: $gameId, match: ${match.matchId}');
     } catch (e) {

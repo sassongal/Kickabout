@@ -40,7 +40,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   bool _isLoading = false;
   bool _isSaving = false;
   Hub? _hub; // Cache hub for manager ratings
-  
+
   // Team colors - predefined neon colors
   static const List<Map<String, dynamic>> _teamColors = [
     {'name': 'כחול', 'color': 0xFF2196F3, 'value': 0xFF2196F3},
@@ -52,7 +52,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     {'name': 'ורוד', 'color': 0xFFE91E63, 'value': 0xFFE91E63},
     {'name': 'טורקיז', 'color': 0xFF00BCD4, 'value': 0xFF00BCD4},
   ];
-  
+
   // Current team colors (index -> color map)
   final Map<int, Map<String, dynamic>> _teamColorMap = {};
 
@@ -68,11 +68,13 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   Future<void> _loadHub() async {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(widget.game.hubId);
-      if (mounted) {
-        setState(() {
-          _hub = hub;
-        });
+      if (widget.game.hubId != null) {
+        final hub = await hubsRepo.getHub(widget.game.hubId!);
+        if (mounted) {
+          setState(() {
+            _hub = hub;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Failed to load hub: $e');
@@ -81,7 +83,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
 
   /// Get player rating (manager rating if available, otherwise currentRankScore)
   double _getPlayerRating(User user) {
-    if (_hub?.managerRatings != null && _hub!.managerRatings.containsKey(user.uid)) {
+    if (_hub?.managerRatings != null &&
+        _hub!.managerRatings.containsKey(user.uid)) {
       return _hub!.managerRatings[user.uid]!;
     }
     return user.currentRankScore; // Fallback
@@ -92,7 +95,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       widget.teamCount,
       (_) => <String>[],
     );
-    
+
     // Initialize colors from existing teams or assign defaults
     for (int i = 0; i < widget.teamCount; i++) {
       if (widget.game.teams.length > i && widget.game.teams[i].color != null) {
@@ -116,12 +119,12 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       final prefs = await SharedPreferences.getInstance();
       final draftKey = 'teammaker_draft_${widget.gameId}';
       final draftJson = prefs.getString(draftKey);
-      
+
       if (draftJson != null) {
         final draft = jsonDecode(draftJson) as Map<String, dynamic>;
         final savedTeamCount = draft['teamCount'] as int?;
         final savedTeamPlayerIds = draft['teamPlayerIds'] as List<dynamic>?;
-        
+
         // Only load if team count matches
         if (savedTeamCount == widget.teamCount && savedTeamPlayerIds != null) {
           setState(() {
@@ -169,7 +172,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     try {
       final usersRepo = ref.read(usersRepositoryProvider);
       final players = await usersRepo.getUsers(widget.playerIds);
-      
+
       if (mounted) {
         setState(() {
           _allPlayers = players;
@@ -211,13 +214,14 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       final teams = _teamPlayerIds.asMap().entries.map((entry) {
         final index = entry.key;
         final playerIds = entry.value;
-        
+
         // Calculate total score using manager ratings
         final totalScore = _allPlayers
             .where((p) => playerIds.contains(p.uid))
             .fold<double>(0.0, (sum, player) => sum + _getPlayerRating(player));
 
-        final colorData = _teamColorMap[index] ?? _teamColors[index % _teamColors.length];
+        final colorData =
+            _teamColorMap[index] ?? _teamColors[index % _teamColors.length];
         return Team(
           teamId: 'team_$index',
           name: teamNames[index],
@@ -231,7 +235,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       if (widget.isEvent && widget.eventId != null && widget.hubId != null) {
         // Save teams to Event
         final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-        await hubEventsRepo.saveTeamsForEvent(widget.hubId!, widget.eventId!, teams);
+        await hubEventsRepo.saveTeamsForEvent(
+            widget.hubId!, widget.eventId!, teams);
       } else {
         // Save teams to Game (original behavior)
         final gamesRepo = ref.read(gamesRepositoryProvider);
@@ -289,13 +294,13 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       for (final team in _teamPlayerIds) {
         team.remove(playerId);
       }
-      
+
       // Add to target team
       _teamPlayerIds[targetTeamIndex].add(playerId);
-      
+
       // Notify callback if provided
       _notifyTeamsChanged();
-      
+
       // Auto-save draft after any change
       _saveDraft();
     });
@@ -307,13 +312,14 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       final teams = _teamPlayerIds.asMap().entries.map((entry) {
         final index = entry.key;
         final playerIds = entry.value;
-        
+
         // Calculate total score using manager ratings
         final totalScore = _allPlayers
             .where((p) => playerIds.contains(p.uid))
             .fold<double>(0.0, (sum, player) => sum + _getPlayerRating(player));
 
-        final colorData = _teamColorMap[index] ?? _teamColors[index % _teamColors.length];
+        final colorData =
+            _teamColorMap[index] ?? _teamColors[index % _teamColors.length];
         return Team(
           teamId: 'team_$index',
           name: teamNames[index],
@@ -323,7 +329,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
           colorValue: colorData['value'] as int,
         );
       }).toList();
-      
+
       widget.onTeamsChanged!(teams);
     }
   }
@@ -353,7 +359,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                 icon: const Icon(Icons.shuffle),
                 label: const Text('ערבב'),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                 ),
               ),
               const SizedBox(width: 12),
@@ -393,13 +400,14 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                   ),
                 );
               }),
-              
+
               // Unassigned players column
               Container(
                 width: 200,
                 margin: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey, style: BorderStyle.solid),
+                  border:
+                      Border.all(color: Colors.grey, style: BorderStyle.solid),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -416,8 +424,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                       child: Text(
                         'שחקנים לא מוקצים (${unassignedPlayers.length})',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                              fontWeight: FontWeight.bold,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -484,15 +492,15 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     int teamIndex,
     List<String> playerIds,
   ) {
-    final teamPlayers = _allPlayers
-        .where((player) => playerIds.contains(player.uid))
-        .toList();
+    final teamPlayers =
+        _allPlayers.where((player) => playerIds.contains(player.uid)).toList();
 
     return Container(
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         border: Border.all(
-          color: Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3),
+          color:
+              Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3),
           width: 2,
         ),
         borderRadius: BorderRadius.circular(8),
@@ -502,7 +510,9 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3).withValues(alpha: 0.1),
+              color: Color(
+                      _teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3)
+                  .withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(6),
                 topRight: Radius.circular(6),
@@ -518,7 +528,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3),
+                      color: Color(_teamColorMap[teamIndex]?['value'] as int? ??
+                          0xFF2196F3),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
@@ -529,8 +540,8 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                   child: Text(
                     '$teamName (${playerIds.length})',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -546,7 +557,9 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   color: candidateData.isNotEmpty
-                      ? Color(_teamColorMap[teamIndex]?['value'] as int? ?? 0xFF2196F3).withValues(alpha: 0.2)
+                      ? Color(_teamColorMap[teamIndex]?['value'] as int? ??
+                              0xFF2196F3)
+                          .withValues(alpha: 0.2)
                       : Colors.transparent,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(8),
@@ -588,17 +601,17 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
                               'דירוג: ${player.currentRankScore.toStringAsFixed(1)}',
                               style: const TextStyle(fontSize: 10),
                             ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.close, size: 16),
-                                onPressed: () {
-                                  setState(() {
-                                    playerIds.remove(player.uid);
-                                    _notifyTeamsChanged();
-                                    // Auto-save draft after any change
-                                    _saveDraft();
-                                  });
-                                },
-                              ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close, size: 16),
+                              onPressed: () {
+                                setState(() {
+                                  playerIds.remove(player.uid);
+                                  _notifyTeamsChanged();
+                                  // Auto-save draft after any change
+                                  _saveDraft();
+                                });
+                              },
+                            ),
                           ),
                         ),
                       );
@@ -630,8 +643,9 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
             itemCount: _teamColors.length,
             itemBuilder: (context, index) {
               final colorData = _teamColors[index];
-              final isSelected = _teamColorMap[teamIndex]?['name'] == colorData['name'];
-              
+              final isSelected =
+                  _teamColorMap[teamIndex]?['name'] == colorData['name'];
+
               return InkWell(
                 onTap: () => Navigator.pop(context, colorData),
                 child: Container(
@@ -659,7 +673,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
         ],
       ),
     );
-    
+
     if (selectedColor != null) {
       setState(() {
         _teamColorMap[teamIndex] = selectedColor;
@@ -667,6 +681,6 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       });
     }
   }
-  
+
   List<String> get teamNames => ['קבוצה א', 'קבוצה ב', 'קבוצה ג', 'קבוצה ד'];
 }

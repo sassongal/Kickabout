@@ -12,6 +12,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/models/targeting_criteria.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
 import 'package:kattrick/services/weather_service.dart';
@@ -77,8 +78,16 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               game.status == GameStatus.teamSelection &&
               game.enableAttendanceReminder;
 
-          // Get user role for this hub
-          final roleAsync = ref.watch(hubRoleProvider(game.hubId));
+          // Get user role for this hub (or determine admin if public)
+          final AsyncValue<UserRole> roleAsync;
+          if (game.hubId != null) {
+            roleAsync = ref.watch(hubRoleProvider(game.hubId!));
+          } else {
+            // For public games, creator is admin, others are members
+            roleAsync = AsyncValue.data(
+              isCreator ? UserRole.admin : UserRole.member,
+            );
+          }
 
           return roleAsync.when(
             data: (role) {
@@ -353,8 +362,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     BuildContext context,
     GameSignup signup,
     UsersRepository usersRepo,
-    bool isConfirmed,
-  ) {
+    bool isConfirmed, {
+    bool isAdmin = false,
+  }) {
     return FutureBuilder<User?>(
       future: usersRepo.getUser(signup.playerId),
       builder: (context, snapshot) {
@@ -377,15 +387,30 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           ),
           title: Text(user.name),
           subtitle: Text(user.email),
-          trailing: isConfirmed
-              ? const Chip(
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isConfirmed)
+                const Chip(
                   label: Text('מאושר'),
                   backgroundColor: Colors.green,
                 )
-              : const Chip(
+              else
+                const Chip(
                   label: Text('ממתין'),
                   backgroundColor: Colors.orange,
                 ),
+              if (isAdmin) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline,
+                      color: Colors.red),
+                  onPressed: () => _rejectPlayer(signup.playerId),
+                  tooltip: 'הסר שחקן',
+                ),
+              ],
+            ],
+          ),
         );
       },
     );
@@ -494,16 +519,26 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   String _getStatusText(GameStatus status) {
     switch (status) {
+      case GameStatus.draft:
+        return 'טיוטה';
+      case GameStatus.scheduled:
+        return 'מתוכנן';
+      case GameStatus.recruiting:
+        return 'גיוס שחקנים';
       case GameStatus.teamSelection:
         return 'בחירת קבוצות';
       case GameStatus.teamsFormed:
         return 'קבוצות נוצרו';
+      case GameStatus.fullyBooked:
+        return 'מלא';
       case GameStatus.inProgress:
         return 'במהלך';
       case GameStatus.completed:
         return 'הושלם';
       case GameStatus.statsInput:
         return 'הזנת סטטיסטיקות';
+      case GameStatus.cancelled:
+        return 'בוטל';
       case GameStatus.archivedNotPlayed:
         return 'ארכיון - לא שוחק';
     }
@@ -522,6 +557,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     UsersRepository usersRepo,
   ) {
     switch (game.status) {
+      // New statuses - default to pending state behavior
+      case GameStatus.draft:
+      case GameStatus.scheduled:
+      case GameStatus.recruiting:
       case GameStatus.teamSelection:
         return _buildPendingState(
           context,
@@ -535,6 +574,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           usersRepo,
         );
 
+      case GameStatus.fullyBooked:
       case GameStatus.teamsFormed:
         final maxPlayers = game.teamCount * 3; // 3 players per team minimum
         return _buildConfirmedState(
@@ -578,6 +618,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           usersRepo,
         );
 
+      case GameStatus.cancelled:
       case GameStatus.archivedNotPlayed:
         return _buildCompletedState(
           context,
@@ -605,6 +646,58 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Targeting Mismatch Warning (for joiners)
+        if (!isCreator &&
+            !isSignedUp &&
+            game.targetingCriteria != null &&
+            currentUserId != null)
+          FutureBuilder<User?>(
+            future: usersRepo.getUser(currentUserId),
+            builder: (context, snapshot) {
+              final user = snapshot.data;
+              if (user == null) return const SizedBox.shrink();
+
+              final age = DateTime.now().year - user.birthDate.year;
+              final criteria = game.targetingCriteria!;
+              final isAgeMatch =
+                  (criteria.minAge == null || age >= criteria.minAge!) &&
+                      (criteria.maxAge == null || age <= criteria.maxAge!);
+
+              // TODO: Add gender to User model to enable this check
+              final isGenderMatch = true;
+              /* criteria.gender == PlayerGender.any ||
+                  (user.gender == 'male' &&
+                      criteria.gender == PlayerGender.male) ||
+                  (user.gender == 'female' &&
+                      criteria.gender == PlayerGender.female); */
+
+              if (!isAgeMatch || !isGenderMatch) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber, color: Colors.amber),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'שים לב: המשחק מיועד לגילאים ${criteria.minAge}-${criteria.maxAge} ${criteria.gender == PlayerGender.male ? '(גברים)' : criteria.gender == PlayerGender.female ? '(נשים)' : ''}',
+                          style: const TextStyle(color: Colors.amber),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+
         // Action buttons
         if (currentUserId != null) ...[
           // Chat button
@@ -617,29 +710,49 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // Sign up button (if not creator and not signed up and not full)
+
+          // Sign up button logic
           if (!isCreator && !isSignedUp && !isGameFull)
             ElevatedButton.icon(
               onPressed: () => _toggleSignup(context, game, isSignedUp),
               icon: const Icon(Icons.person_add),
-              label: const Text('נרשם'),
+              label: Text(game.requiresApproval ? 'בקש להצטרף' : 'הירשם למשחק'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
-          if (!isCreator && isSignedUp)
+
+          // Pending Approval State
+          if (!isCreator &&
+              isSignedUp &&
+              pendingSignups.any((s) => s.playerId == currentUserId))
+            ElevatedButton.icon(
+              onPressed: null, // Disabled
+              icon: const Icon(Icons.hourglass_empty),
+              label: const Text('בקשה נשלחה - ממתין לאישור'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                disabledBackgroundColor: Colors.grey.withValues(alpha: 0.2),
+                disabledForegroundColor: Colors.grey,
+              ),
+            ),
+
+          if (!isCreator &&
+              isSignedUp &&
+              confirmedSignups.any((s) => s.playerId == currentUserId))
             ElevatedButton.icon(
               onPressed: () => _toggleSignup(context, game, isSignedUp),
               icon: const Icon(Icons.person_remove),
-              label: const Text('מסיר הרשמה'),
+              label: const Text('בטל הרשמה'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Theme.of(context).colorScheme.error,
                 foregroundColor: Theme.of(context).colorScheme.onError,
               ),
             ),
+
           if (isGameFull && !isSignedUp)
             Container(
               padding: const EdgeInsets.all(16),
@@ -652,10 +765,51 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 children: [
                   Icon(Icons.info_outline, color: Colors.orange),
                   SizedBox(width: 8),
-                  Text('המשחק מלא'),
+                  Text('המשחק מלא - ניתן להירשם לרשימת המתנה'),
                 ],
               ),
             ),
+          const SizedBox(height: 24),
+        ],
+
+        // Pending Approvals Section (Admin Only)
+        if ((isCreator || role == UserRole.admin) &&
+            pendingSignups.isNotEmpty) ...[
+          Card(
+            color: Colors.orange.withValues(alpha: 0.05),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.orange.withValues(alpha: 0.3)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.verified_user, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Text(
+                        'בקשות ממתינות (${pendingSignups.length})',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ...pendingSignups.map((signup) => _buildPendingApprovalTile(
+                        context,
+                        signup,
+                        usersRepo,
+                      )),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
         ],
 
@@ -663,8 +817,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         _buildSignupsSection(
           context,
           confirmedSignups,
-          pendingSignups,
+          [], // Don't show pending in regular list if admin (shown above)
           usersRepo,
+          isAdmin: isCreator || role == UserRole.admin,
         ),
       ],
     );
@@ -961,8 +1116,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     BuildContext context,
     List<GameSignup> confirmedSignups,
     List<GameSignup> pendingSignups,
-    UsersRepository usersRepo,
-  ) {
+    UsersRepository usersRepo, {
+    bool isAdmin = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -986,6 +1142,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 signup,
                 usersRepo,
                 true,
+                isAdmin: isAdmin,
               )),
           const SizedBox(height: 16),
         ],
@@ -1002,6 +1159,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 signup,
                 usersRepo,
                 false,
+                isAdmin: isAdmin,
               )),
         ],
 
@@ -1012,6 +1170,101 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           ),
       ],
     );
+  }
+
+  Widget _buildPendingApprovalTile(
+    BuildContext context,
+    GameSignup signup,
+    UsersRepository usersRepo,
+  ) {
+    return FutureBuilder<User?>(
+      future: usersRepo.getUser(signup.playerId),
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        if (user == null) return const SizedBox.shrink();
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: PlayerAvatar(user: user, radius: 20),
+            title: Text(user.name),
+            subtitle: Text(
+                'ביקש להצטרף • ${DateFormat('HH:mm dd/MM').format(signup.signedUpAt)}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.check_circle, color: Colors.green),
+                  onPressed: () => _approvePlayer(signup.playerId),
+                  tooltip: 'אשר',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.cancel, color: Colors.red),
+                  onPressed: () => _rejectPlayer(signup.playerId),
+                  tooltip: 'דחה',
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _approvePlayer(String playerId) async {
+    try {
+      final service = GameManagementService();
+      await service.approvePlayer(
+        gameId: widget.gameId,
+        userId: playerId,
+      );
+      if (mounted) SnackbarHelper.showSuccess(context, 'שחקן אושר בהצלחה');
+    } catch (e) {
+      if (mounted) SnackbarHelper.showErrorFromException(context, e);
+    }
+  }
+
+  Future<void> _rejectPlayer(String playerId) async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('דחיית בקשה'),
+        content: TextField(
+          controller: reasonController,
+          decoration: const InputDecoration(
+            labelText: 'סיבת הדחייה (חובה)',
+            hintText: 'לדוגמה: המשחק מלא, לא מתאים לרמה...',
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('ביטול')),
+          ElevatedButton(
+            onPressed: () {
+              if (reasonController.text.trim().isEmpty) return;
+              Navigator.pop(context, true);
+            },
+            child: const Text('דחה בקשה'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final service = GameManagementService();
+        await service.kickPlayer(
+          gameId: widget.gameId,
+          userId: playerId,
+          reason: reasonController.text.trim(),
+        );
+        if (mounted) SnackbarHelper.showSuccess(context, 'בקשה נדחתה');
+      } catch (e) {
+        if (mounted) SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
   }
 
   /// Find missing players - change game to recruiting and post to feed
@@ -1049,37 +1302,41 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final feedRepo = ref.read(feedRepositoryProvider);
 
-      // Get hub name
-      final hub = await hubsRepo.getHub(game.hubId);
-      final hubName = hub?.name ?? 'Hub';
-
       // Update game visibility to recruiting
       await gamesRepo.updateGame(widget.gameId, {
         'visibility': GameVisibility.recruiting.toFirestore(),
       });
 
-      // Create feed post
-      final currentUserId = ref.read(currentUserIdProvider);
-      if (currentUserId != null) {
-        final post = FeedPost(
-          postId: '', // Will be generated by repository
-          hubId: game.hubId,
-          authorId: currentUserId,
-          type: 'game_recruitment',
-          content:
-              'Hub $hubName צריך ${maxPlayers - currentPlayers} שחקנים למשחק ב-${DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate)}',
-          createdAt: DateTime.now(),
-          gameId: widget.gameId,
-          region: game.region ?? hub?.region,
-        );
+      // Create feed post only if game belongs to a hub
+      if (game.hubId != null) {
+        // Get hub name
+        final hub = await hubsRepo.getHub(game.hubId!);
+        final hubName = hub?.name ?? 'Hub';
 
-        await feedRepo.createPost(post);
+        final currentUserId = ref.read(currentUserIdProvider);
+        if (currentUserId != null) {
+          final post = FeedPost(
+            postId: '', // Will be generated by repository
+            hubId: game.hubId!,
+            authorId: currentUserId,
+            type: 'game_recruitment',
+            content:
+                'Hub $hubName צריך ${maxPlayers - currentPlayers} שחקנים למשחק ב-${DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate)}',
+            createdAt: DateTime.now(),
+            gameId: widget.gameId,
+            region: game.region ?? hub?.region,
+          );
+
+          await feedRepo.createPost(post);
+        }
       }
 
       if (context.mounted) {
         SnackbarHelper.showSuccess(
           context,
-          'המשחק הוצג בפיד האזורי למציאת שחקנים',
+          game.hubId != null
+              ? 'המשחק הוצג בפיד האזורי למציאת שחקנים'
+              : 'המשחק פתוח כעת לגיוס שחקנים',
         );
       }
     } catch (e) {

@@ -9,7 +9,7 @@ part of 'game.dart';
 _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       gameId: json['gameId'] as String,
       createdBy: json['createdBy'] as String,
-      hubId: json['hubId'] as String,
+      hubId: json['hubId'] as String?,
       eventId: json['eventId'] as String?,
       gameDate: const TimestampConverter().fromJson(json['gameDate'] as Object),
       location: json['location'] as String?,
@@ -25,6 +25,13 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
           ? GameVisibility.private
           : const GameVisibilityConverter()
               .fromJson(json['visibility'] as String),
+      targetingCriteria: json['targetingCriteria'] == null
+          ? null
+          : TargetingCriteria.fromJson(
+              json['targetingCriteria'] as Map<String, dynamic>),
+      requiresApproval: json['requiresApproval'] as bool? ?? false,
+      minPlayersToPlay: (json['minPlayersToPlay'] as num?)?.toInt() ?? 10,
+      maxPlayers: (json['maxPlayers'] as num?)?.toInt(),
       photoUrls: (json['photoUrls'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -84,6 +91,10 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       reminderSent2HoursAt: json['reminderSent2HoursAt'] == null
           ? null
           : DateTime.parse(json['reminderSent2HoursAt'] as String),
+      auditLog: (json['auditLog'] as List<dynamic>?)
+              ?.map((e) => GameAuditEvent.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -101,6 +112,10 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'teamCount': instance.teamCount,
       'status': const GameStatusConverter().toJson(instance.status),
       'visibility': const GameVisibilityConverter().toJson(instance.visibility),
+      'targetingCriteria': instance.targetingCriteria,
+      'requiresApproval': instance.requiresApproval,
+      'minPlayersToPlay': instance.minPlayersToPlay,
+      'maxPlayers': instance.maxPlayers,
       'photoUrls': instance.photoUrls,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'updatedAt': const TimestampConverter().toJson(instance.updatedAt),
@@ -133,4 +148,5 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'enableAttendanceReminder': instance.enableAttendanceReminder,
       'reminderSent2Hours': instance.reminderSent2Hours,
       'reminderSent2HoursAt': instance.reminderSent2HoursAt?.toIso8601String(),
+      'auditLog': instance.auditLog,
     };

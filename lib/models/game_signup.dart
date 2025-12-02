@@ -12,6 +12,7 @@ class GameSignup with _$GameSignup {
     required String playerId,
     @TimestampConverter() required DateTime signedUpAt,
     @SignupStatusConverter() @Default(SignupStatus.pending) SignupStatus status,
+    String? adminActionReason, // Mandatory for rejections/kicks
   }) = _GameSignup;
 
   factory GameSignup.fromJson(Map<String, dynamic> json) =>
@@ -40,4 +41,3 @@ class SignupStatusConverter implements JsonConverter<SignupStatus, String> {
   @override
   String toJson(SignupStatus object) => object.toFirestore();
 }
-

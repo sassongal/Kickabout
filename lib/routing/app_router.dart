@@ -27,6 +27,7 @@ import 'package:kattrick/screens/game/create_game_screen.dart'
     deferred as create_game_screen;
 import 'package:kattrick/screens/game/game_detail_screen.dart'
     deferred as game_detail_screen;
+import 'package:kattrick/screens/game/all_events_screen.dart';
 import 'package:kattrick/screens/game/confirm_attendance_screen.dart';
 import 'package:kattrick/screens/game/attendance_monitoring_screen.dart';
 import 'package:kattrick/screens/game/team_maker_screen.dart'
@@ -128,7 +129,6 @@ import 'package:kattrick/screens/event/team_generator_result_screen.dart'
 import 'package:kattrick/screens/debug/create_dummy_players_screen.dart'
     deferred as create_dummy_players_screen;
 import 'package:kattrick/screens/debug/auth_status_screen.dart';
-import 'package:kattrick/screens/game/all_events_screen.dart';
 
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
@@ -810,6 +810,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+
+      // All Events Screen
+      GoRoute(
+        path: '/games/all',
+        name: 'allEvents',
+        builder: (context, state) => const AllEventsScreen(),
       ),
 
       // Game routes

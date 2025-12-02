@@ -14,6 +14,7 @@ _$GameSignupImpl _$$GameSignupImplFromJson(Map<String, dynamic> json) =>
       status: json['status'] == null
           ? SignupStatus.pending
           : const SignupStatusConverter().fromJson(json['status'] as String),
+      adminActionReason: json['adminActionReason'] as String?,
     );
 
 Map<String, dynamic> _$$GameSignupImplToJson(_$GameSignupImpl instance) =>
@@ -21,4 +22,5 @@ Map<String, dynamic> _$$GameSignupImplToJson(_$GameSignupImpl instance) =>
       'playerId': instance.playerId,
       'signedUpAt': const TimestampConverter().toJson(instance.signedUpAt),
       'status': const SignupStatusConverter().toJson(instance.status),
+      'adminActionReason': instance.adminActionReason,
     };

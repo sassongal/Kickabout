@@ -1,10 +1,15 @@
 /// Game status enum matching Firestore schema
 enum GameStatus {
-  teamSelection,
-  teamsFormed,
-  inProgress,
-  completed,
-  statsInput,
+  draft, // Incomplete creation
+  scheduled, // Future event
+  recruiting, // Actively seeking players
+  teamSelection, // Existing: Organizing teams
+  teamsFormed, // Existing: Teams created
+  fullyBooked, // At maximum capacity
+  inProgress, // Existing: Game in progress
+  completed, // Existing: Game finished
+  statsInput, // Existing: Entering stats
+  cancelled, // Event cancelled
   archivedNotPlayed; // Game was scheduled but never started (auto-closed after 3h)
 
   /// Convert to Firestore string
@@ -18,4 +23,3 @@ enum GameStatus {
     );
   }
 }
-
