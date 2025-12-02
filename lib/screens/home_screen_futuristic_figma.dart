@@ -23,6 +23,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
+import 'package:kattrick/widgets/home/bubble_menu.dart';
 
 /// Futuristic Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly
@@ -128,564 +130,129 @@ class _HomeScreenFuturisticFigmaState
           bottomNavigationBar: FuturisticBottomNavBar(
             currentRoute: GoRouterState.of(context).uri.toString(),
           ),
-          body: Container(
-            decoration: const BoxDecoration(
-              gradient: FuturisticColors.backgroundGradient,
-            ),
-            child: RefreshIndicator(
-              onRefresh: () async {
-                // Force refresh
-              },
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Weather strip at top
-                    const HomeWeatherVibeWidget(),
-                    const SizedBox(height: 16),
+          body: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: FuturisticColors.backgroundGradient,
+                ),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    // Force refresh
+                  },
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Weather strip at top
+                        const HomeWeatherVibeWidget(),
+                        const SizedBox(height: 16),
 
-                    // Admin Tasks Card (if user is admin)
-                    _buildAdminTasksCard(context, currentUserId),
-                    const SizedBox(height: 16),
+                        // Next Game Spotlight Card - Shows upcoming game/event
+                        NextGameSpotlightCard(userId: currentUserId),
 
-                    // User Profile Card (compact with inline performance)
-                    if (user != null) ...[
-                      _ProfileSummaryCard(
-                        user: user,
-                        currentUserId: currentUserId,
-                        gamificationStream: gamificationStream,
-                        onPerformanceTap: () =>
-                            context.push('/profile/$currentUserId/performance'),
-                        performanceSnippet: Row(
-                          children: [
-                            const Icon(Icons.analytics_outlined,
-                                size: 16, color: Colors.orange),
-                            const SizedBox(width: 6),
-                            Text(
-                              'משחקים: ${user.gamesPlayed} | השתתפויות: ${user.totalParticipations}',
+                        // "To All Events" Link
+                        Center(
+                          child: TextButton(
+                            onPressed: () => context.push('/games/all'),
+                            child: Text(
+                              'לכל האירועים',
                               style: GoogleFonts.inter(
-                                  fontSize: 12, color: Colors.orange[800]),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: FuturisticColors.primary,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
-                          ],
+                          ),
                         ),
-                        onAvailabilityChanged: (value) async {
-                          // currentUserId is guaranteed to be non-null here (checked at line 48)
-                          if (!context.mounted) return;
-                          try {
-                            // Update availability status without triggering navigation
-                            await ref.read(usersRepositoryProvider).updateUser(
-                              currentUserId,
-                              {
-                                'availabilityStatus':
-                                    value ? 'available' : 'notAvailable'
-                              },
-                            );
+                        const SizedBox(height: 8),
 
-                            // Show feedback to user
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    value
-                                        ? 'סטטוס עודכן: זמין למשחקים'
-                                        : 'סטטוס עודכן: לא זמין למשחקים',
-                                  ),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor:
-                                      value ? Colors.green : Colors.grey,
+                        // Admin Tasks Card (if user is admin)
+                        _buildAdminTasksCard(context, currentUserId),
+                        const SizedBox(height: 16),
+
+                        // User Profile Card (compact with inline performance)
+                        if (user != null) ...[
+                          _ProfileSummaryCard(
+                            user: user,
+                            currentUserId: currentUserId,
+                            gamificationStream: gamificationStream,
+                            onPerformanceTap: () => context
+                                .push('/profile/$currentUserId/performance'),
+                            performanceSnippet: Row(
+                              children: [
+                                const Icon(Icons.analytics_outlined,
+                                    size: 16, color: Colors.orange),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'משחקים: ${user.gamesPlayed} | השתתפויות: ${user.totalParticipations}',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 12, color: Colors.orange[800]),
                                 ),
-                              );
-                            }
-                          } catch (e) {
-                            // Handle error without breaking UI
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('שגיאה בעדכון סטטוס: $e'),
-                                  backgroundColor: Colors.red,
-                                  duration: const Duration(seconds: 3),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                              ],
+                            ),
+                            onAvailabilityChanged: (value) async {
+                              // currentUserId is guaranteed to be non-null here (checked at line 48)
+                              if (!context.mounted) return;
+                              try {
+                                // Update availability status without triggering navigation
+                                await ref
+                                    .read(usersRepositoryProvider)
+                                    .updateUser(
+                                  currentUserId,
+                                  {
+                                    'availabilityStatus':
+                                        value ? 'available' : 'notAvailable'
+                                  },
+                                );
 
-                      Text(
-                        'פעולות מהירות',
-                        style: FuturisticTypography.bodySmall
-                            .copyWith(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Quick Actions - Updated Layout
-                      Row(
-                        children: [
-                          // 1. צור הוב (עבר לכאן)
-                          Expanded(
-                            child: _QuickActionButton(
-                              icon: Icons.add_business, // או אייקון אחר מתאים
-                              label: 'צור Hub',
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF9C27B0),
-                                  Color(0xFF7B1FA2)
-                                ], // סגול
-                              ),
-                              onTap: () => context.push('/hubs/create'),
-                            ),
+                                // Show feedback to user
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        value
+                                            ? 'סטטוס עודכן: זמין למשחקים'
+                                            : 'סטטוס עודכן: לא זמין למשחקים',
+                                      ),
+                                      duration: const Duration(seconds: 2),
+                                      backgroundColor:
+                                          value ? Colors.green : Colors.grey,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                // Handle error without breaking UI
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('שגיאה בעדכון סטטוס: $e'),
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
                           ),
-                          const SizedBox(width: 12),
-                          // 2. צור משחק
-                          Expanded(
-                            child: _QuickActionButton(
-                              icon: Icons.sports_soccer,
-                              label: 'צור משחק',
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF1976D2),
-                                  Color(0xFF1565C0)
-                                ], // כחול
-                              ),
-                              onTap: () => context.push('/games/create'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // 3. מצא שחקנים
-                          Expanded(
-                            child: _QuickActionButton(
-                              icon: Icons.person_search,
-                              label: 'מצא שחקנים',
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF4CAF50),
-                                  Color(0xFF388E3C)
-                                ], // ירוק
-                              ),
-                              onTap: () => context.push(AppPaths.playersBoard),
-                            ),
-                          ),
+                          const SizedBox(height: 16),
                         ],
-                      ),
-                      const SizedBox(height: 16), // Reduced space
-                    ],
 
-                    // My Hubs section (simplified for Figma)
-                    StreamBuilder<List<Hub>>(
-                      stream: hubsRepo.watchHubsByMember(currentUserId),
-                      builder: (context, snapshot) {
-                        final hubs = snapshot.data ?? [];
-                        if (hubs.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'MY HUBS',
-                              style: GoogleFonts.orbitron(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 2.0,
-                                color: const Color(0xFF212121),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            ...hubs.take(3).map((hub) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: FuturisticCard(
-                                    onTap: () =>
-                                        context.push('/hubs/${hub.hubId}'),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            gradient: FuturisticColors
-                                                .primaryGradient,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: const Icon(
-                                            Icons.group,
-                                            color: Colors.white,
-                                            size: 24,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                hub.name,
-                                                style: GoogleFonts.montserrat(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w700,
-                                                  color:
-                                                      const Color(0xFF212121),
-                                                ),
-                                              ),
-                                              Text(
-                                                '${hub.memberCount} חברים',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 14,
-                                                  color:
-                                                      const Color(0xFF757575),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // My Hubs & Associated Hubs
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Consumer(
-                            builder: (context, ref, child) {
-                              // FIX: Use provider with keepAlive instead of direct StreamBuilder
-                              final myHubsAsync = ref.watch(hubsByCreatorStreamProvider(currentUserId));
-                              return myHubsAsync.when(
-                                data: (myHubs) => FuturisticCard(
-                                  onTap: () => _showMyHubs(context, myHubs),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          gradient:
-                                              FuturisticColors.primaryGradient,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Icon(
-                                          Icons.group,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Hubs שפתחתי',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF212121),
-                                        ),
-                                      ),
-                                      Text(
-                                        '${myHubs.length}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          color: const Color(0xFF757575),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                loading: () => FuturisticCard(
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          gradient:
-                                              FuturisticColors.primaryGradient,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Center(
-                                          child: SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Hubs שפתחתי',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF212121),
-                                        ),
-                                      ),
-                                      Text(
-                                        '...',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          color: const Color(0xFF757575),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                error: (error, stack) => FuturisticCard(
-                                  onTap: () => _showMyHubs(context, []),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          gradient:
-                                              FuturisticColors.primaryGradient,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Icon(
-                                          Icons.error_outline,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Hubs שפתחתי',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF212121),
-                                        ),
-                                      ),
-                                      Text(
-                                        '0',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          color: const Color(0xFF757575),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FutureBuilder<List<Hub>>(
-                            future: _getAssociatedHubs(hubsRepo, currentUserId),
-                            builder: (context, snapshot) {
-                              final associatedHubs = snapshot.data ?? [];
-                              return FuturisticCard(
-                                onTap: () => _showAssociatedHubs(
-                                    context, associatedHubs),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        gradient:
-                                            FuturisticColors.accentGradient,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.people,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Hub אליו אני משוייך',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF212121),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    Text(
-                                      '${associatedHubs.length}',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: const Color(0xFF757575),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Quick Actions - moved up to replace AI Recommendations
-                    Text(
-                      'פעולות מהירות',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2.0,
-                        color: const Color(0xFF212121),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FuturisticCard(
-                            onTap: () => context.push('/hubs/create'),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: FuturisticColors.primaryGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.group_add,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'צור Hub',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF212121),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FuturisticCard(
-                            onTap: () => context.push('/discover'),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: FuturisticColors.accentGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.explore,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'גלה',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF212121),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FuturisticCard(
-                            onTap: () => context.push('/map'),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        FuturisticColors.secondary,
-                                        FuturisticColors.secondaryDark,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.map,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'מפה',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF212121),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Upcoming Games
-                    StreamBuilder<List<Hub>>(
-                      stream: hubsRepo.watchHubsByMember(currentUserId),
-                      builder: (context, hubsSnapshot) {
-                        if (hubsSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final hubs = hubsSnapshot.data ?? [];
-                        if (hubs.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final hubIds = hubs.map((h) => h.hubId).toList();
-                        final now = DateTime.now();
-                        final nextWeek = now.add(const Duration(days: 7));
-
-                        return FutureBuilder<List<Game>>(
-                          future: _getUpcomingGames(
-                              gamesRepo, hubIds, now, nextWeek),
+                        // My Hubs section (simplified for Figma)
+                        StreamBuilder<List<Hub>>(
+                          stream: hubsRepo.watchHubsByMember(currentUserId),
                           builder: (context, snapshot) {
-                            final games = snapshot.data ?? [];
-                            if (games.isEmpty) {
+                            final hubs = snapshot.data ?? [];
+                            if (hubs.isEmpty) {
                               return const SizedBox.shrink();
                             }
-
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'UPCOMING GAMES',
+                                  'MY HUBS',
                                   style: GoogleFonts.orbitron(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
@@ -694,18 +261,28 @@ class _HomeScreenFuturisticFigmaState
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                ...games.take(2).map((game) => Padding(
+                                ...hubs.take(3).map((hub) => Padding(
                                       padding:
                                           const EdgeInsets.only(bottom: 12),
                                       child: FuturisticCard(
-                                        onTap: () => context
-                                            .push('/games/${game.gameId}'),
+                                        onTap: () =>
+                                            context.push('/hubs/${hub.hubId}'),
                                         child: Row(
                                           children: [
-                                            Icon(
-                                              Icons.calendar_today,
-                                              color: FuturisticColors.primary,
-                                              size: 20,
+                                            Container(
+                                              width: 48,
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                gradient: FuturisticColors
+                                                    .primaryGradient,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: const Icon(
+                                                Icons.group,
+                                                color: Colors.white,
+                                                size: 24,
+                                              ),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
@@ -714,80 +291,25 @@ class _HomeScreenFuturisticFigmaState
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    DateFormat('dd/MM HH:mm')
-                                                        .format(game.gameDate),
+                                                    hub.name,
                                                     style:
                                                         GoogleFonts.montserrat(
                                                       fontSize: 16,
                                                       fontWeight:
-                                                          FontWeight.w600,
+                                                          FontWeight.w700,
                                                       color: const Color(
                                                           0xFF212121),
                                                     ),
                                                   ),
-                                                  if (game.location != null)
-                                                    Text(
-                                                      game.location!,
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 14,
-                                                        color: const Color(
-                                                            0xFF757575),
-                                                      ),
+                                                  Text(
+                                                    '${hub.memberCount} חברים',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 14,
+                                                      color: const Color(
+                                                          0xFF757575),
                                                     ),
+                                                  ),
                                                 ],
-                                              ),
-                                            ),
-                                            // Signup count (simplified - just show status)
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    FuturisticColors.secondary,
-                                                borderRadius:
-                                                    BorderRadius.circular(16),
-                                              ),
-                                              child: Builder(
-                                                builder: (context) {
-                                                  final signupsRepo = ref.read(
-                                                      signupsRepositoryProvider);
-                                                  return StreamBuilder<
-                                                      List<GameSignup>>(
-                                                    stream: signupsRepo
-                                                        .watchSignups(
-                                                            game.gameId),
-                                                    builder: (context,
-                                                        signupsSnapshot) {
-                                                      final signups =
-                                                          signupsSnapshot
-                                                                  .data ??
-                                                              [];
-                                                      final confirmedCount =
-                                                          signups
-                                                              .where((s) =>
-                                                                  s.status ==
-                                                                  SignupStatus
-                                                                      .confirmed)
-                                                              .length;
-                                                      final minRequired = game
-                                                              .teamCount *
-                                                          AppConstants
-                                                              .minPlayersPerTeam;
-                                                      return Text(
-                                                        '$confirmedCount/$minRequired',
-                                                        style: GoogleFonts
-                                                            .montserrat(
-                                                          fontSize: 14,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: Colors.white,
-                                                        ),
-                                                      );
-                                                    },
-                                                  );
-                                                },
                                               ),
                                             ),
                                           ],
@@ -797,68 +319,416 @@ class _HomeScreenFuturisticFigmaState
                               ],
                             );
                           },
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Developer Tools & Admin Console
-                    if (user != null) ...[
-                      // Admin Console Button (prominent)
-                      ElevatedButton.icon(
-                        onPressed: () => context.push('/admin/dashboard'),
-                        icon: const Icon(Icons.admin_panel_settings),
-                        label: const Text('Admin Console'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.deepPurple,
-                          foregroundColor: Colors.white,
                         ),
-                      ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 24),
 
-                      // Developer Tools Row
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  context.push('/admin/generate-dummy-data'),
-                              icon: const Icon(Icons.science_outlined),
-                              label: const Text('Generate Dummy Data (Dev)'),
-                              style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                side: BorderSide(
-                                    color: FuturisticColors.textSecondary
-                                        .withValues(alpha: 0.3)),
+                        // My Hubs & Associated Hubs
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Consumer(
+                                builder: (context, ref, child) {
+                                  // FIX: Use provider with keepAlive instead of direct StreamBuilder
+                                  final myHubsAsync = ref.watch(
+                                      hubsByCreatorStreamProvider(
+                                          currentUserId));
+                                  return myHubsAsync.when(
+                                    data: (myHubs) => FuturisticCard(
+                                      onTap: () => _showMyHubs(context, myHubs),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 48,
+                                            height: 48,
+                                            decoration: BoxDecoration(
+                                              gradient: FuturisticColors
+                                                  .primaryGradient,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: const Icon(
+                                              Icons.group,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Hubs שפתחתי',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF212121),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${myHubs.length}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              color: const Color(0xFF757575),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    loading: () => FuturisticCard(
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 48,
+                                            height: 48,
+                                            decoration: BoxDecoration(
+                                              gradient: FuturisticColors
+                                                  .primaryGradient,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: const Center(
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Hubs שפתחתי',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF212121),
+                                            ),
+                                          ),
+                                          Text(
+                                            '...',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              color: const Color(0xFF757575),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    error: (error, stack) => FuturisticCard(
+                                      onTap: () => _showMyHubs(context, []),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 48,
+                                            height: 48,
+                                            decoration: BoxDecoration(
+                                              gradient: FuturisticColors
+                                                  .primaryGradient,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: const Icon(
+                                              Icons.error_outline,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Hubs שפתחתי',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF212121),
+                                            ),
+                                          ),
+                                          Text(
+                                            '0',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              color: const Color(0xFF757575),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  _forceHaifaLocation(context, currentUserId),
-                              icon: const Icon(Icons.location_city_outlined),
-                              label: const Text('Force Haifa Location (Dev)'),
-                              style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                side: BorderSide(
-                                    color: FuturisticColors.textSecondary
-                                        .withValues(alpha: 0.3)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FutureBuilder<List<Hub>>(
+                                future:
+                                    _getAssociatedHubs(hubsRepo, currentUserId),
+                                builder: (context, snapshot) {
+                                  final associatedHubs = snapshot.data ?? [];
+                                  return FuturisticCard(
+                                    onTap: () => _showAssociatedHubs(
+                                        context, associatedHubs),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            gradient:
+                                                FuturisticColors.accentGradient,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: const Icon(
+                                            Icons.people,
+                                            color: Colors.white,
+                                            size: 24,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Hub אליו אני משוייך',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF212121),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        Text(
+                                          '${associatedHubs.length}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: const Color(0xFF757575),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Upcoming Games
+                        StreamBuilder<List<Hub>>(
+                          stream: hubsRepo.watchHubsByMember(currentUserId),
+                          builder: (context, hubsSnapshot) {
+                            if (hubsSnapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const SizedBox.shrink();
+                            }
+
+                            final hubs = hubsSnapshot.data ?? [];
+                            if (hubs.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+
+                            final hubIds = hubs.map((h) => h.hubId).toList();
+                            final now = DateTime.now();
+                            final nextWeek = now.add(const Duration(days: 7));
+
+                            return FutureBuilder<List<Game>>(
+                              future: _getUpcomingGames(
+                                  gamesRepo, hubIds, now, nextWeek),
+                              builder: (context, snapshot) {
+                                final games = snapshot.data ?? [];
+                                if (games.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'UPCOMING GAMES',
+                                      style: GoogleFonts.orbitron(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 2.0,
+                                        color: const Color(0xFF212121),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ...games.take(2).map((game) => Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
+                                          child: FuturisticCard(
+                                            onTap: () => context
+                                                .push('/games/${game.gameId}'),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.calendar_today,
+                                                  color:
+                                                      FuturisticColors.primary,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        DateFormat(
+                                                                'dd/MM HH:mm')
+                                                            .format(
+                                                                game.gameDate),
+                                                        style: GoogleFonts
+                                                            .montserrat(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: const Color(
+                                                              0xFF212121),
+                                                        ),
+                                                      ),
+                                                      if (game.location != null)
+                                                        Text(
+                                                          game.location!,
+                                                          style:
+                                                              GoogleFonts.inter(
+                                                            fontSize: 14,
+                                                            color: const Color(
+                                                                0xFF757575),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                // Signup count (simplified - just show status)
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6),
+                                                  decoration: BoxDecoration(
+                                                    color: FuturisticColors
+                                                        .secondary,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16),
+                                                  ),
+                                                  child: Builder(
+                                                    builder: (context) {
+                                                      final signupsRepo = ref.read(
+                                                          signupsRepositoryProvider);
+                                                      return StreamBuilder<
+                                                          List<GameSignup>>(
+                                                        stream: signupsRepo
+                                                            .watchSignups(
+                                                                game.gameId),
+                                                        builder: (context,
+                                                            signupsSnapshot) {
+                                                          final signups =
+                                                              signupsSnapshot
+                                                                      .data ??
+                                                                  [];
+                                                          final confirmedCount =
+                                                              signups
+                                                                  .where((s) =>
+                                                                      s.status ==
+                                                                      SignupStatus
+                                                                          .confirmed)
+                                                                  .length;
+                                                          final minRequired = game
+                                                                  .teamCount *
+                                                              AppConstants
+                                                                  .minPlayersPerTeam;
+                                                          return Text(
+                                                            '$confirmedCount/$minRequired',
+                                                            style: GoogleFonts
+                                                                .montserrat(
+                                                              fontSize: 14,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                          );
+                                                        },
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Developer Tools & Admin Console
+                        if (user != null) ...[
+                          // Admin Console Button (prominent)
+                          ElevatedButton.icon(
+                            onPressed: () => context.push('/admin/dashboard'),
+                            icon: const Icon(Icons.admin_panel_settings),
+                            label: const Text('Admin Console'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.deepPurple,
+                              foregroundColor: Colors.white,
+                            ),
                           ),
+                          const SizedBox(height: 12),
+
+                          // Developer Tools Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context
+                                      .push('/admin/generate-dummy-data'),
+                                  icon: const Icon(Icons.science_outlined),
+                                  label:
+                                      const Text('Generate Dummy Data (Dev)'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    side: BorderSide(
+                                        color: FuturisticColors.textSecondary
+                                            .withValues(alpha: 0.3)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _forceHaifaLocation(
+                                      context, currentUserId),
+                                  icon:
+                                      const Icon(Icons.location_city_outlined),
+                                  label:
+                                      const Text('Force Haifa Location (Dev)'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    side: BorderSide(
+                                        color: FuturisticColors.textSecondary
+                                            .withValues(alpha: 0.3)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
                         ],
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const QuickActionsBubbleMenu(),
+            ],
           ),
         );
       },
@@ -986,17 +856,17 @@ class _HomeScreenFuturisticFigmaState
       await authService.signOut();
 
       if (!mounted) return;
-      
+
       SnackbarHelper.showSuccess(
         context,
         'התנתקת בהצלחה',
       );
-      
+
       if (!mounted) return;
       context.go('/auth');
     } catch (e) {
       if (!mounted) return;
-      
+
       SnackbarHelper.showError(
         context,
         'שגיאה בהתנתקות: ${e.toString()}',
@@ -1740,50 +1610,6 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
       icon: Icon(icon, color: iconColor),
       onPressed: _toggleLocation,
       tooltip: tooltip,
-    );
-  }
-}
-
-class _QuickActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Gradient gradient;
-  final VoidCallback onTap;
-
-  const _QuickActionButton({
-    required this.icon,
-    required this.label,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -12,6 +12,8 @@ import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/screens/location/map_picker_screen.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
+import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
+
 /// Create game screen
 class CreateGameScreen extends ConsumerStatefulWidget {
   final String? hubId;
@@ -223,9 +225,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
           return;
         }
         // Ensure venue has valid location if locationPoint is missing
-        if (_selectedLocation == null && venue.location != null) {
-          _selectedLocation = venue.location;
-        }
+        _selectedLocation ??= venue.location;
       }
 
       // Get hub to copy region (optional)
@@ -260,7 +260,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         region: hubRegion, // Copy region from hub
         enableAttendanceReminder: _enableAttendanceReminder,
       );
-      
+
       debugPrint('📝 Creating game with venueId: $_selectedVenueId');
 
       final gameId = await gamesRepo.createGame(game);
@@ -741,121 +741,25 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Text location field (legacy support)
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          return RawAutocomplete<Venue>(
-                            textEditingController: _locationController,
-                            focusNode: _locationFocusNode,
-                            optionsBuilder:
-                                (TextEditingValue textEditingValue) async {
-                              if (textEditingValue.text.length < 2) {
-                                return const Iterable<Venue>.empty();
-                              }
-                              return await ref
-                                  .read(venuesRepositoryProvider)
-                                  .searchVenuesCombined(textEditingValue.text);
-                            },
-                            displayStringForOption: (Venue option) =>
-                                option.name,
-                            onSelected: (Venue selection) async {
-                              Venue venue = selection;
-                              // If it's a Google result (empty ID), save it
-                              if (venue.venueId.isEmpty) {
-                                try {
-                                  venue = await ref
-                                      .read(venuesRepositoryProvider)
-                                      .getOrCreateVenueFromGooglePlace(
-                                          selection);
-                                  debugPrint('✅ Venue saved with ID: ${venue.venueId}');
-                                } catch (e) {
-                                  debugPrint('❌ Error creating venue: $e');
-                                  // Don't proceed if venue creation failed
-                                  return;
-                                }
-                              }
-
-                              // Verify venue has valid ID
-                              if (venue.venueId.isEmpty) {
-                                debugPrint('⚠️ Venue still has empty ID after processing');
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('שגיאה: לא ניתן להוסיף מגרש ללא מזהה תקין'),
-                                    duration: Duration(seconds: 3),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              setState(() {
-                                _selectedLocation = venue.location;
-                                _locationAddress = venue.address ?? venue.name;
-                                _locationController.text = venue.name;
-                                _selectedVenueId = venue.venueId; // Save venue ID
-                              });
-                              debugPrint('✅ Selected venue: ${venue.name} (${venue.venueId})');
-                              // Unfocus to close keyboard
-                              _locationFocusNode.unfocus();
-                            },
-                            optionsViewBuilder: (BuildContext context,
-                                AutocompleteOnSelected<Venue> onSelected,
-                                Iterable<Venue> options) {
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: Material(
-                                  elevation: 4.0,
-                                  child: SizedBox(
-                                    width: constraints.maxWidth,
-                                    height: 200.0,
-                                    child: ListView.builder(
-                                      padding: EdgeInsets.zero,
-                                      itemCount: options.length,
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                        final Venue option =
-                                            options.elementAt(index);
-                                        return ListTile(
-                                          leading: Icon(
-                                            option.venueId.isNotEmpty
-                                                ? Icons.verified
-                                                : Icons.map,
-                                            color: option.venueId.isNotEmpty
-                                                ? Colors.blue
-                                                : Colors.grey,
-                                          ),
-                                          title: Text(option.name),
-                                          subtitle: Text(option.address ?? ''),
-                                          onTap: () => onSelected(option),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            fieldViewBuilder: (BuildContext context,
-                                TextEditingController textEditingController,
-                                FocusNode focusNode,
-                                VoidCallback onFieldSubmitted) {
-                              return TextFormField(
-                                controller: textEditingController,
-                                focusNode: focusNode,
-                                decoration: const InputDecoration(
-                                  labelText: 'כתובת או שם מגרש',
-                                  hintText: 'חפש מגרש קהילתי/פרטי/ציבורי...',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.search),
-                                  helperText:
-                                      'הקלד שם/כתובת כדי ששחקנים יוכלו לנווט לשם',
-                                ),
-                                onFieldSubmitted: (String value) {
-                                  onFieldSubmitted();
-                                },
-                              );
-                            },
-                          );
+                      // Smart Venue Search Field
+                      SmartVenueSearchField(
+                        label: 'מיקום (אופציונלי)',
+                        hint: 'חפש מגרש או כתובת...',
+                        initialValue: _locationController.text,
+                        hubId:
+                            _selectedHubId, // Pass selected hub ID if available
+                        onVenueSelected: (venue) {
+                          setState(() {
+                            _selectedLocation = venue.location;
+                            _locationAddress = venue.address ?? venue.name;
+                            _locationController.text = venue.name;
+                            _selectedVenueId = venue.venueId;
+                          });
+                          debugPrint(
+                              '✅ Selected venue: ${venue.name} (${venue.venueId})');
                         },
                       ),
+
                       const SizedBox(height: 8),
                       // Geographic location
                       if (_locationAddress != null)

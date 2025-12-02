@@ -446,6 +446,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                     name: widget.userName,
                     email:
                         '', // Required field, but not available from request data
+                    birthDate: DateTime(1990, 1, 1),
                     photoUrl: widget.userPhotoUrl,
                     createdAt: widget.createdAt ?? DateTime.now(),
                   ),

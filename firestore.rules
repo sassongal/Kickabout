@@ -139,6 +139,16 @@ service cloud.firestore {
       allow read: if isAuthenticated();
     }
 
+    // Allow users to read their own signups in collection group queries
+    match /{path=**}/signups/{signupId} {
+      allow read: if isAuthenticated() &&
+        request.auth.uid == (
+          resource.data.userId != null
+            ? resource.data.userId
+            : resource.data.playerId
+        );
+    }
+
     // ============================================
     // Users Collection
     // ============================================
@@ -148,8 +158,25 @@ service cloud.firestore {
                       !(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds != null && 
                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds is list &&
                         userId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds));
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid == userId;
+      
+      // ✅ Validation: birthDate is required and age >= 13
+      function isValidBirthDate(birthDate) {
+        return birthDate != null &&
+          (birthDate is timestamp) &&
+          // Age = current year - birth year (per Gap Analysis)
+          int((request.time.toMillis() - birthDate.toMillis()) / (1000 * 60 * 60 * 24 * 365.25)) >= 13;
+      }
+      
+      allow create: if isAuthenticated() &&
+        request.resource.data.birthDate != null &&
+        request.resource.data.birthDate is timestamp &&
+        isValidBirthDate(request.resource.data.birthDate);
+      
+      allow update: if isAuthenticated() && request.auth.uid == userId &&
+        (!('birthDate' in request.resource.data) || 
+         (request.resource.data.birthDate is timestamp && 
+          isValidBirthDate(request.resource.data.birthDate)));
+      
       allow delete: if isAuthenticated() && request.auth.uid == userId;
 
       match /fcm_tokens/{tokenId} {
@@ -183,8 +210,12 @@ service cloud.firestore {
         request.resource.data.createdBy == request.auth.uid &&
         request.resource.data.createdBy is string &&
         request.resource.data.createdAt is timestamp &&
-        // Check user hub limit (10) - since creator joins automatically
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hubIds.size() < 10;
+        // Check user hub limit (10) - missing/invalid hubIds treated as empty list
+        (
+          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hubIds is list)
+            ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hubIds.size() < 10
+            : true
+        );
 
       allow update: if canHandleRequests(hubId) &&
         request.resource.data.hubId == resource.data.hubId &&

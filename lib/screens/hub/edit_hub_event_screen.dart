@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/models.dart' hide Notification;
+import 'package:kattrick/models/notification.dart' as app_notification;
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/player_avatar.dart';
 
 /// Edit hub event screen
 class EditHubEventScreen extends ConsumerStatefulWidget {
@@ -41,6 +43,8 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
   bool _isLoadingData = true;
   HubEvent? _event;
   Hub? _hub;
+  List<User> _registeredUsers = [];
+  List<User> _waitingUsers = [];
 
   final List<String> _gameTypes = [
     '3v3',
@@ -69,10 +73,25 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
           await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
       final hub = await hubsRepo.getHub(widget.hubId);
 
+      List<User> registeredUsers = [];
+      List<User> waitingUsers = [];
+
+      if (event != null) {
+        final usersRepo = ref.read(usersRepositoryProvider);
+        if (event.registeredPlayerIds.isNotEmpty) {
+          registeredUsers = await usersRepo.getUsers(event.registeredPlayerIds);
+        }
+        if (event.waitingListPlayerIds.isNotEmpty) {
+          waitingUsers = await usersRepo.getUsers(event.waitingListPlayerIds);
+        }
+      }
+
       if (mounted) {
         setState(() {
           _event = event;
           _hub = hub;
+          _registeredUsers = registeredUsers;
+          _waitingUsers = waitingUsers;
 
           if (event != null) {
             _titleController.text = event.title;
@@ -227,7 +246,18 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
         return;
       }
 
+      // Check if moving time backward (only forward allowed)
+      if (_event != null && eventDate.isBefore(_event!.eventDate)) {
+        SnackbarHelper.showError(context, 'ניתן לשנות את שעת האירוע רק קדימה');
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+
+      // Check if date/time changed
+      final bool timeChanged = _event != null &&
+          (eventDate.difference(_event!.eventDate).inMinutes.abs() > 0);
 
       await hubEventsRepo.updateHubEvent(
         widget.hubId,
@@ -250,6 +280,74 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
           'updatedAt': DateTime.now(),
         },
       );
+
+      // Send notification if time changed
+      if (timeChanged && _event != null) {
+        try {
+          final notificationsRepo = ref.read(notificationsRepositoryProvider);
+
+          // חשוב: במקום לשלוח לכל חברי ההאב, נשלח רק לשחקנים הרשומים
+          // זה חוסך הרבה כסף בקריאות ובכתיבות!
+          final playerIds = _event!.registeredPlayerIds.toSet();
+
+          // הגבלה ל-100 שחקנים כדי למנוע עומס (במקרים קיצוניים)
+          final limitedPlayerIds = playerIds.take(100).toList();
+
+          // TODO: לייצור, יש להעביר את זה ל-Cloud Function שיעשה את זה בצד השרת
+          // כדי לחסוך עוד יותר כסף ולשפר ביצועים
+
+          if (limitedPlayerIds.isEmpty) {
+            return; // אין למי לשלוח
+          }
+
+          final dateFormat = DateFormat('dd/MM HH:mm');
+          final oldDateStr = dateFormat.format(_event!.eventDate);
+          final newDateStr = dateFormat.format(eventDate);
+
+          // שליחת התראות בבאצ'ים של 10 (כדי לא לחסום את הUI)
+          for (var i = 0; i < limitedPlayerIds.length; i += 10) {
+            final batch = limitedPlayerIds.skip(i).take(10);
+
+            await Future.wait(
+              batch.map((playerId) {
+                if (playerId == currentUserId)
+                  return Future.value(); // לא לשלוח לעצמך
+
+                return notificationsRepo.createNotification(
+                  app_notification.Notification(
+                    notificationId: '',
+                    userId: playerId,
+                    type: 'event_update',
+                    title: 'עדכון זמן משחק',
+                    body:
+                        'המשחק "${_event!.title}" הוזז מ-$oldDateStr ל-$newDateStr',
+                    data: {
+                      'hubId': widget.hubId,
+                      'eventId': widget.eventId,
+                      'type': 'event_update',
+                    },
+                    createdAt: DateTime.now(),
+                    entityId: widget.eventId,
+                    hubId: widget.hubId,
+                  ),
+                );
+              }),
+            );
+          }
+
+          if (mounted) {
+            SnackbarHelper.showSuccess(
+              context,
+              'הודעה נשלחה ל-${limitedPlayerIds.length} שחקנים',
+            );
+          }
+        } catch (e) {
+          debugPrint('Failed to send notifications: $e');
+          if (mounted) {
+            SnackbarHelper.showError(context, 'שגיאה בשליחת הודעות');
+          }
+        }
+      }
 
       if (!mounted) return;
       SnackbarHelper.showSuccess(context, 'אירוע עודכן בהצלחה!');
@@ -317,6 +415,109 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
       SnackbarHelper.showSuccess(context, 'אירוע נמחק בהצלחה!');
       if (mounted) {
         context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _removeParticipant(User user, bool isWaitingList) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('הסרת משתתף'),
+        content: Text(
+            'האם אתה בטוח שברצונך להסיר את ${user.name} מ${isWaitingList ? 'רשימת ההמתנה' : 'האירוע'}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('הסר'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+      await hubEventsRepo.unregisterFromEvent(
+          widget.hubId, widget.eventId, user.uid);
+
+      // Refresh lists
+      setState(() {
+        if (isWaitingList) {
+          _waitingUsers.removeWhere((u) => u.uid == user.uid);
+        } else {
+          _registeredUsers.removeWhere((u) => u.uid == user.uid);
+        }
+      });
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'משתתף הוסר בהצלחה');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _promoteParticipant(User user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('הוספת משתתף'),
+        content: Text('האם להוסיף את ${user.name} לרשימת המשתתפים?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('הוסף'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+      await hubEventsRepo.promoteFromWaitingList(
+          widget.hubId, widget.eventId, user.uid);
+
+      // Refresh lists
+      setState(() {
+        _waitingUsers.removeWhere((u) => u.uid == user.uid);
+        _registeredUsers.add(user);
+      });
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'משתתף נוסף בהצלחה');
       }
     } catch (e) {
       if (mounted) {
@@ -529,6 +730,71 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               const SizedBox(height: 24),
+
+              // Participants List
+              if (_registeredUsers.isNotEmpty) ...[
+                const Text(
+                  'משתתפים רשומים',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _registeredUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = _registeredUsers[index];
+                    return ListTile(
+                      leading: PlayerAvatar(user: user, radius: 20),
+                      title: Text(user.name),
+                      trailing: IconButton(
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _removeParticipant(user, false),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Waiting List
+              if (_waitingUsers.isNotEmpty) ...[
+                const Text(
+                  'רשימת המתנה',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _waitingUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = _waitingUsers[index];
+                    return ListTile(
+                      leading: PlayerAvatar(user: user, radius: 20),
+                      title: Text(user.name),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline,
+                                color: Colors.green),
+                            onPressed: () => _promoteParticipant(user),
+                            tooltip: 'הוסף לאירוע',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.red),
+                            onPressed: () => _removeParticipant(user, true),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // Update Button
               ElevatedButton(

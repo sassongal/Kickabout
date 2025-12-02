@@ -21,6 +21,8 @@ Venue _$VenueFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$Venue {
   String get venueId => throw _privateConstructorUsedError;
+  int get venueNumber =>
+      throw _privateConstructorUsedError; // Unique sequential number for this venue (like hubId)
   String get hubId =>
       throw _privateConstructorUsedError; // Which hub this venue belongs to
   String get name =>
@@ -51,7 +53,10 @@ mixin _$Venue {
       throw _privateConstructorUsedError; // Is this the main/home venue for the hub
   int get hubCount =>
       throw _privateConstructorUsedError; // Number of hubs using this venue
-  bool get isPublic => throw _privateConstructorUsedError;
+  bool get isPublic =>
+      throw _privateConstructorUsedError; // Whether this is a public venue
+  String get source => throw _privateConstructorUsedError; // 'manual' or 'osm'
+  String? get externalId => throw _privateConstructorUsedError;
 
   /// Serializes this Venue to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -69,6 +74,7 @@ abstract class $VenueCopyWith<$Res> {
   @useResult
   $Res call(
       {String venueId,
+      int venueNumber,
       String hubId,
       String name,
       String? description,
@@ -84,7 +90,9 @@ abstract class $VenueCopyWith<$Res> {
       bool isActive,
       bool isMain,
       int hubCount,
-      bool isPublic});
+      bool isPublic,
+      String source,
+      String? externalId});
 }
 
 /// @nodoc
@@ -103,6 +111,7 @@ class _$VenueCopyWithImpl<$Res, $Val extends Venue>
   @override
   $Res call({
     Object? venueId = null,
+    Object? venueNumber = null,
     Object? hubId = null,
     Object? name = null,
     Object? description = freezed,
@@ -119,12 +128,18 @@ class _$VenueCopyWithImpl<$Res, $Val extends Venue>
     Object? isMain = null,
     Object? hubCount = null,
     Object? isPublic = null,
+    Object? source = null,
+    Object? externalId = freezed,
   }) {
     return _then(_value.copyWith(
       venueId: null == venueId
           ? _value.venueId
           : venueId // ignore: cast_nullable_to_non_nullable
               as String,
+      venueNumber: null == venueNumber
+          ? _value.venueNumber
+          : venueNumber // ignore: cast_nullable_to_non_nullable
+              as int,
       hubId: null == hubId
           ? _value.hubId
           : hubId // ignore: cast_nullable_to_non_nullable
@@ -189,6 +204,14 @@ class _$VenueCopyWithImpl<$Res, $Val extends Venue>
           ? _value.isPublic
           : isPublic // ignore: cast_nullable_to_non_nullable
               as bool,
+      source: null == source
+          ? _value.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String,
+      externalId: freezed == externalId
+          ? _value.externalId
+          : externalId // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -202,6 +225,7 @@ abstract class _$$VenueImplCopyWith<$Res> implements $VenueCopyWith<$Res> {
   @useResult
   $Res call(
       {String venueId,
+      int venueNumber,
       String hubId,
       String name,
       String? description,
@@ -217,7 +241,9 @@ abstract class _$$VenueImplCopyWith<$Res> implements $VenueCopyWith<$Res> {
       bool isActive,
       bool isMain,
       int hubCount,
-      bool isPublic});
+      bool isPublic,
+      String source,
+      String? externalId});
 }
 
 /// @nodoc
@@ -234,6 +260,7 @@ class __$$VenueImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? venueId = null,
+    Object? venueNumber = null,
     Object? hubId = null,
     Object? name = null,
     Object? description = freezed,
@@ -250,12 +277,18 @@ class __$$VenueImplCopyWithImpl<$Res>
     Object? isMain = null,
     Object? hubCount = null,
     Object? isPublic = null,
+    Object? source = null,
+    Object? externalId = freezed,
   }) {
     return _then(_$VenueImpl(
       venueId: null == venueId
           ? _value.venueId
           : venueId // ignore: cast_nullable_to_non_nullable
               as String,
+      venueNumber: null == venueNumber
+          ? _value.venueNumber
+          : venueNumber // ignore: cast_nullable_to_non_nullable
+              as int,
       hubId: null == hubId
           ? _value.hubId
           : hubId // ignore: cast_nullable_to_non_nullable
@@ -320,6 +353,14 @@ class __$$VenueImplCopyWithImpl<$Res>
           ? _value.isPublic
           : isPublic // ignore: cast_nullable_to_non_nullable
               as bool,
+      source: null == source
+          ? _value.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String,
+      externalId: freezed == externalId
+          ? _value.externalId
+          : externalId // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -329,6 +370,7 @@ class __$$VenueImplCopyWithImpl<$Res>
 class _$VenueImpl implements _Venue {
   const _$VenueImpl(
       {required this.venueId,
+      this.venueNumber = 0,
       required this.hubId,
       required this.name,
       this.description,
@@ -344,7 +386,9 @@ class _$VenueImpl implements _Venue {
       this.isActive = true,
       this.isMain = false,
       this.hubCount = 0,
-      this.isPublic = true})
+      this.isPublic = true,
+      this.source = 'manual',
+      this.externalId})
       : _amenities = amenities;
 
   factory _$VenueImpl.fromJson(Map<String, dynamic> json) =>
@@ -352,6 +396,10 @@ class _$VenueImpl implements _Venue {
 
   @override
   final String venueId;
+  @override
+  @JsonKey()
+  final int venueNumber;
+// Unique sequential number for this venue (like hubId)
   @override
   final String hubId;
 // Which hub this venue belongs to
@@ -413,10 +461,17 @@ class _$VenueImpl implements _Venue {
   @override
   @JsonKey()
   final bool isPublic;
+// Whether this is a public venue
+  @override
+  @JsonKey()
+  final String source;
+// 'manual' or 'osm'
+  @override
+  final String? externalId;
 
   @override
   String toString() {
-    return 'Venue(venueId: $venueId, hubId: $hubId, name: $name, description: $description, location: $location, address: $address, googlePlaceId: $googlePlaceId, amenities: $amenities, surfaceType: $surfaceType, maxPlayers: $maxPlayers, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, isActive: $isActive, isMain: $isMain, hubCount: $hubCount, isPublic: $isPublic)';
+    return 'Venue(venueId: $venueId, venueNumber: $venueNumber, hubId: $hubId, name: $name, description: $description, location: $location, address: $address, googlePlaceId: $googlePlaceId, amenities: $amenities, surfaceType: $surfaceType, maxPlayers: $maxPlayers, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, isActive: $isActive, isMain: $isMain, hubCount: $hubCount, isPublic: $isPublic, source: $source, externalId: $externalId)';
   }
 
   @override
@@ -425,6 +480,8 @@ class _$VenueImpl implements _Venue {
         (other.runtimeType == runtimeType &&
             other is _$VenueImpl &&
             (identical(other.venueId, venueId) || other.venueId == venueId) &&
+            (identical(other.venueNumber, venueNumber) ||
+                other.venueNumber == venueNumber) &&
             (identical(other.hubId, hubId) || other.hubId == hubId) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.description, description) ||
@@ -452,30 +509,37 @@ class _$VenueImpl implements _Venue {
             (identical(other.hubCount, hubCount) ||
                 other.hubCount == hubCount) &&
             (identical(other.isPublic, isPublic) ||
-                other.isPublic == isPublic));
+                other.isPublic == isPublic) &&
+            (identical(other.source, source) || other.source == source) &&
+            (identical(other.externalId, externalId) ||
+                other.externalId == externalId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      venueId,
-      hubId,
-      name,
-      description,
-      location,
-      address,
-      googlePlaceId,
-      const DeepCollectionEquality().hash(_amenities),
-      surfaceType,
-      maxPlayers,
-      createdAt,
-      updatedAt,
-      createdBy,
-      isActive,
-      isMain,
-      hubCount,
-      isPublic);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        venueId,
+        venueNumber,
+        hubId,
+        name,
+        description,
+        location,
+        address,
+        googlePlaceId,
+        const DeepCollectionEquality().hash(_amenities),
+        surfaceType,
+        maxPlayers,
+        createdAt,
+        updatedAt,
+        createdBy,
+        isActive,
+        isMain,
+        hubCount,
+        isPublic,
+        source,
+        externalId
+      ]);
 
   /// Create a copy of Venue
   /// with the given fields replaced by the non-null parameter values.
@@ -496,6 +560,7 @@ class _$VenueImpl implements _Venue {
 abstract class _Venue implements Venue {
   const factory _Venue(
       {required final String venueId,
+      final int venueNumber,
       required final String hubId,
       required final String name,
       final String? description,
@@ -511,12 +576,16 @@ abstract class _Venue implements Venue {
       final bool isActive,
       final bool isMain,
       final int hubCount,
-      final bool isPublic}) = _$VenueImpl;
+      final bool isPublic,
+      final String source,
+      final String? externalId}) = _$VenueImpl;
 
   factory _Venue.fromJson(Map<String, dynamic> json) = _$VenueImpl.fromJson;
 
   @override
   String get venueId;
+  @override
+  int get venueNumber; // Unique sequential number for this venue (like hubId)
   @override
   String get hubId; // Which hub this venue belongs to
   @override
@@ -551,7 +620,11 @@ abstract class _Venue implements Venue {
   @override
   int get hubCount; // Number of hubs using this venue
   @override
-  bool get isPublic;
+  bool get isPublic; // Whether this is a public venue
+  @override
+  String get source; // 'manual' or 'osm'
+  @override
+  String? get externalId;
 
   /// Create a copy of Venue
   /// with the given fields replaced by the non-null parameter values.

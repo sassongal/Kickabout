@@ -10,6 +10,8 @@ class ScoutingCriteria {
   final String hubId;
   final int? minAge; // Minimum age (default: 18)
   final int? maxAge; // Maximum age (default: 45)
+  final AgeGroup?
+      ageGroup; // ✅ Filter by age group (alternative to minAge/maxAge)
   final String? region; // איזור מגורים: צפון, מרכז, דרום, ירושלים
   final bool activeOnly; // Only active players (isActive = true)
   final int? limit;
@@ -18,6 +20,7 @@ class ScoutingCriteria {
     required this.hubId,
     this.minAge,
     this.maxAge,
+    this.ageGroup, // ✅ Age group filter
     this.region,
     this.activeOnly = true,
     this.limit,
@@ -81,11 +84,17 @@ class ScoutingService {
           return false;
         }
 
-        // Filter by age
-        if (user.birthDate != null) {
-          final age = now.year - user.birthDate!.year;
-          final monthDiff = now.month - user.birthDate!.month;
-          final dayDiff = now.day - user.birthDate!.day;
+        // ✅ Filter by age group (if specified, takes priority over minAge/maxAge)
+        if (criteria.ageGroup != null) {
+          if (user.ageGroup != criteria.ageGroup) {
+            return false;
+          }
+        } else {
+          // Filter by age range (if ageGroup not specified)
+          // birthDate is now required, so we can safely use it
+          final age = now.year - user.birthDate.year;
+          final monthDiff = now.month - user.birthDate.month;
+          final dayDiff = now.day - user.birthDate.day;
           final actualAge =
               age - (monthDiff < 0 || (monthDiff == 0 && dayDiff < 0) ? 1 : 0);
 
@@ -93,11 +102,6 @@ class ScoutingService {
             return false;
           }
           if (criteria.maxAge != null && actualAge > criteria.maxAge!) {
-            return false;
-          }
-        } else {
-          // If no birthDate, exclude if age filter is set
-          if (criteria.minAge != null || criteria.maxAge != null) {
             return false;
           }
         }

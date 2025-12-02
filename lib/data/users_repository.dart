@@ -179,6 +179,7 @@ class UsersRepository {
           uid: missingId,
           name: 'משתמש לא ידוע',
           email: 'unknown@example.com',
+          birthDate: DateTime(2000, 1, 1),
           createdAt: DateTime.now(),
         ));
       }

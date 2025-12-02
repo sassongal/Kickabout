@@ -17,6 +17,7 @@ void main() {
         name: 'Test User',
         email: 'test@test.com',
         photoUrl: null,
+        birthDate: DateTime(2000, 1, 1),
         hubIds: ['hub1'],
         createdAt: DateTime.now(),
       );

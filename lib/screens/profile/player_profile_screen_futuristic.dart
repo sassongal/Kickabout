@@ -100,13 +100,16 @@ class _PlayerProfileScreenFuturisticState
             stream: usersRepo.watchUser(currentUserId),
             builder: (context, currentUserSnapshot) {
               final currentUser = currentUserSnapshot.data;
-              final isBlocked = currentUser?.blockedUserIds.contains(widget.playerId) ?? false;
-              
+              final isBlocked =
+                  currentUser?.blockedUserIds.contains(widget.playerId) ??
+                      false;
+
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (value) async {
                   if (value == 'block') {
-                    await _handleBlockUser(context, currentUserId, widget.playerId);
+                    await _handleBlockUser(
+                        context, currentUserId, widget.playerId);
                   } else if (value == 'unblock') {
                     await _handleUnblockUser(
                         context, currentUserId, widget.playerId);
@@ -351,21 +354,60 @@ class _PlayerProfileScreenFuturisticState
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            user.preferredPosition,
-                            style: FuturisticTypography.labelMedium.copyWith(
-                              color: Colors.white,
+                        // Position & Age Group
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            // Preferred Position
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                user.preferredPosition,
+                                style:
+                                    FuturisticTypography.labelMedium.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                          ),
+                            // Age Group
+                            if (user.ageGroup != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.cake_outlined,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      user.ageGroup!.displayNameHe,
+                                      style: FuturisticTypography.labelMedium
+                                          .copyWith(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                       ],
@@ -1226,7 +1268,6 @@ class _PlayerProfileScreenFuturisticState
     );
   }
 
-
   // Rating components removed
 
   Widget _buildHubsTab(
@@ -1371,8 +1412,8 @@ class _PlayerProfileScreenFuturisticState
     }
   }
 
-  Future<void> _handleUnblockUser(
-      BuildContext context, String currentUserId, String userIdToUnblock) async {
+  Future<void> _handleUnblockUser(BuildContext context, String currentUserId,
+      String userIdToUnblock) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

@@ -25,6 +25,7 @@ class NotificationSettingsScreen extends ConsumerStatefulWidget {
 class _NotificationSettingsScreenState
     extends ConsumerState<NotificationSettingsScreen> {
   bool _isLoading = false;
+  // ignore: unused_field
   bool _isSaving = false;
   User? _currentUser;
   Map<String, bool> _notificationPreferences = {};
@@ -382,4 +383,3 @@ class NotificationItem {
     required this.icon,
   });
 }
-

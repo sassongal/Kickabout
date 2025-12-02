@@ -9,12 +9,14 @@ class HubVenuesManager extends ConsumerStatefulWidget {
   final List<Venue> initialVenues;
   final String? initialMainVenueId;
   final Function(List<Venue> venues, String? mainVenueId) onChanged;
+  final String? hubId; // Optional hubId to set on venues when created
 
   const HubVenuesManager({
     super.key,
     this.initialVenues = const [],
     this.initialMainVenueId,
     required this.onChanged,
+    this.hubId,
   });
 
   @override
@@ -40,17 +42,17 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
   @override
   void didUpdateWidget(HubVenuesManager oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Sync state with widget properties if they changed from parent
     // Compare by venue IDs to avoid unnecessary updates
     final currentIds = _selectedVenues.map((v) => v.venueId).toSet();
     final newIds = widget.initialVenues.map((v) => v.venueId).toSet();
-    
+
     if (currentIds != newIds || widget.initialMainVenueId != _mainVenueId) {
       setState(() {
         _selectedVenues = List.from(widget.initialVenues);
         _mainVenueId = widget.initialMainVenueId;
-        
+
         // Ensure we have a main venue if venues exist
         if (_selectedVenues.isNotEmpty && _mainVenueId == null) {
           _mainVenueId = _selectedVenues.first.venueId;
@@ -78,7 +80,8 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
     if (venue.venueId.isEmpty) {
       debugPrint('❌ Cannot add venue with empty ID: ${venue.name}');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('שגיאה: לא ניתן להוסיף מגרש ללא מזהה תקין')),
+        const SnackBar(
+            content: Text('שגיאה: לא ניתן להוסיף מגרש ללא מזהה תקין')),
       );
       return;
     }
@@ -88,13 +91,15 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
       // If this is the first venue, make it main
       if (_selectedVenues.length == 1) {
         _mainVenueId = venue.venueId;
-        debugPrint('✅ Setting first venue as main: ${venue.name} (${venue.venueId})');
+        debugPrint(
+            '✅ Setting first venue as main: ${venue.name} (${venue.venueId})');
       } else {
         debugPrint('✅ Added venue: ${venue.name} (${venue.venueId})');
       }
     });
 
-    debugPrint('📋 Current venues: ${_selectedVenues.map((v) => '${v.name} (${v.venueId})').toList()}');
+    debugPrint(
+        '📋 Current venues: ${_selectedVenues.map((v) => '${v.name} (${v.venueId})').toList()}');
     debugPrint('📋 Main venue ID: $_mainVenueId');
     widget.onChanged(_selectedVenues, _mainVenueId);
   }
@@ -121,7 +126,7 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
       debugPrint('❌ Cannot set main venue to empty ID');
       return;
     }
-    
+
     setState(() {
       _mainVenueId = venueId;
     });
@@ -146,6 +151,7 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
             onVenueSelected: _addVenue,
             label: 'הוסף מגרש',
             hint: 'חפש מגרש להוספה...',
+            hubId: widget.hubId, // Pass hubId so venue gets it when created
           ),
 
         const SizedBox(height: 16),

@@ -10,6 +10,7 @@ class DeepLinkService {
   DeepLinkService._internal();
 
   GoRouter? _router;
+  // ignore: unused_field
   String? _pendingHubId; // Stored hub id for redirect after auth
 
   /// Initialize with navigator key and router

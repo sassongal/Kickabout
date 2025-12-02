@@ -33,6 +33,16 @@
       ]
     },
     {
+      "collectionGroup": "venues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "venueNumber",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "hubs",
       "queryScope": "COLLECTION",
       "fields": [

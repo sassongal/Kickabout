@@ -202,6 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         uid: uid,
         name: '',
         email: authService.currentUser?.email ?? '',
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
         createdAt: DateTime.now(),
       );
       await usersRepo.setUser(newUser);

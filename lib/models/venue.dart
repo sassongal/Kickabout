@@ -12,13 +12,17 @@ part 'venue.g.dart';
 class Venue with _$Venue {
   const factory Venue({
     required String venueId,
+    @Default(0)
+    int venueNumber, // Unique sequential number for this venue (like hubId)
     required String hubId, // Which hub this venue belongs to
     required String name, // e.g., "גן דניאל - מגרש 1"
     String? description,
-    @GeoPointConverter() required GeoPoint location, // Exact location from Google Maps
+    @GeoPointConverter()
+    required GeoPoint location, // Exact location from Google Maps
     String? address, // Human-readable address
     String? googlePlaceId, // Google Places API ID for real venues
-    @Default([]) List<String> amenities, // e.g., ["parking", "showers", "lights"]
+    @Default([])
+    List<String> amenities, // e.g., ["parking", "showers", "lights"]
     @Default('grass') String surfaceType, // grass, artificial, concrete
     @Default(11) int maxPlayers, // Max players per team (default 11v11)
     @TimestampConverter() required DateTime createdAt,
@@ -28,6 +32,8 @@ class Venue with _$Venue {
     @Default(false) bool isMain, // Is this the main/home venue for the hub
     @Default(0) int hubCount, // Number of hubs using this venue
     @Default(true) bool isPublic, // Whether this is a public venue
+    @Default('manual') String source, // 'manual' or 'osm'
+    String? externalId, // OSM ID
   }) = _Venue;
 
   factory Venue.fromJson(Map<String, dynamic> json) => _$VenueFromJson(json);
@@ -43,4 +49,3 @@ class VenueConverter implements JsonConverter<Venue, Map<String, dynamic>> {
   @override
   Map<String, dynamic> toJson(Venue object) => object.toJson();
 }
-

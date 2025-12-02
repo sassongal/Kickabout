@@ -23,11 +23,12 @@ class User with _$User {
         displayName, // Custom nickname (shown to others) - independent from firstName/lastName
     String? firstName,
     String? lastName,
-    @TimestampConverter() DateTime? birthDate,
+    @TimestampConverter() required DateTime birthDate, // ✅ Required field
     String? favoriteTeamId, // ID of favorite team from Firestore
     String? facebookProfileUrl,
     String? instagramProfileUrl,
-    @Default(false) bool showSocialLinks, // Control visibility of social links to other users
+    @Default(false)
+    bool showSocialLinks, // Control visibility of social links to other users
     @Default('available')
     String
         availabilityStatus, // available, busy, notAvailable (deprecated, use isActive)
@@ -112,34 +113,29 @@ extension UserDisplayName on User {
 /// Extension to add age-related getters to User
 extension UserAgeExtension on User {
   /// Get user's current age
-  /// Returns null if birthDate is not set
-  int? get age {
-    if (birthDate == null) return null;
-    return AgeUtils.calculateAge(birthDate!);
+  /// birthDate is now required, so this always returns a value
+  int get age {
+    return AgeUtils.calculateAge(birthDate);
   }
 
   /// Get user's age group
-  /// Returns null if birthDate is not set or age < 13
+  /// Returns null if age < 13
   AgeGroup? get ageGroup {
-    if (birthDate == null) return null;
     try {
-      return AgeUtils.getAgeGroup(birthDate!);
+      return AgeUtils.getAgeGroup(birthDate);
     } catch (e) {
       return null;
     }
   }
 
   /// Get age category (Kids, Young, Adults, Veterans, Legends)
-  /// Returns null if birthDate is not set
-  String? get ageCategory {
-    if (birthDate == null) return null;
-    return AgeUtils.getAgeCategory(birthDate!);
+  String get ageCategory {
+    return AgeUtils.getAgeCategory(birthDate);
   }
 
   /// Check if user meets minimum age requirement (13+)
   bool get meetsMinimumAge {
-    if (birthDate == null) return false;
-    return AgeUtils.isAgeValid(birthDate!);
+    return AgeUtils.isAgeValid(birthDate);
   }
 }
 

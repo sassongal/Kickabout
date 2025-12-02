@@ -29,6 +29,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
   bool _showAvailableOnly = false;
   String? _selectedCity;
   String? _selectedPosition;
+  AgeGroup? _selectedAgeGroup; // ✅ Filter by age group
 
   final Map<String, double> _playerDistances = {};
   final ScrollController _scrollController = ScrollController();
@@ -254,18 +255,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                         final sharedHubs = myHubs
                             .where((hub) => player.hubIds.contains(hub.hubId))
                             .toList();
-                        final managerHubCandidates = currentUserId == null
-                            ? <Hub>[]
-                            : sharedHubs.where((hub) {
-                                final role = hub.roles[currentUserId];
-                                return role == 'manager' ||
-                                    role == 'admin' ||
-                                    hub.createdBy == currentUserId;
-                              }).toList();
-                        final managerHub = managerHubCandidates.isNotEmpty
-                            ? managerHubCandidates.first
-                            : null;
-
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: FuturisticCard(
@@ -369,6 +358,26 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     player.city!,
+                                                    style: FuturisticTypography
+                                                        .bodySmall,
+                                                  ),
+                                                ],
+                                              ),
+                                            // ✅ Age Group
+                                            if (player.ageGroup != null)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.cake_outlined,
+                                                    size: 14,
+                                                    color: FuturisticColors
+                                                        .textTertiary,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    player.ageGroup!
+                                                        .displayNameHe,
                                                     style: FuturisticTypography
                                                         .bodySmall,
                                                   ),
@@ -581,6 +590,12 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
             .toList();
       }
 
+      // ✅ Filter by age group
+      if (_selectedAgeGroup != null) {
+        players =
+            players.where((p) => p.ageGroup == _selectedAgeGroup).toList();
+      }
+
       _playerDistances.clear();
       if (position != null) {
         for (final player in players) {
@@ -702,6 +717,31 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                       });
                     },
                   ),
+                  const SizedBox(height: 16),
+                  // ✅ Age Group Filter
+                  DropdownButtonFormField<AgeGroup>(
+                    value: _selectedAgeGroup,
+                    decoration: const InputDecoration(
+                      labelText: 'קבוצת גיל',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.cake_outlined),
+                    ),
+                    items: [
+                      const DropdownMenuItem<AgeGroup>(
+                        value: null,
+                        child: Text('כל קבוצות הגיל'),
+                      ),
+                      ...AgeGroup.values.map((ageGroup) => DropdownMenuItem(
+                            value: ageGroup,
+                            child: Text(ageGroup.displayNameHe),
+                          )),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        _selectedAgeGroup = value;
+                      });
+                    },
+                  ),
                 ],
               ),
             );
@@ -713,6 +753,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
               setState(() {
                 _selectedCity = null;
                 _selectedPosition = null;
+                _selectedAgeGroup = null; // ✅ Reset age group filter
               });
               Navigator.pop(context);
             },

@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.mycompany.CounterApp">
+    package="com.joyatech.kattrick">
     <!-- Location permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -38,13 +38,14 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <!-- Google Maps API Key (Client-side SDK key for displaying maps) -->
-        <!-- SECURITY: This key should be restricted in Google Cloud Console -->
-        <!-- Application restrictions: Add package name (com.mycompany.CounterApp) -->
+        <!-- SECURITY: This key is loaded from dart-define via build.gradle -->
+        <!-- Usage: flutter run with dart-define GOOGLE_MAPS_API_KEY=YOUR_KEY -->
+        <!-- Or: flutter build apk with dart-define GOOGLE_MAPS_API_KEY=YOUR_KEY -->
+        <!-- Application restrictions: Add package name (com.joyatech.kattrick) -->
         <!-- API restrictions: Only Maps SDK for Android, Places API -->
-        <!-- TODO: Move to build.gradle using BuildConfig for better security -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAapcK84BybKhuATK6n9YEtBlENgJ068tM" />
+            android:value="${googleMapsApiKey}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

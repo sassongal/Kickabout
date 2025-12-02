@@ -72,6 +72,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           final isCreator = currentUserId == game.createdBy;
           final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
 
+          // ✅ Show attendance monitoring button for organizers
+          final showAttendanceButton = isCreator &&
+              game.status == GameStatus.teamSelection &&
+              game.enableAttendanceReminder;
+
           // Get user role for this hub
           final roleAsync = ref.watch(hubRoleProvider(game.hubId));
 
@@ -101,6 +106,23 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // ✅ Attendance Monitoring Button (for organizers)
+                        if (showAttendanceButton)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                context
+                                    .push('/games/${widget.gameId}/attendance');
+                              },
+                              icon: const Icon(Icons.people),
+                              label: const Text('ניטור הגעה'),
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
                         // Game info card
                         Card(
                           child: Padding(
@@ -118,7 +140,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                       ),
                                 ),
                                 // Load and display venue if venueId exists, otherwise show text location
-                                if (game.venueId != null && game.venueId!.isNotEmpty) ...[
+                                if (game.venueId != null &&
+                                    game.venueId!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   StreamBuilder<Venue?>(
                                     stream: ref
@@ -126,14 +149,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                         .watchVenue(game.venueId!),
                                     builder: (context, venueSnapshot) {
                                       final venue = venueSnapshot.data;
-                                      final locationText = venue?.name ?? 
-                                                          game.location ?? 
-                                                          'מיקום לא צוין';
-                                      
-                                      if (locationText.isEmpty || locationText == 'מיקום לא צוין') {
+                                      final locationText = venue?.name ??
+                                          game.location ??
+                                          'מיקום לא צוין';
+
+                                      if (locationText.isEmpty ||
+                                          locationText == 'מיקום לא צוין') {
                                         return const SizedBox.shrink();
                                       }
-                                      
+
                                       return Row(
                                         children: [
                                           Icon(
@@ -147,7 +171,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   locationText,
@@ -155,18 +180,22 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                                       .textTheme
                                                       .bodyMedium,
                                                 ),
-                                                if (venue?.address != null && 
-                                                    venue!.address != locationText)
+                                                if (venue?.address != null &&
+                                                    venue!.address !=
+                                                        locationText)
                                                   Text(
                                                     venue.address!,
                                                     style: Theme.of(context)
                                                         .textTheme
                                                         .bodySmall
                                                         ?.copyWith(
-                                                          color: Theme.of(context)
-                                                              .colorScheme
-                                                              .onSurface
-                                                              .withValues(alpha: 0.6),
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onSurface
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.6),
                                                         ),
                                                   ),
                                               ],
@@ -176,7 +205,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                       );
                                     },
                                   ),
-                                ] else if (game.location?.isNotEmpty ?? false) ...[
+                                ] else if (game.location?.isNotEmpty ??
+                                    false) ...[
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
@@ -1062,7 +1092,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   /// Build weather widget for game date and location
   Widget _buildGameWeatherWidget(Game game) {
     // If no locationPoint but we have venueId, load venue to get location
-    if (game.locationPoint == null && game.venueId != null && game.venueId!.isNotEmpty) {
+    if (game.locationPoint == null &&
+        game.venueId != null &&
+        game.venueId!.isNotEmpty) {
       return StreamBuilder<Venue?>(
         stream: ref.read(venuesRepositoryProvider).watchVenue(game.venueId!),
         builder: (context, venueSnapshot) {
@@ -1077,7 +1109,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             longitude: venue.location.longitude,
             date: game.gameDate,
           );
-          
+
           return FutureBuilder<WeatherData?>(
             future: weatherFuture,
             builder: (context, weatherSnapshot) {
@@ -1120,7 +1152,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                         children: [
                           Text(
                             'תנאי מזג אוויר למשחק',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                           ),
@@ -1144,7 +1179,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         },
       );
     }
-    
+
     final locationPoint = game.locationPoint;
     if (locationPoint == null) return const SizedBox.shrink();
 

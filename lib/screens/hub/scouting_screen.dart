@@ -28,6 +28,8 @@ class ScoutingScreen extends ConsumerStatefulWidget {
 class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
   int _minAge = 18;
   int _maxAge = 45;
+  AgeGroup?
+      _selectedAgeGroup; // ✅ Filter by age group (alternative to age range)
   String? _selectedRegion;
   bool _activeOnly = true;
   bool _isLoading = false;
@@ -48,7 +50,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
         children: [
           // Filters
           _buildFilters(),
-          
+
           // Search button
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -71,7 +73,8 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
           // Results
           Expanded(
             child: _isLoading
-                ? const FuturisticLoadingState(message: 'מחפש שחקנים מתאימים...')
+                ? const FuturisticLoadingState(
+                    message: 'מחפש שחקנים מתאימים...')
                 : _results.isEmpty
                     ? FuturisticEmptyState(
                         icon: Icons.people_outline,
@@ -126,14 +129,14 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                         max: 50,
                         divisions: 34,
                         label: '$_minAge',
-                    onChanged: (value) {
-                      setState(() {
+                        onChanged: (value) {
+                          setState(() {
                             _minAge = value.toInt();
                             if (_minAge > _maxAge) {
                               _maxAge = _minAge;
                             }
-                      });
-                    },
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -149,19 +152,44 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                         max: 50,
                         divisions: 34,
                         label: '$_maxAge',
-                    onChanged: (value) {
-                      setState(() {
+                        onChanged: (value) {
+                          setState(() {
                             _maxAge = value.toInt();
                             if (_maxAge < _minAge) {
                               _minAge = _maxAge;
                             }
-                      });
-                    },
+                          });
+                        },
                       ),
                     ],
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            // ✅ Age Group Filter (alternative to age range)
+            DropdownButtonFormField<AgeGroup>(
+              value: _selectedAgeGroup,
+              decoration: const InputDecoration(
+                labelText: 'קבוצת גיל (אופציונלי)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.cake_outlined),
+                helperText: 'אם נבחר, יתעלם מטווח הגיל',
+              ),
+              items: [
+                const DropdownMenuItem<AgeGroup>(
+                  value: null,
+                  child: Text('השתמש בטווח גיל'),
+                ),
+                ...AgeGroup.values.map((ageGroup) => DropdownMenuItem(
+                      value: ageGroup,
+                      child: Text(ageGroup.displayNameHe),
+                    )),
+              ],
+              onChanged: (value) {
+                setState(() => _selectedAgeGroup = value);
+              },
             ),
             const SizedBox(height: 16),
 
@@ -259,17 +287,37 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
               children: [
-                Icon(Icons.sports_soccer, size: 16),
-                const SizedBox(width: 4),
-                Text(_getPositionName(player.preferredPosition)),
-                if (result.distanceKm != null) ...[
-                  const SizedBox(width: 16),
-                  Icon(Icons.location_on, size: 16),
-                  const SizedBox(width: 4),
-                  Text('${result.distanceKm!.toStringAsFixed(1)} ק"מ'),
-                ],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sports_soccer, size: 16),
+                    const SizedBox(width: 4),
+                    Text(_getPositionName(player.preferredPosition)),
+                  ],
+                ),
+                // ✅ Age Group
+                if (player.ageGroup != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.cake_outlined, size: 16),
+                      const SizedBox(width: 4),
+                      Text(player.ageGroup!.displayNameHe),
+                    ],
+                  ),
+                if (result.distanceKm != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.location_on, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${result.distanceKm!.toStringAsFixed(1)} ק"מ'),
+                    ],
+                  ),
               ],
             ),
             if (result.matchReasons.isNotEmpty) ...[
@@ -312,9 +360,9 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                   Icon(Icons.group_add, size: 20),
                   SizedBox(width: 8),
                   Text('הזמן ל-Hub'),
-                  ],
-                ),
+                ],
               ),
+            ),
             const PopupMenuItem(
               value: 'view_player_card',
               child: Row(
@@ -360,8 +408,11 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
 
       final criteria = ScoutingCriteria(
         hubId: widget.hubId,
-        minAge: _minAge,
-        maxAge: _maxAge,
+        minAge: _selectedAgeGroup == null
+            ? _minAge
+            : null, // ✅ Use age range only if ageGroup not selected
+        maxAge: _selectedAgeGroup == null ? _maxAge : null,
+        ageGroup: _selectedAgeGroup, // ✅ Pass age group filter
         region: _selectedRegion,
         activeOnly: _activeOnly,
         limit: 50,
@@ -532,7 +583,8 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _PlayerCardSheet(player: player, hubId: widget.hubId),
+      builder: (context) =>
+          _PlayerCardSheet(player: player, hubId: widget.hubId),
     );
   }
 }
@@ -563,7 +615,7 @@ class _PlayerCardSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hubsRepo = ref.read(hubsRepositoryProvider);
     final age = _calculateAge(player.birthDate);
-    
+
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
       minChildSize: 0.5,
@@ -583,9 +635,10 @@ class _PlayerCardSheet extends ConsumerWidget {
                   children: [
                     Text(
                       'כרטיס שחקן',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -595,7 +648,7 @@ class _PlayerCardSheet extends ConsumerWidget {
                 ),
                 const Divider(),
                 const SizedBox(height: 16),
-                
+
                 // Profile picture and name
                 Center(
                   child: Column(
@@ -606,15 +659,16 @@ class _PlayerCardSheet extends ConsumerWidget {
                         player.firstName != null && player.lastName != null
                             ? '${player.firstName} ${player.lastName}'
                             : player.name,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Player details
                 _buildDetailRow(
                   context,
@@ -638,7 +692,8 @@ class _PlayerCardSheet extends ConsumerWidget {
                     'איזור מגורים',
                     player.region!,
                   ),
-                if (player.phoneNumber != null && !player.privacySettings['hidePhone']!)
+                if (player.phoneNumber != null &&
+                    !player.privacySettings['hidePhone']!)
                   _buildDetailRow(
                     context,
                     Icons.phone,
@@ -659,15 +714,15 @@ class _PlayerCardSheet extends ConsumerWidget {
                     'גיל',
                     '$age',
                   ),
-                
+
                 // Hubs
                 if (player.hubIds.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
                     'האבים',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   FutureBuilder<List<Hub>>(
@@ -695,7 +750,7 @@ class _PlayerCardSheet extends ConsumerWidget {
                     },
                   ),
                 ],
-                
+
                 // Favorite team
                 if (player.favoriteTeamId != null) ...[
                   const SizedBox(height: 16),
@@ -706,7 +761,7 @@ class _PlayerCardSheet extends ConsumerWidget {
                     'ID: ${player.favoriteTeamId}',
                   ),
                 ],
-                
+
                 const SizedBox(height: 24),
               ],
             ),
@@ -716,7 +771,8 @@ class _PlayerCardSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _buildDetailRow(
+      BuildContext context, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -730,8 +786,11 @@ class _PlayerCardSheet extends ConsumerWidget {
                 Text(
                   label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
                 ),
                 Text(
                   value,
@@ -745,4 +804,3 @@ class _PlayerCardSheet extends ConsumerWidget {
     );
   }
 }
-

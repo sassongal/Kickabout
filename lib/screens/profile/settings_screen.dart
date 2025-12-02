@@ -167,19 +167,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: 'עדכן את פרטי הפרופיל שלך',
                     onTap: () => context.push('/profile/${widget.userId}/edit'),
                   ),
-                  const Divider(height: 1, color: FuturisticColors.surfaceVariant),
+                  const Divider(
+                      height: 1, color: FuturisticColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.privacy_tip,
                     title: 'הגדרות פרטיות',
                     subtitle: 'נהל את הגדרות הפרטיות שלך',
-                    onTap: () => context.push('/profile/${widget.userId}/privacy'),
+                    onTap: () =>
+                        context.push('/profile/${widget.userId}/privacy'),
                   ),
-                  const Divider(height: 1, color: FuturisticColors.surfaceVariant),
+                  const Divider(
+                      height: 1, color: FuturisticColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.block,
                     title: 'משתמשים חסומים',
                     subtitle: 'נהל את רשימת המשתמשים החסומים',
-                    onTap: () => context.push('/profile/${widget.userId}/blocked'),
+                    onTap: () =>
+                        context.push('/profile/${widget.userId}/blocked'),
                   ),
                 ],
               ),
@@ -196,9 +200,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     icon: Icons.notifications,
                     title: 'ניהול התראות',
                     subtitle: 'בחר אילו התראות לקבל',
-                    onTap: () => context.push('/profile/${widget.userId}/notifications'),
+                    onTap: () =>
+                        context.push('/profile/${widget.userId}/notifications'),
                   ),
-                  const Divider(height: 1, color: FuturisticColors.surfaceVariant),
+                  const Divider(
+                      height: 1, color: FuturisticColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.location_on,
                     title: 'מיקום',
@@ -265,7 +271,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       );
                     },
                   ),
-                  const Divider(height: 1, color: FuturisticColors.surfaceVariant),
+                  const Divider(
+                      height: 1, color: FuturisticColors.surfaceVariant),
+                  _buildSettingTile(
+                    icon: Icons.security,
+                    title: 'סטטוס אימות',
+                    subtitle: 'בדוק את סטטוס האימות שלך',
+                    onTap: () => context.push('/debug/auth-status'),
+                  ),
+                  const Divider(
+                      height: 1, color: FuturisticColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.help_outline,
                     title: 'עזרה ותמיכה',
@@ -331,7 +346,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       );
                     },
                   ),
-                  const Divider(height: 1, color: FuturisticColors.surfaceVariant),
+                  const Divider(
+                      height: 1, color: FuturisticColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.description,
                     title: 'תנאי שימוש',
@@ -343,7 +359,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       );
                     },
                   ),
-                  const Divider(height: 1, color: FuturisticColors.surfaceVariant),
+                  const Divider(
+                      height: 1, color: FuturisticColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.privacy_tip_outlined,
                     title: 'מדיניות פרטיות',
@@ -486,10 +503,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (user.email.isNotEmpty)
-            _buildInfoRow('אימייל', user.email),
-          if (user.name.isNotEmpty)
-            _buildInfoRow('שם', user.name),
+          if (user.email.isNotEmpty) _buildInfoRow('אימייל', user.email),
+          if (user.name.isNotEmpty) _buildInfoRow('שם', user.name),
           _buildInfoRow(
             'תאריך הצטרפות',
             _formatDate(user.createdAt),
@@ -531,4 +546,3 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 }
-

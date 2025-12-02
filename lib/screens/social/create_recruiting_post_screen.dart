@@ -39,7 +39,6 @@ class _CreateRecruitingPostScreenState
   String? _linkedEventId;
 
   List<Game> _upcomingGames = [];
-  List<HubEvent> _upcomingEvents = [];
 
   @override
   void initState() {

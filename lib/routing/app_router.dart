@@ -127,6 +127,8 @@ import 'package:kattrick/screens/event/team_generator_result_screen.dart'
     deferred as team_generator_result_screen;
 import 'package:kattrick/screens/debug/create_dummy_players_screen.dart'
     deferred as create_dummy_players_screen;
+import 'package:kattrick/screens/debug/auth_status_screen.dart';
+import 'package:kattrick/screens/game/all_events_screen.dart';
 
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
@@ -819,6 +821,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: () => game_list_screen.GameListScreen()),
         routes: [
           GoRoute(
+            path: 'all',
+            name: 'allGames',
+            builder: (context, state) => const AllEventsScreen(),
+          ),
+          GoRoute(
             path: 'create',
             name: 'createGame',
             builder: (context, state) => LazyRouteLoader(
@@ -885,6 +892,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                       create_dummy_players_screen.CreateDummyPlayersScreen(),
                 ),
               ),
+              // Debug route: Auth Status
+              GoRoute(
+                path: '/debug/auth-status',
+                name: 'authStatus',
+                builder: (context, state) => const AuthStatusScreen(),
+              ),
             ],
           ),
         ],
@@ -942,7 +955,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 loader: notification_settings_screen.loadLibrary(),
                 builder: () {
                   final userId = state.pathParameters['uid']!;
-                  return notification_settings_screen.NotificationSettingsScreen(
+                  return notification_settings_screen
+                      .NotificationSettingsScreen(
                     userId: userId,
                   );
                 }),

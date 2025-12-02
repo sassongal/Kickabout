@@ -184,7 +184,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
         photoUrl: photoUrl,
         avatarColor: _selectedAvatarColor,
-        birthDate: _selectedBirthDate,
+        birthDate: _selectedBirthDate ?? _currentUser?.birthDate ?? DateTime(2000, 1, 1),
         facebookProfileUrl: _facebookController.text.trim().isEmpty
             ? null
             : UrlValidator.validateAndCleanFacebookUrl(_facebookController.text.trim()),

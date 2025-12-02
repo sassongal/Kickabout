@@ -16,8 +16,37 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// Decode dart-define variables (for Google Maps API Key)
+// Priority: 1. dart-define (highest) 2. local.properties 3. empty string
+// Usage: flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY
+// Or: Add to android/local.properties: google.maps.api.key=YOUR_KEY
+def dartEnvironmentVariables = [:]
+if (project.hasProperty('dart-defines')) {
+    project.property('dart-defines').split(',').each { entry ->
+        def decodedEntry = new String(entry.decodeBase64(), 'UTF-8')
+        def pair = decodedEntry.split('=', 2)
+        if (pair.length == 2) {
+            dartEnvironmentVariables[pair[0]] = pair[1]
+        }
+    }
+}
+
+// Try to read from local.properties as fallback (for debug mode convenience)
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localProperties.load(new FileInputStream(localPropertiesFile))
+}
+
+// Get Google Maps API Key with fallback priority:
+// 1. dart-define (GOOGLE_MAPS_API_KEY) - highest priority
+// 2. local.properties (google.maps.api.key) - for local development
+// 3. empty string - must be set via one of the above!
+def googleMapsApiKey = dartEnvironmentVariables.get('GOOGLE_MAPS_API_KEY', 
+    localProperties.getProperty('google.maps.api.key', ''))
+
 android {
-    namespace = "com.mycompany.CounterApp"
+    namespace = "com.joyatech.kattrick"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -42,13 +71,20 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.mycompany.CounterApp"
+        applicationId = "com.joyatech.kattrick"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Pass Google Maps API Key to AndroidManifest.xml via manifestPlaceholders
+        // Priority: dart-define > local.properties > empty string
+        manifestPlaceholders = [
+            applicationName: "io.flutter.app.FlutterApplication",
+            googleMapsApiKey: googleMapsApiKey
+        ]
     }
 
     buildTypes {

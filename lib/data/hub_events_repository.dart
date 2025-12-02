@@ -34,6 +34,13 @@ class HubEventsRepository {
                 if (!data.containsKey('hubId')) {
                   data['hubId'] = hubId;
                 }
+                // Ensure array fields have default values for old documents
+                data['registeredPlayerIds'] ??= [];
+                data['waitingListPlayerIds'] ??= [];
+                data['teams'] ??= [];
+                data['matches'] ??= [];
+                data['aggregateWins'] ??= {};
+
                 return HubEvent.fromJson({...data, 'eventId': doc.id});
               } catch (e) {
                 debugPrint('Error parsing HubEvent ${doc.id}: $e');
@@ -285,7 +292,8 @@ class HubEventsRepository {
   }
 
   /// Register a player to an event
-  /// Returns the new registration count after registration
+  /// Returns positive int (registration number) if registered
+  /// Returns negative int (waiting list position) if added to waiting list
   Future<int> registerToEvent(
       String hubId, String eventId, String playerId) async {
     if (!Env.isFirebaseAvailable) {
@@ -293,50 +301,46 @@ class HubEventsRepository {
     }
 
     try {
-      // First, get the current event to check max participants
-      final eventDoc = await _firestore
+      final eventRef = _firestore
           .collection(FirestorePaths.hubs())
           .doc(hubId)
           .collection('events')
-          .doc(eventId)
-          .get();
+          .doc(eventId);
 
-      if (!eventDoc.exists) {
-        throw Exception('Event not found');
-      }
+      return await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(eventRef);
+        if (!snapshot.exists) {
+          throw Exception('Event not found');
+        }
 
-      final eventData = eventDoc.data()!;
-      final currentRegistered =
-          List<String>.from(eventData['registeredPlayerIds'] ?? []);
-      final maxParticipants = eventData['maxParticipants'] as int? ?? 15;
+        final data = snapshot.data()!;
+        final registered = List<String>.from(data['registeredPlayerIds'] ?? []);
+        final waiting = List<String>.from(data['waitingListPlayerIds'] ?? []);
+        final maxParticipants = data['maxParticipants'] as int? ?? 15;
 
-      // Check if already registered
-      if (currentRegistered.contains(playerId)) {
-        throw Exception('Already registered to this event');
-      }
+        if (registered.contains(playerId)) {
+          throw Exception('Already registered to this event');
+        }
+        if (waiting.contains(playerId)) {
+          throw Exception('Already on waiting list');
+        }
 
-      // Check if event is full
-      if (currentRegistered.length >= maxParticipants) {
-        throw Exception('Event is full');
-      }
-
-      // Register the player
-      await _firestore
-          .collection(FirestorePaths.hubs())
-          .doc(hubId)
-          .collection('events')
-          .doc(eventId)
-          .update({
-        'registeredPlayerIds': FieldValue.arrayUnion([playerId]),
-        'updatedAt': FieldValue.serverTimestamp(),
+        if (registered.length < maxParticipants) {
+          // Register
+          transaction.update(eventRef, {
+            'registeredPlayerIds': FieldValue.arrayUnion([playerId]),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          return registered.length + 1;
+        } else {
+          // Add to waiting list
+          transaction.update(eventRef, {
+            'waitingListPlayerIds': FieldValue.arrayUnion([playerId]),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          return -(waiting.length + 1);
+        }
       });
-
-      // Invalidate cache for this event
-      CacheService().clear(CacheKeys.event(hubId, eventId));
-      CacheService().clear(CacheKeys.eventsByHub(hubId));
-
-      // Return the new count (current + 1)
-      return currentRegistered.length + 1;
     } catch (e) {
       throw Exception('Failed to register to event: $e');
     }
@@ -357,6 +361,7 @@ class HubEventsRepository {
           .doc(eventId)
           .update({
         'registeredPlayerIds': FieldValue.arrayRemove([playerId]),
+        'waitingListPlayerIds': FieldValue.arrayRemove([playerId]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -365,6 +370,33 @@ class HubEventsRepository {
       CacheService().clear(CacheKeys.eventsByHub(hubId));
     } catch (e) {
       throw Exception('Failed to unregister from event: $e');
+    }
+  }
+
+  /// Promote a player from waiting list to registered list
+  Future<void> promoteFromWaitingList(
+      String hubId, String eventId, String playerId) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      await _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId)
+          .update({
+        'waitingListPlayerIds': FieldValue.arrayRemove([playerId]),
+        'registeredPlayerIds': FieldValue.arrayUnion([playerId]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Invalidate cache for this event
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+    } catch (e) {
+      throw Exception('Failed to promote player: $e');
     }
   }
 

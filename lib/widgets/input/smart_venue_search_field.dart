@@ -19,6 +19,7 @@ class SmartVenueSearchField extends ConsumerStatefulWidget {
   final String? initialValue;
   final String label;
   final String hint;
+  final String? hubId; // Optional hubId to set on venue when created
 
   const SmartVenueSearchField({
     super.key,
@@ -26,6 +27,7 @@ class SmartVenueSearchField extends ConsumerStatefulWidget {
     this.initialValue,
     this.label = 'כתובת או שם מגרש',
     this.hint = 'חפש מגרש קהילתי/פרטי/ציבורי...',
+    this.hubId,
   });
 
   @override
@@ -277,11 +279,12 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
     if (_currentPosition == null) return null;
     try {
       return Geolocator.distanceBetween(
-        _currentPosition!.latitude,
-        _currentPosition!.longitude,
-        venue.location.latitude,
-        venue.location.longitude,
-      ) / 1000; // Convert to km
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            venue.location.latitude,
+            venue.location.longitude,
+          ) /
+          1000; // Convert to km
     } catch (e) {
       return null;
     }
@@ -296,7 +299,7 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
           focusNode: _focusNode,
           optionsBuilder: (TextEditingValue textEditingValue) async {
             final query = textEditingValue.text.trim();
-            
+
             // Show nearby venues when search is empty (no history shown in autocomplete)
             if (query.isEmpty) {
               return _applyFilter(_nearbyVenues);
@@ -314,7 +317,7 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
 
             // Debouncing: cancel previous search
             _searchTimer?.cancel();
-            
+
             // Check cache first
             if (query == _lastQuery && _cachedResults.isNotEmpty) {
               return _applyFilter(_cachedResults);
@@ -327,7 +330,7 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                 final results = await ref
                     .read(venuesRepositoryProvider)
                     .searchVenuesCombined(query);
-                
+
                 // Sort by distance if we have location
                 if (_currentPosition != null) {
                   results.sort((a, b) {
@@ -336,11 +339,11 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                     return distA.compareTo(distB);
                   });
                 }
-                
+
                 // Cache results
                 _cachedResults = results;
                 _lastQuery = query;
-                
+
                 if (!completer.isCompleted) {
                   completer.complete(_applyFilter(results));
                 }
@@ -357,15 +360,21 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
           onSelected: (Venue selection) async {
             // Get messenger before async operations
             final messenger = ScaffoldMessenger.maybeOf(context);
-            
+
             Venue venue = selection;
             // If it's a Google result (empty ID), save it
             if (venue.venueId.isEmpty) {
               try {
-                debugPrint('💾 Saving Google Places venue to Firestore: ${venue.name}');
+                debugPrint(
+                    '💾 Saving Google Places venue to Firestore: ${venue.name}');
+                // If hubId is provided, set it on the venue before saving
+                if (widget.hubId != null && widget.hubId!.isNotEmpty) {
+                  venue = venue.copyWith(hubId: widget.hubId!);
+                  debugPrint('   Setting hubId: ${widget.hubId}');
+                }
                 venue = await ref
                     .read(venuesRepositoryProvider)
-                    .getOrCreateVenueFromGooglePlace(selection);
+                    .getOrCreateVenueFromGooglePlace(venue);
                 debugPrint('✅ Venue saved with ID: ${venue.venueId}');
               } catch (e, stackTrace) {
                 debugPrint('❌ Error creating venue: $e');
@@ -400,10 +409,10 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
 
             if (!mounted) return;
             _controller.text = venue.name;
-            
+
             // Add to search history
             await _addToHistory(venue.name);
-            
+
             widget.onVenueSelected(venue);
 
             // Unfocus to close keyboard
@@ -418,11 +427,12 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
             final showHistory = isEmpty || query.length == 1;
             final filteredHistory = showHistory && query.length == 1
                 ? _searchHistory
-                    .where((item) => item.toLowerCase().startsWith(query.toLowerCase()))
+                    .where((item) =>
+                        item.toLowerCase().startsWith(query.toLowerCase()))
                     .take(5)
                     .toList()
                 : (isEmpty ? _searchHistory.take(5).toList() : <String>[]);
-            
+
             return Align(
               alignment: Alignment.topLeft,
               child: Material(
@@ -469,9 +479,11 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                                 TextButton(
                                   onPressed: _clearHistory,
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
                                     minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   child: const Text(
                                     'נקה הכל',
@@ -500,13 +512,15 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                               ),
                               trailing: IconButton(
                                 icon: const Icon(Icons.close, size: 16),
-                                onPressed: () => _removeFromHistory(historyItem),
+                                onPressed: () =>
+                                    _removeFromHistory(historyItem),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                               ),
                               onTap: () {
                                 _controller.text = historyItem;
-                                _controller.selection = TextSelection.fromPosition(
+                                _controller.selection =
+                                    TextSelection.fromPosition(
                                   TextPosition(offset: historyItem.length),
                                 );
                                 // Trigger search by moving cursor
@@ -579,12 +593,15 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                             ? (isEmpty && _nearbyVenues.isNotEmpty
                                 ? ListView.builder(
                                     shrinkWrap: true,
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 8),
                                     itemCount: _nearbyVenues.length,
                                     itemBuilder: (context, index) {
                                       final venue = _nearbyVenues[index];
-                                      final distance = _calculateDistance(venue);
-                                      final isVerified = venue.venueId.isNotEmpty;
+                                      final distance =
+                                          _calculateDistance(venue);
+                                      final isVerified =
+                                          venue.venueId.isNotEmpty;
                                       final isPopular = venue.hubCount > 0;
 
                                       return ListTile(
@@ -593,8 +610,12 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                                               ? Colors.blue.withOpacity(0.1)
                                               : Colors.grey.withOpacity(0.1),
                                           child: Icon(
-                                            isVerified ? Icons.verified : Icons.map,
-                                            color: isVerified ? Colors.blue : Colors.grey,
+                                            isVerified
+                                                ? Icons.verified
+                                                : Icons.map,
+                                            color: isVerified
+                                                ? Colors.blue
+                                                : Colors.grey,
                                             size: 20,
                                           ),
                                         ),
@@ -610,14 +631,18 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                                             ),
                                             if (isPopular)
                                               Container(
-                                                margin: const EdgeInsets.only(right: 4),
-                                                padding: const EdgeInsets.symmetric(
+                                                margin: const EdgeInsets.only(
+                                                    right: 4),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
                                                   horizontal: 6,
                                                   vertical: 2,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.orange.withOpacity(0.2),
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  color: Colors.orange
+                                                      .withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                                 child: Text(
                                                   '${venue.hubCount}',
@@ -631,7 +656,8 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                                           ],
                                         ),
                                         subtitle: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             if (venue.address != null)
                                               Text(
@@ -658,27 +684,33 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                                                     style: TextStyle(
                                                       fontSize: 11,
                                                       color: Colors.grey[600],
-                                                      fontWeight: FontWeight.w500,
+                                                      fontWeight:
+                                                          FontWeight.w500,
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),
                                                 ],
                                                 if (!venue.isPublic)
                                                   Container(
-                                                    padding: const EdgeInsets.symmetric(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
                                                       horizontal: 4,
                                                       vertical: 2,
                                                     ),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.orange.withOpacity(0.2),
-                                                      borderRadius: BorderRadius.circular(4),
+                                                      color: Colors.orange
+                                                          .withOpacity(0.2),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
                                                     ),
                                                     child: const Text(
                                                       'פרטי',
                                                       style: TextStyle(
                                                         fontSize: 9,
                                                         color: Colors.orange,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
                                                     ),
                                                   ),
@@ -717,104 +749,113 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                                   final isPopular = option.hubCount > 0;
 
                                   return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isVerified
-                              ? Colors.blue.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
-                          child: Icon(
-                            isVerified ? Icons.verified : Icons.map,
-                            color: isVerified ? Colors.blue : Colors.grey,
-                            size: 20,
-                          ),
-                        ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                option.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            if (isPopular)
-                              Container(
-                                margin: const EdgeInsets.only(right: 4),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${option.hubCount}',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (option.address != null)
-                              Text(
-                                option.address!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                if (distance != null) ...[
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    _formatDistance(distance),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                ],
-                                if (!option.isPublic)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'פרטי',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        color: Colors.orange,
-                                        fontWeight: FontWeight.bold,
+                                    leading: CircleAvatar(
+                                      backgroundColor: isVerified
+                                          ? Colors.blue.withOpacity(0.1)
+                                          : Colors.grey.withOpacity(0.1),
+                                      child: Icon(
+                                        isVerified ? Icons.verified : Icons.map,
+                                        color: isVerified
+                                            ? Colors.blue
+                                            : Colors.grey,
+                                        size: 20,
                                       ),
                                     ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            option.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isPopular)
+                                          Container(
+                                            margin:
+                                                const EdgeInsets.only(right: 4),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange
+                                                  .withOpacity(0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              '${option.hubCount}',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (option.address != null)
+                                          Text(
+                                            option.address!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            if (distance != null) ...[
+                                              Icon(
+                                                Icons.location_on,
+                                                size: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                _formatDistance(distance),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                            ],
+                                            if (!option.isPublic)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 4,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.orange
+                                                      .withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  'פרטי',
+                                                  style: TextStyle(
+                                                    fontSize: 9,
+                                                    color: Colors.orange,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                     onTap: () => onSelected(option),
                                   );
                                 },

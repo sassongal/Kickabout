@@ -23,6 +23,10 @@ _$HubEventImpl _$$HubEventImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      waitingListPlayerIds: (json['waitingListPlayerIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       status: json['status'] as String? ?? 'upcoming',
       isStarted: json['isStarted'] as bool? ?? false,
       startedAt: _$JsonConverterFromJson<Object, DateTime>(
@@ -66,6 +70,7 @@ Map<String, dynamic> _$$HubEventImplToJson(_$HubEventImpl instance) =>
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'updatedAt': const TimestampConverter().toJson(instance.updatedAt),
       'registeredPlayerIds': instance.registeredPlayerIds,
+      'waitingListPlayerIds': instance.waitingListPlayerIds,
       'status': instance.status,
       'isStarted': instance.isStarted,
       'startedAt': _$JsonConverterToJson<Object, DateTime>(

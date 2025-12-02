@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/team.dart';
 import 'package:kattrick/models/match_result.dart';
 
+// ignore_for_file: invalid_annotation_target
+
 part 'hub_event.freezed.dart';
 part 'hub_event.g.dart';
 
@@ -21,7 +23,12 @@ class HubEvent with _$HubEvent {
     @TimestampConverter() required DateTime eventDate,
     @TimestampConverter() required DateTime createdAt,
     @TimestampConverter() required DateTime updatedAt,
-    @Default([]) List<String> registeredPlayerIds, // Players who registered
+    @JsonKey(defaultValue: <String>[])
+    @Default(<String>[])
+    List<String> registeredPlayerIds, // Players who registered
+    @JsonKey(defaultValue: <String>[])
+    @Default(<String>[])
+    List<String> waitingListPlayerIds, // Players on waiting list
     @Default('upcoming')
     String status, // upcoming, ongoing, completed, cancelled
     @Default(false) bool isStarted, // Explicit flag for in-progress session
@@ -41,15 +48,19 @@ class HubEvent with _$HubEvent {
     @Default(false)
     bool showInCommunityFeed, // Show this event in the community activity feed
     // Attendance confirmation settings
-    @Default(true) bool enableAttendanceReminder, // Organizer can choose to send 2h reminders
+    @Default(true)
+    bool enableAttendanceReminder, // Organizer can choose to send 2h reminders
     // Teams planned for this event (manager-only, saved when using TeamMaker)
-    @Default([])
+    @JsonKey(defaultValue: <Team>[])
+    @Default(<Team>[])
     List<Team> teams, // Teams planned for this event (manager-only)
     // Multi-match session support
-    @Default([])
+    @JsonKey(defaultValue: <MatchResult>[])
+    @Default(<MatchResult>[])
     List<MatchResult>
         matches, // List of individual match outcomes within this event
-    @Default({})
+    @JsonKey(defaultValue: <String, int>{})
+    @Default(<String, int>{})
     Map<String, int>
         aggregateWins, // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
     // Reference to Game if event was converted to game

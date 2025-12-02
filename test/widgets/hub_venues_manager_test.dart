@@ -115,17 +115,10 @@ void main() {
     });
     
     testWidgets('should mark first venue as main by default', (WidgetTester tester) async {
-      // Arrange
-      List<Venue>? changedVenues;
-      String? changedMainId;
-      
       // Act
       await tester.pumpWidget(createWidgetUnderTest(
         initialVenues: [testVenue1],
-        onChanged: (venues, mainId) {
-          changedVenues = venues;
-          changedMainId = mainId;
-        },
+        onChanged: (_, __) {},
       ));
       
       // Assert - main venue should be set to first venue
@@ -171,4 +164,3 @@ void main() {
     });
   });
 }
-

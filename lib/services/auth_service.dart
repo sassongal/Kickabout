@@ -31,46 +31,13 @@ class AuthService {
     return _auth.authStateChanges();
   }
 
-  /// Sign in anonymously
+  /// Sign in anonymously - DISABLED: Anonymous sign-in is not allowed
+  /// This function is kept for backward compatibility but always throws an error
+  @Deprecated('Anonymous sign-in is disabled. Users must register and sign in.')
   Future<UserCredential> signInAnonymously() async {
-    if (!Env.isFirebaseAvailable) {
-      debugPrint(
-          '❌ Anonymous sign in failed: Firebase not available (limited mode)');
-      throw Exception('Firebase not available');
-    }
-
-    try {
-      debugPrint('🔐 Attempting anonymous sign in...');
-
-      final result = await _auth.signInAnonymously();
-
-      if (result.user == null) {
-        throw Exception('Anonymous sign in returned null user');
-      }
-
-      debugPrint('✅ Anonymous sign in successful: ${result.user?.uid}');
-      return result;
-    } on FirebaseAuthException catch (e) {
-      debugPrint(
-          '❌ Anonymous sign in failed (FirebaseAuthException): ${e.code} - ${e.message}');
-
-      // Provide user-friendly error messages
-      String errorMessage;
-      switch (e.code) {
-        case 'auth/operation-not-allowed':
-          errorMessage = 'התחברות כאורח לא מופעלת. אנא פנה לתמיכה.';
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = 'שגיאת רשת. נסה שוב.';
-          break;
-        default:
-          errorMessage = 'התחברות נכשלה: ${e.message ?? e.code}';
-      }
-      throw Exception(errorMessage);
-    } catch (e) {
-      debugPrint('❌ Anonymous sign in failed: $e');
-      rethrow;
-    }
+    debugPrint('❌ Anonymous sign in attempted but is disabled');
+    throw Exception(
+        'התחברות כאורח לא זמינה. אנא הירשם או התחבר כדי להשתמש באפליקציה.');
   }
 
   /// Sign out

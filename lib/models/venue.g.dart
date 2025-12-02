@@ -8,6 +8,7 @@ part of 'venue.dart';
 
 _$VenueImpl _$$VenueImplFromJson(Map<String, dynamic> json) => _$VenueImpl(
       venueId: json['venueId'] as String,
+      venueNumber: (json['venueNumber'] as num?)?.toInt() ?? 0,
       hubId: json['hubId'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
@@ -29,11 +30,14 @@ _$VenueImpl _$$VenueImplFromJson(Map<String, dynamic> json) => _$VenueImpl(
       isMain: json['isMain'] as bool? ?? false,
       hubCount: (json['hubCount'] as num?)?.toInt() ?? 0,
       isPublic: json['isPublic'] as bool? ?? true,
+      source: json['source'] as String? ?? 'manual',
+      externalId: json['externalId'] as String?,
     );
 
 Map<String, dynamic> _$$VenueImplToJson(_$VenueImpl instance) =>
     <String, dynamic>{
       'venueId': instance.venueId,
+      'venueNumber': instance.venueNumber,
       'hubId': instance.hubId,
       'name': instance.name,
       'description': instance.description,
@@ -50,4 +54,6 @@ Map<String, dynamic> _$$VenueImplToJson(_$VenueImpl instance) =>
       'isMain': instance.isMain,
       'hubCount': instance.hubCount,
       'isPublic': instance.isPublic,
+      'source': instance.source,
+      'externalId': instance.externalId,
     };

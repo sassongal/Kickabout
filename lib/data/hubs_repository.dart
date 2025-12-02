@@ -139,19 +139,32 @@ class HubsRepository {
 
     try {
       await _firestore.doc(FirestorePaths.hub(hubId)).update(data);
+      // Invalidate cache after successful update
+      CacheService().clear(CacheKeys.hub(hubId));
     } catch (e) {
       throw Exception('Failed to update hub: $e');
     }
   }
 
   /// Delete hub
-  Future<void> deleteHub(String hubId) async {
+  Future<void> deleteHub(String hubId, String currentUserId) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
-      await _firestore.doc(FirestorePaths.hub(hubId)).delete();
+      final batch = _firestore.batch();
+
+      // Remove hubId from the current user's hubIds array
+      final userRef = _firestore.doc(FirestorePaths.user(currentUserId));
+      batch.update(userRef, {
+        'hubIds': FieldValue.arrayRemove([hubId]),
+      });
+
+      // Delete the hub document itself
+      batch.delete(_firestore.doc(FirestorePaths.hub(hubId)));
+
+      await batch.commit();
     } catch (e) {
       throw Exception('Failed to delete hub: $e');
     }
@@ -709,9 +722,11 @@ class HubsRepository {
         final oldPrimaryVenueId = hubData['primaryVenueId'] as String?;
 
         // Prepare hub updates
+        // Update both primaryVenueId and mainVenueId for consistency
         final hubUpdates = <String, dynamic>{
           'primaryVenueId': venueId,
           'primaryVenueLocation': venueLocation,
+          'mainVenueId': venueId, // Also update mainVenueId
         };
 
         // Add venueId to venueIds array if not already present
@@ -730,20 +745,26 @@ class HubsRepository {
           final oldVenueDoc = await transaction.get(oldVenueRef);
 
           if (oldVenueDoc.exists) {
-            // Decrement hubCount on old primary venue
+            // Decrement hubCount on old primary venue and set isMain to false
             transaction.update(oldVenueRef, {
               'hubCount': FieldValue.increment(-1),
+              'isMain': false, // No longer the main venue
               'updatedAt': FieldValue.serverTimestamp(),
             });
           }
         }
 
-        // Update new primary venue - increment hubCount
+        // Update new primary venue - increment hubCount, set isMain to true, and update hubId
         transaction.update(venueRef, {
           'hubCount': FieldValue.increment(1),
+          'isMain': true, // This is now the main venue for this hub
+          'hubId': hubId, // Ensure hubId is set correctly
           'updatedAt': FieldValue.serverTimestamp(),
         });
       });
+
+      // Invalidate cache after successful transaction
+      CacheService().clear(CacheKeys.hub(hubId));
     } catch (e) {
       throw Exception('Failed to set hub primary venue: $e');
     }

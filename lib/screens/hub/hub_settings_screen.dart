@@ -10,9 +10,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/screens/hub/hub_invitations_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
-import 'package:kattrick/models/venue.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
@@ -570,7 +568,11 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      await hubsRepo.deleteHub(widget.hubId);
+      final currentUserId = ref.read(currentUserIdProvider);
+      if (currentUserId == null) {
+        throw Exception('משתמש לא מחובר');
+      }
+      await hubsRepo.deleteHub(widget.hubId, currentUserId);
 
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
@@ -625,8 +627,14 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
   Future<void> _loadVenues() async {
     try {
       final venuesRepo = ref.read(venuesRepositoryProvider);
-      final futures =
-          widget.initialVenueIds.map((id) => venuesRepo.getVenue(id));
+      final futures = widget.initialVenueIds.map((id) async {
+        try {
+          return await venuesRepo.getVenue(id);
+        } catch (e) {
+          debugPrint('⚠️ Error loading venue $id: $e');
+          return null; // Return null if venue not found
+        }
+      });
       final venues = await Future.wait(futures);
 
       if (mounted) {
@@ -634,9 +642,10 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
           _venues = venues.whereType<Venue>().toList();
           _isLoading = false;
         });
+        debugPrint('✅ Loaded ${_venues.length} venues for hub ${widget.hubId}');
       }
     } catch (e) {
-      debugPrint('Error loading venues: $e');
+      debugPrint('❌ Error loading venues: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -647,55 +656,77 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
     setState(() => _isSaving = true);
 
     try {
+      debugPrint('💾 Starting to save venues for hub ${widget.hubId}');
+      debugPrint('   Venues count: ${_venues.length}');
+      debugPrint('   Main venue ID: $_mainVenueId');
+      debugPrint('   Venue IDs: ${_venues.map((v) => v.venueId).toList()}');
+
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
 
-      // Determine main venue location
-      GeoPoint? location;
-      String? geohash;
+      // 1. First, update the venueIds list if it changed
+      final newVenueIds = _venues.map((v) => v.venueId).toList();
+      debugPrint('📝 Updating hub venueIds: $newVenueIds');
+      await hubsRepo.updateHub(widget.hubId, {
+        'venueIds': newVenueIds,
+      });
+      debugPrint('✅ Updated hub venueIds');
 
+      // 2. If a main venue is selected, use the dedicated function that handles transaction
+      // This ensures both Hub and Venue are updated atomically (including hubCount)
       if (_mainVenueId != null) {
+        debugPrint('📝 Setting primary venue: $_mainVenueId');
+        // This function updates primaryVenueId, mainVenueId, primaryVenueLocation, and venue hubCount
+        await hubsRepo.setHubPrimaryVenue(widget.hubId, _mainVenueId!);
+        debugPrint('✅ Set primary venue');
+
+        // Also update location and geohash for consistency (mainVenueId is already updated by setHubPrimaryVenue)
         final mainVenue = _venues.firstWhere(
           (v) => v.venueId == _mainVenueId,
           orElse: () => _venues.first,
         );
-        location = mainVenue.location;
-        geohash = locationService.generateGeohash(
+        final location = mainVenue.location;
+        final geohash = locationService.generateGeohash(
           location.latitude,
           location.longitude,
         );
+
+        await hubsRepo.updateHub(widget.hubId, {
+          'location': location,
+          'geohash': geohash,
+        });
+      } else {
+        // If no main venue selected, clear the fields
+        await hubsRepo.updateHub(widget.hubId, {
+          'mainVenueId': null,
+          'primaryVenueId': null,
+          'primaryVenueLocation': null,
+          'location': null,
+          'geohash': null,
+        });
       }
 
-      // Update hub
-      await hubsRepo.updateHub(widget.hubId, {
-        'venueIds': _venues.map((v) => v.venueId).toList(),
-        'mainVenueId': _mainVenueId,
-        'primaryVenueId': _mainVenueId,
-        'primaryVenueLocation': location,
-        'location': location,
-        'geohash': geohash,
-      });
-
-      // Update venue hub counts (optional but good for consistency)
-      // We can iterate and link/unlink if needed, but for now let's assume
-      // the updateHub call is enough for the hub side.
-      // Ideally we should handle hubCount on venues too.
-      // Let's use VenuesRepository to ensure consistency.
+      // 3. Link secondary venues (for consistency with hubCount)
       final venuesRepo = ref.read(venuesRepositoryProvider);
-
-      // Link new venues
+      debugPrint('📝 Linking secondary venues...');
       for (final venue in _venues) {
-        await venuesRepo.linkSecondaryVenueToHub(widget.hubId, venue.venueId);
+        // Only link if it's not the main venue (main venue is handled by setHubPrimaryVenue)
+        if (venue.venueId != _mainVenueId) {
+          debugPrint('   Linking venue ${venue.venueId} (${venue.name})');
+          await venuesRepo.linkSecondaryVenueToHub(widget.hubId, venue.venueId);
+          debugPrint('   ✅ Linked venue ${venue.venueId}');
+        }
       }
-
-      // Note: We are not unlinking removed venues here to keep it simple and safe.
-      // Removed venues will just have an inaccurate hubCount, which is acceptable for now.
+      debugPrint('✅ All venues linked successfully');
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'מגרשי הבית עודכנו בהצלחה');
         setState(() => _hasChanges = false);
       }
-    } catch (e) {
+      debugPrint('🎉 Venues saved successfully for hub ${widget.hubId}');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error saving venues: $e');
+      debugPrint('   Stack trace: $stackTrace');
       if (mounted) {
         SnackbarHelper.showError(context, 'שגיאה בעדכון מגרשים: $e');
       }
@@ -718,6 +749,7 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
         HubVenuesManager(
           initialVenues: _venues,
           initialMainVenueId: _mainVenueId,
+          hubId: widget.hubId, // Pass hubId so venues get it when created
           onChanged: (venues, mainVenueId) {
             setState(() {
               _venues = venues;

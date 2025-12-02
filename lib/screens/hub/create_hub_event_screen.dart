@@ -11,6 +11,12 @@ import 'package:kattrick/utils/geohash_utils.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 
 /// Create hub event screen
+///
+/// Features:
+/// - Pre-fills venue with hub's main venue (checks both mainVenueId and primaryVenueId)
+/// - Uses SmartVenueSearchField for venue selection with Google Places integration
+/// - Preserves venue selection when navigating back from venue search
+/// - Automatically associates new venues with the hub via hubId parameter
 class CreateHubEventScreen extends ConsumerStatefulWidget {
   final String hubId;
   final Hub hub;
@@ -71,21 +77,39 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
         setState(() {
           _hub = hub;
         });
-        // Pre-fill location with hub primary venue if available
-        if (hub?.primaryVenueId != null &&
-            hub!.primaryVenueId!.isNotEmpty &&
-            _locationController.text.isEmpty) {
+
+        // Pre-fill location with hub main venue if available
+        // Check both mainVenueId and primaryVenueId (fallback)
+        final venueIdToLoad = hub?.mainVenueId ?? hub?.primaryVenueId;
+
+        if (venueIdToLoad != null &&
+            venueIdToLoad.isNotEmpty &&
+            _selectedVenue == null) {
+          // Only load if not already selected
           try {
             final venuesRepo = ref.read(venuesRepositoryProvider);
-            final primaryVenue = await venuesRepo.getVenue(hub.primaryVenueId!);
-            if (primaryVenue != null) {
-              _selectedVenue = primaryVenue;
-              _locationController.text = primaryVenue.name;
+            final mainVenue = await venuesRepo.getVenue(venueIdToLoad);
+            if (mainVenue != null && mounted) {
+              setState(() {
+                _selectedVenue = mainVenue;
+                _locationController.text = mainVenue.name;
+              });
+              debugPrint('✅ Loaded hub main venue: ${mainVenue.name}');
             } else {
-              _locationController.text = hub.primaryVenueId!;
+              debugPrint('⚠️ Main venue not found: $venueIdToLoad');
+              if (mounted) {
+                setState(() {
+                  _locationController.text = venueIdToLoad;
+                });
+              }
             }
-          } catch (_) {
-            _locationController.text = hub.primaryVenueId!;
+          } catch (e) {
+            debugPrint('❌ Error loading main venue: $e');
+            if (mounted) {
+              setState(() {
+                _locationController.text = venueIdToLoad;
+              });
+            }
           }
         }
       }
@@ -377,11 +401,15 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
                 label: 'מגרש *',
                 hint: 'חפש מגרש...',
                 initialValue: _locationController.text,
+                hubId: widget
+                    .hubId, // Pass hubId so new venues get associated with this hub
                 onVenueSelected: (venue) {
                   setState(() {
                     _selectedVenue = venue;
                     _locationController.text = venue.name;
                   });
+                  debugPrint(
+                      '✅ Venue selected: ${venue.name} (ID: ${venue.venueId})');
                 },
               ),
               // Add validator widget

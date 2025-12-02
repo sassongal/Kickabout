@@ -176,14 +176,16 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                 HubPermissions(
                                                     hub: hub,
                                                     userId: currentUserId);
-                                            final role = hubPermissions.userRole;
+                                            final role =
+                                                hubPermissions.userRole;
                                             final roleName = role.displayName;
-                                            
+
                                             // Set icon based on actual role
                                             IconData roleIcon;
                                             switch (role) {
                                               case HubRole.manager:
-                                                roleIcon = Icons.admin_panel_settings;
+                                                roleIcon =
+                                                    Icons.admin_panel_settings;
                                                 break;
                                               case HubRole.moderator:
                                                 roleIcon = Icons.shield;
@@ -198,7 +200,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                 roleIcon = Icons.person_outline;
                                                 break;
                                             }
-                                            
+
                                             return Chip(
                                               label: Text(roleName),
                                               avatar: Icon(
@@ -1285,10 +1287,12 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                           Expanded(
                             child: Text(
                               firstName,
-                              style:
-                                  Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ),
                           // Social media icons (if enabled and links exist)
@@ -1444,11 +1448,32 @@ class _HomeVenueSelectorContent extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_HomeVenueSelectorContent> createState() => _HomeVenueSelectorContentState();
+  ConsumerState<_HomeVenueSelectorContent> createState() =>
+      _HomeVenueSelectorContentState();
 }
 
-class _HomeVenueSelectorContentState extends ConsumerState<_HomeVenueSelectorContent> {
+class _HomeVenueSelectorContentState
+    extends ConsumerState<_HomeVenueSelectorContent> {
   bool _isLoading = false;
+  String? _lastMainVenueId;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastMainVenueId = widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
+  }
+
+  @override
+  void didUpdateWidget(_HomeVenueSelectorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If mainVenueId changed, update the last known ID to trigger FutureBuilder refresh
+    final newMainVenueId = widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
+    if (newMainVenueId != _lastMainVenueId) {
+      _lastMainVenueId = newMainVenueId;
+      // Force rebuild to reload venue
+      setState(() {});
+    }
+  }
 
   Future<void> _selectHomeVenue() async {
     setState(() => _isLoading = true);
@@ -1462,7 +1487,11 @@ class _HomeVenueSelectorContentState extends ConsumerState<_HomeVenueSelectorCon
         final currentUserId = ref.read(currentUserIdProvider);
 
         if (result is Venue) {
-          // Existing venue selected
+          // Existing venue selected - use setHubPrimaryVenue for transaction and hubCount update
+          // This function already updates primaryVenueId, mainVenueId, and primaryVenueLocation
+          await hubsRepo.setHubPrimaryVenue(widget.hubId, result.venueId);
+
+          // Also update location and geohash for consistency (mainVenueId is already updated by setHubPrimaryVenue)
           final geohash = GeohashUtils.encode(
             result.location.latitude,
             result.location.longitude,
@@ -1470,12 +1499,8 @@ class _HomeVenueSelectorContentState extends ConsumerState<_HomeVenueSelectorCon
           );
 
           await hubsRepo.updateHub(widget.hubId, {
-            'mainVenueId': result.venueId,
-            'primaryVenueId': result.venueId,
-            'primaryVenueLocation': result.location,
             'location': result.location,
             'geohash': geohash,
-            'venueIds': FieldValue.arrayUnion([result.venueId]),
           });
         } else if (result is Map<String, dynamic>) {
           // Manual location selected
@@ -1493,7 +1518,10 @@ class _HomeVenueSelectorContentState extends ConsumerState<_HomeVenueSelectorCon
             isPublic: false, // Hub's private venue
           );
 
-          // Update hub with new venue
+          // Update hub with new venue - use setHubPrimaryVenue for transaction and hubCount update
+          await hubsRepo.setHubPrimaryVenue(widget.hubId, newVenue.venueId);
+
+          // Also update mainVenueId, location, and geohash for consistency
           final geohash = GeohashUtils.encode(
             location.latitude,
             location.longitude,
@@ -1502,15 +1530,18 @@ class _HomeVenueSelectorContentState extends ConsumerState<_HomeVenueSelectorCon
 
           await hubsRepo.updateHub(widget.hubId, {
             'mainVenueId': newVenue.venueId,
-            'primaryVenueId': newVenue.venueId,
-            'primaryVenueLocation': location,
             'location': location,
             'geohash': geohash,
-            'venueIds': FieldValue.arrayUnion([newVenue.venueId]),
           });
         }
 
         if (mounted) {
+          // Force rebuild to reload venue after save
+          setState(() {
+            _lastMainVenueId =
+                widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
+          });
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('מגרש הבית עודכן בהצלחה!'),
@@ -1537,9 +1568,25 @@ class _HomeVenueSelectorContentState extends ConsumerState<_HomeVenueSelectorCon
 
   @override
   Widget build(BuildContext context) {
+    // Use primaryVenueId if mainVenueId is not set (for backward compatibility)
+    final venueIdToLoad = widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
+
+    // Update last known ID to track changes and force rebuild if changed
+    if (venueIdToLoad != _lastMainVenueId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _lastMainVenueId = venueIdToLoad;
+          });
+        }
+      });
+    }
+
     return FutureBuilder<Venue?>(
-      future: widget.hub.mainVenueId != null && widget.hub.mainVenueId!.isNotEmpty
-          ? widget.venuesRepo.getVenue(widget.hub.mainVenueId!)
+      key: ValueKey(
+          'home_venue_${venueIdToLoad ?? 'none'}'), // Force rebuild when venueId changes
+      future: venueIdToLoad != null && venueIdToLoad.isNotEmpty
+          ? widget.venuesRepo.getVenue(venueIdToLoad)
           : Future.value(null),
       builder: (context, snapshot) {
         final homeVenue = snapshot.data;

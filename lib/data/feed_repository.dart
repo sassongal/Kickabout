@@ -66,7 +66,7 @@ class FeedRepository {
     query = query.orderBy('createdAt', descending: true).limit(20);
 
     return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data();
           return FeedPost.fromJson({...data, 'postId': doc.id});
         }).toList());
   }

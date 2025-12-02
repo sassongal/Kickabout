@@ -7,6 +7,42 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:731836758075:android:3ff3d5b4ac20d84b03441e",
+        "android_client_info": {
+          "package_name": "com.joyatech.kattrick"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "731836758075-7n7toprsfivmbrlmgf12af4bcb1j128h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzz0lNtzpqFPcZalk3OIxjdsSuq-F8dFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "731836758075-7n7toprsfivmbrlmgf12af4bcb1j128h.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.CounterApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:731836758075:android:0dde0fad28e8c51003441e",
         "android_client_info": {
           "package_name": "com.mycompany.CounterApp"

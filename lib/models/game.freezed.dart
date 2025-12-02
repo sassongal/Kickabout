@@ -70,11 +70,9 @@ mixin _$Game {
       throw _privateConstructorUsedError; // List of teams created in TeamMaker
 // Legacy single-match scores (deprecated - use matches list for session mode)
 // These fields are kept for backward compatibility with old games
-// ignore: invalid_annotation_target
   @JsonKey(name: 'teamAScore')
   int? get legacyTeamAScore =>
       throw _privateConstructorUsedError; // Legacy: Score for team A - use matches for session mode
-// ignore: invalid_annotation_target
   @JsonKey(name: 'teamBScore')
   int? get legacyTeamBScore =>
       throw _privateConstructorUsedError; // Legacy: Score for team B - use matches for session mode
@@ -855,12 +853,10 @@ class _$GameImpl implements _Game {
 // List of teams created in TeamMaker
 // Legacy single-match scores (deprecated - use matches list for session mode)
 // These fields are kept for backward compatibility with old games
-// ignore: invalid_annotation_target
   @override
   @JsonKey(name: 'teamAScore')
   final int? legacyTeamAScore;
 // Legacy: Score for team A - use matches for session mode
-// ignore: invalid_annotation_target
   @override
   @JsonKey(name: 'teamBScore')
   final int? legacyTeamBScore;
@@ -1237,12 +1233,10 @@ abstract class _Game implements Game {
   List<Team> get teams; // List of teams created in TeamMaker
 // Legacy single-match scores (deprecated - use matches list for session mode)
 // These fields are kept for backward compatibility with old games
-// ignore: invalid_annotation_target
   @override
   @JsonKey(name: 'teamAScore')
   int?
       get legacyTeamAScore; // Legacy: Score for team A - use matches for session mode
-// ignore: invalid_annotation_target
   @override
   @JsonKey(name: 'teamBScore')
   int?

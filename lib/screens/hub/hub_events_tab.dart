@@ -4,9 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/venue.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/futuristic/spotlight_card.dart';
 import 'package:kattrick/widgets/futuristic/empty_state.dart';
 import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
 import 'package:kattrick/theme/futuristic_theme.dart';
@@ -125,445 +124,455 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                       event.registeredPlayerIds.contains(currentUserId);
                   final isPast = DateTime.now().isAfter(happeningWindowEnd);
 
-                  return FuturisticCard(
+                  return SpotlightCard(
                     margin: const EdgeInsets.only(bottom: 12),
                     onTap: widget.isManager
                         ? () => context.push(
                             '/hubs/${widget.hubId}/events/${event.eventId}/manage')
                         : null,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Title
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  event.title,
-                                  style: FuturisticTypography.techHeadline
-                                      .copyWith(
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                              if (isHappeningNow)
-                                _StatusPill(
-                                  label: 'מתרחש',
-                                  color: Colors.green,
-                                  pulse: true,
-                                )
-                              else if (isPast)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: FuturisticColors.surfaceVariant,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'עבר',
-                                    style: FuturisticTypography.labelSmall
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title and Edit Icon Row
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    event.title,
+                                    style: FuturisticTypography.techHeadline
                                         .copyWith(
-                                      color: FuturisticColors.textSecondary,
+                                      fontSize: 18,
                                     ),
                                   ),
-                                ),
-                            ],
+                                  if (isHappeningNow)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: _StatusPill(
+                                        label: 'מתרחש',
+                                        color: Colors.green,
+                                        pulse: true,
+                                      ),
+                                    )
+                                  else if (isPast)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              FuturisticColors.surfaceVariant,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          'עבר',
+                                          style: FuturisticTypography.labelSmall
+                                              .copyWith(
+                                            color:
+                                                FuturisticColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            // Edit Icon for Managers
+                            if (widget.isManager && !isPast && !event.isStarted)
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 20),
+                                color: FuturisticColors.primary,
+                                tooltip: 'ערוך פרטי אירוע',
+                                onPressed: () => context.push(
+                                    '/hubs/${widget.hubId}/events/${event.eventId}/edit'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Description
+                        if (event.description != null &&
+                            event.description!.isNotEmpty) ...[
+                          Text(
+                            event.description!,
+                            style: FuturisticTypography.bodyMedium,
                           ),
                           const SizedBox(height: 12),
-                          // Description
-                          if (event.description != null &&
-                              event.description!.isNotEmpty) ...[
+                        ],
+                        // Date and time
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 18,
+                              color: FuturisticColors.primary,
+                            ),
+                            const SizedBox(width: 8),
                             Text(
-                              event.description!,
+                              dateFormat.format(event.eventDate),
                               style: FuturisticTypography.bodyMedium,
                             ),
-                            const SizedBox(height: 12),
                           ],
-                          // Date and time
+                        ),
+                        // Location with navigation - load venue if venueId exists
+                        if (event.venueId != null &&
+                            event.venueId!.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          StreamBuilder<Venue?>(
+                            stream: ref
+                                .read(venuesRepositoryProvider)
+                                .watchVenue(event.venueId!),
+                            builder: (context, venueSnapshot) {
+                              final venue = venueSnapshot.data;
+                              final locationText = venue?.name ??
+                                  event.location ??
+                                  'מיקום לא צוין';
+                              final locationPoint =
+                                  venue?.location ?? event.locationPoint;
+
+                              if (locationText.isEmpty ||
+                                  locationText == 'מיקום לא צוין') {
+                                return const SizedBox.shrink();
+                              }
+
+                              return Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 18,
+                                    color: FuturisticColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          locationText,
+                                          style:
+                                              FuturisticTypography.bodyMedium,
+                                        ),
+                                        if (venue?.address != null &&
+                                            venue!.address != locationText)
+                                          Text(
+                                            venue.address!,
+                                            style: FuturisticTypography
+                                                .bodySmall
+                                                .copyWith(
+                                              color: FuturisticColors
+                                                  .textSecondary,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Navigation button
+                                  if (locationPoint != null)
+                                    IconButton(
+                                      icon: const Icon(Icons.navigation,
+                                          size: 20),
+                                      color: FuturisticColors.primary,
+                                      tooltip: 'נווט למגרש',
+                                      onPressed: () => _navigateToLocation(
+                                        locationPoint.latitude,
+                                        locationPoint.longitude,
+                                        locationText,
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                        ] else if (event.location != null) ...[
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               Icon(
-                                Icons.calendar_today,
+                                Icons.location_on,
                                 size: 18,
                                 color: FuturisticColors.primary,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                dateFormat.format(event.eventDate),
-                                style: FuturisticTypography.bodyMedium,
+                              Expanded(
+                                child: Text(
+                                  event.location!,
+                                  style: FuturisticTypography.bodyMedium,
+                                ),
                               ),
+                              // Navigation button
+                              if (event.locationPoint != null)
+                                IconButton(
+                                  icon: const Icon(Icons.navigation, size: 20),
+                                  color: FuturisticColors.primary,
+                                  tooltip: 'נווט למגרש',
+                                  onPressed: () => _navigateToLocation(
+                                    event.locationPoint!.latitude,
+                                    event.locationPoint!.longitude,
+                                    event.location!,
+                                  ),
+                                ),
                             ],
                           ),
-                          // Location with navigation - load venue if venueId exists
-                          if (event.venueId != null && event.venueId!.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            StreamBuilder<Venue?>(
-                              stream: ref
-                                  .read(venuesRepositoryProvider)
-                                  .watchVenue(event.venueId!),
-                              builder: (context, venueSnapshot) {
-                                final venue = venueSnapshot.data;
-                                final locationText = venue?.name ?? 
-                                                    event.location ?? 
-                                                    'מיקום לא צוין';
-                                final locationPoint = venue?.location ?? event.locationPoint;
-                                
-                                if (locationText.isEmpty || locationText == 'מיקום לא צוין') {
-                                  return const SizedBox.shrink();
-                                }
-                                
-                                return Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: 18,
-                                      color: FuturisticColors.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            locationText,
-                                            style: FuturisticTypography.bodyMedium,
-                                          ),
-                                          if (venue?.address != null && 
-                                              venue!.address != locationText)
-                                            Text(
-                                              venue.address!,
-                                              style: FuturisticTypography.bodySmall.copyWith(
-                                                color: FuturisticColors.textSecondary,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Navigation button
-                                    if (locationPoint != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.navigation, size: 20),
-                                        color: FuturisticColors.primary,
-                                        tooltip: 'נווט למגרש',
-                                        onPressed: () => _navigateToLocation(
-                                          locationPoint.latitude,
-                                          locationPoint.longitude,
-                                          locationText,
-                                        ),
-                                      ),
-                                  ],
-                                );
-                              },
+                        ],
+                        const SizedBox(height: 12),
+                        // Registered count with max participants
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.people,
+                              size: 18,
+                              color: FuturisticColors.textSecondary,
                             ),
-                          ] else if (event.location != null) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on,
-                                  size: 18,
-                                  color: FuturisticColors.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    event.location!,
-                                    style: FuturisticTypography.bodyMedium,
-                                  ),
-                                ),
-                                // Navigation button
-                                if (event.locationPoint != null)
-                                  IconButton(
-                                    icon: const Icon(Icons.navigation, size: 20),
-                                    color: FuturisticColors.primary,
-                                    tooltip: 'נווט למגרש',
-                                    onPressed: () => _navigateToLocation(
-                                      event.locationPoint!.latitude,
-                                      event.locationPoint!.longitude,
-                                      event.location!,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          // Registered count with max participants
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.people,
-                                size: 18,
+                            const SizedBox(width: 8),
+                            Text(
+                              '${event.registeredPlayerIds.length}/${event.maxParticipants} נרשמו',
+                              style: FuturisticTypography.bodySmall.copyWith(
                                 color: FuturisticColors.textSecondary,
                               ),
+                            ),
+                            if (event.registeredPlayerIds.length >=
+                                event.maxParticipants) ...[
                               const SizedBox(width: 8),
-                              Text(
-                                '${event.registeredPlayerIds.length}/${event.maxParticipants} נרשמו',
-                                style: FuturisticTypography.bodySmall.copyWith(
-                                  color: FuturisticColors.textSecondary,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'הרשמה סגורה',
+                                  style:
+                                      FuturisticTypography.labelSmall.copyWith(
+                                    color: Colors.red,
+                                  ),
                                 ),
                               ),
-                              if (event.registeredPlayerIds.length >=
-                                  event.maxParticipants) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'הרשמה סגורה',
-                                    style: FuturisticTypography.labelSmall
-                                        .copyWith(
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ],
-                          ),
-                          // Show registered participants list (expandable)
-                          if (event.registeredPlayerIds.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            _RegisteredParticipantsList(
-                              event: event,
-                              hubId: widget.hubId,
-                            ),
                           ],
-                          // Pay via PayBox button (if payment link exists and user is registered)
-                          if (widget.hub.paymentLink != null &&
-                              widget.hub.paymentLink!.isNotEmpty &&
-                              currentUserId != null &&
-                              isRegistered &&
-                              !isPast) ...[
-                            const SizedBox(height: 12),
+                        ),
+                        // Show registered participants list (expandable)
+                        if (event.registeredPlayerIds.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          _RegisteredParticipantsList(
+                            event: event,
+                            hubId: widget.hubId,
+                          ),
+                        ],
+                        // Pay via PayBox button (if payment link exists and user is registered)
+                        if (widget.hub.paymentLink != null &&
+                            widget.hub.paymentLink!.isNotEmpty &&
+                            currentUserId != null &&
+                            isRegistered &&
+                            !isPast) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final uri = Uri.parse(widget.hub.paymentLink!);
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri,
+                                      mode: LaunchMode.externalApplication);
+                                } else {
+                                  if (mounted) {
+                                    SnackbarHelper.showError(
+                                        context, 'לא ניתן לפתוח קישור תשלום');
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.payment, size: 20),
+                              label: const Text('שלם ב-PayBox 💰'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        // Event Started Logic (Manager Only)
+                        if (widget.isManager && !isPast) ...[
+                          SwitchListTile(
+                            title: const Text('האירוע התחיל'),
+                            value: event.isStarted,
+                            onChanged: (value) async {
+                              if (value == event.isStarted) return;
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('אישור התחלת אירוע'),
+                                  content:
+                                      const Text('האם אתה בטוח שהאירוע התחיל?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: const Text('ביטול'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      child: const Text('אישור'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirm != true) return;
+
+                              try {
+                                final eventsRepo =
+                                    ref.read(hubEventsRepositoryProvider);
+                                await eventsRepo.updateHubEvent(
+                                  widget.hubId,
+                                  event.eventId,
+                                  {
+                                    'isStarted': value,
+                                    'status': value ? 'ongoing' : 'upcoming',
+                                    if (value)
+                                      'startedAt': FieldValue.serverTimestamp(),
+                                  },
+                                );
+                              } catch (e) {
+                                if (mounted) {
+                                  final messenger =
+                                      ScaffoldMessenger.maybeOf(context);
+                                  if (messenger != null) {
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text('שגיאה בעדכון אירוע: $e')),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                            secondary: const Icon(Icons.timer),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          if (event.isStarted) ...[
+                            const SizedBox(height: 8),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  final uri =
-                                      Uri.parse(widget.hub.paymentLink!);
-                                  if (await canLaunchUrl(uri)) {
-                                    await launchUrl(uri,
-                                        mode: LaunchMode.externalApplication);
-                                  } else {
-                                    if (mounted) {
-                                      SnackbarHelper.showError(
-                                          context, 'לא ניתן לפתוח קישור תשלום');
-                                    }
-                                  }
-                                },
-                                icon: const Icon(Icons.payment, size: 20),
-                                label: const Text('שלם ב-PayBox 💰'),
+                                onPressed: () => context.push(
+                                  '/hubs/${widget.hubId}/events/${event.eventId}/team-maker',
+                                ),
+                                icon: const Icon(Icons.groups),
+                                label: const Text('יוצר כוחות'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: FuturisticColors.accent,
                                   foregroundColor: Colors.white,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 16),
                           ],
-                          const SizedBox(height: 16),
-                          // Event Started Logic (Manager Only)
-                          if (widget.isManager && !isPast) ...[
-                            SwitchListTile(
-                              title: const Text('האירוע התחיל'),
-                              value: event.isStarted,
-                              onChanged: (value) async {
-                                if (value == event.isStarted) return;
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('אישור התחלת אירוע'),
-                                    content: const Text(
-                                        'האם אתה בטוח שהאירוע התחיל?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('ביטול'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text('אישור'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-
-                                if (confirm != true) return;
-
-                                try {
-                                  final eventsRepo =
-                                      ref.read(hubEventsRepositoryProvider);
-                                  await eventsRepo.updateHubEvent(
-                                    widget.hubId,
-                                    event.eventId,
-                                    {
-                                      'isStarted': value,
-                                      'status': value ? 'ongoing' : 'upcoming',
-                                      if (value)
-                                        'startedAt':
-                                            FieldValue.serverTimestamp(),
-                                    },
-                                  );
-                                } catch (e) {
-                                  if (mounted) {
-                                    final messenger = ScaffoldMessenger.maybeOf(context);
-                                    if (messenger != null) {
-                                      messenger.showSnackBar(
-                                        SnackBar(content: Text('שגיאה בעדכון אירוע: $e')),
-                                      );
-                                    }
-                                  }
-                                }
-                              },
-                              secondary: const Icon(Icons.timer),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            if (event.isStarted) ...[
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => context.push(
-                                    '/hubs/${widget.hubId}/events/${event.eventId}/team-maker',
-                                  ),
-                                  icon: const Icon(Icons.groups),
-                                  label: const Text('יוצר כוחות'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: FuturisticColors.accent,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
+                        ],
+                        // Actions
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (currentUserId != null && !isPast) ...[
+                              ElevatedButton.icon(
+                                onPressed: (event.registeredPlayerIds.length >=
+                                            event.maxParticipants &&
+                                        !isRegistered)
+                                    ? null
+                                    : (isRegistered
+                                        ? () => _unregisterFromEvent(event)
+                                        : () => _registerToEvent(event)),
+                                icon: Icon(
+                                  isRegistered
+                                      ? Icons.cancel
+                                      : Icons.check_circle,
+                                ),
+                                label:
+                                    Text(isRegistered ? 'ביטל הרשמה' : 'הירשם'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isRegistered
+                                      ? FuturisticColors.surfaceVariant
+                                      : FuturisticColors.primary,
+                                  foregroundColor: isRegistered
+                                      ? FuturisticColors.textSecondary
+                                      : Colors.white,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                            ] else if (widget.isManager) ...[
+                              // Generate Teams button (if event hasn't passed and no teams exist)
+                              if (!isPast && event.teams.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => context.push(
+                                        '/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
+                                    icon: const Icon(Icons.group, size: 18),
+                                    label: const Text('צור קבוצות'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: FuturisticColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                    ),
+                                  ),
+                                ),
+                              // Log Game button (if event has passed and no game exists)
+                              if (isPast &&
+                                  (event.gameId == null ||
+                                      event.gameId!.isEmpty))
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => context.push(
+                                        '/hubs/${widget.hubId}/events/${event.eventId}/log-game'),
+                                    icon: const Icon(Icons.sports_soccer,
+                                        size: 18),
+                                    label: const Text('רשום משחק'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: FuturisticColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                    ),
+                                  ),
+                                ),
+                              // Manage button
+                              ElevatedButton.icon(
+                                onPressed: () => context.push(
+                                    '/hubs/${widget.hubId}/events/${event.eventId}/manage'),
+                                icon: const Icon(Icons.edit, size: 18),
+                                label: const Text('ניהול'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: FuturisticColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => _deleteEvent(event),
+                                color: FuturisticColors.error,
+                                tooltip: 'מחק',
+                              ),
                             ],
                           ],
-                          // Actions
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              if (currentUserId != null && !isPast) ...[
-                                ElevatedButton.icon(
-                                  onPressed: (event
-                                                  .registeredPlayerIds.length >=
-                                              event.maxParticipants &&
-                                          !isRegistered)
-                                      ? null
-                                      : (isRegistered
-                                          ? () => _unregisterFromEvent(event)
-                                          : () => _registerToEvent(event)),
-                                  icon: Icon(
-                                    isRegistered
-                                        ? Icons.cancel
-                                        : Icons.check_circle,
-                                  ),
-                                  label: Text(
-                                      isRegistered ? 'ביטל הרשמה' : 'הירשם'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isRegistered
-                                        ? FuturisticColors.surfaceVariant
-                                        : FuturisticColors.primary,
-                                    foregroundColor: isRegistered
-                                        ? FuturisticColors.textSecondary
-                                        : Colors.white,
-                                  ),
-                                ),
-                              ] else if (widget.isManager) ...[
-                                // Generate Teams button (if event hasn't passed and no teams exist)
-                                if (!isPast && event.teams.isEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => context.push(
-                                          '/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
-                                      icon: const Icon(Icons.group, size: 18),
-                                      label: const Text('צור קבוצות'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            FuturisticColors.primary,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                      ),
-                                    ),
-                                  ),
-                                // Log Game button (if event has passed and no game exists)
-                                if (isPast &&
-                                    (event.gameId == null ||
-                                        event.gameId!.isEmpty))
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => context.push(
-                                          '/hubs/${widget.hubId}/events/${event.eventId}/log-game'),
-                                      icon: const Icon(Icons.sports_soccer,
-                                          size: 18),
-                                      label: const Text('רשום משחק'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            FuturisticColors.primary,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                      ),
-                                    ),
-                                  ),
-                                // Edit Event button (if not started)
-                                if (!event.isStarted && !isPast)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => context.push(
-                                          '/hubs/${widget.hubId}/events/${event.eventId}/edit'),
-                                      icon: const Icon(Icons.edit_calendar,
-                                          size: 18),
-                                      label: const Text('ערוך פרטים'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            FuturisticColors.primary,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                      ),
-                                    ),
-                                  ),
-                                // Manage button
-                                ElevatedButton.icon(
-                                  onPressed: () => context.push(
-                                      '/hubs/${widget.hubId}/events/${event.eventId}/manage'),
-                                  icon: const Icon(Icons.edit, size: 18),
-                                  label: const Text('ניהול'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: FuturisticColors.primary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => _deleteEvent(event),
-                                  color: FuturisticColors.error,
-                                  tooltip: 'מחק',
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -581,15 +590,34 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
 
     // Check if event is full
     if (event.registeredPlayerIds.length >= event.maxParticipants) {
-      if (!mounted || !context.mounted) return;
-      SnackbarHelper.showError(context, 'האירוע מלא, אין מקום להרשמה נוספת');
-      return;
+      final joinWaiting = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('האירוע מלא'),
+          content: const Text('האם ברצונך להצטרף לרשימת ההמתנה?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('הצטרף'),
+            ),
+          ],
+        ),
+      );
+
+      if (joinWaiting != true) return;
     }
 
     try {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-      final registrationNumber = await hubEventsRepo.registerToEvent(
+      final result = await hubEventsRepo.registerToEvent(
           widget.hubId, event.eventId, currentUserId);
+
+      final isWaitingList = result < 0;
+      final registrationNumber = result.abs();
 
       // Create feed post about registration
       try {
@@ -598,13 +626,21 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
         final user = await usersRepo.getUser(currentUserId);
         final userName = user?.name ?? 'מישהו';
 
+        String postText;
+        if (isWaitingList) {
+          postText =
+              '$userName הצטרף לרשימת ההמתנה לאירוע "${event.title}" (מקום $registrationNumber)';
+        } else {
+          postText =
+              '$userName נרשם לאירוע "${event.title}" ($registrationNumber/${event.maxParticipants})';
+        }
+
         final feedPost = FeedPost(
           postId: '',
           hubId: widget.hubId,
           authorId: currentUserId,
           type: 'event_registration',
-          text:
-              '$userName נרשם לאירוע "${event.title}" בתאריך ${DateFormat('dd/MM/yyyy', 'he').format(DateTime.now())} ($registrationNumber/${event.maxParticipants})',
+          text: postText,
           entityId: event.eventId,
           createdAt: DateTime.now(),
         );
@@ -615,7 +651,11 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
       }
 
       if (!mounted || !context.mounted) return;
-      SnackbarHelper.showSuccess(context, 'נרשמת לאירוע!');
+      if (isWaitingList) {
+        SnackbarHelper.showSuccess(context, 'הצטרפת לרשימת ההמתנה!');
+      } else {
+        SnackbarHelper.showSuccess(context, 'נרשמת לאירוע!');
+      }
     } catch (e) {
       if (!mounted || !context.mounted) return;
       if (e.toString().contains('full')) {

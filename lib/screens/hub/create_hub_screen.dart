@@ -122,7 +122,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
       String? geohash;
       GeoPoint? location;
 
-      if (mainVenue != null && mainVenue.location != null) {
+      if (mainVenue != null) {
         location = mainVenue.location;
         geohash = locationService.generateGeohash(
           location.latitude,

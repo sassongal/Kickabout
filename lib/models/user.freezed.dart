@@ -34,7 +34,8 @@ mixin _$User {
   String? get firstName => throw _privateConstructorUsedError;
   String? get lastName => throw _privateConstructorUsedError;
   @TimestampConverter()
-  DateTime? get birthDate => throw _privateConstructorUsedError;
+  DateTime get birthDate =>
+      throw _privateConstructorUsedError; // ✅ Required field
   String? get favoriteTeamId =>
       throw _privateConstructorUsedError; // ID of favorite team from Firestore
   String? get facebookProfileUrl => throw _privateConstructorUsedError;
@@ -106,7 +107,7 @@ abstract class $UserCopyWith<$Res> {
       String? displayName,
       String? firstName,
       String? lastName,
-      @TimestampConverter() DateTime? birthDate,
+      @TimestampConverter() DateTime birthDate,
       String? favoriteTeamId,
       String? facebookProfileUrl,
       String? instagramProfileUrl,
@@ -159,7 +160,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? displayName = freezed,
     Object? firstName = freezed,
     Object? lastName = freezed,
-    Object? birthDate = freezed,
+    Object? birthDate = null,
     Object? favoriteTeamId = freezed,
     Object? facebookProfileUrl = freezed,
     Object? instagramProfileUrl = freezed,
@@ -227,10 +228,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.lastName
           : lastName // ignore: cast_nullable_to_non_nullable
               as String?,
-      birthDate: freezed == birthDate
+      birthDate: null == birthDate
           ? _value.birthDate
           : birthDate // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
+              as DateTime,
       favoriteTeamId: freezed == favoriteTeamId
           ? _value.favoriteTeamId
           : favoriteTeamId // ignore: cast_nullable_to_non_nullable
@@ -353,7 +354,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String? displayName,
       String? firstName,
       String? lastName,
-      @TimestampConverter() DateTime? birthDate,
+      @TimestampConverter() DateTime birthDate,
       String? favoriteTeamId,
       String? facebookProfileUrl,
       String? instagramProfileUrl,
@@ -403,7 +404,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? displayName = freezed,
     Object? firstName = freezed,
     Object? lastName = freezed,
-    Object? birthDate = freezed,
+    Object? birthDate = null,
     Object? favoriteTeamId = freezed,
     Object? facebookProfileUrl = freezed,
     Object? instagramProfileUrl = freezed,
@@ -471,10 +472,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.lastName
           : lastName // ignore: cast_nullable_to_non_nullable
               as String?,
-      birthDate: freezed == birthDate
+      birthDate: null == birthDate
           ? _value.birthDate
           : birthDate // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
+              as DateTime,
       favoriteTeamId: freezed == favoriteTeamId
           ? _value.favoriteTeamId
           : favoriteTeamId // ignore: cast_nullable_to_non_nullable
@@ -593,7 +594,7 @@ class _$UserImpl implements _User {
       this.displayName,
       this.firstName,
       this.lastName,
-      @TimestampConverter() this.birthDate,
+      @TimestampConverter() required this.birthDate,
       this.favoriteTeamId,
       this.facebookProfileUrl,
       this.instagramProfileUrl,
@@ -670,7 +671,8 @@ class _$UserImpl implements _User {
   final String? lastName;
   @override
   @TimestampConverter()
-  final DateTime? birthDate;
+  final DateTime birthDate;
+// ✅ Required field
   @override
   final String? favoriteTeamId;
 // ID of favorite team from Firestore
@@ -929,7 +931,7 @@ abstract class _User implements User {
       final String? displayName,
       final String? firstName,
       final String? lastName,
-      @TimestampConverter() final DateTime? birthDate,
+      @TimestampConverter() required final DateTime birthDate,
       final String? favoriteTeamId,
       final String? facebookProfileUrl,
       final String? instagramProfileUrl,
@@ -982,7 +984,7 @@ abstract class _User implements User {
   String? get lastName;
   @override
   @TimestampConverter()
-  DateTime? get birthDate;
+  DateTime get birthDate; // ✅ Required field
   @override
   String? get favoriteTeamId; // ID of favorite team from Firestore
   @override

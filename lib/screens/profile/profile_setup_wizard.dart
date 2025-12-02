@@ -14,8 +14,7 @@ class ProfileSetupWizard extends ConsumerStatefulWidget {
   const ProfileSetupWizard({super.key});
 
   @override
-  ConsumerState<ProfileSetupWizard> createState() =>
-      _ProfileSetupWizardState();
+  ConsumerState<ProfileSetupWizard> createState() => _ProfileSetupWizardState();
 }
 
 class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
@@ -44,10 +43,10 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
       final usersRepo = ref.read(usersRepositoryProvider);
       final authService = ref.read(authServiceProvider);
       final currentUser = authService.currentUser;
-      
+
       // בדוק אם המשתמש קיים
       final existingUser = await usersRepo.getUser(uid);
-      
+
       if (existingUser == null) {
         // המשתמש לא קיים - צור אותו
         final newUser = model.User(
@@ -57,7 +56,7 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           phoneNumber: _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-          birthDate: _birthDate,
+          birthDate: _birthDate!, // ✅ Required - validated in _next()
           city: _cityController.text.trim(),
           region: CityUtils.getRegionForCity(_cityController.text.trim()),
           preferredPosition: _position,
@@ -71,7 +70,8 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           'phoneNumber': _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-          'birthDate': _birthDate != null ? Timestamp.fromDate(_birthDate!) : null,
+          'birthDate':
+              _birthDate != null ? Timestamp.fromDate(_birthDate!) : null,
           'city': _cityController.text.trim(),
           'region': CityUtils.getRegionForCity(_cityController.text.trim()),
           'preferredPosition': _position,
@@ -100,35 +100,37 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           position.latitude,
           position.longitude,
         );
-        
+
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
           // נסה למצוא את שם העיר
           String? cityName;
           if (place.locality != null && place.locality!.isNotEmpty) {
             cityName = place.locality;
-          } else if (place.subAdministrativeArea != null && 
-                     place.subAdministrativeArea!.isNotEmpty) {
+          } else if (place.subAdministrativeArea != null &&
+              place.subAdministrativeArea!.isNotEmpty) {
             cityName = place.subAdministrativeArea;
-          } else if (place.administrativeArea != null && 
-                     place.administrativeArea!.isNotEmpty) {
+          } else if (place.administrativeArea != null &&
+              place.administrativeArea!.isNotEmpty) {
             cityName = place.administrativeArea;
           }
-          
+
           if (cityName != null && cityName.isNotEmpty) {
             // נסה למצוא התאמה בערים הישראליות
             final cityNameValue = cityName; // שמור את הערך ב-variable מקומי
             String matchingCity = cityNameValue;
             try {
               matchingCity = CityUtils.cities.firstWhere(
-                (city) => city.contains(cityNameValue) || cityNameValue.contains(city),
+                (city) =>
+                    city.contains(cityNameValue) ||
+                    cityNameValue.contains(city),
                 orElse: () => cityNameValue,
               );
             } catch (e) {
               // אם לא נמצאה התאמה, השתמש בשם העיר המקורי
               matchingCity = cityNameValue;
             }
-            
+
             setState(() {
               _cityController.text = matchingCity;
             });
@@ -207,19 +209,21 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            color:
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.phone, size: 40, color: Theme.of(context).colorScheme.primary),
+              Icon(Icons.phone,
+                  size: 40, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 12),
               Text(
                 'צור קשר בקלות',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -233,19 +237,21 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            color:
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.location_on, size: 40, color: Theme.of(context).colorScheme.primary),
+              Icon(Icons.location_on,
+                  size: 40, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 12),
               Text(
                 'מצא שחקנים והאבים לידך',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -259,19 +265,21 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            color:
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.sports_soccer, size: 40, color: Theme.of(context).colorScheme.primary),
+              Icon(Icons.sports_soccer,
+                  size: 40, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 12),
               Text(
                 'בנה את הפרופיל השחקן שלך',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -285,19 +293,21 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            color:
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.notifications_active, size: 40, color: Theme.of(context).colorScheme.primary),
+              Icon(Icons.notifications_active,
+                  size: 40, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 12),
               Text(
                 'הישאר מעודכן בכל רגע',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -318,8 +328,7 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
 
     // Simple loader while auth is resolving
     if (currentUserId == null) {
-      return const Scaffold(
-          body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return FutureBuilder(
@@ -337,287 +346,301 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           if (_cityController.text.isEmpty && user.city != null) {
             _cityController.text = user.city!;
           }
-          if (_birthDate == null && user.birthDate != null) {
+          // Note: birthDate is required in model, but may be null for existing users before migration
+          // ignore: unnecessary_null_comparison
+          if (user.birthDate != null) {
             _birthDate = user.birthDate;
           }
           _position = _position.isEmpty ? user.preferredPosition : _position;
         }
         final steps = [
-      _StepData(
-        title: 'פרטים בסיסיים',
-        description: 'טלפון אופציונלי ותאריך לידה',
-        content: Column(
-          children: [
-            // תאריך לידה (חובה)
-            InkWell(
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: _birthDate ?? AgeUtils.maxBirthDateForMinAge,
-                  firstDate: DateTime(1940),
-                  lastDate: AgeUtils.maxBirthDateForMinAge,
-                  helpText: 'בחר תאריך לידה',
-                  cancelText: 'ביטול',
-                  confirmText: 'אישור',
-                  builder: (context, child) {
-                    return Theme(
-                      data: Theme.of(context).copyWith(
-                        colorScheme: Theme.of(context).colorScheme,
+          _StepData(
+            title: 'פרטים בסיסיים',
+            description: 'טלפון אופציונלי ותאריך לידה',
+            content: Column(
+              children: [
+                // תאריך לידה (חובה)
+                InkWell(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: _birthDate ?? AgeUtils.maxBirthDateForMinAge,
+                      firstDate: DateTime(1940),
+                      lastDate: AgeUtils.maxBirthDateForMinAge,
+                      helpText: 'בחר תאריך לידה',
+                      cancelText: 'ביטול',
+                      confirmText: 'אישור',
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: Theme.of(context).colorScheme,
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (date != null) {
+                      setState(() => _birthDate = date);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _birthDate == null
+                            ? Colors.red.withOpacity(0.5)
+                            : Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.5),
+                        width: 1,
                       ),
-                      child: child!,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.cake_outlined,
+                          color: _birthDate == null
+                              ? Colors.red.withOpacity(0.7)
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _birthDate == null
+                                    ? 'תאריך לידה (חובה) *'
+                                    : DateFormat('dd/MM/yyyy', 'he')
+                                        .format(_birthDate!),
+                                style: TextStyle(
+                                  color: _birthDate == null
+                                      ? Colors.grey
+                                      : Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              if (_birthDate != null) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'גיל: ${AgeUtils.calculateAge(_birthDate!)}',
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    if (AgeUtils.isAgeValid(_birthDate!))
+                                      Text(
+                                        '(${AgeUtils.getAgeGroup(_birthDate!).displayNameHe})',
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.calendar_today,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // מספר טלפון (אופציונלי)
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'מספר טלפון (אופציונלי)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                ),
+              ],
+            ),
+            isOptional: false, // תאריך לידה הוא חובה
+          ),
+          _StepData(
+            title: 'מיקום',
+            description: 'חובה כדי למצוא שחקנים והאבים לידך',
+            content: Column(
+              children: [
+                // כפתור לבחירת מיקום נוכחי
+                OutlinedButton.icon(
+                  onPressed: _isLoadingLocation ? null : _getCurrentLocation,
+                  icon: _isLoadingLocation
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location),
+                  label: const Text('בחר מיקום נוכחי'),
+                ),
+                const SizedBox(height: 16),
+                // דרופדאון ערים
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text == '') {
+                      return CityUtils.cities;
+                    }
+                    return CityUtils.cities.where((String option) {
+                      return option.contains(textEditingValue.text) ||
+                          textEditingValue.text.contains(option);
+                    });
+                  },
+                  onSelected: (String selection) {
+                    _cityController.text = selection;
+                  },
+                  fieldViewBuilder: (context, textEditingController, focusNode,
+                      onFieldSubmitted) {
+                    // סנכרן את ה-controllers
+                    if (_cityController.text.isNotEmpty &&
+                        textEditingController.text.isEmpty) {
+                      textEditingController.text = _cityController.text;
+                    }
+                    return TextField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        labelText: 'עיר מגורים',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.location_city),
+                      ),
+                      onChanged: (value) {
+                        _cityController.text = value;
+                      },
                     );
                   },
-                );
-                if (date != null) {
-                  setState(() => _birthDate = date);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: _birthDate == null
-                        ? Colors.red.withOpacity(0.5)
-                        : Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                    width: 1,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.cake_outlined,
-                      color: _birthDate == null
-                          ? Colors.red.withOpacity(0.7)
-                          : Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _birthDate == null
-                                ? 'תאריך לידה (חובה) *'
-                                : DateFormat('dd/MM/yyyy', 'he').format(_birthDate!),
-                            style: TextStyle(
-                              color: _birthDate == null
-                                  ? Colors.grey
-                                  : Theme.of(context).colorScheme.onSurface,
-                              fontSize: 16,
-                            ),
-                          ),
-                          if (_birthDate != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  'גיל: ${AgeUtils.calculateAge(_birthDate!)}',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                if (AgeUtils.isAgeValid(_birthDate!))
-                                  Text(
-                                    '(${AgeUtils.getAgeGroup(_birthDate!).displayNameHe})',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.secondary,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.calendar_today,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                  ],
+              ],
+            ),
+            isOptional: false,
+          ),
+          _StepData(
+            title: 'פרופיל שחקן',
+            description: 'אופציונלי – בחר עמדה מועדפת',
+            content: Wrap(
+              spacing: 8,
+              children: ['Goalkeeper', 'Defender', 'Attacker']
+                  .map((pos) => ChoiceChip(
+                        label: Text(_positionLabel(pos)),
+                        selected: _position == pos,
+                        onSelected: (_) => setState(() => _position = pos),
+                      ))
+                  .toList(),
+            ),
+            isOptional: true,
+          ),
+          _StepData(
+            title: 'הרשאות',
+            description: 'מומלץ לאפשר התראות ומיקום',
+            content: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('התראות'),
+                  value: _allowNotifications,
+                  onChanged: (v) => setState(() => _allowNotifications = v),
                 ),
-              ),
+                SwitchListTile(
+                  title: const Text('מיקום'),
+                  value: _allowLocation,
+                  onChanged: (v) => setState(() => _allowLocation = v),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            // מספר טלפון (אופציונלי)
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'מספר טלפון (אופציונלי)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.phone),
-              ),
-            ),
-          ],
-        ),
-        isOptional: false, // תאריך לידה הוא חובה
-      ),
-      _StepData(
-        title: 'מיקום',
-        description: 'חובה כדי למצוא שחקנים והאבים לידך',
-        content: Column(
-          children: [
-            // כפתור לבחירת מיקום נוכחי
-            OutlinedButton.icon(
-              onPressed: _isLoadingLocation ? null : _getCurrentLocation,
-              icon: _isLoadingLocation
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location),
-              label: const Text('בחר מיקום נוכחי'),
-            ),
-            const SizedBox(height: 16),
-            // דרופדאון ערים
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text == '') {
-                  return CityUtils.cities;
-                }
-                return CityUtils.cities.where((String option) {
-                  return option.contains(textEditingValue.text) ||
-                      textEditingValue.text.contains(option);
-                });
-              },
-              onSelected: (String selection) {
-                _cityController.text = selection;
-              },
-              fieldViewBuilder: (context, textEditingController,
-                  focusNode, onFieldSubmitted) {
-                // סנכרן את ה-controllers
-                if (_cityController.text.isNotEmpty &&
-                    textEditingController.text.isEmpty) {
-                  textEditingController.text = _cityController.text;
-                }
-                return TextField(
-                  controller: textEditingController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'עיר מגורים',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_city),
-                  ),
-                  onChanged: (value) {
-                    _cityController.text = value;
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-        isOptional: false,
-      ),
-      _StepData(
-        title: 'פרופיל שחקן',
-        description: 'אופציונלי – בחר עמדה מועדפת',
-        content: Wrap(
-          spacing: 8,
-          children: ['Goalkeeper', 'Defender', 'Attacker']
-              .map((pos) => ChoiceChip(
-                    label: Text(_positionLabel(pos)),
-                    selected: _position == pos,
-                    onSelected: (_) => setState(() => _position = pos),
-                  ))
-              .toList(),
-        ),
-        isOptional: true,
-      ),
-      _StepData(
-        title: 'הרשאות',
-        description: 'מומלץ לאפשר התראות ומיקום',
-        content: Column(
-          children: [
-            SwitchListTile(
-              title: const Text('התראות'),
-              value: _allowNotifications,
-              onChanged: (v) => setState(() => _allowNotifications = v),
-            ),
-            SwitchListTile(
-              title: const Text('מיקום'),
-              value: _allowLocation,
-              onChanged: (v) => setState(() => _allowLocation = v),
-            ),
-          ],
-        ),
-        isOptional: true,
-      ),
-    ];
+            isOptional: true,
+          ),
+        ];
 
         final step = steps[_step];
 
         return Scaffold(
-      appBar: AppBar(
-        title: const Text('הגדרת פרופיל'),
-        leading: _step > 0
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _back,
-              )
-            : null,
-      ),
-      body: Column(
-        children: [
-          // חצי עליון - הגדרת פרטים
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Text('שלב ${_step + 1} מתוך 4',
-                          style: Theme.of(context).textTheme.titleMedium),
-                    ),
-                    const SizedBox(height: 16),
-                    LinearProgressIndicator(value: (_step + 1) / steps.length),
-                    const SizedBox(height: 24),
-                    Text(step.title, style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 8),
-                    Text(step.description),
-                    const SizedBox(height: 16),
-                    step.content,
-                    const SizedBox(height: 16),
-                    Row(
+          appBar: AppBar(
+            title: const Text('הגדרת פרופיל'),
+            leading: _step > 0
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: _back,
+                  )
+                : null,
+          ),
+          body: Column(
+            children: [
+              // חצי עליון - הגדרת פרטים
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (step.isOptional)
-                          TextButton(
-                            onPressed: _next,
-                            child: const Text('דלג'),
-                          ),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: _saving ? null : _next,
-                          child: Text(_step == steps.length - 1 ? 'סיים' : 'הבא'),
+                        Center(
+                          child: Text('שלב ${_step + 1} מתוך 4',
+                              style: Theme.of(context).textTheme.titleMedium),
+                        ),
+                        const SizedBox(height: 16),
+                        LinearProgressIndicator(
+                            value: (_step + 1) / steps.length),
+                        const SizedBox(height: 24),
+                        Text(step.title,
+                            style: Theme.of(context).textTheme.headlineSmall),
+                        const SizedBox(height: 8),
+                        Text(step.description),
+                        const SizedBox(height: 16),
+                        step.content,
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            if (step.isOptional)
+                              TextButton(
+                                onPressed: _next,
+                                child: const Text('דלג'),
+                              ),
+                            const Spacer(),
+                            ElevatedButton(
+                              onPressed: _saving ? null : _next,
+                              child: Text(
+                                  _step == steps.length - 1 ? 'סיים' : 'הבא'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          // קו מפריד
-          const Divider(height: 1, thickness: 1),
-          // חצי תחתון - מידע שיווקי
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: _buildMarketingContent(context, _step),
+              // קו מפריד
+              const Divider(height: 1, thickness: 1),
+              // חצי תחתון - מידע שיווקי
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SingleChildScrollView(
+                    child: _buildMarketingContent(context, _step),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
         );
       },
     );

@@ -1,0 +1,212 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/futuristic/spotlight_card.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/futuristic/loading_state.dart';
+
+class AllEventsScreen extends ConsumerStatefulWidget {
+  const AllEventsScreen({super.key});
+
+  @override
+  ConsumerState<AllEventsScreen> createState() => _AllEventsScreenState();
+}
+
+class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+
+    if (currentUserId == null) {
+      return const AppScaffold(
+        title: 'כל האירועים',
+        body: Center(child: Text('נא להתחבר')),
+      );
+    }
+
+    return AppScaffold(
+      title: 'כל האירועים',
+      body: StreamBuilder<List<Hub>>(
+        stream: hubsRepo.watchHubsByMember(currentUserId),
+        builder: (context, hubsSnapshot) {
+          if (hubsSnapshot.connectionState == ConnectionState.waiting) {
+            return const FuturisticLoadingState(message: 'טוען אירועים...');
+          }
+
+          final hubs = hubsSnapshot.data ?? [];
+          final hubIds = hubs.map((h) => h.hubId).toList();
+
+          // Also fetch games created by user or where user is signed up, even if not in hub list
+          // For now, let's stick to hub games + user created games logic if possible,
+          // but the repository method might need adjustment.
+          // Let's assume we want to show all future games relevant to the user.
+
+          // We'll use a FutureBuilder to fetch games since complex querying might not be stream-friendly
+          // or use a stream if available. Let's try to fetch all relevant games.
+
+          return FutureBuilder<List<Game>>(
+            future: gamesRepo.getUpcomingGames(
+              hubIds: hubIds,
+              limit: 50, // Reasonable limit
+            ),
+            builder: (context, gamesSnapshot) {
+              if (gamesSnapshot.connectionState == ConnectionState.waiting) {
+                return const FuturisticLoadingState(message: 'טוען אירועים...');
+              }
+
+              if (gamesSnapshot.hasError) {
+                return FuturisticEmptyState(
+                  icon: Icons.error_outline,
+                  title: 'שגיאה',
+                  message: 'לא ניתן לטעון אירועים',
+                );
+              }
+
+              final games = gamesSnapshot.data ?? [];
+
+              // Filter out past games just in case
+              final upcomingGames = games
+                  .where((g) => g.gameDate.isAfter(DateTime.now()))
+                  .toList();
+
+              // Sort chronologically
+              upcomingGames.sort((a, b) => a.gameDate.compareTo(b.gameDate));
+
+              if (upcomingGames.isEmpty) {
+                return const FuturisticEmptyState(
+                  icon: Icons.event_busy,
+                  title: 'אין אירועים מתוכננים',
+                  message: 'כרגע אין משחקים עתידיים ברשימה שלך.',
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: upcomingGames.length,
+                itemBuilder: (context, index) {
+                  final game = upcomingGames[index];
+                  return _buildEventCard(context, game, currentUserId);
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEventCard(
+      BuildContext context, Game game, String currentUserId) {
+    final isCreator = game.createdBy == currentUserId;
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: SpotlightCard(
+        onTap: () => context.push('/games/${game.gameId}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        dateFormat.format(game.gameDate),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (game.location != null)
+                        Text(
+                          game.location!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (isCreator)
+                  IconButton(
+                    icon:
+                        const Icon(Icons.edit, color: FuturisticColors.primary),
+                    onPressed: () {
+                      // Navigate to edit game or hub event depending on type
+                      // For now, assuming generic edit or game details handles it
+                      context.push('/games/${game.gameId}');
+                    },
+                  )
+                else
+                  const Icon(Icons.chevron_right, color: Colors.white54),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Status chip
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _getStatusColor(game.status).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _getStatusColor(game.status).withValues(alpha: 0.5),
+                ),
+              ),
+              child: Text(
+                _getStatusText(game.status),
+                style: TextStyle(
+                  color: _getStatusColor(game.status),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(GameStatus status) {
+    switch (status) {
+      case GameStatus.teamSelection:
+        return Colors.blue;
+      case GameStatus.teamsFormed:
+        return Colors.orange;
+      case GameStatus.inProgress:
+        return Colors.green;
+      case GameStatus.completed:
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusText(GameStatus status) {
+    switch (status) {
+      case GameStatus.teamSelection:
+        return 'הרשמה פתוחה';
+      case GameStatus.teamsFormed:
+        return 'קבוצות נוצרו';
+      case GameStatus.inProgress:
+        return 'במהלך משחק';
+      case GameStatus.completed:
+        return 'הסתיים';
+      default:
+        return 'לא ידוע';
+    }
+  }
+}

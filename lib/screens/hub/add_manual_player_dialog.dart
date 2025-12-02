@@ -103,6 +103,7 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
         preferredPosition: _selectedPosition,
         availabilityStatus: 'notAvailable', // Manual players are not available
         createdAt: DateTime.now(),
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
         currentRankScore: finalRating,
         totalParticipations: 0,
       );
@@ -307,4 +308,3 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
     }
   }
 }
-

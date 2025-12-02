@@ -1,6 +1,4 @@
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub.dart';
-import 'package:kattrick/models/user.dart';
 
 /// Simple user role enum for permission checks
 enum UserRole {

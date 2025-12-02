@@ -13,6 +13,7 @@ import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/services/storage_service.dart';
 import 'package:kattrick/widgets/avatar_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 /// Register screen with email/password
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -35,6 +36,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String _selectedPosition = 'Midfielder'; // Default
   XFile? _selectedImage;
   String? _selectedAvatarColor;
+  DateTime? _birthDate; // תאריך לידה
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -70,6 +72,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // ✅ Age validation - minimum 13 years old
+    if (_birthDate == null) {
+      SnackbarHelper.showError(context, 'נא לבחור תאריך לידה');
+      return;
+    }
+    if (!AgeUtils.isAgeValid(_birthDate!)) {
+      final age = AgeUtils.calculateAge(_birthDate!);
+      SnackbarHelper.showError(
+        context,
+        'גיל מינימלי להרשמה: ${AgeUtils.minimumAge} שנים (הגיל שלך: $age)',
+      );
+      return;
+    }
 
     if (!Env.isFirebaseAvailable) {
       SnackbarHelper.showError(context, 'Firebase לא זמין. אנא הגדר Firebase.');
@@ -122,6 +138,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         preferredPosition: _selectedPosition,
         photoUrl: photoUrl,
         avatarColor: _selectedAvatarColor,
+        birthDate: _birthDate!, // ✅ Save birth date
         createdAt: DateTime.now(),
         isActive: true,
       );
@@ -259,6 +276,81 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // ✅ Date of Birth Picker
+                  InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: AgeUtils.maxBirthDateForMinAge,
+                        firstDate: DateTime(1940),
+                        lastDate: AgeUtils.maxBirthDateForMinAge,
+                        helpText: 'בחר תאריך לידה',
+                        cancelText: 'ביטול',
+                        confirmText: 'אישור',
+                      );
+                      if (date != null) {
+                        setState(() => _birthDate = date);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _birthDate == null
+                              ? Colors.red.withOpacity(0.5)
+                              : Colors.green.withOpacity(0.5),
+                          width: 1,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.cake_outlined,
+                              color: _birthDate == null
+                                  ? Colors.grey
+                                  : Colors.blue),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _birthDate == null
+                                  ? 'תאריך לידה (חובה) *'
+                                  : DateFormat('dd/MM/yyyy', 'he')
+                                      .format(_birthDate!),
+                              style: TextStyle(
+                                color: _birthDate == null
+                                    ? Colors.grey
+                                    : Colors.black87,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          if (_birthDate != null) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              'גיל: ${AgeUtils.calculateAge(_birthDate!)}',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            if (AgeUtils.isAgeValid(_birthDate!))
+                              Text(
+                                '(${AgeUtils.getAgeGroup(_birthDate!).displayNameHe})',
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Phone Number
                   TextFormField(
                     controller: _phoneController,
@@ -359,7 +451,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       prefixIcon: Icon(Icons.email),
                     ),
                     keyboardType: TextInputType.emailAddress,
-                    textDirection: TextDirection.ltr,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'נא להזין אימייל';

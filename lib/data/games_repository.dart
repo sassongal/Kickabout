@@ -331,6 +331,44 @@ class GamesRepository {
     }
   }
 
+  /// Get upcoming games for a list of hubs
+  Future<List<Game>> getUpcomingGames({
+    required List<String> hubIds,
+    int limit = 20,
+  }) async {
+    if (!Env.isFirebaseAvailable) return [];
+    if (hubIds.isEmpty) return [];
+
+    try {
+      // Split hubIds into batches of 10 (Firestore 'in' query limit)
+      final games = <Game>[];
+      final now = Timestamp.now();
+
+      for (var i = 0; i < hubIds.length; i += 10) {
+        final batch = hubIds.skip(i).take(10).toList();
+
+        final snapshot = await _firestore
+            .collection(FirestorePaths.games())
+            .where('hubId', whereIn: batch)
+            .where('gameDate', isGreaterThan: now)
+            .orderBy('gameDate')
+            .limit(limit)
+            .get();
+
+        games.addAll(snapshot.docs
+            .map((doc) => Game.fromJson({...doc.data(), 'gameId': doc.id})));
+      }
+
+      // Sort combined results
+      games.sort((a, b) => a.gameDate.compareTo(b.gameDate));
+
+      return games.take(limit).toList();
+    } catch (e) {
+      debugPrint('Error fetching upcoming games: $e');
+      return [];
+    }
+  }
+
   /// Get games by hub (alias for listGamesByHub)
   Future<List<Game>> getGamesByHub(String hubId) async {
     return listGamesByHub(hubId);

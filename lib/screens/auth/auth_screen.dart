@@ -108,7 +108,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         uid: uid,
         name: _signupName.text.trim(),
         email: _signupEmail.text.trim(),
-        birthDate: _birthDate, // ✅ Save birth date
+        birthDate: _birthDate!, // ✅ Save birth date (validated above)
         createdAt: DateTime.now(),
         isProfileComplete: false,
       );

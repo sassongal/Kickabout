@@ -51,6 +51,7 @@ class DummyDataGenerator {
         name: '$firstName $lastName',
         email:
             '${firstName.toLowerCase()}.${lastName.toLowerCase()}.${random.nextInt(999)}@kickabout.local',
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
         phoneNumber:
             '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
         city: 'חיפה', // או עיר רנדומלית מהרשימה
@@ -233,6 +234,7 @@ class DummyDataGenerator {
       name: fullName,
       email:
           '${firstName.toLowerCase()}.${lastName.toLowerCase()}@kickabout.local',
+      birthDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
       phoneNumber:
           '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
       city: city ?? cities[random.nextInt(cities.length)],
@@ -658,6 +660,7 @@ class DummyDataGenerator {
         name: playerNames[i],
         email:
             '${firstName.toLowerCase()}.${lastName.toLowerCase()}@kickadoor.local',
+        birthDate: DateTime.now().subtract(Duration(days: 365 * (20 + (i % 15)))),
         phoneNumber:
             '05${(i % 9) + 1}${(i * 1234567).toString().padLeft(7, '0').substring(0, 7)}',
         city: cities[i % cities.length],
@@ -765,6 +768,7 @@ class DummyDataGenerator {
         name: fullName,
         email:
             '${firstName.toLowerCase()}.${lastName.toLowerCase()}@kickadoor.local',
+        birthDate: DateTime.now().subtract(Duration(days: 365 * (18 + random.nextInt(15)))),
         phoneNumber:
             '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
         city: cities[random.nextInt(cities.length)],
@@ -1250,6 +1254,7 @@ class DummyDataGenerator {
         lastName: lastName,
         email:
             '${firstName.toLowerCase()}.${lastName.toLowerCase()}@haifa.local',
+        birthDate: DateTime.now().subtract(Duration(days: 365 * (18 + random.nextInt(20)))),
         phoneNumber:
             '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
         city: 'חיפה',

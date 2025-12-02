@@ -309,10 +309,26 @@ class VenuesRepository {
           .limit(1)
           .get();
 
-      // If venue exists, return it
+      // If venue exists, return it (but update hubId if it's empty and new venue has hubId)
       if (snapshot.docs.isNotEmpty) {
         final doc = snapshot.docs.first;
-        return Venue.fromJson({...doc.data(), 'venueId': doc.id});
+        final existingData = doc.data();
+        final existingHubId = existingData['hubId'] as String? ?? '';
+        final newHubId = venueFromGoogle.hubId;
+
+        // If existing venue has empty hubId and new venue has hubId, update it
+        if ((existingHubId.isEmpty || existingHubId == '') &&
+            newHubId.isNotEmpty) {
+          debugPrint(
+              '📝 Updating existing venue ${doc.id} with hubId: $newHubId');
+          await doc.reference.update({
+            'hubId': newHubId,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          existingData['hubId'] = newHubId;
+        }
+
+        return Venue.fromJson({...existingData, 'venueId': doc.id});
       }
 
       // If venue doesn't exist, create it
@@ -388,9 +404,13 @@ class VenuesRepository {
           'venueIds': FieldValue.arrayUnion([venueId]),
         });
 
-        // Update venue - increment hubCount
+        // Update venue - increment hubCount and set hubId
+        // Note: If venue is already linked to another hub, this will overwrite hubId
+        // This is intentional - venue.hubId represents the "primary" hub it belongs to
         transaction.update(venueRef, {
           'hubCount': FieldValue.increment(1),
+          'hubId':
+              hubId, // Set hubId so venue appears in getVenuesByHub queries
           'updatedAt': FieldValue.serverTimestamp(),
         });
       });
@@ -411,12 +431,354 @@ class VenuesRepository {
           .where('isActive', isEqualTo: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => Venue.fromJson({...doc.data(), 'venueId': doc.id}))
-          .toList();
+      debugPrint(
+          '📊 Loading venues for map: ${snapshot.docs.length} documents found');
+
+      final venues = <Venue>[];
+      int skipped = 0;
+
+      for (final doc in snapshot.docs) {
+        try {
+          final normalized = _normalizeVenueData(doc.data(), doc.id);
+          final venue = Venue.fromJson(normalized);
+          venues.add(venue);
+        } catch (e, stackTrace) {
+          skipped++;
+          debugPrint('⚠️ Skipping venue ${doc.id}: $e');
+          debugPrint('   Stack trace: $stackTrace');
+          // Try to get more details about the error
+          try {
+            final data = doc.data();
+            debugPrint('   Venue data keys: ${data.keys.toList()}');
+            debugPrint('   createdAt type: ${data['createdAt']?.runtimeType}');
+            debugPrint('   updatedAt type: ${data['updatedAt']?.runtimeType}');
+            if (data['createdAt'] is String) {
+              debugPrint('   createdAt value: ${data['createdAt']}');
+            }
+            if (data['updatedAt'] is String) {
+              debugPrint('   updatedAt value: ${data['updatedAt']}');
+            }
+          } catch (debugError) {
+            debugPrint('   Could not debug venue data: $debugError');
+          }
+        }
+      }
+
+      debugPrint(
+          '✅ Successfully loaded ${venues.length} venues (skipped $skipped)');
+      return venues;
     } catch (e) {
+      debugPrint('❌ Error loading venues for map: $e');
       return [];
     }
+  }
+
+  /// Normalize and clean venue data from Firestore
+  /// Ensures all fields have correct types and default values
+  Map<String, dynamic> _normalizeVenueData(
+      Map<String, dynamic> data, String venueId) {
+    final normalized = <String, dynamic>{...data, 'venueId': venueId};
+
+    // Required String fields
+    normalized['hubId'] = _normalizeStringField(data, 'hubId', '');
+    normalized['name'] = _normalizeStringField(data, 'name', 'מגרש ללא שם');
+
+    // Optional String fields
+    normalized['description'] = _normalizeOptionalString(data, 'description');
+    normalized['address'] = _normalizeOptionalString(data, 'address');
+    normalized['googlePlaceId'] =
+        _normalizeOptionalString(data, 'googlePlaceId');
+    normalized['externalId'] = _normalizeOptionalString(data, 'externalId');
+    normalized['createdBy'] = _normalizeOptionalString(data, 'createdBy');
+
+    // List fields
+    normalized['amenities'] =
+        _normalizeListField(data, 'amenities', <String>[]);
+
+    // String with defaults
+    normalized['surfaceType'] = _normalizeStringField(
+      data,
+      'surfaceType',
+      'grass',
+      allowedValues: ['grass', 'artificial', 'concrete', 'unknown'],
+    );
+    normalized['source'] = _normalizeStringField(
+      data,
+      'source',
+      'manual',
+      allowedValues: ['manual', 'osm', 'google'],
+    );
+
+    // Int fields with defaults
+    normalized['maxPlayers'] =
+        _normalizeIntField(data, 'maxPlayers', 11, min: 5, max: 22);
+    normalized['hubCount'] = _normalizeIntField(data, 'hubCount', 0, min: 0);
+    normalized['venueNumber'] =
+        _normalizeIntField(data, 'venueNumber', 0, min: 0);
+
+    // Bool fields with defaults
+    normalized['isActive'] = _normalizeBoolField(data, 'isActive', true);
+    normalized['isMain'] = _normalizeBoolField(data, 'isMain', false);
+    normalized['isPublic'] = _normalizeBoolField(data, 'isPublic', true);
+
+    // DateTime fields - keep as Timestamp for Venue.fromJson (which uses @TimestampConverter)
+    // The converter will handle the conversion from Timestamp to DateTime
+    try {
+      final createdAtValue = data['createdAt'];
+      if (createdAtValue == null) {
+        normalized['createdAt'] = Timestamp.now();
+      } else if (createdAtValue is Timestamp) {
+        normalized['createdAt'] = createdAtValue;
+      } else if (createdAtValue is String) {
+        // Parse string and convert to Timestamp
+        final dateTime = _normalizeDateTimeField(data, 'createdAt');
+        normalized['createdAt'] = Timestamp.fromDate(dateTime);
+      } else if (createdAtValue is DateTime) {
+        normalized['createdAt'] = Timestamp.fromDate(createdAtValue);
+      } else {
+        normalized['createdAt'] = Timestamp.now();
+      }
+    } catch (e) {
+      debugPrint(
+          '⚠️ Could not parse createdAt for venue $venueId: $e, using now()');
+      normalized['createdAt'] = Timestamp.now();
+    }
+
+    try {
+      final updatedAtValue = data['updatedAt'];
+      if (updatedAtValue == null) {
+        normalized['updatedAt'] = Timestamp.now();
+      } else if (updatedAtValue is Timestamp) {
+        normalized['updatedAt'] = updatedAtValue;
+      } else if (updatedAtValue is String) {
+        // Parse string and convert to Timestamp
+        final dateTime =
+            _normalizeDateTimeField(data, 'updatedAt', fallbackToNow: true);
+        normalized['updatedAt'] = Timestamp.fromDate(dateTime);
+      } else if (updatedAtValue is DateTime) {
+        normalized['updatedAt'] = Timestamp.fromDate(updatedAtValue);
+      } else {
+        normalized['updatedAt'] = Timestamp.now();
+      }
+    } catch (e) {
+      debugPrint(
+          '⚠️ Could not parse updatedAt for venue $venueId: $e, using now()');
+      normalized['updatedAt'] = Timestamp.now();
+    }
+
+    // Required GeoPoint
+    if (!normalized.containsKey('location') || normalized['location'] == null) {
+      throw Exception('Venue $venueId is missing required location field');
+    }
+
+    // Ensure geohash exists for location-based queries
+    if (!normalized.containsKey('geohash') || normalized['geohash'] == null) {
+      try {
+        final location = normalized['location'] as GeoPoint;
+        normalized['geohash'] = GeohashUtils.encode(
+          location.latitude,
+          location.longitude,
+        );
+      } catch (e) {
+        debugPrint('⚠️ Could not generate geohash for venue $venueId: $e');
+      }
+    }
+
+    return normalized;
+  }
+
+  String _normalizeStringField(
+    Map<String, dynamic> data,
+    String key,
+    String defaultValue, {
+    List<String>? allowedValues,
+  }) {
+    if (!data.containsKey(key) || data[key] == null) {
+      return defaultValue;
+    }
+    final value = data[key];
+    if (value is! String) {
+      return defaultValue;
+    }
+    if (value.isEmpty) {
+      return defaultValue;
+    }
+    if (allowedValues != null && !allowedValues.contains(value)) {
+      debugPrint(
+          '⚠️ Invalid value for $key: $value, using default: $defaultValue');
+      return defaultValue;
+    }
+    return value;
+  }
+
+  String? _normalizeOptionalString(Map<String, dynamic> data, String key) {
+    if (!data.containsKey(key) || data[key] == null) {
+      return null;
+    }
+    final value = data[key];
+    if (value is! String) {
+      return null;
+    }
+    return value.isEmpty ? null : value;
+  }
+
+  List<T> _normalizeListField<T>(
+      Map<String, dynamic> data, String key, List<T> defaultValue) {
+    if (!data.containsKey(key) || data[key] == null) {
+      return defaultValue;
+    }
+    final value = data[key];
+    if (value is! List) {
+      return defaultValue;
+    }
+    try {
+      return List<T>.from(value);
+    } catch (e) {
+      debugPrint('⚠️ Could not convert $key to List<$T>: $e');
+      return defaultValue;
+    }
+  }
+
+  int _normalizeIntField(
+    Map<String, dynamic> data,
+    String key,
+    int defaultValue, {
+    int? min,
+    int? max,
+  }) {
+    if (!data.containsKey(key) || data[key] == null) {
+      return defaultValue;
+    }
+    final value = data[key];
+    if (value is! int) {
+      // Try to convert from double
+      if (value is double) {
+        return value.round();
+      }
+      return defaultValue;
+    }
+    if (min != null && value < min) {
+      return min;
+    }
+    if (max != null && value > max) {
+      return max;
+    }
+    return value;
+  }
+
+  bool _normalizeBoolField(
+      Map<String, dynamic> data, String key, bool defaultValue) {
+    if (!data.containsKey(key) || data[key] == null) {
+      return defaultValue;
+    }
+    final value = data[key];
+    if (value is! bool) {
+      return defaultValue;
+    }
+    return value;
+  }
+
+  DateTime _normalizeDateTimeField(
+    Map<String, dynamic> data,
+    String key, {
+    bool fallbackToNow = false,
+  }) {
+    if (!data.containsKey(key) || data[key] == null) {
+      return fallbackToNow
+          ? DateTime.now()
+          : throw Exception('Missing required field: $key');
+    }
+    final value = data[key];
+
+    // Handle DateTime object
+    if (value is DateTime) {
+      return value;
+    }
+
+    // Handle Firestore Timestamp
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    // Handle string format: "2025-11-29 02:57:49.459" or ISO format
+    if (value is String) {
+      try {
+        // Try ISO format first (e.g., "2025-11-29T02:57:49.459Z")
+        if (value.contains('T') || value.contains('Z')) {
+          // If contains T but not Z or timezone offset, try adding Z
+          if (value.contains('T') &&
+              !value.contains('Z') &&
+              !value.contains('+')) {
+            // Check if there's a timezone offset after T (look for pattern like -HH:MM or +HH:MM)
+            final tIndex = value.indexOf('T');
+            final afterT = value.substring(tIndex + 1);
+            // Check if there's a timezone offset pattern (starts with + or - followed by digits)
+            final hasTimezoneOffset =
+                RegExp(r'[+-]\d{2}:?\d{2}').hasMatch(afterT);
+            if (!hasTimezoneOffset) {
+              return DateTime.parse('${value}Z');
+            }
+          }
+          return DateTime.parse(value);
+        }
+        // Try format: "2025-11-29 02:57:49.459"
+        if (value.contains(' ')) {
+          // Replace space with T and add Z for UTC timezone
+          final isoString = value.replaceFirst(' ', 'T');
+          // Handle milliseconds - ensure proper format
+          if (isoString.contains('.')) {
+            // Format: "2025-11-29T02:57:49.459" -> "2025-11-29T02:57:49.459Z"
+            return DateTime.parse('${isoString}Z');
+          } else {
+            // Format: "2025-11-29T02:57:49" -> "2025-11-29T02:57:49Z"
+            return DateTime.parse('${isoString}Z');
+          }
+        }
+        // Try simple date format
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          // If simple parse fails, try adding Z for UTC
+          if (!value.contains('Z') &&
+              !value.contains('+') &&
+              !value.contains('-', 10)) {
+            return DateTime.parse('${value}Z');
+          }
+          rethrow;
+        }
+      } catch (e) {
+        debugPrint(
+            '⚠️ Could not parse DateTime string "$value" for field $key: $e');
+        if (fallbackToNow) {
+          return DateTime.now();
+        }
+        throw Exception(
+            'Invalid DateTime string format for field: $key (value: $value)');
+      }
+    }
+
+    // Handle int/double as milliseconds since epoch
+    if (value is int || value is double) {
+      try {
+        return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+      } catch (e) {
+        debugPrint(
+            '⚠️ Could not parse DateTime from milliseconds $value for field $key: $e');
+        if (fallbackToNow) {
+          return DateTime.now();
+        }
+        throw Exception('Invalid DateTime milliseconds for field: $key');
+      }
+    }
+
+    // Fallback
+    if (fallbackToNow) {
+      debugPrint(
+          '⚠️ Unknown DateTime format for field $key: ${value.runtimeType}, using now()');
+      return DateTime.now();
+    }
+    throw Exception(
+        'Invalid DateTime format for field: $key (type: ${value.runtimeType})');
   }
 
   /// Get all hubs with primary venue location for map display
@@ -548,15 +910,20 @@ class VenuesRepository {
       // Use Cloud Function to avoid API key restrictions
       // Check authentication first
       Future<List<PlaceResult>> googleFuture;
-      
+
       try {
         // Check if user is authenticated before calling Cloud Function
         final auth = FirebaseAuth.instance;
-        if (auth.currentUser == null) {
-          debugPrint('⚠️ User not authenticated - skipping Google Places search');
+        final currentUser = auth.currentUser;
+        if (currentUser == null) {
+          debugPrint(
+              '⚠️ User not authenticated - skipping Google Places search (will only search Firestore)');
           googleFuture = Future.value(<PlaceResult>[]);
         } else {
-          final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+          debugPrint(
+              '✅ User authenticated (${currentUser.uid}) - will search Google Places');
+          final functions =
+              FirebaseFunctions.instanceFor(region: 'us-central1');
           googleFuture = functions.httpsCallable('searchVenues').call({
             'query': query,
             'lat': lat,
@@ -567,42 +934,51 @@ class VenuesRepository {
               debugPrint('⚠️ searchVenues returned null data');
               return <PlaceResult>[];
             }
-            
+
             final results = data['results'] as List<dynamic>? ?? [];
-            debugPrint('✅ Found ${results.length} Google Places results for "$query"');
-            
-            return results.map((place) {
-              try {
-                final geometry = place['geometry'] as Map<String, dynamic>?;
-                final location = geometry?['location'] as Map<String, dynamic>?;
-                return PlaceResult(
-                  placeId: place['place_id'] as String? ?? '',
-                  name: place['name'] as String? ?? '',
-                  address: place['formatted_address'] as String?,
-                  latitude: (location?['lat'] as num?)?.toDouble() ?? 0.0,
-                  longitude: (location?['lng'] as num?)?.toDouble() ?? 0.0,
-                  types: List<String>.from(place['types'] ?? []),
-                  isPublic: true,
-                );
-              } catch (e) {
-                debugPrint('⚠️ Error parsing place result: $e');
-                return null;
-              }
-            }).whereType<PlaceResult>().toList();
+            debugPrint(
+                '✅ Found ${results.length} Google Places results for "$query"');
+
+            return results
+                .map((place) {
+                  try {
+                    final geometry = place['geometry'] as Map<String, dynamic>?;
+                    final location =
+                        geometry?['location'] as Map<String, dynamic>?;
+                    return PlaceResult(
+                      placeId: place['place_id'] as String? ?? '',
+                      name: place['name'] as String? ?? '',
+                      address: place['formatted_address'] as String?,
+                      latitude: (location?['lat'] as num?)?.toDouble() ?? 0.0,
+                      longitude: (location?['lng'] as num?)?.toDouble() ?? 0.0,
+                      types: List<String>.from(place['types'] ?? []),
+                      isPublic: true,
+                    );
+                  } catch (e) {
+                    debugPrint('⚠️ Error parsing place result: $e');
+                    return null;
+                  }
+                })
+                .whereType<PlaceResult>()
+                .toList();
           }).catchError((error) {
-            // Better error handling
+            // Better error handling - don't show error to user, just skip Google Places
             if (error is FirebaseFunctionsException) {
               if (error.code == 'unauthenticated') {
-                debugPrint('❌ Authentication required for venue search');
+                debugPrint(
+                    '⚠️ User not authenticated - skipping Google Places search (this is OK)');
               } else if (error.code == 'resource-exhausted') {
-                debugPrint('❌ Rate limit exceeded for venue search');
+                debugPrint(
+                    '⚠️ Rate limit exceeded for venue search - skipping Google Places');
               } else {
-                debugPrint('❌ Firebase Functions error: ${error.code} - ${error.message}');
+                debugPrint(
+                    '⚠️ Firebase Functions error: ${error.code} - ${error.message} - skipping Google Places');
               }
             } else {
-              debugPrint('❌ Google Places search error: $error');
+              debugPrint(
+                  '⚠️ Google Places search error: $error - skipping Google Places');
             }
-            return <PlaceResult>[]; // Return empty list on error
+            return <PlaceResult>[]; // Return empty list on error - user can still search Firestore
           });
         }
       } catch (e) {
@@ -619,7 +995,8 @@ class VenuesRepository {
       final firestoreSnapshot = results[0] as QuerySnapshot;
       final googleResults = results[1] as List<PlaceResult>;
 
-      debugPrint('📊 Search results: ${firestoreSnapshot.docs.length} from Firestore, ${googleResults.length} from Google');
+      debugPrint(
+          '📊 Search results: ${firestoreSnapshot.docs.length} from Firestore, ${googleResults.length} from Google');
 
       final venues = <Venue>[];
       final existingGooglePlaceIds = <String>{};
@@ -659,5 +1036,115 @@ class VenuesRepository {
       // If everything fails, return empty list
       return [];
     }
+  }
+
+  /// Validate venue data before saving
+  // ignore: unused_element
+  void _validateVenueData(Map<String, dynamic> data) {
+    // Validate required fields
+    final name = data['name'] as String?;
+    if (name == null || name.isEmpty) {
+      throw Exception('Venue name is required');
+    }
+
+    if (!data.containsKey('location') || data['location'] == null) {
+      throw Exception('Venue location is required');
+    }
+
+    // Validate location coordinates
+    final location = data['location'] as GeoPoint;
+    if (location.latitude < -90 || location.latitude > 90) {
+      throw Exception('Invalid latitude: ${location.latitude}');
+    }
+    if (location.longitude < -180 || location.longitude > 180) {
+      throw Exception('Invalid longitude: ${location.longitude}');
+    }
+
+    // Validate surfaceType
+    final surfaceType = data['surfaceType'] as String? ?? 'grass';
+    if (!['grass', 'artificial', 'concrete', 'unknown'].contains(surfaceType)) {
+      throw Exception('Invalid surfaceType: $surfaceType');
+    }
+
+    // Validate maxPlayers
+    final maxPlayers = data['maxPlayers'] as int? ?? 11;
+    if (maxPlayers < 5 || maxPlayers > 22) {
+      throw Exception('maxPlayers must be between 5 and 22');
+    }
+  }
+
+  /// Batch update venues to ensure data quality
+  /// This should be run periodically or via Cloud Function
+  Future<int> normalizeExistingVenues({int? limit}) async {
+    if (!Env.isFirebaseAvailable) return 0;
+
+    try {
+      final snapshot = await _firestore
+          .collection(FirestorePaths.venues())
+          .limit(limit ?? 100)
+          .get();
+
+      int updated = 0;
+      final batch = _firestore.batch();
+
+      for (final doc in snapshot.docs) {
+        try {
+          final normalized = _normalizeVenueData(doc.data(), doc.id);
+
+          // Check if update is needed
+          bool needsUpdate = false;
+          for (final key in normalized.keys) {
+            if (key == 'venueId') continue;
+            if (!doc.data().containsKey(key) ||
+                doc.data()[key] != normalized[key]) {
+              needsUpdate = true;
+              break;
+            }
+          }
+
+          if (needsUpdate) {
+            normalized['updatedAt'] = FieldValue.serverTimestamp();
+            batch.update(doc.reference, normalized);
+            updated++;
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error normalizing venue ${doc.id}: $e');
+        }
+      }
+
+      if (updated > 0) {
+        await batch.commit();
+        debugPrint('✅ Updated $updated venues');
+      }
+
+      return updated;
+    } catch (e) {
+      debugPrint('❌ Error normalizing venues: $e');
+      return 0;
+    }
+  }
+
+  // ignore: unused_element
+  String _normalizeSurfaceType(dynamic value) {
+    if (value is! String) return 'grass';
+
+    final normalized = value.toLowerCase().trim();
+
+    // Map common variations to standard values
+    final surfaceMap = {
+      'artificial_turf': 'artificial',
+      'artificial': 'artificial',
+      'synthetic': 'artificial',
+      'turf': 'artificial',
+      'grass': 'grass',
+      'natural': 'grass',
+      'concrete': 'concrete',
+      'asphalt': 'concrete',
+      'hard': 'concrete',
+      'unknown': 'unknown',
+      '': 'unknown',
+    };
+
+    return surfaceMap[normalized] ?? 'unknown';
   }
 }

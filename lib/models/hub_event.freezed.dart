@@ -33,6 +33,8 @@ mixin _$HubEvent {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   List<String> get registeredPlayerIds =>
       throw _privateConstructorUsedError; // Players who registered
+  List<String> get waitingListPlayerIds =>
+      throw _privateConstructorUsedError; // Players on waiting list
   String get status =>
       throw _privateConstructorUsedError; // upcoming, ongoing, completed, cancelled
   bool get isStarted =>
@@ -97,6 +99,7 @@ abstract class $HubEventCopyWith<$Res> {
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
       List<String> registeredPlayerIds,
+      List<String> waitingListPlayerIds,
       String status,
       bool isStarted,
       @TimestampConverter() DateTime? startedAt,
@@ -141,6 +144,7 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? registeredPlayerIds = null,
+    Object? waitingListPlayerIds = null,
     Object? status = null,
     Object? isStarted = null,
     Object? startedAt = freezed,
@@ -196,6 +200,10 @@ class _$HubEventCopyWithImpl<$Res, $Val extends HubEvent>
       registeredPlayerIds: null == registeredPlayerIds
           ? _value.registeredPlayerIds
           : registeredPlayerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      waitingListPlayerIds: null == waitingListPlayerIds
+          ? _value.waitingListPlayerIds
+          : waitingListPlayerIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
       status: null == status
           ? _value.status
@@ -291,6 +299,7 @@ abstract class _$$HubEventImplCopyWith<$Res>
       @TimestampConverter() DateTime createdAt,
       @TimestampConverter() DateTime updatedAt,
       List<String> registeredPlayerIds,
+      List<String> waitingListPlayerIds,
       String status,
       bool isStarted,
       @TimestampConverter() DateTime? startedAt,
@@ -333,6 +342,7 @@ class __$$HubEventImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? registeredPlayerIds = null,
+    Object? waitingListPlayerIds = null,
     Object? status = null,
     Object? isStarted = null,
     Object? startedAt = freezed,
@@ -388,6 +398,10 @@ class __$$HubEventImplCopyWithImpl<$Res>
       registeredPlayerIds: null == registeredPlayerIds
           ? _value._registeredPlayerIds
           : registeredPlayerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      waitingListPlayerIds: null == waitingListPlayerIds
+          ? _value._waitingListPlayerIds
+          : waitingListPlayerIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
       status: null == status
           ? _value.status
@@ -478,6 +492,7 @@ class _$HubEventImpl implements _HubEvent {
       @TimestampConverter() required this.createdAt,
       @TimestampConverter() required this.updatedAt,
       final List<String> registeredPlayerIds = const [],
+      final List<String> waitingListPlayerIds = const [],
       this.status = 'upcoming',
       this.isStarted = false,
       @TimestampConverter() this.startedAt,
@@ -497,6 +512,7 @@ class _$HubEventImpl implements _HubEvent {
       final Map<String, int> aggregateWins = const {},
       this.gameId})
       : _registeredPlayerIds = registeredPlayerIds,
+        _waitingListPlayerIds = waitingListPlayerIds,
         _teams = teams,
         _matches = matches,
         _aggregateWins = aggregateWins;
@@ -534,6 +550,18 @@ class _$HubEventImpl implements _HubEvent {
   }
 
 // Players who registered
+  final List<String> _waitingListPlayerIds;
+// Players who registered
+  @override
+  @JsonKey()
+  List<String> get waitingListPlayerIds {
+    if (_waitingListPlayerIds is EqualUnmodifiableListView)
+      return _waitingListPlayerIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_waitingListPlayerIds);
+  }
+
+// Players on waiting list
   @override
   @JsonKey()
   final String status;
@@ -626,7 +654,7 @@ class _$HubEventImpl implements _HubEvent {
 
   @override
   String toString() {
-    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, status: $status, isStarted: $isStarted, startedAt: $startedAt, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
+    return 'HubEvent(eventId: $eventId, hubId: $hubId, createdBy: $createdBy, title: $title, description: $description, eventDate: $eventDate, createdAt: $createdAt, updatedAt: $updatedAt, registeredPlayerIds: $registeredPlayerIds, waitingListPlayerIds: $waitingListPlayerIds, status: $status, isStarted: $isStarted, startedAt: $startedAt, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, gameType: $gameType, durationMinutes: $durationMinutes, maxParticipants: $maxParticipants, notifyMembers: $notifyMembers, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, teams: $teams, matches: $matches, aggregateWins: $aggregateWins, gameId: $gameId)';
   }
 
   @override
@@ -649,6 +677,8 @@ class _$HubEventImpl implements _HubEvent {
                 other.updatedAt == updatedAt) &&
             const DeepCollectionEquality()
                 .equals(other._registeredPlayerIds, _registeredPlayerIds) &&
+            const DeepCollectionEquality()
+                .equals(other._waitingListPlayerIds, _waitingListPlayerIds) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.isStarted, isStarted) ||
                 other.isStarted == isStarted) &&
@@ -695,6 +725,7 @@ class _$HubEventImpl implements _HubEvent {
         createdAt,
         updatedAt,
         const DeepCollectionEquality().hash(_registeredPlayerIds),
+        const DeepCollectionEquality().hash(_waitingListPlayerIds),
         status,
         isStarted,
         startedAt,
@@ -742,6 +773,7 @@ abstract class _HubEvent implements HubEvent {
       @TimestampConverter() required final DateTime createdAt,
       @TimestampConverter() required final DateTime updatedAt,
       final List<String> registeredPlayerIds,
+      final List<String> waitingListPlayerIds,
       final String status,
       final bool isStarted,
       @TimestampConverter() final DateTime? startedAt,
@@ -785,6 +817,8 @@ abstract class _HubEvent implements HubEvent {
   DateTime get updatedAt;
   @override
   List<String> get registeredPlayerIds; // Players who registered
+  @override
+  List<String> get waitingListPlayerIds; // Players on waiting list
   @override
   String get status; // upcoming, ongoing, completed, cancelled
   @override
