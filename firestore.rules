@@ -4,6 +4,10 @@ service cloud.firestore {
     // ============================================
     // Helper Functions
     // ============================================
+    function isSuperAdmin() {
+      return request.auth.token.isSuperAdmin == true;
+    }
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -66,7 +70,6 @@ service cloud.firestore {
     function canManageGames(hubId) {
       return isHubManagerOrModerator(hubId);
     }
-
 
     function canModerateContent(hubId) {
       return isHubManagerOrModerator(hubId);
@@ -132,14 +135,12 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Global Collection Group Queries (החלק החדש)
+    // Global Collection Group Queries
     // ============================================
-    // חוק זה קריטי עבור מסך ה-Community שמושך אירועים מכל ההאבים יחד
     match /{path=**}/events/{eventId} {
       allow read: if isAuthenticated();
     }
 
-    // Allow users to read their own signups in collection group queries
     match /{path=**}/signups/{signupId} {
       allow read: if isAuthenticated() &&
         request.auth.uid == (
@@ -159,36 +160,31 @@ service cloud.firestore {
                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds is list &&
                         userId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.blockedUserIds));
       
-      // ✅ Validation: birthDate is required and age >= 13
       function isValidBirthDate(birthDate) {
         return birthDate != null &&
           (birthDate is timestamp) &&
-          // Age = current year - birth year (per Gap Analysis)
           int((request.time.toMillis() - birthDate.toMillis()) / (1000 * 60 * 60 * 24 * 365.25)) >= 13;
       }
       
-      allow create: if isAuthenticated() &&
-        request.resource.data.birthDate != null &&
-        request.resource.data.birthDate is timestamp &&
-        isValidBirthDate(request.resource.data.birthDate);
+      allow create: if (isAuthenticated() && request.resource.data.birthDate != null && request.resource.data.birthDate is timestamp && isValidBirthDate(request.resource.data.birthDate)) || isSuperAdmin();
       
-      allow update: if isAuthenticated() && request.auth.uid == userId &&
+      allow update: if (isAuthenticated() && request.auth.uid == userId &&
         (!('birthDate' in request.resource.data) || 
          (request.resource.data.birthDate is timestamp && 
-          isValidBirthDate(request.resource.data.birthDate)));
+          isValidBirthDate(request.resource.data.birthDate)))) || isSuperAdmin();
       
-      allow delete: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if (isAuthenticated() && request.auth.uid == userId) || isSuperAdmin();
 
       match /fcm_tokens/{tokenId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) || isSuperAdmin();
       }
       match /following/{followingId} {
         allow read: if isAuthenticated();
-        allow write: if isOwner(userId);
+        allow write: if isOwner(userId) || isSuperAdmin();
       }
       match /followers/{followerId} {
         allow read: if isAuthenticated();
-        allow write: if isOwner(userId);
+        allow write: if isOwner(userId) || isSuperAdmin();
       }
       match /gamification/{doc} {
         allow read: if isAuthenticated();
@@ -200,8 +196,9 @@ service cloud.firestore {
     // Hubs Collection
     // ============================================
     match /hubs/{hubId} {
-      // Allow authenticated users to read hubs
-      // Note: bannedUserIds filtering is done client-side since getHubData() doesn't work in queries
+      // Super Admin can read/write any hub
+      allow read, write: if isSuperAdmin();
+      
       allow read: if isAuthenticated();
 
       allow create: if isAuthenticated() &&
@@ -210,7 +207,6 @@ service cloud.firestore {
         request.resource.data.createdBy == request.auth.uid &&
         request.resource.data.createdBy is string &&
         request.resource.data.createdAt is timestamp &&
-        // Check user hub limit (10) - missing/invalid hubIds treated as empty list
         (
           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hubIds is list)
             ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hubIds.size() < 10
@@ -226,109 +222,94 @@ service cloud.firestore {
 
       match /members/{userId} {
         allow read: if isAuthenticated();
-        // Allow create without checking hub capacity (hub doesn't exist yet during batch write)
-        allow create: if isAuthenticated() && isOwner(userId) &&
+        allow create: if (isAuthenticated() && isOwner(userId) &&
           request.resource.data.keys().hasAll(['joinedAt', 'role']) &&
-          request.resource.data.role in ['member', 'admin', 'manager'];
-        // Allow update with hub capacity check (hub exists by then)
-        allow update: if isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId)) &&
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.memberCount < 50;
-        allow delete: if isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId));
+          request.resource.data.role in ['member', 'admin', 'manager']) || isSuperAdmin();
+        allow update: if (isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId)) &&
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.memberCount < 50) || isSuperAdmin();
+        allow delete: if (isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId))) || isSuperAdmin();
       }
 
       match /requests/{userId} {
-        allow read: if isAuthenticated() && canHandleRequests(hubId);
-        allow create: if isAuthenticated() && isOwner(userId) &&
+        allow read: if (isAuthenticated() && canHandleRequests(hubId)) || isSuperAdmin();
+        allow create: if (isAuthenticated() && isOwner(userId) &&
           request.resource.data.keys().hasAll(['userId', 'hubId', 'status', 'createdAt']) &&
           request.resource.data.userId == userId &&
           request.resource.data.hubId == hubId &&
           request.resource.data.status == 'pending' &&
-          request.resource.data.createdAt is timestamp;
-        allow update, delete: if canHandleRequests(hubId) &&
+          request.resource.data.createdAt is timestamp) || isSuperAdmin();
+        allow update, delete: if (canHandleRequests(hubId) &&
           request.resource.data.userId == resource.data.userId &&
-          request.resource.data.hubId == resource.data.hubId;
+          request.resource.data.hubId == resource.data.hubId) || isSuperAdmin();
       }
 
       match /feed/posts/items/{postId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && canCreatePosts(hubId) &&
+        allow create: if (isAuthenticated() && canCreatePosts(hubId) &&
           request.resource.data.keys().hasAll(['postId', 'hubId', 'authorId', 'type', 'createdAt']) &&
           request.resource.data.postId == postId &&
           request.resource.data.hubId == hubId &&
           request.resource.data.authorId == request.auth.uid &&
-          request.resource.data.createdAt is timestamp;
-        allow update: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) &&
-          request.resource.data.postId == resource.data.postId &&
-          request.resource.data.hubId == resource.data.hubId &&
-          request.resource.data.authorId == resource.data.authorId &&
-          request.resource.data.createdAt == resource.data.createdAt;
-        allow delete: if canModerateContent(hubId) || request.auth.uid == resource.data.authorId;
+          request.resource.data.createdAt is timestamp) || isSuperAdmin();
+        allow update: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) || isSuperAdmin();
+        allow delete: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) || isSuperAdmin();
 
         match /comments/{commentId} {
           allow read: if isAuthenticated();
-          allow create: if isAuthenticated() && isHubMember(hubId) &&
+          allow create: if (isAuthenticated() && isHubMember(hubId) &&
             request.resource.data.keys().hasAll(['commentId', 'postId', 'hubId', 'authorId', 'text', 'createdAt']) &&
             request.resource.data.commentId == commentId &&
             request.resource.data.postId == postId &&
             request.resource.data.hubId == hubId &&
             request.resource.data.authorId == request.auth.uid &&
-            request.resource.data.createdAt is timestamp;
-          allow update: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) &&
-            request.resource.data.commentId == resource.data.commentId &&
-            request.resource.data.postId == resource.data.postId &&
-            request.resource.data.hubId == resource.data.hubId &&
-            request.resource.data.authorId == resource.data.authorId &&
-            request.resource.data.createdAt == resource.data.createdAt;
-          allow delete: if canModerateContent(hubId) || request.auth.uid == resource.data.authorId;
+            request.resource.data.createdAt is timestamp) || isSuperAdmin();
+          allow update: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) || isSuperAdmin();
+          allow delete: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) || isSuperAdmin();
         }
       }
-
+      
       match /chat/{messageId} {
-        allow read: if isAuthenticated() && isHubMember(hubId);
-        allow create: if isAuthenticated() && isHubMember(hubId) &&
+        allow read: if (isAuthenticated() && isHubMember(hubId)) || isSuperAdmin();
+        allow create: if (isAuthenticated() && isHubMember(hubId) &&
           request.resource.data.keys().hasAll(['hubId', 'authorId', 'text', 'createdAt']) &&
           request.resource.data.hubId == hubId &&
           request.resource.data.authorId == request.auth.uid &&
-          request.resource.data.createdAt is timestamp;
-        allow update, delete: if isHubAdmin(hubId);
+          request.resource.data.createdAt is timestamp) || isSuperAdmin();
+        allow update, delete: if isHubAdmin(hubId) || isSuperAdmin();
       }
 
       match /chatMessages/{messageId} {
-        allow read: if isHubMember(hubId);
-        allow create: if isHubMember(hubId) &&
+        allow read: if isHubMember(hubId) || isSuperAdmin();
+        allow create: if (isHubMember(hubId) &&
           request.resource.data.authorId == request.auth.uid &&
           request.resource.data.keys().hasAll(['messageId', 'hubId', 'authorId', 'text', 'createdAt']) &&
           request.resource.data.messageId == messageId &&
           request.resource.data.hubId == hubId &&
-          request.resource.data.createdAt is timestamp;
-        allow update, delete: if isHubAdmin(hubId) &&
-          request.resource.data.messageId == resource.data.messageId &&
-          request.resource.data.hubId == resource.data.hubId &&
-          request.resource.data.authorId == resource.data.authorId &&
-          request.resource.data.createdAt == resource.data.createdAt;
+          request.resource.data.createdAt is timestamp) || isSuperAdmin();
+        allow update, delete: if isHubAdmin(hubId) || isSuperAdmin();
       }
 
       match /events/{eventId} {
         allow read: if isAuthenticated();
-        allow create: if canCreateEvents(hubId) &&
+        allow create: if (canCreateEvents(hubId) &&
           isValidHubEvent(request.resource.data) &&
           request.resource.data.eventId == eventId &&
-          request.resource.data.hubId == hubId;
-        allow update, delete: if isHubAdmin(hubId) &&
+          request.resource.data.hubId == hubId) || isSuperAdmin();
+        allow update, delete: if (isHubAdmin(hubId) &&
           isValidHubEvent(request.resource.data) &&
           request.resource.data.eventId == resource.data.eventId &&
           request.resource.data.hubId == resource.data.hubId &&
-          request.resource.data.createdBy == resource.data.createdBy;
+          request.resource.data.createdBy == resource.data.createdBy) || isSuperAdmin();
 
         match /games/{gameId} {
           allow read: if isAuthenticated();
-          allow write: if isHubAdmin(hubId);
+          allow write: if isHubAdmin(hubId) || isSuperAdmin();
         }
       }
 
       match /{collection}/{docId} {
         allow read: if isAuthenticated();
-        allow write, update, delete: if isHubAdmin(hubId);
+        allow write, update, delete: if isHubAdmin(hubId) || isSuperAdmin();
       }
     }
 
@@ -338,14 +319,14 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read: if isAuthenticated();
 
-      allow create: if (
+      allow create: if ((
         (request.resource.data.hubId == '' && isAuthenticated()) ||
         canManageGames(request.resource.data.hubId)
       ) &&
         isValidGame(request.resource.data) &&
-        request.resource.data.createdBy == request.auth.uid;
+        request.resource.data.createdBy == request.auth.uid) || isSuperAdmin();
 
-      allow update: if (
+      allow update: if ((
         (resource.data.hubId == '' && resource.data.createdBy == request.auth.uid) ||
         canManageGames(resource.data.hubId)
       ) &&
@@ -354,46 +335,48 @@ service cloud.firestore {
         request.resource.data.hubId == resource.data.hubId &&
         (!('status' in request.resource.data) ||
          request.resource.data.status != 'completed' ||
-         isHubAdmin(resource.data.hubId));
+         isHubAdmin(resource.data.hubId))) || isSuperAdmin();
 
-      allow delete: if (resource.data.hubId == '' && resource.data.createdBy == request.auth.uid) ||
-        canManageGames(resource.data.hubId);
+      allow delete: if ((resource.data.hubId == '' && resource.data.createdBy == request.auth.uid) ||
+        canManageGames(resource.data.hubId)) || isSuperAdmin();
 
       match /signups/{userId} {
         allow read: if isAuthenticated();
-        allow create, update, delete: if isAuthenticated() && (
+        allow create, update, delete: if (isAuthenticated() && (
           isOwner(userId) ||
           isHubAdmin(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
-        ) &&
-          request.resource.data.playerId == userId;
+        )) || isSuperAdmin();
       }
 
       match /chatMessages/{messageId} {
-        allow read: if isAuthenticated() &&
+        allow read: if (isAuthenticated() &&
           exists(/databases/$(database)/documents/games/$(gameId)) &&
-          exists(/databases/$(database)/documents/games/$(gameId)/signups/$(request.auth.uid));
-        allow create: if isAuthenticated() &&
+          exists(/databases/$(database)/documents/games/$(gameId)/signups/$(request.auth.uid))) || isSuperAdmin();
+        
+        allow create: if (isAuthenticated() &&
           exists(/databases/$(database)/documents/games/$(gameId)) &&
           exists(/databases/$(database)/documents/games/$(gameId)/signups/$(request.auth.uid)) &&
           request.resource.data.senderId == request.auth.uid &&
           request.resource.data.keys().hasAll(['gameId', 'senderId', 'text', 'createdAt']) &&
           request.resource.data.gameId == gameId &&
-          request.resource.data.createdAt is timestamp;
+          request.resource.data.createdAt is timestamp) || isSuperAdmin();
+        
         allow update: if false;
-        allow delete: if isAuthenticated() && (
+        
+        allow delete: if (isAuthenticated() && (
           resource.data.senderId == request.auth.uid ||
           isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
-        );
+        )) || isSuperAdmin();
       }
 
       match /teams/{teamId} {
         allow read: if isAuthenticated();
-        allow write: if isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId);
+        allow write: if isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId) || isSuperAdmin();
       }
 
       match /events/{eventId} {
         allow read: if isAuthenticated();
-        allow create, update, delete: if isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId);
+        allow create, update, delete: if isHubModerator(get(/databases/$(database)/documents/games/$(gameId)).data.hubId) || isSuperAdmin();
       }
     }
 
@@ -402,88 +385,87 @@ service cloud.firestore {
     // ============================================
     match /ratings/{userId}/history/{ratingId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
+      allow create: if (isAuthenticated() &&
         request.resource.data.keys().hasAll(['ratingId', 'gameId', 'playerId', 'submittedBy', 'submittedAt']) &&
         request.resource.data.ratingId == ratingId &&
         request.resource.data.playerId == userId &&
         request.resource.data.submittedBy == request.auth.uid &&
-        request.resource.data.submittedAt is timestamp;
-      allow update, delete: if false;
+        request.resource.data.submittedAt is timestamp) || isSuperAdmin();
+      allow update, delete: if false || isSuperAdmin();
     }
 
     match /notifications/{userId}/items/{notificationId} {
-      allow read: if isAuthenticated() && userId == request.auth.uid;
-      allow create: if isAuthenticated() && userId == request.auth.uid;
-      allow update: if isAuthenticated() && userId == request.auth.uid;
-      allow delete: if isAuthenticated() && userId == request.auth.uid;
+      allow read: if (isAuthenticated() && userId == request.auth.uid) || isSuperAdmin();
+      allow create: if (isAuthenticated() && userId == request.auth.uid) || isSuperAdmin();
+      allow update: if (isAuthenticated() && userId == request.auth.uid) || isSuperAdmin();
+      allow delete: if (isAuthenticated() && userId == request.auth.uid) || isSuperAdmin();
     }
 
     match /private_messages/{conversationId} {
-      allow read: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participantIds;
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-      allow delete: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      allow read: if (isAuthenticated() && request.auth.uid in resource.data.participantIds) || isSuperAdmin();
+      allow create: if (isAuthenticated() && request.auth.uid in request.resource.data.participantIds) || isSuperAdmin();
+      allow update: if (isAuthenticated() && request.auth.uid in resource.data.participantIds) || isSuperAdmin();
+      allow delete: if (isAuthenticated() && request.auth.uid in resource.data.participantIds) || isSuperAdmin();
 
       match /messages/{messageId} {
-        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/private_messages/$(conversationId)).data.participantIds;
-        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
-        allow update, delete: if false;
+        allow read: if (isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/private_messages/$(conversationId)).data.participantIds) || isSuperAdmin();
+        allow create: if (isAuthenticated() && request.resource.data.senderId == request.auth.uid) || isSuperAdmin();
+        allow update, delete: if false || isSuperAdmin();
       }
     }
 
     match /venues/{venueId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if resource.data.hubId == null || isHubModerator(resource.data.hubId);
+      allow create: if isAuthenticated() || isSuperAdmin();
+      allow update: if isAuthenticated() || isSuperAdmin();
+      allow delete: if resource.data.hubId == null || isHubModerator(resource.data.hubId) || isSuperAdmin();
     }
 
     match /feedPosts/{postId} {
       allow read: if isAuthenticated();
-      allow write: if false;
+      allow write: if false || isSuperAdmin();
     }
 
     // ============================================
     // Polls Collection
     // ============================================
     match /polls/{pollId} {
-      // Read: כל חברי ה-Hub יכולים לקרוא
-      allow read: if isAuthenticated() && 
-                     isHubMember(resource.data.hubId);
+      // Read: All hub members can read
+      allow read: if (isAuthenticated() && 
+                      isHubMember(resource.data.hubId)) || isSuperAdmin();
       
-      // Create: managers ו-moderators יכולים ליצור סקרים
-      allow create: if isAuthenticated() && 
-                       (isHubManager(request.resource.data.hubId) || 
-                        isHubModerator(request.resource.data.hubId)) &&
-                       request.resource.data.createdBy == request.auth.uid &&
-                       request.resource.data.hubId is string &&
-                       request.resource.data.question is string &&
-                       request.resource.data.options.size() >= 2 &&
-                       request.resource.data.options.size() <= 10;
+      // Create: managers and moderators can create polls
+      allow create: if (isAuthenticated() && 
+                        (isHubManager(request.resource.data.hubId) || 
+                         isHubModerator(request.resource.data.hubId)) &&
+                        request.resource.data.createdBy == request.auth.uid &&
+                        request.resource.data.hubId is string &&
+                        request.resource.data.question is string &&
+                        request.resource.data.options.size() >= 2 &&
+                        request.resource.data.options.size() <= 10) || isSuperAdmin();
       
-      // Update: רק היוצר או managers יכולים לעדכן
-      // אבל לא יכולים לשנות הצבעות ישירות (רק דרך Cloud Function)
-      allow update: if isAuthenticated() && 
-                       (resource.data.createdBy == request.auth.uid ||
-                        isHubManager(resource.data.hubId)) &&
-                       request.resource.data.totalVotes == resource.data.totalVotes &&
-                       request.resource.data.voters == resource.data.voters;
+      // Update: Only creator or managers can update
+      allow update: if (isAuthenticated() && 
+                        (resource.data.createdBy == request.auth.uid ||
+                         isHubManager(resource.data.hubId)) &&
+                        request.resource.data.totalVotes == resource.data.totalVotes &&
+                        request.resource.data.voters == resource.data.voters) || isSuperAdmin();
       
-      // Delete: רק היוצר או managers יכולים למחוק
-      allow delete: if isAuthenticated() && 
-                       (resource.data.createdBy == request.auth.uid ||
-                        isHubManager(resource.data.hubId));
+      // Delete: Only creator or managers can delete
+      allow delete: if (isAuthenticated() && 
+                        (resource.data.createdBy == request.auth.uid ||
+                         isHubManager(resource.data.hubId))) || isSuperAdmin();
       
       // Votes subcollection
       match /votes/{voteId} {
-        // Read: כל חברי ה-Hub (אלא אם סקר אנונימי)
-        allow read: if isAuthenticated() && 
-                       isHubMember(get(/databases/$(database)/documents/polls/$(pollId)).data.hubId);
+        // Read: All hub members (unless anonymous poll - logic handled in app/function)
+        allow read: if (isAuthenticated() && 
+                        isHubMember(get(/databases/$(database)/documents/polls/$(pollId)).data.hubId)) || isSuperAdmin();
         
-        // Create: רק דרך Cloud Function (למניעת manipulation)
+        // Create: Only via Cloud Function
         allow create: if false;
         
-        // Update/Delete: אסור
+        // Update/Delete: Forbidden
         allow update, delete: if false;
       }
     }
@@ -491,12 +473,10 @@ service cloud.firestore {
     // ============================================
     // Rate Limits Collection (System Only)
     // ============================================
-    // This collection is used by Cloud Functions for rate limiting
-    // Users should NEVER be able to read or write to this collection
     match /_rate_limits/{userId} {
       match /actions/{actionId} {
-        allow read: if false;  // Only Cloud Functions can read
-        allow write: if false; // Only Cloud Functions can write
+        allow read: if false;
+        allow write: if false;
       }
     }
   }

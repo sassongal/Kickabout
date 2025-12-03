@@ -1,141 +1,109 @@
 #!/usr/bin/env node
 /**
- * Script to create a super admin user with full permissions
- * 
- * Usage:
- *   node scripts/createSuperAdmin.js <phoneNumber>
- * 
- * Example:
- *   node scripts/createSuperAdmin.js 0546468676
+ * Script to force-create a Super Admin using local Owner credentials.
+ * This bypasses Firestore Rules and IAM restrictions by using your local gcloud session.
+ * * Usage:
+ * node scripts/createSuperAdmin.js
  */
 
-const { initializeApp } = require('firebase-admin/app');
+const { initializeApp, applicationDefault } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getAuth } = require('firebase-admin/auth');
 
-// Initialize Firebase Admin SDK with explicit project ID
+// Initialize Firebase Admin SDK with Application Default Credentials
+// This uses the credentials from 'gcloud auth application-default login'
 initializeApp({
-  projectId: 'kickabout-ddc06',
+  credential: applicationDefault(),
+  projectId: 'kickabout-ddc06', // Your exact project ID
 });
+
 const db = getFirestore();
 const auth = getAuth();
 
-async function createSuperAdmin(phoneNumber) {
-  console.log(`\n🔧 Creating super admin for phone: ${phoneNumber}\n`);
+// Your specific UID from the logs
+const TARGET_UID = 'lFvifImYi9XTRsajqfUB6iN64be2';
+
+async function makeMeSuperAdmin() {
+  console.log(`\n🚀 Starting Super Admin promotion for UID: ${TARGET_UID}...\n`);
 
   try {
-    // Find user by phone number
-    const usersSnapshot = await db
-      .collection('users')
-      .where('phoneNumber', '==', phoneNumber.trim())
-      .limit(1)
-      .get();
+    // 1. Verify User Exists
+    const userDocRef = db.collection('users').doc(TARGET_UID);
+    const userDoc = await userDocRef.get();
 
-    if (usersSnapshot.empty) {
-      throw new Error(`❌ User with phone number ${phoneNumber} not found`);
+    if (!userDoc.exists) {
+      console.log(`❌ User document not found in Firestore. Creating barebones profile...`);
+      await userDocRef.set({
+        uid: TARGET_UID,
+        createdAt: new Date(),
+        isSuperAdmin: true
+      }, { merge: true });
+    } else {
+      console.log(`✅ User found: ${userDoc.data().name || 'No Name'} (${userDoc.data().phoneNumber || 'No Phone'})`);
     }
 
-    const userDoc = usersSnapshot.docs[0];
-    const userId = userDoc.id;
-    const userData = userDoc.data();
-
-    console.log(`✅ Found user: ${userId}`);
-    console.log(`   Name: ${userData.name || 'N/A'}`);
-    console.log(`   Email: ${userData.email || 'N/A'}`);
-    console.log(`   Phone: ${userData.phoneNumber || 'N/A'}\n`);
-
-    // Get all hubs
+    // 2. Fetch all Hubs to give you control over them
+    console.log(`\n📊 Fetching all hubs to grant access...`);
     const hubsSnapshot = await db.collection('hubs').get();
     const hubIds = hubsSnapshot.docs.map((doc) => doc.id);
+    console.log(`   Found ${hubIds.length} hubs.`);
 
-    console.log(`📊 Found ${hubIds.length} hubs to add admin to\n`);
+    // 3. Update User Document (Firestore)
+    const updatedHubIds = [...new Set([...(userDoc.data()?.hubIds || []), ...hubIds])];
 
-    if (hubIds.length === 0) {
-      console.log('⚠️  No hubs found. User will be set as super admin but won\'t be added to any hubs.\n');
-    }
-
-    // Add user as admin to all hubs
-    const batch = db.batch();
-    for (const hubId of hubIds) {
-      const hubRef = db.collection('hubs').doc(hubId);
-      const hubData = hubsSnapshot.docs.find(doc => doc.id === hubId)?.data();
-      const hubName = hubData?.name || hubId;
-      
-      batch.update(hubRef, {
-        [`roles.${userId}`]: 'admin',
-      });
-      console.log(`   ✓ Adding admin to hub: ${hubName} (${hubId})`);
-    }
-
-    // Update user's hubIds to include all hubs
-    const updatedHubIds = [...new Set([...userData.hubIds || [], ...hubIds])];
-    batch.update(userDoc.ref, {
-      hubIds: updatedHubIds,
+    await userDocRef.update({
+      isSuperAdmin: true,
+      role: 'super_admin', // Just in case UI looks for this
+      hubIds: updatedHubIds
     });
+    console.log(`✅ Firestore: Marked user as Super Admin and added to all hubs.`);
 
-    await batch.commit();
-    console.log(`\n✅ Added user ${userId} as admin to ${hubIds.length} hubs`);
+    // 4. Update Hubs (Firestore) - Add you as admin to EVERY hub
+    if (hubIds.length > 0) {
+      const batch = db.batch();
+      let operationCount = 0;
 
-    // Set custom claims for super admin
+      for (const hubId of hubIds) {
+        const hubRef = db.collection('hubs').doc(hubId);
+        // Add you to the roles map as 'admin'
+        batch.update(hubRef, {
+          [`roles.${TARGET_UID}`]: 'admin'
+        });
+        operationCount++;
+      }
+
+      await batch.commit();
+      console.log(`✅ Firestore: Added you as 'admin' to ${operationCount} hubs.`);
+    }
+
+    // 5. Set Custom Claims (Auth) - The "God Mode" key
+    // This allows you to pass "request.auth.token.isSuperAdmin" checks in Security Rules
     const customClaims = {
       isSuperAdmin: true,
-      hubIds: updatedHubIds,
-      roles: {},
+      roles: {}
     };
 
-    // Add admin role for all hubs
+    // Add explicit admin role for every hub in the token as well
     for (const hubId of hubIds) {
       customClaims.roles[hubId] = 'admin';
     }
 
-    await auth.setCustomUserClaims(userId, customClaims);
-    console.log(`✅ Set super admin custom claims for user ${userId}`);
+    await auth.setCustomUserClaims(TARGET_UID, customClaims);
+    console.log(`✅ Auth: Set custom claims (isSuperAdmin=true) on your user token.`);
 
-    console.log('\n🎉 Success! Super admin created successfully!\n');
-    console.log('Summary:');
-    console.log(`   User ID: ${userId}`);
-    console.log(`   User Name: ${userData.name || userData.email}`);
-    console.log(`   Phone: ${phoneNumber}`);
-    console.log(`   Hubs Added: ${hubIds.length}`);
-    console.log(`   Custom Claims: isSuperAdmin=true, roles=${hubIds.length} hubs\n`);
+    console.log('\n🎉 SUCCESS! You are now a Super Admin.');
+    console.log('👉 IMPORTANT: You must LOG OUT and LOG IN again in the app for changes to take effect!\n');
 
-    return {
-      success: true,
-      userId: userId,
-      userName: userData.name || userData.email,
-      hubsAdded: hubIds.length,
-      message: `Super admin created successfully. User is now admin of ${hubIds.length} hubs.`,
-    };
   } catch (error) {
-    console.error(`\n❌ Error creating super admin:`, error.message);
-    if (error.code) {
-      console.error(`   Error Code: ${error.code}`);
-    }
-    if (error.stack) {
-      console.error(`\nStack trace:\n${error.stack}`);
-    }
+    console.error(`\n❌ Error:`, error);
     process.exit(1);
   }
 }
 
-// Main execution
-const phoneNumber = process.argv[2];
-
-if (!phoneNumber) {
-  console.error('\n❌ Error: Phone number is required\n');
-  console.log('Usage:');
-  console.log('  node scripts/createSuperAdmin.js <phoneNumber>\n');
-  console.log('Example:');
-  console.log('  node scripts/createSuperAdmin.js 0546468676\n');
-  process.exit(1);
-}
-
-createSuperAdmin(phoneNumber)
-  .then(() => {
-    console.log('✅ Script completed successfully\n');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('\n❌ Script failed:', error);
+// Execute
+makeMeSuperAdmin()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error(e);
     process.exit(1);
   });

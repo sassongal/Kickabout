@@ -373,11 +373,11 @@ class DummyDataGenerator {
     final hubRef = firestore.doc(FirestorePaths.hub(hubId));
     batch.set(hubRef, hub.toJson());
 
-      // Add members to subcollection (Strategy C)
-      for (final memberId in finalMemberIds) {
-        batch.set(
-          hubRef.collection('members').doc(memberId),
-          {
+    // Add members to subcollection (Strategy C)
+    for (final memberId in finalMemberIds) {
+      batch.set(
+        hubRef.collection('members').doc(memberId),
+        {
           'joinedAt': FieldValue.serverTimestamp(),
           'role': memberId == finalMemberIds[0] ? 'manager' : 'member',
         },
@@ -660,7 +660,8 @@ class DummyDataGenerator {
         name: playerNames[i],
         email:
             '${firstName.toLowerCase()}.${lastName.toLowerCase()}@kickadoor.local',
-        birthDate: DateTime.now().subtract(Duration(days: 365 * (20 + (i % 15)))),
+        birthDate:
+            DateTime.now().subtract(Duration(days: 365 * (20 + (i % 15)))),
         phoneNumber:
             '05${(i % 9) + 1}${(i * 1234567).toString().padLeft(7, '0').substring(0, 7)}',
         city: cities[i % cities.length],
@@ -768,7 +769,8 @@ class DummyDataGenerator {
         name: fullName,
         email:
             '${firstName.toLowerCase()}.${lastName.toLowerCase()}@kickadoor.local',
-        birthDate: DateTime.now().subtract(Duration(days: 365 * (18 + random.nextInt(15)))),
+        birthDate: DateTime.now()
+            .subtract(Duration(days: 365 * (18 + random.nextInt(15)))),
         phoneNumber:
             '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
         city: cities[random.nextInt(cities.length)],
@@ -1230,10 +1232,13 @@ class DummyDataGenerator {
       'שלמה',
     ];
 
+    final ageGroups = AgeGroup.values;
     final allUserIds = <String>[];
 
     // Generate 30 users
     for (int i = 0; i < 30; i++) {
+      final birthDate = DateTime.now()
+          .subtract(Duration(days: (365 * (18 + random.nextInt(20))).toInt()));
       final firstName = israeliFirstNames[i % israeliFirstNames.length];
       final lastName =
           israeliLastNames[random.nextInt(israeliLastNames.length)];
@@ -1247,6 +1252,8 @@ class DummyDataGenerator {
       final geohash =
           GeohashUtils.encode(location.latitude, location.longitude);
 
+      // final ageGroup = AgeUtils.getAgeGroup(birthDate); // Removed as it's not in the User model yet
+
       final user = User(
         uid: userId,
         name: fullName,
@@ -1254,7 +1261,7 @@ class DummyDataGenerator {
         lastName: lastName,
         email:
             '${firstName.toLowerCase()}.${lastName.toLowerCase()}@haifa.local',
-        birthDate: DateTime.now().subtract(Duration(days: 365 * (18 + random.nextInt(20)))),
+        birthDate: birthDate,
         phoneNumber:
             '05${random.nextInt(9)}${random.nextInt(9999999).toString().padLeft(7, '0')}',
         city: 'חיפה',
@@ -1267,6 +1274,8 @@ class DummyDataGenerator {
         location: location,
         geohash: geohash,
         region: 'צפון',
+        // ageGroup: ageGroup, // This field needs to be added to the User model first
+        hubIds: [], // Initialize as empty list
       );
 
       await firestore.doc(FirestorePaths.user(userId)).set({
@@ -1363,95 +1372,97 @@ class DummyDataGenerator {
   /// Delete all dummy data (Users, Hubs, Games with isDummy: true)
   Future<void> deleteAllDummyData() async {
     debugPrint('🗑️ Starting dummy data cleanup...');
+    int totalDeleted = 0;
 
+    // 1. Delete dummy hubs and their subcollections
+    final hubsQuery =
+        firestore.collection('hubs').where('isDummy', isEqualTo: true);
+    final hubsSnapshot = await hubsQuery.get();
+    for (final hubDoc in hubsSnapshot.docs) {
+      debugPrint('   - Deleting hub: ${hubDoc.id} (${hubDoc.data()['name']})');
+      // Delete subcollections first
+      totalDeleted += await _deleteCollectionInBatches(
+          hubDoc.reference.collection('members'));
+      totalDeleted += await _deleteCollectionInBatches(
+          hubDoc.reference.collection('events'));
+      totalDeleted += await _deleteCollectionInBatches(
+          hubDoc.reference.collection('chatMessages'));
+      // ... add other subcollections if they exist
+
+      // Delete the hub document itself
+      await hubDoc.reference.delete();
+      totalDeleted++;
+    }
+    debugPrint(
+        '   - Deleted ${hubsSnapshot.docs.length} hubs and their content.');
+
+    // 2. Delete dummy games and their subcollections
+    final gamesQuery =
+        firestore.collection('games').where('isDummy', isEqualTo: true);
+    final gamesSnapshot = await gamesQuery.get();
+    for (final gameDoc in gamesSnapshot.docs) {
+      debugPrint('   - Deleting game: ${gameDoc.id}');
+      // Delete subcollections
+      totalDeleted += await _deleteCollectionInBatches(
+          gameDoc.reference.collection('signups'));
+      totalDeleted += await _deleteCollectionInBatches(
+          gameDoc.reference.collection('events'));
+      // ... add other subcollections if they exist
+
+      // Delete the game document
+      await gameDoc.reference.delete();
+      totalDeleted++;
+    }
+    debugPrint(
+        '   - Deleted ${gamesSnapshot.docs.length} games and their content.');
+
+    // 3. Delete dummy users
+    final usersQuery =
+        firestore.collection('users').where('isDummy', isEqualTo: true);
+    final usersDeleted = await _deleteCollectionInBatches(usersQuery);
+    totalDeleted += usersDeleted;
+    debugPrint('   - Deleted $usersDeleted users.');
+
+    debugPrint('✅ Deleted a total of $totalDeleted dummy documents.');
+  }
+
+  /// Helper to delete a collection in batches to avoid memory issues.
+  Future<int> _deleteCollectionInBatches(
+      Query<Map<String, dynamic>> query) async {
+    const int batchSize = 100;
     int deletedCount = 0;
-    const int batchSize = 500; // Firestore batch limit.
 
-    // Delete dummy users (in batches)
-    Query<Map<String, dynamic>> usersQuery = firestore
-        .collection('users')
-        .where('isDummy', isEqualTo: true)
-        .limit(batchSize);
-
-    var usersSnapshot = await usersQuery.get();
-    while (usersSnapshot.docs.isNotEmpty) {
-      final batch = firestore.batch();
-      for (final doc in usersSnapshot.docs) {
-        batch.delete(doc.reference);
-        deletedCount++;
-      }
-      await batch.commit();
-
-      if (usersSnapshot.docs.length == batchSize) {
-        // Get next batch
-        final lastDoc = usersSnapshot.docs.last;
-        usersQuery = firestore
-            .collection('users')
-            .where('isDummy', isEqualTo: true)
-            .startAfterDocument(lastDoc)
-            .limit(batchSize);
-        usersSnapshot = await usersQuery.get();
-      } else {
+    // Get documents in batches
+    QuerySnapshot<Map<String, dynamic>> snapshot;
+    do {
+      snapshot = await query.limit(batchSize).get();
+      if (snapshot.docs.isEmpty) {
         break;
       }
-    }
 
-    // Delete dummy hubs (in batches)
-    Query<Map<String, dynamic>> hubsQuery = firestore
-        .collection('hubs')
-        .where('isDummy', isEqualTo: true)
-        .limit(batchSize);
-
-    var hubsSnapshot = await hubsQuery.get();
-    while (hubsSnapshot.docs.isNotEmpty) {
+      // Create a new batch for each set of documents
       final batch = firestore.batch();
-      for (final doc in hubsSnapshot.docs) {
+      for (final doc in snapshot.docs) {
+        // Recursively delete subcollections if needed
+        // For now, we assume subcollections are handled by the main function
         batch.delete(doc.reference);
-        deletedCount++;
       }
-      await batch.commit();
 
-      if (hubsSnapshot.docs.length == batchSize) {
-        final lastDoc = hubsSnapshot.docs.last;
-        hubsQuery = firestore
-            .collection('hubs')
-            .where('isDummy', isEqualTo: true)
-            .startAfterDocument(lastDoc)
-            .limit(batchSize);
-        hubsSnapshot = await hubsQuery.get();
-      } else {
-        break;
+      try {
+        await batch.commit();
+        deletedCount += snapshot.docs.length;
+        debugPrint(
+            '     ...deleted $deletedCount documents from collection...');
+      } catch (e) {
+        debugPrint('Error during batch delete: $e. Retrying in 1s...');
+        await Future.delayed(const Duration(seconds: 1));
+        // If a batch fails, we might want to retry or handle it.
+        // For simplicity, we'll just log and continue.
       }
-    }
 
-    // Delete dummy games (in batches)
-    Query<Map<String, dynamic>> gamesQuery = firestore
-        .collection('games')
-        .where('isDummy', isEqualTo: true)
-        .limit(batchSize);
+      // If we fetched a full batch, there might be more documents.
+    } while (snapshot.docs.length == batchSize);
 
-    var gamesSnapshot = await gamesQuery.get();
-    while (gamesSnapshot.docs.isNotEmpty) {
-      final batch = firestore.batch();
-      for (final doc in gamesSnapshot.docs) {
-        batch.delete(doc.reference);
-        deletedCount++;
-      }
-      await batch.commit();
-
-      if (gamesSnapshot.docs.length == batchSize) {
-        final lastDoc = gamesSnapshot.docs.last;
-        gamesQuery = firestore
-            .collection('games')
-            .where('isDummy', isEqualTo: true)
-            .startAfterDocument(lastDoc)
-            .limit(batchSize);
-        gamesSnapshot = await gamesQuery.get();
-      } else {
-        break;
-      }
-    }
-
-    debugPrint('✅ Deleted $deletedCount dummy documents');
+    return deletedCount;
   }
 }

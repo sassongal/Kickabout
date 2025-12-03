@@ -226,6 +226,12 @@ class HubsRepository {
     return controller.stream;
   }
 
+  /// Stream all hubs the user is associated with (created or joined)
+  /// This relies on user.hubIds being the source of truth for all associated hubs
+  Stream<List<Hub>> watchAllMyHubs(String uid) {
+    return watchHubsByMember(uid);
+  }
+
   /// Get hubs by member (non-streaming)
   /// Get hubs by member (non-streaming)
   Future<List<Hub>> getHubsByMember(String uid) async {
