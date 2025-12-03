@@ -8,13 +8,15 @@ import 'package:kattrick/models/models.dart';
 
 /// Top-level function for compute isolate - balances teams in background
 List<Team> _computeBalanceTeams(Map<String, dynamic> params) {
-  final players = (params['players'] as List).map((p) => PlayerForTeam(
-    uid: p['uid'] as String,
-    rating: p['rating'] as double,
-    role: PlayerRole.values.firstWhere((r) => r.name == p['role']),
-  )).toList();
+  final players = (params['players'] as List)
+      .map((p) => PlayerForTeam(
+            uid: p['uid'] as String,
+            rating: p['rating'] as double,
+            role: PlayerRole.values.firstWhere((r) => r.name == p['role']),
+          ))
+      .toList();
   final teamCount = params['teamCount'] as int;
-  
+
   final result = TeamMaker.createBalancedTeams(
     players,
     teamCount: teamCount,
@@ -25,14 +27,14 @@ List<Team> _computeBalanceTeams(Map<String, dynamic> params) {
 /// Team builder page with draggable chips and balance meter
 class TeamBuilderPage extends ConsumerStatefulWidget {
   final String gameId;
-  final String hubId; // Added for manager ratings
+  final String? hubId; // Added for manager ratings
   final int teamCount;
   final List<String> playerIds;
 
   const TeamBuilderPage({
     super.key,
     required this.gameId,
-    required this.hubId,
+    this.hubId,
     required this.teamCount,
     required this.playerIds,
   });
@@ -55,9 +57,10 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
   }
 
   Future<void> _loadHub() async {
+    if (widget.hubId == null) return;
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(widget.hubId);
+      final hub = await hubsRepo.getHub(widget.hubId!);
       if (mounted) {
         setState(() {
           _hub = hub;
@@ -70,7 +73,8 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
 
   /// Get player rating (manager rating if available, otherwise currentRankScore)
   double _getPlayerRating(User user) {
-    if (_hub?.managerRatings != null && _hub!.managerRatings.containsKey(user.uid)) {
+    if (_hub?.managerRatings != null &&
+        _hub!.managerRatings.containsKey(user.uid)) {
       return _hub!.managerRatings[user.uid]!;
     }
     return user.currentRankScore; // Fallback
@@ -79,7 +83,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
   Future<void> _loadTeams() async {
     final teamsRepo = ref.read(teamsRepositoryProvider);
     final teams = await teamsRepo.getTeams(widget.gameId);
-    
+
     if (mounted) {
       setState(() {
         _teams = teams;
@@ -95,33 +99,38 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
     try {
       final usersRepo = ref.read(usersRepositoryProvider);
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      
+
       // Load users and hub (for manager ratings)
       final users = await usersRepo.getUsers(widget.playerIds);
-      final hub = await hubsRepo.getHub(widget.hubId);
+      final hub =
+          widget.hubId != null ? await hubsRepo.getHub(widget.hubId!) : null;
 
       // Use manager ratings if available
-      final players = users.map((u) => PlayerForTeam.fromUser(
-        u,
-        hubId: widget.hubId,
-        managerRatings: hub?.managerRatings,
-      )).toList();
-      
+      final players = users
+          .map((u) => PlayerForTeam.fromUser(
+                u,
+                hubId: widget.hubId,
+                managerRatings: hub?.managerRatings,
+              ))
+          .toList();
+
       // Prepare data for compute (must be serializable)
-      final playersData = players.map((p) => {
-        'uid': p.uid,
-        'rating': p.rating,
-        'role': p.role.name,
-      }).toList();
-      
+      final playersData = players
+          .map((p) => {
+                'uid': p.uid,
+                'rating': p.rating,
+                'role': p.role.name,
+              })
+          .toList();
+
       final params = {
         'players': playersData,
         'teamCount': widget.teamCount,
       };
-      
+
       // Run heavy computation in isolate to prevent UI blocking
       final teams = await compute(_computeBalanceTeams, params);
-      
+
       // Preserve existing colors when rebalancing
       final existingColors = <String, String>{};
       for (final existingTeam in _teams) {
@@ -129,7 +138,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
           existingColors[existingTeam.teamId] = existingTeam.color!;
         }
       }
-      
+
       // Apply existing colors to new teams (by index)
       final updatedTeams = teams.asMap().entries.map((entry) {
         final index = entry.key;
@@ -167,7 +176,7 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
 
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      
+
       // Save teams to game document
       await gamesRepo.saveTeamsForGame(widget.gameId, _teams);
 
@@ -199,9 +208,8 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final metrics = _teams.isNotEmpty
-        ? TeamMaker.calculateBalanceMetrics(_teams)
-        : null;
+    final metrics =
+        _teams.isNotEmpty ? TeamMaker.calculateBalanceMetrics(_teams) : null;
 
     return Column(
       children: [
@@ -296,7 +304,10 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                       Icon(
                         Icons.group_outlined,
                         size: 64,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.3),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -377,8 +388,8 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                     Text(
                       team?.name ?? teamNames[index],
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     if (team != null) ...[
                       const SizedBox(width: 8),
@@ -394,8 +405,14 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                   Wrap(
                     spacing: 4,
                     alignment: WrapAlignment.center,
-                    children: ['red', 'green', 'black', 'yellow', 'blue', 'white']
-                        .map((colorName) {
+                    children: [
+                      'red',
+                      'green',
+                      'black',
+                      'yellow',
+                      'blue',
+                      'white'
+                    ].map((colorName) {
                       final isSelected = currentColor == colorName;
                       final color = _getColorFromString(colorName);
                       return ChoiceChip(
@@ -430,12 +447,17 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                     child: Text(
                       'ריק',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
+                          ),
                     ),
                   )
                 : FutureBuilder<List<User>>(
-                    future: ref.read(usersRepositoryProvider).getUsers(team.playerIds),
+                    future: ref
+                        .read(usersRepositoryProvider)
+                        .getUsers(team.playerIds),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -454,7 +476,8 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                               dense: true,
                               leading: CircleAvatar(
                                 radius: 16,
-                                backgroundColor: colorValue.withValues(alpha: 0.2),
+                                backgroundColor:
+                                    colorValue.withValues(alpha: 0.2),
                                 child: user.photoUrl != null
                                     ? ClipOval(
                                         child: Image.network(
@@ -479,9 +502,12 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
                               ),
                               trailing: Text(
                                 _getPlayerRating(user).toStringAsFixed(1),
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                             ),
                           );
@@ -530,4 +556,3 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
     }
   }
 }
-

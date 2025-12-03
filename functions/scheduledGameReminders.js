@@ -28,15 +28,15 @@ exports.scheduledGameReminders = onSchedule(
   async (event) => {
     info('Running scheduledGameReminders...');
     const now = new Date();
-    
+
     // ✅ Find games starting in 1.5-2.5 hours (2h ± 30min window)
     const oneAndHalfHoursFromNow = new Date(now.getTime() + 1.5 * 60 * 60 * 1000);
     const twoAndHalfHoursFromNow = new Date(now.getTime() + 2.5 * 60 * 60 * 1000);
-    
+
     try {
       const gamesSnapshot = await db
         .collection('games')
-        .where('status', '==', 'teamSelection')
+        .where('status', 'in', ['scheduled', 'recruiting', 'fullyBooked', 'teamSelection', 'teamsFormed'])
         .where('gameDate', '>=', oneAndHalfHoursFromNow)
         .where('gameDate', '<=', twoAndHalfHoursFromNow)
         .limit(100)
@@ -72,7 +72,7 @@ exports.scheduledGameReminders = onSchedule(
             .doc(gameId)
             .collection('signups')
             .get();
-          
+
           const participants = signupsSnapshot.docs.map(doc => doc.id);
           if (participants.length === 0) {
             info(`No participants for game ${gameId}`);
@@ -80,17 +80,31 @@ exports.scheduledGameReminders = onSchedule(
           }
 
           // Get venue name
-          const venueName = game.venueName || 'המגרש';
+          const venueName = game.venueName || game.location || 'המגרש';
 
-          // Get Hub name
-          let hubName = 'האב שלך';
-          try {
-            const hubDoc = await db.collection('hubs').doc(game.hubId).get();
-            if (hubDoc.exists) {
-              hubName = hubDoc.data().name || hubName;
+          // Context-aware notification (Public vs Hub)
+          let title, body, hubName = null;
+
+          if (game.hubId) {
+            // Hub Game - fetch hub name
+            try {
+              const hubDoc = await db.collection('hubs').doc(game.hubId).get();
+              if (hubDoc.exists) {
+                hubName = hubDoc.data().name || 'האב';
+              } else {
+                hubName = 'האב';
+              }
+            } catch (err) {
+              info(`Could not fetch hub name for game ${gameId}:`, err);
+              hubName = 'האב';
             }
-          } catch (err) {
-            info(`Could not fetch hub name for game ${gameId}:`, err);
+
+            title = '⚽ תזכורת משחק - מתחיל בעוד שעתיים!';
+            body = `${hubName} • ${venueName}\nאשר הגעה באפליקציה`;
+          } else {
+            // Public Game - no hub
+            title = '⚽ Game Reminder - Starts in 2 Hours!';
+            body = `Your game at ${venueName}\nConfirm attendance in the app`;
           }
 
           // ✅ Fetch FCM tokens in PARALLEL using helper
@@ -113,14 +127,14 @@ exports.scheduledGameReminders = onSchedule(
           // ✅ Send reminder notification
           const message = {
             notification: {
-              title: '⚽ תזכורת משחק - מתחיל בעוד שעתיים!',
-              body: `${hubName} • ${venueName}\nאשר הגעה באפליקציה`,
+              title: title,
+              body: body,
             },
             tokens: uniqueTokens,
             data: {
               type: 'game_reminder_2h',
               gameId: gameId,
-              hubId: game.hubId,
+              hubId: game.hubId || '',
               action: 'confirm_attendance',
             },
             android: {

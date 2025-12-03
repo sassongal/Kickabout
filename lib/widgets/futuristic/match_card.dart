@@ -120,6 +120,16 @@ class MatchCard extends StatelessWidget {
 
   Color _getStatusColor(GameStatus status) {
     switch (status) {
+      case GameStatus.draft:
+        return FuturisticColors.textSecondary;
+      case GameStatus.scheduled:
+        return FuturisticColors.info;
+      case GameStatus.recruiting:
+        return FuturisticColors.accent;
+      case GameStatus.fullyBooked:
+        return FuturisticColors.success;
+      case GameStatus.cancelled:
+        return FuturisticColors.textSecondary;
       case GameStatus.teamSelection:
         return FuturisticColors.warning;
       case GameStatus.teamsFormed:
@@ -137,6 +147,16 @@ class MatchCard extends StatelessWidget {
 
   String _getStatusText(GameStatus status) {
     switch (status) {
+      case GameStatus.draft:
+        return 'DRAFT';
+      case GameStatus.scheduled:
+        return 'SCHEDULED';
+      case GameStatus.recruiting:
+        return 'RECRUITING';
+      case GameStatus.fullyBooked:
+        return 'FULL';
+      case GameStatus.cancelled:
+        return 'CANCELLED';
       case GameStatus.teamSelection:
         return 'TEAM SELECTION';
       case GameStatus.teamsFormed:

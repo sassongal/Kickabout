@@ -19,7 +19,8 @@ class SmartVenueSearchField extends ConsumerStatefulWidget {
   final String? initialValue;
   final String label;
   final String hint;
-  final String? hubId; // Optional hubId to set on venue when created
+  final String? hubId;
+  final String? Function(String?)? validator;
 
   const SmartVenueSearchField({
     super.key,
@@ -28,6 +29,7 @@ class SmartVenueSearchField extends ConsumerStatefulWidget {
     this.label = 'כתובת או שם מגרש',
     this.hint = 'חפש מגרש קהילתי/פרטי/ציבורי...',
     this.hubId,
+    this.validator,
   });
 
   @override
@@ -294,407 +296,545 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return RawAutocomplete<Venue>(
-          textEditingController: _controller,
-          focusNode: _focusNode,
-          optionsBuilder: (TextEditingValue textEditingValue) async {
-            final query = textEditingValue.text.trim();
+        return FormField<String>(
+          validator: widget.validator,
+          initialValue: widget.initialValue,
+          builder: (FormFieldState<String> field) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RawAutocomplete<Venue>(
+                  textEditingController: _controller,
+                  focusNode: _focusNode,
+                  // ... (rest of RawAutocomplete)
 
-            // Show nearby venues when search is empty (no history shown in autocomplete)
-            if (query.isEmpty) {
-              return _applyFilter(_nearbyVenues);
-            }
+                  optionsBuilder: (TextEditingValue textEditingValue) async {
+                    final query = textEditingValue.text.trim();
 
-            // Show history when user starts typing (1 character)
-            // History will be displayed in optionsViewBuilder
-            if (query.length == 1) {
-              return const Iterable<Venue>.empty();
-            }
+                    // Show nearby venues when search is empty (no history shown in autocomplete)
+                    if (query.isEmpty) {
+                      return _applyFilter(_nearbyVenues);
+                    }
 
-            if (query.length < 2) {
-              return const Iterable<Venue>.empty();
-            }
+                    // Show history when user starts typing (1 character)
+                    // History will be displayed in optionsViewBuilder
+                    if (query.length == 1) {
+                      return const Iterable<Venue>.empty();
+                    }
 
-            // Debouncing: cancel previous search
-            _searchTimer?.cancel();
+                    if (query.length < 2) {
+                      return const Iterable<Venue>.empty();
+                    }
 
-            // Check cache first
-            if (query == _lastQuery && _cachedResults.isNotEmpty) {
-              return _applyFilter(_cachedResults);
-            }
+                    // Debouncing: cancel previous search
+                    _searchTimer?.cancel();
 
-            // Debounce search
-            final completer = Completer<List<Venue>>();
-            _searchTimer = Timer(const Duration(milliseconds: 400), () async {
-              try {
-                final results = await ref
-                    .read(venuesRepositoryProvider)
-                    .searchVenuesCombined(query);
+                    // Check cache first
+                    if (query == _lastQuery && _cachedResults.isNotEmpty) {
+                      return _applyFilter(_cachedResults);
+                    }
 
-                // Sort by distance if we have location
-                if (_currentPosition != null) {
-                  results.sort((a, b) {
-                    final distA = _calculateDistance(a) ?? double.infinity;
-                    final distB = _calculateDistance(b) ?? double.infinity;
-                    return distA.compareTo(distB);
-                  });
-                }
+                    // Debounce search
+                    final completer = Completer<List<Venue>>();
+                    _searchTimer =
+                        Timer(const Duration(milliseconds: 400), () async {
+                      try {
+                        final results = await ref
+                            .read(venuesRepositoryProvider)
+                            .searchVenuesCombined(query);
 
-                // Cache results
-                _cachedResults = results;
-                _lastQuery = query;
+                        // Sort by distance if we have location
+                        if (_currentPosition != null) {
+                          results.sort((a, b) {
+                            final distA =
+                                _calculateDistance(a) ?? double.infinity;
+                            final distB =
+                                _calculateDistance(b) ?? double.infinity;
+                            return distA.compareTo(distB);
+                          });
+                        }
 
-                if (!completer.isCompleted) {
-                  completer.complete(_applyFilter(results));
-                }
-              } catch (e) {
-                if (!completer.isCompleted) {
-                  completer.completeError(e);
-                }
-              }
-            });
+                        // Cache results
+                        _cachedResults = results;
+                        _lastQuery = query;
 
-            return completer.future;
-          },
-          displayStringForOption: (Venue option) => option.name,
-          onSelected: (Venue selection) async {
-            // Get messenger before async operations
-            final messenger = ScaffoldMessenger.maybeOf(context);
+                        if (!completer.isCompleted) {
+                          completer.complete(_applyFilter(results));
+                        }
+                      } catch (e) {
+                        if (!completer.isCompleted) {
+                          completer.completeError(e);
+                        }
+                      }
+                    });
 
-            Venue venue = selection;
-            // If it's a Google result (empty ID), save it
-            if (venue.venueId.isEmpty) {
-              try {
-                debugPrint(
-                    '💾 Saving Google Places venue to Firestore: ${venue.name}');
-                // If hubId is provided, set it on the venue before saving
-                if (widget.hubId != null && widget.hubId!.isNotEmpty) {
-                  venue = venue.copyWith(hubId: widget.hubId!);
-                  debugPrint('   Setting hubId: ${widget.hubId}');
-                }
-                venue = await ref
-                    .read(venuesRepositoryProvider)
-                    .getOrCreateVenueFromGooglePlace(venue);
-                debugPrint('✅ Venue saved with ID: ${venue.venueId}');
-              } catch (e, stackTrace) {
-                debugPrint('❌ Error creating venue: $e');
-                debugPrint('Stack trace: $stackTrace');
-                // Show error to user but still allow selection
-                if (mounted && messenger != null) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text('שגיאה בשמירת המגרש: $e'),
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                }
-                // Don't proceed if venue creation failed - user needs a valid venue
-                return;
-              }
-            }
+                    return completer.future;
+                  },
+                  displayStringForOption: (Venue option) => option.name,
+                  onSelected: (Venue selection) async {
+                    // Get messenger before async operations
+                    final messenger = ScaffoldMessenger.maybeOf(context);
 
-            // Verify venue has valid ID before proceeding
-            if (venue.venueId.isEmpty) {
-              debugPrint('⚠️ Venue still has empty ID after processing');
-              if (mounted && messenger != null) {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('שגיאה: לא ניתן להוסיף מגרש ללא מזהה תקין'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              }
-              return;
-            }
-
-            if (!mounted) return;
-            _controller.text = venue.name;
-
-            // Add to search history
-            await _addToHistory(venue.name);
-
-            widget.onVenueSelected(venue);
-
-            // Unfocus to close keyboard
-            _focusNode.unfocus();
-          },
-          optionsViewBuilder: (BuildContext context,
-              AutocompleteOnSelected<Venue> onSelected,
-              Iterable<Venue> options) {
-            final optionsList = options.toList();
-            final query = _controller.text.trim();
-            final isEmpty = query.isEmpty;
-            final showHistory = isEmpty || query.length == 1;
-            final filteredHistory = showHistory && query.length == 1
-                ? _searchHistory
-                    .where((item) =>
-                        item.toLowerCase().startsWith(query.toLowerCase()))
-                    .take(5)
-                    .toList()
-                : (isEmpty ? _searchHistory.take(5).toList() : <String>[]);
-
-            return Align(
-              alignment: Alignment.topLeft,
-              child: Material(
-                elevation: 4.0,
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: constraints.maxWidth,
-                  constraints: const BoxConstraints(maxHeight: 400),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Search history section
-                      if (filteredHistory.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Colors.grey[300]!,
-                                width: 1,
-                              ),
+                    Venue venue = selection;
+                    // If it's a Google result (empty ID), save it
+                    if (venue.venueId.isEmpty) {
+                      try {
+                        debugPrint(
+                            '💾 Saving Google Places venue to Firestore: ${venue.name}');
+                        // If hubId is provided, set it on the venue before saving
+                        if (widget.hubId != null && widget.hubId!.isNotEmpty) {
+                          venue = venue.copyWith(hubId: widget.hubId!);
+                          debugPrint('   Setting hubId: ${widget.hubId}');
+                        }
+                        venue = await ref
+                            .read(venuesRepositoryProvider)
+                            .getOrCreateVenueFromGooglePlace(venue);
+                        debugPrint('✅ Venue saved with ID: ${venue.venueId}');
+                      } catch (e, stackTrace) {
+                        debugPrint('❌ Error creating venue: $e');
+                        debugPrint('Stack trace: $stackTrace');
+                        // Show error to user but still allow selection
+                        if (mounted && messenger != null) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('שגיאה בשמירת המגרש: $e'),
+                              duration: const Duration(seconds: 3),
                             ),
+                          );
+                        }
+                        // Don't proceed if venue creation failed - user needs a valid venue
+                        return;
+                      }
+                    }
+
+                    // Verify venue has valid ID before proceeding
+                    if (venue.venueId.isEmpty) {
+                      debugPrint(
+                          '⚠️ Venue still has empty ID after processing');
+                      if (mounted && messenger != null) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'שגיאה: לא ניתן להוסיף מגרש ללא מזהה תקין'),
+                            duration: Duration(seconds: 3),
                           ),
-                          child: Row(
+                        );
+                      }
+                      return;
+                    }
+
+                    if (!mounted) return;
+                    _controller.text = venue.name;
+
+                    // Add to search history
+                    await _addToHistory(venue.name);
+
+                    widget.onVenueSelected(venue);
+
+                    // Unfocus to close keyboard
+                    _focusNode.unfocus();
+                  },
+                  optionsViewBuilder: (BuildContext context,
+                      AutocompleteOnSelected<Venue> onSelected,
+                      Iterable<Venue> options) {
+                    final optionsList = options.toList();
+                    final query = _controller.text.trim();
+                    final isEmpty = query.isEmpty;
+                    final showHistory = isEmpty || query.length == 1;
+                    final filteredHistory = showHistory && query.length == 1
+                        ? _searchHistory
+                            .where((item) => item
+                                .toLowerCase()
+                                .startsWith(query.toLowerCase()))
+                            .take(5)
+                            .toList()
+                        : (isEmpty
+                            ? _searchHistory.take(5).toList()
+                            : <String>[]);
+
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4.0,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: constraints.maxWidth,
+                          constraints: const BoxConstraints(maxHeight: 400),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.history,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'היסטוריית חיפושים',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const Spacer(),
-                              if (_searchHistory.isNotEmpty)
-                                TextButton(
-                                  onPressed: _clearHistory,
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
+                              // Search history section
+                              if (filteredHistory.isNotEmpty) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
                                   ),
-                                  child: const Text(
-                                    'נקה הכל',
-                                    style: TextStyle(fontSize: 11),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey[300]!,
+                                        width: 1,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: filteredHistory.length,
-                          itemBuilder: (context, index) {
-                            final historyItem = filteredHistory[index];
-                            return ListTile(
-                              dense: true,
-                              leading: Icon(
-                                Icons.history,
-                                size: 18,
-                                color: Colors.grey[600],
-                              ),
-                              title: Text(
-                                historyItem,
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.close, size: 16),
-                                onPressed: () =>
-                                    _removeFromHistory(historyItem),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                              onTap: () {
-                                _controller.text = historyItem;
-                                _controller.selection =
-                                    TextSelection.fromPosition(
-                                  TextPosition(offset: historyItem.length),
-                                );
-                                // Trigger search by moving cursor
-                                _focusNode.requestFocus();
-                              },
-                            );
-                          },
-                        ),
-                        if (optionsList.isNotEmpty || _nearbyVenues.isNotEmpty)
-                          Container(
-                            height: 1,
-                            color: Colors.grey[300],
-                          ),
-                      ],
-                      // Filter chips (only show when there are results)
-                      if (optionsList.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Colors.grey[300]!,
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Text(
-                                'סינון:',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
                                   child: Row(
                                     children: [
-                                      _buildFilterChip(
-                                        'הכל',
-                                        VenueFilterType.all,
+                                      Icon(
+                                        Icons.history,
+                                        size: 16,
+                                        color: Colors.grey[600],
                                       ),
-                                      const SizedBox(width: 4),
-                                      _buildFilterChip(
-                                        'ציבורי',
-                                        VenueFilterType.public,
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'היסטוריית חיפושים',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      _buildFilterChip(
-                                        'פרטי',
-                                        VenueFilterType.private,
+                                      const Spacer(),
+                                      if (_searchHistory.isNotEmpty)
+                                        TextButton(
+                                          onPressed: _clearHistory,
+                                          style: TextButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                          child: const Text(
+                                            'נקה הכל',
+                                            style: TextStyle(fontSize: 11),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filteredHistory.length,
+                                  itemBuilder: (context, index) {
+                                    final historyItem = filteredHistory[index];
+                                    return ListTile(
+                                      dense: true,
+                                      leading: Icon(
+                                        Icons.history,
+                                        size: 18,
+                                        color: Colors.grey[600],
+                                      ),
+                                      title: Text(
+                                        historyItem,
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                      trailing: IconButton(
+                                        icon: const Icon(Icons.close, size: 16),
+                                        onPressed: () =>
+                                            _removeFromHistory(historyItem),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                      onTap: () {
+                                        _controller.text = historyItem;
+                                        _controller.selection =
+                                            TextSelection.fromPosition(
+                                          TextPosition(
+                                              offset: historyItem.length),
+                                        );
+                                        // Trigger search by moving cursor
+                                        _focusNode.requestFocus();
+                                      },
+                                    );
+                                  },
+                                ),
+                                if (optionsList.isNotEmpty ||
+                                    _nearbyVenues.isNotEmpty)
+                                  Container(
+                                    height: 1,
+                                    color: Colors.grey[300],
+                                  ),
+                              ],
+                              // Filter chips (only show when there are results)
+                              if (optionsList.isNotEmpty) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey[300]!,
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Text(
+                                        'סינון:',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(
+                                            children: [
+                                              _buildFilterChip(
+                                                'הכל',
+                                                VenueFilterType.all,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              _buildFilterChip(
+                                                'ציבורי',
+                                                VenueFilterType.public,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              _buildFilterChip(
+                                                'פרטי',
+                                                VenueFilterType.private,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      // Results list or nearby venues
-                      Flexible(
-                        child: optionsList.isEmpty
-                            ? (isEmpty && _nearbyVenues.isNotEmpty
-                                ? ListView.builder(
-                                    shrinkWrap: true,
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 8),
-                                    itemCount: _nearbyVenues.length,
-                                    itemBuilder: (context, index) {
-                                      final venue = _nearbyVenues[index];
-                                      final distance =
-                                          _calculateDistance(venue);
-                                      final isVerified =
-                                          venue.venueId.isNotEmpty;
-                                      final isPopular = venue.hubCount > 0;
+                              ],
+                              // Results list or nearby venues
+                              Flexible(
+                                child: optionsList.isEmpty
+                                    ? (isEmpty && _nearbyVenues.isNotEmpty
+                                        ? ListView.builder(
+                                            shrinkWrap: true,
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 8),
+                                            itemCount: _nearbyVenues.length,
+                                            itemBuilder: (context, index) {
+                                              final venue =
+                                                  _nearbyVenues[index];
+                                              final distance =
+                                                  _calculateDistance(venue);
+                                              final isVerified =
+                                                  venue.venueId.isNotEmpty;
+                                              final isPopular =
+                                                  venue.hubCount > 0;
 
-                                      return ListTile(
-                                        leading: CircleAvatar(
-                                          backgroundColor: isVerified
-                                              ? Colors.blue.withOpacity(0.1)
-                                              : Colors.grey.withOpacity(0.1),
-                                          child: Icon(
-                                            isVerified
-                                                ? Icons.verified
-                                                : Icons.map,
-                                            color: isVerified
-                                                ? Colors.blue
-                                                : Colors.grey,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        title: Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                venue.name,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w500,
+                                              return ListTile(
+                                                leading: CircleAvatar(
+                                                  backgroundColor: isVerified
+                                                      ? Colors.blue
+                                                          .withOpacity(0.1)
+                                                      : Colors.grey
+                                                          .withOpacity(0.1),
+                                                  child: Icon(
+                                                    isVerified
+                                                        ? Icons.verified
+                                                        : Icons.map,
+                                                    color: isVerified
+                                                        ? Colors.blue
+                                                        : Colors.grey,
+                                                    size: 20,
+                                                  ),
                                                 ),
+                                                title: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        venue.name,
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (isPopular)
+                                                      Container(
+                                                        margin: const EdgeInsets
+                                                            .only(right: 4),
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors.orange
+                                                              .withOpacity(0.2),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(8),
+                                                        ),
+                                                        child: Text(
+                                                          '${venue.hubCount}',
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color:
+                                                                Colors.orange,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                                subtitle: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    if (venue.address != null)
+                                                      Text(
+                                                        venue.address!,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:
+                                                              Colors.grey[600],
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    const SizedBox(height: 4),
+                                                    Row(
+                                                      children: [
+                                                        if (distance !=
+                                                            null) ...[
+                                                          Icon(
+                                                            Icons.location_on,
+                                                            size: 12,
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 2),
+                                                          Text(
+                                                            _formatDistance(
+                                                                distance),
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              color: Colors
+                                                                  .grey[600],
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 8),
+                                                        ],
+                                                        if (!venue.isPublic)
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                              horizontal: 4,
+                                                              vertical: 2,
+                                                            ),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: Colors
+                                                                  .orange
+                                                                  .withOpacity(
+                                                                      0.2),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          4),
+                                                            ),
+                                                            child: const Text(
+                                                              'פרטי',
+                                                              style: TextStyle(
+                                                                fontSize: 9,
+                                                                color: Colors
+                                                                    .orange,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                                onTap: () => onSelected(venue),
+                                              );
+                                            },
+                                          )
+                                        : Padding(
+                                            padding: const EdgeInsets.all(16),
+                                            child: Center(
+                                              child: isEmpty && _isLoadingNearby
+                                                  ? const CircularProgressIndicator()
+                                                  : Text(
+                                                      isEmpty
+                                                          ? 'טוען מגרשים קרובים...'
+                                                          : 'לא נמצאו תוצאות',
+                                                      style: TextStyle(
+                                                        color: Colors.grey[600],
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                            ),
+                                          ))
+                                    : ListView.builder(
+                                        shrinkWrap: true,
+                                        padding: EdgeInsets.zero,
+                                        itemCount: optionsList.length,
+                                        itemBuilder:
+                                            (BuildContext context, int index) {
+                                          final Venue option =
+                                              optionsList[index];
+                                          final distance =
+                                              _calculateDistance(option);
+                                          final isVerified =
+                                              option.venueId.isNotEmpty;
+                                          final isPopular = option.hubCount > 0;
+
+                                          return ListTile(
+                                            leading: CircleAvatar(
+                                              backgroundColor: isVerified
+                                                  ? Colors.blue.withOpacity(0.1)
+                                                  : Colors.grey
+                                                      .withOpacity(0.1),
+                                              child: Icon(
+                                                isVerified
+                                                    ? Icons.verified
+                                                    : Icons.map,
+                                                color: isVerified
+                                                    ? Colors.blue
+                                                    : Colors.grey,
+                                                size: 20,
                                               ),
                                             ),
-                                            if (isPopular)
-                                              Container(
-                                                margin: const EdgeInsets.only(
-                                                    right: 4),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 2,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.orange
-                                                      .withOpacity(0.2),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  '${venue.hubCount}',
-                                                  style: const TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.orange,
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            if (venue.address != null)
-                                              Text(
-                                                venue.address!,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey[600],
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            const SizedBox(height: 4),
-                                            Row(
+                                            title: Row(
                                               children: [
-                                                if (distance != null) ...[
-                                                  Icon(
-                                                    Icons.location_on,
-                                                    size: 12,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  const SizedBox(width: 2),
-                                                  Text(
-                                                    _formatDistance(distance),
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: Colors.grey[600],
+                                                Expanded(
+                                                  child: Text(
+                                                    option.name,
+                                                    style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.w500,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 8),
-                                                ],
-                                                if (!venue.isPublic)
+                                                ),
+                                                if (isPopular)
                                                   Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            right: 4),
                                                     padding: const EdgeInsets
                                                         .symmetric(
-                                                      horizontal: 4,
+                                                      horizontal: 6,
                                                       vertical: 2,
                                                     ),
                                                     decoration: BoxDecoration(
@@ -702,193 +842,137 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                                                           .withOpacity(0.2),
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                              4),
+                                                              8),
                                                     ),
-                                                    child: const Text(
-                                                      'פרטי',
-                                                      style: TextStyle(
-                                                        fontSize: 9,
-                                                        color: Colors.orange,
+                                                    child: Text(
+                                                      '${option.hubCount}',
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
                                                         fontWeight:
                                                             FontWeight.bold,
+                                                        color: Colors.orange,
                                                       ),
                                                     ),
                                                   ),
                                               ],
                                             ),
-                                          ],
-                                        ),
-                                        onTap: () => onSelected(venue),
-                                      );
-                                    },
-                                  )
-                                : Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Center(
-                                      child: isEmpty && _isLoadingNearby
-                                          ? const CircularProgressIndicator()
-                                          : Text(
-                                              isEmpty
-                                                  ? 'טוען מגרשים קרובים...'
-                                                  : 'לא נמצאו תוצאות',
-                                              style: TextStyle(
-                                                color: Colors.grey[600],
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                    ),
-                                  ))
-                            : ListView.builder(
-                                shrinkWrap: true,
-                                padding: EdgeInsets.zero,
-                                itemCount: optionsList.length,
-                                itemBuilder: (BuildContext context, int index) {
-                                  final Venue option = optionsList[index];
-                                  final distance = _calculateDistance(option);
-                                  final isVerified = option.venueId.isNotEmpty;
-                                  final isPopular = option.hubCount > 0;
-
-                                  return ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: isVerified
-                                          ? Colors.blue.withOpacity(0.1)
-                                          : Colors.grey.withOpacity(0.1),
-                                      child: Icon(
-                                        isVerified ? Icons.verified : Icons.map,
-                                        color: isVerified
-                                            ? Colors.blue
-                                            : Colors.grey,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    title: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            option.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        if (isPopular)
-                                          Container(
-                                            margin:
-                                                const EdgeInsets.only(right: 4),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.orange
-                                                  .withOpacity(0.2),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              '${option.hubCount}',
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.orange,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (option.address != null)
-                                          Text(
-                                            option.address!,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            if (distance != null) ...[
-                                              Icon(
-                                                Icons.location_on,
-                                                size: 12,
-                                                color: Colors.grey[600],
-                                              ),
-                                              const SizedBox(width: 2),
-                                              Text(
-                                                _formatDistance(distance),
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey[600],
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                            ],
-                                            if (!option.isPublic)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 4,
-                                                  vertical: 2,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.orange
-                                                      .withOpacity(0.2),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: const Text(
-                                                  'פרטי',
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    color: Colors.orange,
-                                                    fontWeight: FontWeight.bold,
+                                            subtitle: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                if (option.address != null)
+                                                  Text(
+                                                    option.address!,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    if (distance != null) ...[
+                                                      Icon(
+                                                        Icons.location_on,
+                                                        size: 12,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                      const SizedBox(width: 2),
+                                                      Text(
+                                                        _formatDistance(
+                                                            distance),
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          color:
+                                                              Colors.grey[600],
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                    ],
+                                                    if (!option.isPublic)
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 4,
+                                                          vertical: 2,
+                                                        ),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors.orange
+                                                              .withOpacity(0.2),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(4),
+                                                        ),
+                                                        child: const Text(
+                                                          'פרטי',
+                                                          style: TextStyle(
+                                                            fontSize: 9,
+                                                            color:
+                                                                Colors.orange,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
                                                 ),
-                                              ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    onTap: () => onSelected(option),
-                                  );
-                                },
+                                              ],
+                                            ),
+                                            onTap: () => onSelected(option),
+                                          );
+                                        },
+                                      ),
                               ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
+                    );
+                  },
+                  fieldViewBuilder: (BuildContext context,
+                      TextEditingController textEditingController,
+                      FocusNode focusNode,
+                      VoidCallback onFieldSubmitted) {
+                    return TextFormField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        labelText: widget.label,
+                        hintText: widget.hint,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.map),
+                          tooltip: 'בחר מהמפה',
+                          onPressed: _selectFromMap,
+                        ),
+                        helperText: 'הקלד שם/כתובת או לחץ על המפה לבחירה',
+                      ),
+                      onFieldSubmitted: (String value) {
+                        onFieldSubmitted();
+                      },
+                    );
+                  },
+                ),
+                if (field.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0, right: 12.0),
+                    child: Text(
+                      field.errorText!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
-          fieldViewBuilder: (BuildContext context,
-              TextEditingController textEditingController,
-              FocusNode focusNode,
-              VoidCallback onFieldSubmitted) {
-            return TextFormField(
-              controller: textEditingController,
-              focusNode: focusNode,
-              decoration: InputDecoration(
-                labelText: widget.label,
-                hintText: widget.hint,
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.map),
-                  tooltip: 'בחר מהמפה',
-                  onPressed: _selectFromMap,
-                ),
-                helperText: 'הקלד שם/כתובת או לחץ על המפה לבחירה',
-              ),
-              onFieldSubmitted: (String value) {
-                onFieldSubmitted();
-              },
+              ],
             );
           },
         );

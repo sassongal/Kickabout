@@ -29,17 +29,17 @@ exports.scheduledGameAutoClose = onSchedule(
   async (event) => {
     info('Running scheduledGameAutoClose...');
     const now = new Date();
-    
+
     try {
       // ========================================
-      // RULE 1: Auto-close PENDING games (3h after scheduled)
+      // RULE 1: Auto-close PENDING games (24h after scheduled)
       // ========================================
-      const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
-      
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
       const pendingGamesSnapshot = await db
         .collection('games')
-        .where('status', '==', 'teamSelection')
-        .where('gameDate', '<=', threeHoursAgo)
+        .where('status', 'in', ['scheduled', 'recruiting', 'fullyBooked', 'teamSelection'])
+        .where('gameDate', '<=', twentyFourHoursAgo)
         .limit(50)
         .get();
 
@@ -48,17 +48,17 @@ exports.scheduledGameAutoClose = onSchedule(
       const pendingPromises = pendingGamesSnapshot.docs.map(async (gameDoc) => {
         const gameId = gameDoc.id;
         const game = gameDoc.data();
-        
+
         try {
           // Update game status to archivedNotPlayed
           await gameDoc.ref.update({
             status: 'archivedNotPlayed',
             updatedAt: FieldValue.serverTimestamp(),
             autoClosedAt: FieldValue.serverTimestamp(),
-            autoCloseReason: 'not_started_within_3h',
+            autoCloseReason: 'not_started_within_24h',
           });
 
-          info(`Auto-closed pending game ${gameId} (not started within 3h)`);
+          info(`Auto-closed pending game ${gameId} (not started within 24h)`);
 
           // Notify organizer
           if (game.createdBy) {
@@ -66,7 +66,7 @@ exports.scheduledGameAutoClose = onSchedule(
               game.createdBy,
               gameId,
               game.hubId,
-              'המשחק שלך בוטל אוטומטית מכיוון שלא התחיל תוך 3 שעות',
+              'המשחק שלך בוטל אוטומטית מכיוון שלא התחיל תוך 24 שעות',
             );
           }
         } catch (err) {
@@ -80,7 +80,7 @@ exports.scheduledGameAutoClose = onSchedule(
       // RULE 2: Auto-close ACTIVE games (5h after started)
       // ========================================
       const fiveHoursAgo = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-      
+
       const activeGamesSnapshot = await db
         .collection('games')
         .where('status', '==', 'inProgress')
@@ -93,7 +93,7 @@ exports.scheduledGameAutoClose = onSchedule(
       const activePromises = activeGamesSnapshot.docs.map(async (gameDoc) => {
         const gameId = gameDoc.id;
         const game = gameDoc.data();
-        
+
         try {
           // Update game status to completed
           await gameDoc.ref.update({

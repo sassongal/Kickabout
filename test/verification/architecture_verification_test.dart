@@ -1,49 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/targeting_criteria.dart';
-import 'package:kattrick/services/game_management_service.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:kattrick/data/games_repository.dart';
-import 'package:kattrick/data/hubs_repository.dart';
-import 'package:kattrick/data/signups_repository.dart';
-import 'package:kattrick/data/notifications_repository.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-// Mock classes
-class MockGamesRepository extends Mock implements GamesRepository {}
-
-class MockHubsRepository extends Mock implements HubsRepository {}
-
-class MockSignupsRepository extends Mock implements SignupsRepository {}
-
-class MockNotificationsRepository extends Mock
-    implements NotificationsRepository {}
-
-class MockFirestore extends Mock implements FirebaseFirestore {}
 
 void main() {
   group('Architecture Verification', () {
-    late GameManagementService gameService;
-    late MockGamesRepository mockGamesRepo;
-    late MockHubsRepository mockHubsRepo;
-    late MockSignupsRepository mockSignupsRepo;
-    late MockNotificationsRepository mockNotificationsRepo;
-
-    setUp(() {
-      mockGamesRepo = MockGamesRepository();
-      mockHubsRepo = MockHubsRepository();
-      mockSignupsRepo = MockSignupsRepository();
-      mockNotificationsRepo = MockNotificationsRepository();
-
-      gameService = GameManagementService(
-        gamesRepo: mockGamesRepo,
-        hubsRepo: mockHubsRepo,
-        signupsRepo: mockSignupsRepo,
-        notificationsRepo: mockNotificationsRepo,
-        firestore: MockFirestore(),
-      );
-    });
-
     test('Public Game Creation (hubId = null)', () {
       final publicGame = Game(
         gameId: 'public_1',

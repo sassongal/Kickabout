@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:sliver_tools/sliver_tools.dart';
+
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
 import 'package:kattrick/widgets/futuristic/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+
+import 'package:kattrick/widgets/game/my_next_match_card.dart';
+import 'package:kattrick/widgets/game/game_feed_card.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Selected hub provider (for filtering games)
 final selectedHubProvider = StateProvider<String?>((ref) => null);
 
-/// Game list screen - filter by selected hub, order by gameDate desc
+/// Game list screen - The Game Board
 class GameListScreen extends ConsumerStatefulWidget {
   const GameListScreen({super.key});
 
@@ -22,31 +27,69 @@ class GameListScreen extends ConsumerStatefulWidget {
 }
 
 class _GameListScreenState extends ConsumerState<GameListScreen> {
+  GeoPoint? _userLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserLocation();
+  }
+
+  Future<void> _getUserLocation() async {
+    try {
+      // Check permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      // Get current position
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+
+      setState(() {
+        _userLocation = GeoPoint(position.latitude, position.longitude);
+      });
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final selectedHubId = ref.watch(selectedHubProvider);
     final gamesRepo = ref.watch(gamesRepositoryProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
 
-    // Get user's hubs for filter
-    final hubsStream = currentUserId != null
-        ? hubsRepo.watchHubsByMember(currentUserId)
-        : Stream.value(<Hub>[]);
+    if (currentUserId == null) return const SizedBox.shrink();
 
-    // Get games stream - show completed games from all hubs when no hub selected
-    final gamesStream = selectedHubId != null
-        ? gamesRepo.watchGamesByHub(selectedHubId)
-        : gamesRepo.watchCompletedGames(limit: 100);
+    // Stream 1: My Next Match
+    final nextMatchStream = gamesRepo.watchNextMatch(currentUserId);
+
+    // Stream 2: Discovery Feed with geo-location
+    final discoveryStream = gamesRepo.watchDiscoveryFeed(
+      userLocation: _userLocation,
+      radiusKm: 10.0,
+    );
+
+    // User Hubs (for determining isMyHub/isLocked)
+    final userHubsStream = hubsRepo.watchHubsByMember(currentUserId);
 
     return AppScaffold(
-      title: 'משחקים',
+      title: 'לוח משחקים',
       showBottomNav: true,
       actions: [
         IconButton(
           icon: const Icon(Icons.calendar_today),
-          onPressed: () => context.push(
-              '/calendar${selectedHubId != null ? '?hubId=$selectedHubId' : ''}'),
+          onPressed: () => context.push('/calendar'),
           tooltip: 'לוח שנה',
         ),
       ],
@@ -55,379 +98,307 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
         icon: const Icon(Icons.add),
         label: const Text('צור משחק'),
       ),
-      body: Column(
-        children: [
-          // Hub filter
-          StreamBuilder<List<Hub>>(
-            stream: hubsStream,
-            builder: (context, hubsSnapshot) {
-              if (hubsSnapshot.connectionState == ConnectionState.waiting) {
-                return const LinearProgressIndicator();
-              }
+      body: StreamBuilder<List<Hub>>(
+        stream: userHubsStream,
+        builder: (context, hubsSnapshot) {
+          final userHubIds =
+              hubsSnapshot.data?.map((h) => h.hubId).toSet() ?? {};
 
-              final hubs = hubsSnapshot.data ?? [];
-
-              if (hubs.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  child: FuturisticEmptyState(
-                    icon: Icons.group_outlined,
-                    title: 'אין הובס',
-                    message: 'צור הוב כדי ליצור משחקים',
-                    action: ElevatedButton.icon(
-                      onPressed: () => context.push('/hubs/create'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('צור הוב'),
-                    ),
-                  ),
-                );
-              }
-
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: DropdownButtonFormField<String>(
-                  initialValue: selectedHubId,
-                  decoration: const InputDecoration(
-                    labelText: 'בחר הוב',
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text('כל ההובס'),
-                    ),
-                    ...hubs.map((hub) => DropdownMenuItem<String>(
-                          value: hub.hubId,
-                          child: Text(hub.name),
-                        )),
-                  ],
-                  onChanged: (value) {
-                    ref.read(selectedHubProvider.notifier).state = value;
-                  },
-                ),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              // Refresh logic if needed (streams auto-update usually)
+              setState(() {});
             },
-          ),
+            child: CustomScrollView(
+              slivers: [
+                // 1. My Next Match Section
+                SliverToBoxAdapter(
+                  child: StreamBuilder<Game?>(
+                    stream: nextMatchStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                              child: Text(
+                                'המשחק הבא',
+                                style: GoogleFonts.rubik(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            MyNextMatchCard(game: snapshot.data!),
+                            const SizedBox(height: 16),
+                          ],
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
 
-          // Games list
-          Expanded(
-            child: StreamBuilder<List<Game>>(
-              stream: gamesStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                    itemCount: 5,
-                    itemBuilder: (context, index) => const SkeletonGameCard(),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return FuturisticEmptyState(
-                    icon: Icons.error_outline,
-                    title: 'שגיאה בטעינת משחקים',
-                    message: ErrorHandlerService().handleException(
-                      snapshot.error,
-                      context: 'Game list screen',
+                // 2. Discovery Feed Header
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          'משחקים בסביבה',
+                          style: GoogleFonts.rubik(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        // TODO: Add region filter button here
+                      ],
                     ),
-                    action: ElevatedButton.icon(
-                      onPressed: () {
-                        // Retry by rebuilding - trigger rebuild via key change
-                        // For ConsumerWidget, we can't use setState, so we'll just show the error
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('נסה שוב'),
-                    ),
-                  );
-                }
+                  ),
+                ),
 
-                final games = snapshot.data ?? [];
+                // 3. Discovery Feed List
+                StreamBuilder<List<Game>>(
+                  stream: discoveryStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => const SkeletonGameCard(),
+                          childCount: 3,
+                        ),
+                      );
+                    }
 
-                if (games.isEmpty) {
-                  return FuturisticEmptyState(
-                    icon: Icons.sports_soccer_outlined,
-                    title: selectedHubId == null
-                        ? 'אין משחקים'
-                        : 'אין משחקים בהוב זה',
-                    message: 'צור משחק חדש כדי להתחיל',
-                    action: ElevatedButton.icon(
-                      onPressed: () => context.push('/games/create'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('צור משחק'),
-                    ),
-                  );
-                }
+                    if (snapshot.hasError) {
+                      return SliverToBoxAdapter(
+                        child: FuturisticEmptyState(
+                          icon: Icons.error_outline,
+                          title: 'שגיאה בטעינת משחקים',
+                          message: 'אנא נסה שוב מאוחר יותר',
+                        ),
+                      );
+                    }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                  itemCount: games.length,
-                  itemBuilder: (context, index) {
-                    final game = games[index];
-                    final dateFormat = DateFormat('dd/MM/yyyy', 'he');
+                    final games = snapshot.data ?? [];
 
-                    return _GameCard(
-                      game: game,
-                      dateFormat: dateFormat,
-                      onTap: () => context.push('/games/${game.gameId}'),
+                    if (games.isEmpty) {
+                      return SliverToBoxAdapter(
+                        child: FuturisticEmptyState(
+                          icon: Icons.sports_soccer_outlined,
+                          title: 'אין משחקים בסביבה',
+                          message: 'היה הראשון ליצור משחק!',
+                          action: ElevatedButton.icon(
+                            onPressed: () => context.push('/games/create'),
+                            icon: const Icon(Icons.add),
+                            label: const Text('צור משחק'),
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Group games by date
+                    final groupedGames = _groupGamesByDate(games);
+
+                    // Build sliver list with sticky headers
+                    return MultiSliver(
+                      children: groupedGames.entries.map((entry) {
+                        final dateLabel = entry.key;
+                        final gamesForDate = entry.value;
+
+                        return MultiSliver(
+                          children: [
+                            // Sticky Date Header
+                            SliverPersistentHeader(
+                              pinned: true,
+                              delegate: _DateHeaderDelegate(
+                                minHeight: 40,
+                                maxHeight: 40,
+                                child: Container(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surface
+                                      .withValues(alpha: 0.95),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _getIconForDate(dateLabel),
+                                        size: 20,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        dateLabel,
+                                        style: GoogleFonts.rubik(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        '${gamesForDate.length} משחקים',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Games for this date
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final game = gamesForDate[index];
+
+                                  // Determine state
+                                  final isPublic = game.hubId == null;
+                                  final isMyHub = game.hubId != null &&
+                                      userHubIds.contains(game.hubId);
+                                  final isLocked =
+                                      game.hubId != null && !isMyHub;
+
+                                  // Calculate distance if location available
+                                  double? distance;
+                                  if (_userLocation != null &&
+                                      game.locationPoint != null) {
+                                    final distanceMeters =
+                                        Geolocator.distanceBetween(
+                                      _userLocation!.latitude,
+                                      _userLocation!.longitude,
+                                      game.locationPoint!.latitude,
+                                      game.locationPoint!.longitude,
+                                    );
+                                    distance =
+                                        distanceMeters / 1000; // Convert to km
+                                  }
+
+                                  return GameFeedCard(
+                                    game: game,
+                                    isLocked: isLocked,
+                                    isMyHub: isMyHub,
+                                    isPublic: isPublic,
+                                    distanceKm: distance,
+                                  );
+                                },
+                                childCount: gamesForDate.length,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
                     );
                   },
-                );
-              },
+                ),
+
+                // Bottom padding for FAB
+                const SliverToBoxAdapter(child: SizedBox(height: 80)),
+              ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
+
+  /// Group games by date labels (Today, Tomorrow, This Week, Later)
+  Map<String, List<Game>> _groupGamesByDate(List<Game> games) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final weekEnd = today.add(const Duration(days: 7));
+
+    final Map<String, List<Game>> grouped = {
+      'היום': [],
+      'מחר': [],
+      'השבוע': [],
+      'מאוחר יותר': [],
+    };
+
+    for (final game in games) {
+      final gameDate = DateTime(
+        game.gameDate.year,
+        game.gameDate.month,
+        game.gameDate.day,
+      );
+
+      if (gameDate == today) {
+        grouped['היום']!.add(game);
+      } else if (gameDate == tomorrow) {
+        grouped['מחר']!.add(game);
+      } else if (gameDate.isBefore(weekEnd)) {
+        grouped['השבוע']!.add(game);
+      } else {
+        grouped['מאוחר יותר']!.add(game);
+      }
+    }
+
+    // Remove empty groups
+    grouped.removeWhere((key, value) => value.isEmpty);
+
+    return grouped;
+  }
+
+  /// Get icon for date label
+  IconData _getIconForDate(String dateLabel) {
+    switch (dateLabel) {
+      case 'היום':
+        return Icons.today;
+      case 'מחר':
+        return Icons.wb_sunny_outlined;
+      case 'השבוע':
+        return Icons.date_range;
+      case 'מאוחר יותר':
+        return Icons.event;
+      default:
+        return Icons.calendar_today;
+    }
+  }
 }
 
-/// Game card widget - displays game as bulletin board item
-class _GameCard extends ConsumerWidget {
-  final Game game;
-  final DateFormat dateFormat;
-  final VoidCallback onTap;
+/// Delegate for sticky date headers
+class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
 
-  const _GameCard({
-    required this.game,
-    required this.dateFormat,
-    required this.onTap,
+  _DateHeaderDelegate({
+    required this.minHeight,
+    required this.maxHeight,
+    required this.child,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hubsRepo = ref.read(hubsRepositoryProvider);
-    final usersRepo = ref.read(usersRepositoryProvider);
-    final eventsRepo = ref.read(hubEventsRepositoryProvider);
-    final venuesRepo = ref.read(venuesRepositoryProvider);
+  double get minExtent => minHeight;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Score row (prominent)
-              if (game.legacyTeamAScore != null &&
-                  game.legacyTeamBScore != null)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${game.legacyTeamAScore}',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        '-',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ),
-                    Text(
-                      '${game.legacyTeamBScore}',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                    ),
-                  ],
-                ),
-              if (game.legacyTeamAScore != null &&
-                  game.legacyTeamBScore != null)
-                const SizedBox(height: 12),
+  @override
+  double get maxExtent => maxHeight;
 
-              // Date
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    dateFormat.format(game.gameDate),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
 
-              // Location (from event, venue, or hub)
-              FutureBuilder<Hub?>(
-                future: game.hubId != null
-                    ? hubsRepo.getHub(game.hubId!)
-                    : Future.value(null),
-                builder: (context, hubSnapshot) {
-                  return FutureBuilder<List<HubEvent>>(
-                    future: game.eventId != null && game.hubId != null
-                        ? eventsRepo.getHubEvents(game.hubId!)
-                        : Future.value([]),
-                    builder: (context, eventSnapshot) {
-                      return FutureBuilder<Venue?>(
-                        future: game.venueId != null
-                            ? venuesRepo.getVenue(game.venueId!)
-                            : Future.value(null),
-                        builder: (context, venueSnapshot) {
-                          final hub = hubSnapshot.data;
-                          final events = eventSnapshot.data ?? [];
-                          HubEvent? event;
-                          if (game.eventId != null) {
-                            try {
-                              event = events.firstWhere(
-                                (e) => e.eventId == game.eventId,
-                              );
-                            } catch (e) {
-                              event = events.isNotEmpty ? events.first : null;
-                            }
-                          }
-                          final venue = venueSnapshot.data;
-
-                          // Get location: from event, or venue name, or game location, or hub name
-                          String? location;
-                          if (event?.location != null &&
-                              event!.location!.isNotEmpty) {
-                            location = event.location;
-                          } else if (venue != null) {
-                            location = venue.name;
-                          } else if (game.location != null &&
-                              game.location!.isNotEmpty) {
-                            location = game.location;
-                          } else if (hub?.name != null) {
-                            location = hub!.name;
-                          }
-
-                          if (location != null && location.isNotEmpty) {
-                            return Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: 16,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        location,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                              ],
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-
-              // Hub name
-              FutureBuilder<Hub?>(
-                future: game.hubId != null
-                    ? hubsRepo.getHub(game.hubId!)
-                    : Future.value(null),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data != null) {
-                    return Row(
-                      children: [
-                        Icon(
-                          Icons.group,
-                          size: 16,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          snapshot.data!.name,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                        ),
-                      ],
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Created by (who logged the game)
-              FutureBuilder<User?>(
-                future: usersRepo.getUser(game.createdBy),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data != null) {
-                    return Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          size: 16,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'תועד על ידי: ${snapshot.data!.name}',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
-                        ),
-                      ],
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  @override
+  bool shouldRebuild(_DateHeaderDelegate oldDelegate) {
+    return maxHeight != oldDelegate.maxHeight ||
+        minHeight != oldDelegate.minHeight ||
+        child != oldDelegate.child;
   }
 }

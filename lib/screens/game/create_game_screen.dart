@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/services/analytics_service.dart';
@@ -901,11 +901,20 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       const SizedBox(height: 8),
                       // Smart Venue Search Field
                       SmartVenueSearchField(
-                        label: 'מיקום (אופציונלי)',
+                        label: _isPublicGame
+                            ? 'מיקום (חובה)'
+                            : 'מיקום (אופציונלי)',
                         hint: 'חפש מגרש או כתובת...',
                         initialValue: _locationController.text,
                         hubId:
                             _selectedHubId, // Pass selected hub ID if available
+                        validator: (value) {
+                          if (_isPublicGame &&
+                              (value == null || value.isEmpty)) {
+                            return 'חובה לבחור מיקום למשחק ציבורי';
+                          }
+                          return null;
+                        },
                         onVenueSelected: (venue) {
                           setState(() {
                             _selectedLocation = venue.location;

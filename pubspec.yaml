@@ -63,6 +63,7 @@ dependencies:
   flutter_dotenv: ^6.0.0
   flutter_speed_dial: ^7.0.0
   uuid: ^4.4.2
+  sliver_tools: ^0.2.12
 
 dev_dependencies:
   flutter_test:

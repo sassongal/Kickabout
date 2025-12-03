@@ -21,7 +21,7 @@ exports.sendGameReminder = onSchedule(
         .collection('games')
         .where('gameDate', '>=', oneHourFromNow)
         .where('gameDate', '<', twoHoursFromNow)
-        .where('status', 'in', ['teamSelection', 'teamsFormed']) // Games that haven't started yet
+        .where('status', 'in', ['scheduled', 'recruiting', 'fullyBooked', 'teamSelection', 'teamsFormed']) // Include new statuses
         .get();
 
       if (gamesSnapshot.empty) {
@@ -35,6 +35,12 @@ exports.sendGameReminder = onSchedule(
         async (gameDoc) => {
           const game = gameDoc.data();
           const gameId = gameDoc.id;
+
+          // Null-safe: Skip hub fetch for public games
+          if (!game.hubId) {
+            info(`Skipping reminder for public game ${gameId} (no hub)`);
+            return;
+          }
 
           const hubSnapshot = await db
             .collection('hubs')
@@ -120,9 +126,16 @@ exports.onGameCreated = onDocumentCreated('games/{gameId}', async (event) => {
   const game = event.data.data();
   const gameId = event.params.gameId;
 
-  info(`New game created: ${gameId} in hub: ${game.hubId}`);
+  info(`New game created: ${gameId}${game.hubId ? ` in hub: ${game.hubId}` : ' (public game)'}`);
 
   try {
+    // Null-safe: Only process hub-specific logic if hubId exists
+    if (!game.hubId) {
+      info(`Public game ${gameId} created. Skipping hub-specific operations.`);
+      // TODO: Add public game feed post logic here if needed
+      return;
+    }
+
     // Fetch hub and user data in parallel for denormalization
     const [hubSnap, userSnap] = await Promise.all([
       db.collection('hubs').doc(game.hubId).get(),

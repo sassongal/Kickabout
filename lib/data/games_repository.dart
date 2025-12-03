@@ -14,6 +14,8 @@ import 'package:kattrick/data/hubs_repository.dart';
 import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/data/signups_repository.dart';
 import 'package:kattrick/data/chat_repository.dart';
+import 'package:kattrick/utils/geohash_utils.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Repository for Game operations
 class GamesRepository {
@@ -54,6 +56,116 @@ class GamesRepository {
 
     return _firestore.doc(FirestorePaths.game(gameId)).snapshots().map((doc) =>
         doc.exists ? Game.fromJson({...doc.data()!, 'gameId': doc.id}) : null);
+  }
+
+  /// Stream user's next upcoming match
+  Stream<Game?> watchNextMatch(String userId) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value(null);
+    }
+
+    final now = DateTime.now();
+    return _firestore
+        .collection(FirestorePaths.games())
+        .where('confirmedPlayerIds', arrayContains: userId)
+        .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
+        .orderBy('gameDate')
+        .limit(1)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) return null;
+      final doc = snapshot.docs.first;
+      return Game.fromJson({...doc.data(), 'gameId': doc.id});
+    });
+  }
+
+  /// Stream discovery feed of games (public & hub games nearby)
+  Stream<List<Game>> watchDiscoveryFeed({
+    GeoPoint? userLocation,
+    double radiusKm = 10.0,
+    int limit = 20,
+  }) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
+    final now = DateTime.now();
+    Query query = _firestore
+        .collection(FirestorePaths.games())
+        .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
+        .where('status', whereNotIn: [
+      GameStatus.cancelled.toFirestore(),
+      GameStatus.archivedNotPlayed.toFirestore(),
+      GameStatus.draft.toFirestore(),
+    ]);
+
+    // If user location provided, filter by geohash proximity
+    if (userLocation != null) {
+      // Get geohash for center point
+      final geohash = GeohashUtils.encode(
+        userLocation.latitude,
+        userLocation.longitude,
+        precision: 5, // ~5km precision
+      );
+
+      // Query by geohash prefix for bounding box
+      // We'll fetch more results and filter by actual distance client-side
+      query = query
+          .where('geohash', isGreaterThanOrEqualTo: geohash)
+          .where('geohash', isLessThan: geohash + '~')
+          .orderBy('geohash')
+          .limit(limit * 3); // Fetch 3x for client-side filtering
+    } else {
+      // Fallback: no location filtering, just order by date
+      query = query.orderBy('gameDate').limit(limit);
+    }
+
+    return query.snapshots().map((snapshot) {
+      var games = snapshot.docs
+          .map((doc) => Game.fromJson(
+              {...doc.data() as Map<String, dynamic>, 'gameId': doc.id}))
+          .toList();
+
+      // Client-side distance filtering if location provided
+      if (userLocation != null) {
+        games = games.where((game) {
+          if (game.locationPoint == null) return false;
+
+          // Calculate distance using Geolocator
+          final distanceMeters = Geolocator.distanceBetween(
+            userLocation.latitude,
+            userLocation.longitude,
+            game.locationPoint!.latitude,
+            game.locationPoint!.longitude,
+          );
+          final distanceKm = distanceMeters / 1000;
+
+          return distanceKm <= radiusKm;
+        }).toList();
+
+        // Sort by distance (closest first)
+        games.sort((a, b) {
+          final distA = Geolocator.distanceBetween(
+            userLocation.latitude,
+            userLocation.longitude,
+            a.locationPoint!.latitude,
+            a.locationPoint!.longitude,
+          );
+          final distB = Geolocator.distanceBetween(
+            userLocation.latitude,
+            userLocation.longitude,
+            b.locationPoint!.latitude,
+            b.locationPoint!.longitude,
+          );
+          return distA.compareTo(distB);
+        });
+
+        // Limit to requested count
+        games = games.take(limit).toList();
+      }
+
+      return games;
+    });
   }
 
   /// Create game
