@@ -217,6 +217,13 @@ exports.onGameCompleted = onDocumentUpdated(
       return;
     }
 
+    // If coming from the new finalization flow, skip this function
+    // as processGameCompletion handles it.
+    if (beforeStatus === 'processing_completion') {
+      info(`Game ${gameId} was processed by new flow. Skipping onGameCompleted.`);
+      return;
+    }
+
     info(`Game ${gameId} completed. Calculating player statistics.`);
 
     try {
@@ -317,7 +324,28 @@ exports.onGameCompleted = onDocumentUpdated(
           }
         });
       } else {
-        info(`No events found for game ${gameId}. Using base statistics (goals/assists/saves = 0).`);
+        info(`No events found for game ${gameId}. Checking for simple mode stats on game document.`);
+        // Fallback for games logged without events (e.g., from finalizeGame)
+        const goalScorers = gameData.goalScorerIds || [];
+        goalScorers.forEach((playerId) => {
+          if (playerStats[playerId]) {
+            playerStats[playerId].goals += 1;
+          }
+        });
+
+        const assistProviders = gameData.assistPlayerIds || [];
+        assistProviders.forEach((playerId) => {
+          if (playerStats[playerId]) {
+            playerStats[playerId].assists += 1;
+          }
+        });
+
+        if (gameData.mvpPlayerId) {
+          const mvpPlayerId = gameData.mvpPlayerId;
+          if (playerStats[mvpPlayerId]) {
+            playerStats[mvpPlayerId].mvpVotes += 1;
+          }
+        }
       }
 
       // ✅ PERFORMANCE FIX: Fetch all gamification docs in PARALLEL
@@ -857,6 +885,12 @@ exports.notifyHubOnNewGame = onCall(
         'invalid-argument',
         'Missing \'hubId\' or \'gameId\' parameter.',
       );
+    }
+
+    // Security Patch: Add an authorization check
+    const hubMember = await db.collection('hubs').doc(hubId).collection('members').doc(request.auth.uid).get();
+    if (!hubMember.exists || !['owner', 'manager'].includes(hubMember.data()?.role)) {
+      throw new HttpsError('permission-denied', 'Only Hub Managers can send notifications.');
     }
 
     info(`Notifying hub ${hubId} about new game ${gameId}`);

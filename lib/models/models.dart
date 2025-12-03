@@ -3,6 +3,7 @@ export 'user.dart';
 export 'age_group.dart';
 export 'poll.dart';
 export 'hub.dart';
+export 'hub_member.dart'; // NEW: First-class membership model
 export 'hub_event.dart';
 export 'game.dart';
 export 'game_signup.dart';

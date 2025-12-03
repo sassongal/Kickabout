@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
 import 'package:kattrick/services/auth_service.dart';
 import 'package:kattrick/services/storage_service.dart';
 import 'package:kattrick/services/location_service.dart';
@@ -150,7 +151,7 @@ final _authStateForCacheProvider = StreamProvider<firebase_auth.User?>((ref) {
 final currentUserIdProvider = Provider<String?>((ref) {
   final authService = ref.watch(authServiceProvider);
   final currentUserId = authService.currentUserId;
-  
+
   // FIX: Clear cache when user changes
   final authStateAsync = ref.watch(_authStateForCacheProvider);
   authStateAsync.whenData((firebaseUser) {
@@ -161,7 +162,7 @@ final currentUserIdProvider = Provider<String?>((ref) {
       debugPrint('🧹 Cleared cache for user change: $newUserId');
     }
   });
-  
+
   return currentUserId;
 });
 
@@ -312,7 +313,9 @@ final hubPermissionsProvider =
       throw Exception('Hub not found');
     }
 
-    return HubPermissions(hub: hub, userId: params.userId);
+    final permissionsService =
+        HubPermissionsService(ref.read(firestoreProvider));
+    return permissionsService.getPermissions(hub, params.userId);
   } catch (e) {
     rethrow;
   }
@@ -341,8 +344,8 @@ final hubRoleProvider =
       return UserRole.admin;
     }
 
-    // Check explicit roles map
-    final roleString = hub.roles[currentUserId];
+    // Check explicit role from subcollection
+    final roleString = await hubsRepo.getUserRole(hubId, currentUserId);
     if (roleString != null) {
       // Check for 'admin' role directly (used by Super Admin and Firestore rules)
       if (roleString == 'admin') {
@@ -413,7 +416,8 @@ final adminTasksProvider = StreamProvider<int>((ref) {
               if (hub.createdBy == currentUserId) {
                 adminHubIds.add(hubId);
               } else {
-                final roleString = hub.roles[currentUserId];
+                final roleString =
+                    await hubsRepo.getUserRole(hubId, currentUserId);
                 if (roleString != null) {
                   final hubRole = HubRole.fromFirestore(roleString);
                   if (hubRole == HubRole.manager ||

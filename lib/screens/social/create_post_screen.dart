@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_role.dart';
+
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/widgets/game_photos_gallery.dart';
@@ -47,7 +47,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         try {
           final storageService = ref.read(storageServiceProvider);
           final currentUserId = ref.read(currentUserIdProvider);
-          
+
           if (currentUserId == null) {
             if (mounted) {
               SnackbarHelper.showError(context, 'נא להתחבר');
@@ -93,7 +93,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         try {
           final storageService = ref.read(storageServiceProvider);
           final currentUserId = ref.read(currentUserIdProvider);
-          
+
           if (currentUserId == null) {
             if (mounted) {
               SnackbarHelper.showError(context, 'נא להתחבר');
@@ -153,19 +153,19 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return;
     }
 
-    // Check permissions
+    // Check permissions - fetch asynchronously with membership data
     try {
-      final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(widget.hubId);
-      if (hub != null) {
-        final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
-        if (!hubPermissions.canCreatePosts()) {
-          if (mounted) {
-            SnackbarHelper.showError(
-                context, 'אין לך הרשאה ליצור פוסטים בהאב זה');
-          }
-          return;
+      final hubPermissionsAsync = await ref.read(
+        hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId))
+            .future,
+      );
+
+      if (!hubPermissionsAsync.canCreatePosts()) {
+        if (mounted) {
+          SnackbarHelper.showError(
+              context, 'אין לך הרשאה ליצור פוסטים בהאב זה');
         }
+        return;
       }
     } catch (e) {
       debugPrint('Error checking post permissions: $e');
@@ -176,7 +176,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     try {
       final feedRepo = ref.read(feedRepositoryProvider);
-      
+
       final post = FeedPost(
         postId: '',
         hubId: widget.hubId,
@@ -312,4 +312,3 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     );
   }
 }
-

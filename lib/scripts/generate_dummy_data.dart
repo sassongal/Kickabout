@@ -863,9 +863,7 @@ class DummyDataGenerator {
         settings: {
           'ratingMode': ['basic', 'advanced'][random.nextInt(2)],
         },
-        roles: {
-          managerId: 'manager', // Set first user as manager
-        },
+        // NOTE: roles removed - now stored in members subcollection
       );
 
       await firestore.doc(FirestorePaths.hub(hubId)).set(hub.toJson());
@@ -1333,7 +1331,7 @@ class DummyDataGenerator {
         settings: {
           'ratingMode': 'basic',
         },
-        roles: hubRoles,
+        // NOTE: roles removed - now stored in members subcollection
       );
 
       await firestore.doc(FirestorePaths.hub(hubId)).set({

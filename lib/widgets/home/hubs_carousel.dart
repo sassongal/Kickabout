@@ -85,8 +85,7 @@ class _HubsCarouselState extends State<HubsCarousel> {
   }
 
   Widget _buildHubCard(Hub hub) {
-    final isManager = hub.createdBy == widget.currentUserId ||
-        (hub.roles[widget.currentUserId] == 'admin');
+    final isManager = hub.createdBy == widget.currentUserId;
     return GestureDetector(
       onTap: () => context.push('/hubs/${hub.hubId}'),
       child: Container(

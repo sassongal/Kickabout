@@ -15,7 +15,6 @@ import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kattrick/services/error_handler_service.dart';
-import 'package:kattrick/models/hub_role.dart';
 
 class HubMember {
   final User user;
@@ -119,8 +118,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
         };
       }
 
-      final users =
-          await ref.read(usersRepositoryProvider).getUsers(memberIds);
+      final users = await ref.read(usersRepositoryProvider).getUsers(memberIds);
 
       final newMembers = users.map((u) {
         final meta = metadata[u.uid];
@@ -149,7 +147,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     }
   }
 
-  List<HubMember> _filterAndSort(List<HubMember> members, Hub? hub, bool isHubManager) {
+  List<HubMember> _filterAndSort(
+      List<HubMember> members, Hub? hub, bool isHubManager) {
     var filtered = List<HubMember>.from(members);
 
     // Search filter
@@ -227,9 +226,14 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
           final hub = hubSnapshot.data!;
           final isHubManager = currentUserId == hub.createdBy;
-          final hubPermissions = currentUserId != null
-              ? HubPermissions(hub: hub, userId: currentUserId)
+
+          // Fetch permissions asynchronously - watch the provider for reactive updates
+          final hubPermissionsAsync = currentUserId != null
+              ? ref.watch(hubPermissionsProvider(
+                  (hubId: widget.hubId, userId: currentUserId)))
               : null;
+          final hubPermissions = hubPermissionsAsync?.valueOrNull;
+
           final canManageRatings = (hubPermissions?.isManager() ?? false) ||
               (hubPermissions?.isModerator() ?? false);
 
@@ -334,7 +338,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 );
               }
 
-              final filteredMembers = _filterAndSort(_members, hub, isHubManager);
+              final filteredMembers =
+                  _filterAndSort(_members, hub, isHubManager);
               final membersToShow = filteredMembers;
               final hasMoreToShow = _hasMore;
 
@@ -633,7 +638,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     final managerRating = isHubManager ? hub.managerRatings[user.uid] : null;
     // For non-managers, always show global rating
     // For managers, show manager rating if exists, otherwise global rating
-    final displayRating = isHubManager 
+    final displayRating = isHubManager
         ? (managerRating ?? user.currentRankScore)
         : user.currentRankScore;
     final hasManagerRating = managerRating != null;
@@ -805,8 +810,9 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
               Icon(
                 Icons.star,
                 size: 16,
-                color:
-                    (isHubManager && hasManagerRating) ? Colors.orange : FuturisticColors.warning,
+                color: (isHubManager && hasManagerRating)
+                    ? Colors.orange
+                    : FuturisticColors.warning,
               ),
               const SizedBox(width: 4),
               Text(

@@ -19,6 +19,7 @@ import 'package:kattrick/screens/hub/hub_events_tab.dart';
 import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
 import 'package:kattrick/widgets/optimized_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
@@ -139,9 +140,15 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
         return roleAsync.when(
           data: (role) {
             final isAdminRole = role == UserRole.admin;
-            final hubPermissions = currentUserId != null
-                ? HubPermissions(hub: hub, userId: currentUserId)
+
+            // Fetch permissions asynchronously - this will properly load membership data
+            final hubPermissionsAsync = currentUserId != null
+                ? ref.watch(hubPermissionsProvider(
+                    (hubId: widget.hubId, userId: currentUserId)))
                 : null;
+
+            final hubPermissions = hubPermissionsAsync?.valueOrNull;
+
             return AppScaffold(
               title: hub.name,
               floatingActionButton: hubPermissions != null &&
@@ -181,7 +188,8 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                             final roleName = role.displayName;
 
                                             // Set icon based on actual role
-                                            IconData roleIcon;
+                                            IconData roleIcon =
+                                                Icons.person_outline;
                                             switch (role) {
                                               case HubRole.manager:
                                                 roleIcon =
@@ -1210,8 +1218,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                   final hubPermissions =
                       HubPermissions(hub: widget.hub, userId: user.uid);
                   String roleDisplayName;
-                  IconData roleIcon;
-                  Color? roleColor;
+                  IconData roleIcon = Icons.person_outline;
+                  Color roleColor = Colors.grey.shade400;
 
                   try {
                     final role = hubPermissions.userRole;

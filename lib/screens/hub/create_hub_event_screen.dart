@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_role.dart';
+
+import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
@@ -199,13 +200,24 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
       return;
     }
 
-    // Check permissions
-    final hubPermissions = HubPermissions(hub: _hub!, userId: currentUserId);
-    if (!hubPermissions.canCreateEvents()) {
-      // Get manager names
-      final managers = await _getManagerNames();
+    // Check permissions - fetch asynchronously with membership data
+    try {
+      final hubPermissionsAsync = await ref.read(
+        hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId))
+            .future,
+      );
+
+      if (!hubPermissionsAsync.canCreateEvents()) {
+        // Get manager names
+        final managers = await _getManagerNames();
+        if (mounted) {
+          _showPermissionDeniedDialog(managers);
+        }
+        return;
+      }
+    } catch (e) {
       if (mounted) {
-        _showPermissionDeniedDialog(managers);
+        SnackbarHelper.showError(context, 'שגיאה בבדיקת הרשאות');
       }
       return;
     }

@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart' hide Notification;
 import 'package:kattrick/models/notification.dart' as app_notification;
-import 'package:kattrick/models/hub_role.dart';
+
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
@@ -221,10 +221,19 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
       return;
     }
 
-    // Check permissions
-    final hubPermissions = HubPermissions(hub: _hub!, userId: currentUserId);
-    if (!hubPermissions.canCreateEvents()) {
-      SnackbarHelper.showError(context, 'אין לך הרשאה לערוך אירועים בהאב זה');
+    // Check permissions - fetch asynchronously with membership data
+    try {
+      final hubPermissionsAsync = await ref.read(
+        hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId))
+            .future,
+      );
+
+      if (!hubPermissionsAsync.canCreateEvents()) {
+        SnackbarHelper.showError(context, 'אין לך הרשאה לערוך אירועים בהאב זה');
+        return;
+      }
+    } catch (e) {
+      SnackbarHelper.showError(context, 'שגיאה בבדיקת הרשאות');
       return;
     }
 
@@ -398,10 +407,19 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
       return;
     }
 
-    // Check permissions
-    final hubPermissions = HubPermissions(hub: _hub!, userId: currentUserId);
-    if (!hubPermissions.canCreateEvents()) {
-      SnackbarHelper.showError(context, 'אין לך הרשאה למחוק אירועים בהאב זה');
+    // Check permissions - fetch asynchronously with membership data
+    try {
+      final hubPermissionsAsync = await ref.read(
+        hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId))
+            .future,
+      );
+
+      if (!hubPermissionsAsync.canCreateEvents()) {
+        SnackbarHelper.showError(context, 'אין לך הרשאה למחוק אירועים בהאב זה');
+        return;
+      }
+    } catch (e) {
+      SnackbarHelper.showError(context, 'שגיאה בבדיקת הרשאות');
       return;
     }
 

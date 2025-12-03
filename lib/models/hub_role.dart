@@ -113,163 +113,16 @@ enum HubRole {
       this == HubRole.manager ||
       this == HubRole.moderator ||
       this == HubRole.veteran;
-  
+
   /// ✅ NEW: Can record game results (Gap Analysis #1)
   /// Veterans can start game recording alongside Managers
   bool canRecordGame() =>
       this == HubRole.manager ||
       this == HubRole.moderator ||
       this == HubRole.veteran;
-  
+
   bool canEditHubInfo() => this == HubRole.manager;
   bool canDeletePosts() => this == HubRole.manager || this == HubRole.moderator;
   bool canDeleteComments() =>
       this == HubRole.manager || this == HubRole.moderator;
-}
-
-/// Helper class for hub permissions
-class HubPermissions {
-  final Hub hub;
-  final String userId;
-  final List<String>?
-      userHubIds; // Optional: user's hub memberships for membership check
-
-  HubPermissions({
-    required this.hub,
-    required this.userId,
-    this.userHubIds, // If provided, used for membership check; otherwise assume guest
-  });
-
-  /// Get the user's role in the hub
-  /// Priority: Manager (creator) > Explicit role > Veteran (if >2 months) > Member > Guest
-  HubRole get userRole {
-    // Creator is always manager
-    if (userId == hub.createdBy) return HubRole.manager;
-
-    // Check explicit roles map (assigned by manager)
-    final roleString = hub.roles[userId];
-    if (roleString != null) {
-      final explicitRole = HubRole.fromFirestore(roleString);
-      // If explicitly set to moderator, return moderator (not veteran)
-      if (explicitRole == HubRole.moderator) return HubRole.moderator;
-      // If explicitly set to member, check if veteran
-      if (explicitRole == HubRole.member) {
-        return _isVeteranPlayer() ? HubRole.veteran : HubRole.member;
-      }
-      return explicitRole;
-    }
-
-    // Check if member (Strategy A: use userHubIds if provided)
-    final isMember = userHubIds != null && userHubIds!.contains(hub.hubId);
-    if (isMember) {
-      // Check if veteran (in hub for more than 2 months)
-      return _isVeteranPlayer() ? HubRole.veteran : HubRole.member;
-    }
-
-    // Not a member
-    return HubRole.guest;
-  }
-
-  /// Check if user is a veteran player (in hub for more than 2 months)
-  bool _isVeteranPlayer() {
-    // Must be a member first
-    final isMember = userHubIds != null && userHubIds!.contains(hub.hubId);
-    if (!isMember) return false;
-
-    // Get join date from memberJoinDates
-    final joinDateTimestamp = hub.memberJoinDates[userId];
-    if (joinDateTimestamp == null) {
-      // If no join date recorded, use hub creation date as fallback
-      // This handles legacy data where join dates weren't tracked
-      final daysSinceHubCreation =
-          DateTime.now().difference(hub.createdAt).inDays;
-      return daysSinceHubCreation >= 60; // 2 months = ~60 days
-    }
-
-    // Convert Timestamp to DateTime
-    final joinDate = joinDateTimestamp.toDate();
-
-    // Check if more than 2 months (60 days)
-    final daysSinceJoin = DateTime.now().difference(joinDate).inDays;
-    return daysSinceJoin >= 60;
-  }
-
-  /// Check if user is a veteran player (public method)
-  bool isVeteranPlayer() => _isVeteranPlayer();
-
-  /// Get the date when user joined the hub
-  DateTime? getJoinDate() {
-    final joinDateTimestamp = hub.memberJoinDates[userId];
-    if (joinDateTimestamp == null) return null;
-    return joinDateTimestamp.toDate();
-  }
-
-  /// Get days since joining the hub
-  int? getDaysSinceJoin() {
-    final joinDate = getJoinDate();
-    if (joinDate == null) return null;
-    return DateTime.now().difference(joinDate).inDays;
-  }
-
-  // Permission methods
-  bool canManageMembers() => userRole.canManageMembers();
-  bool canManageRoles() => userRole.canManageRoles();
-  bool canManageSettings() => userRole.canManageSettings();
-  bool canDeleteHub() => userRole.canDeleteHub();
-  bool canCreateGames() => userRole.canCreateGames();
-
-  /// Check if user can create events
-  /// Checks: 1) Default role permissions, 2) Custom permissions set by manager
-  bool canCreateEvents() {
-    // First check default role permissions
-    if (userRole.canCreateEvents()) return true;
-
-    // Then check custom permissions (set by manager)
-    final canCreateEventsList = hub.permissions['canCreateEvents'] as List?;
-    if (canCreateEventsList != null && canCreateEventsList.contains(userId)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /// Check if user can create posts
-  /// Checks: 1) Default role permissions (all members can), 2) Custom permissions set by manager
-  bool canCreatePosts() {
-    // Guest cannot post
-    if (userRole == HubRole.guest) return false;
-
-    // All hub members can create posts by default
-    if (isMember()) return true;
-
-    // Check custom permissions (if manager restricted posting)
-    final canCreatePostsList = hub.permissions['canCreatePosts'] as List?;
-    if (canCreatePostsList != null) {
-      // If list exists, only users in the list can post
-      return canCreatePostsList.contains(userId);
-    }
-
-    // Default: all members can post
-    return isMember();
-  }
-
-  bool canModerateContent() => userRole.canModerateContent();
-  bool canInvitePlayers() => userRole.canInvitePlayers();
-  bool canViewAnalytics() => userRole.canViewAnalytics();
-  bool canEditHubInfo() => userRole.canEditHubInfo();
-  bool canDeletePosts() => userRole.canDeletePosts();
-  bool canDeleteComments() => userRole.canDeleteComments();
-  
-  /// ✅ NEW: Can record game results (Veterans can do this!)
-  bool canRecordGame() => userRole.canRecordGame();
-
-  // Role check methods
-  bool isManager() => userRole == HubRole.manager;
-  bool isModerator() =>
-      userRole == HubRole.moderator || userRole == HubRole.manager;
-  bool isVeteran() => userRole == HubRole.veteran;
-  bool isMember() => userHubIds != null && userHubIds!.contains(hub.hubId);
-
-  /// Get role display name
-  String getRoleDisplayName() => userRole.displayName;
 }

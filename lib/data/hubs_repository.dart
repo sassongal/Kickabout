@@ -260,10 +260,10 @@ class HubsRepository {
     }
   }
 
-  /// Add member to hub (atomic operation)
-  /// Updates both hub.memberIds and user.hubIds atomically
-  /// Add member to hub (atomic operation)
-  /// Updates hub.memberCount, adds to members subcollection, and updates user.hubIds
+  /// Add member to hub (REFACTORED - uses HubMember subcollection)
+  ///
+  /// This method supports both first-time joins and rejoining after leaving.
+  /// Cloud Function will handle memberCount updates via trigger.
   Future<void> addMember(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
@@ -274,20 +274,20 @@ class HubsRepository {
       await _firestore.runTransaction((transaction) async {
         final hubRef = _firestore.doc(FirestorePaths.hub(hubId));
         final userRef = _firestore.doc(FirestorePaths.user(uid));
+        final memberRef = hubRef.collection('members').doc(uid);
 
-        // Read both documents
+        // Read all documents
         final hubDoc = await transaction.get(hubRef);
         final userDoc = await transaction.get(userRef);
+        final memberDoc = await transaction.get(memberRef);
 
         if (!hubDoc.exists) throw Exception('Hub not found');
         if (!userDoc.exists) throw Exception('User not found');
 
-        final hubData = hubDoc.data();
-        final userData = userDoc.data();
-        if (hubData == null || userData == null)
-          throw Exception('Data is null');
+        final hubData = hubDoc.data()!;
+        final userData = userDoc.data()!;
 
-        // Check Hub Capacity (Max 50)
+        // Check Hub Capacity (Max 50 active members)
         final memberCount = hubData['memberCount'] as int? ?? 0;
         if (memberCount >= 50) {
           throw Exception('Hub is full (max 50 members)');
@@ -299,125 +299,200 @@ class HubsRepository {
           throw Exception('User has joined max hubs (10)');
         }
 
-        // Check if already a member (check subcollection existence would be extra read,
-        // but checking user.hubIds is free since we read user)
+        // Check if already a member
         if (userHubIds.contains(hubId)) {
-          return; // Already a member
+          return; // Already a member, idempotent
         }
 
-        // Add to members subcollection
-        final memberRef = hubRef.collection('members').doc(uid);
-        transaction.set(memberRef, {
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': 'member',
-        });
+        // Check if user was previously a member
+        if (memberDoc.exists) {
+          final memberData = memberDoc.data()!;
+          final status = memberData['status'] as String?;
 
-        // Increment memberCount
-        transaction.update(hubRef, {
-          'memberCount': FieldValue.increment(1),
-        });
+          // If banned, reject
+          if (status == 'banned') {
+            throw Exception('You are banned from this hub');
+          }
+
+          // If previously left, reactivate (preserves join history)
+          if (status == 'left') {
+            transaction.update(memberRef, {
+              'status': 'active',
+              'updatedAt': FieldValue.serverTimestamp(),
+              'updatedBy': uid,
+              'statusReason': null,
+            });
+          }
+          // If already active, do nothing (shouldn't happen, but safe)
+        } else {
+          // First-time join - create new membership
+          transaction.set(memberRef, {
+            'hubId': hubId,
+            'userId': uid,
+            'joinedAt': FieldValue.serverTimestamp(),
+            'role': 'member',
+            'status': 'active',
+            'veteranSince': null, // Will be set by Cloud Function after 60 days
+            'managerRating': 0.0,
+            'lastActiveAt': null,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedBy': uid,
+          });
+        }
 
         // Update user.hubIds
         transaction.update(userRef, {
           'hubIds': FieldValue.arrayUnion([hubId]),
         });
+
+        // NOTE: memberCount is updated by Cloud Function trigger
+        // (onMembershipChange in functions/src/triggers/membershipCounters.ts)
       });
     } catch (e) {
       throw Exception('Failed to add member: $e');
     }
   }
 
-  /// Remove member from hub (atomic operation)
-  /// Updates both hub.memberIds, hub.roles, and user.hubIds atomically
-  /// Remove member from hub (atomic operation)
-  /// Updates hub.memberCount, removes from members subcollection, and updates user.hubIds
+  /// Remove member from hub (REFACTORED - soft-delete via status)
+  ///
+  /// This performs a soft-delete by setting status='left' instead of deleting.
+  /// Preserves membership history and allows rejoining.
   Future<void> removeMember(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
-      // Use transaction to ensure atomicity
       await _firestore.runTransaction((transaction) async {
         final hubRef = _firestore.doc(FirestorePaths.hub(hubId));
         final userRef = _firestore.doc(FirestorePaths.user(uid));
+        final memberRef = hubRef.collection('members').doc(uid);
 
-        // Read both documents
-        final hubDoc = await transaction.get(hubRef);
+        // Read documents
+        final memberDoc = await transaction.get(memberRef);
         final userDoc = await transaction.get(userRef);
 
-        if (!hubDoc.exists) throw Exception('Hub not found');
+        if (!memberDoc.exists) {
+          // Already not a member, idempotent
+          return;
+        }
+
         if (!userDoc.exists) throw Exception('User not found');
 
-        final hubData = hubDoc.data();
-        final userData = userDoc.data();
-        if (hubData == null || userData == null)
-          throw Exception('Data is null');
-
-        // Remove from members subcollection
-        final memberRef = hubRef.collection('members').doc(uid);
-        transaction.delete(memberRef);
-
-        // Decrement memberCount (prevent negative)
-        final memberCount = hubData['memberCount'] as int? ?? 0;
-        if (memberCount > 0) {
-          transaction.update(hubRef, {
-            'memberCount': FieldValue.increment(-1),
-          });
-        }
-
-        // Remove from roles if exists
-        final roles = Map<String, String>.from(hubData['roles'] ?? {});
-        if (roles.containsKey(uid)) {
-          final updatedRoles = Map<String, String>.from(roles);
-          updatedRoles.remove(uid);
-          transaction.update(hubRef, {'roles': updatedRoles});
-        }
+        // Soft-delete: Set status to 'left'
+        transaction.update(memberRef, {
+          'status': 'left',
+          'updatedAt': FieldValue.serverTimestamp(),
+          'updatedBy': uid,
+          'statusReason': 'User chose to leave',
+        });
 
         // Remove from user.hubIds
-        final userHubIds = List<String>.from(userData['hubIds'] ?? []);
-        if (userHubIds.contains(hubId)) {
-          transaction.update(userRef, {
-            'hubIds': FieldValue.arrayRemove([hubId]),
-          });
-        }
+        transaction.update(userRef, {
+          'hubIds': FieldValue.arrayRemove([hubId]),
+        });
+
+        // NOTE: memberCount is updated by Cloud Function trigger
+        // (onMembershipChange detects status change from active to left)
       });
     } catch (e) {
       throw Exception('Failed to remove member: $e');
     }
   }
 
-  /// Update member role
-  Future<void> updateMemberRole(String hubId, String uid, String role) async {
+  /// Update member role (REFACTORED - updates HubMember subcollection)
+  ///
+  /// Only managers can promote/demote members.
+  /// Creator cannot have their role changed (always manager).
+  Future<void> updateMemberRole(
+      String hubId, String uid, String role, String updatedBy) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
+    }
+
+    // Validate role
+    final validRoles = ['member', 'moderator', 'manager'];
+    if (!validRoles.contains(role)) {
+      throw Exception('Invalid role: $role');
     }
 
     try {
       final hub = await getHub(hubId);
       if (hub == null) throw Exception('Hub not found');
 
-      // Creator cannot change role
+      // Creator cannot have role changed
       if (uid == hub.createdBy) {
         throw Exception('Cannot change creator role');
       }
 
-      // Update roles
-      final updatedRoles = Map<String, String>.from(hub.roles);
-      updatedRoles[uid] = role;
-
-      await _firestore.doc(FirestorePaths.hub(hubId)).update({
-        'roles': updatedRoles,
+      // Update member role in subcollection
+      await _firestore.doc('hubs/$hubId/members/$uid').update({
+        'role': role,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': updatedBy,
       });
     } catch (e) {
       throw Exception('Failed to update member role: $e');
     }
   }
 
-  /// Set player rating for hub-specific team balancing
-  /// This rating is used by the team generation algorithm
-  /// Set player rating for hub-specific team balancing
-  /// This rating is used by the team generation algorithm
+  /// Ban a member from hub (REFACTORED - uses HubMember.status)
+  ///
+  /// Sets member status to 'banned' and removes from user.hubIds.
+  /// Preserves all member history for audit purposes.
+  Future<void> banMember(
+      String hubId, String uid, String reason, String bannedBy) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final hubRef = _firestore.doc(FirestorePaths.hub(hubId));
+        final userRef = _firestore.doc(FirestorePaths.user(uid));
+        final memberRef = hubRef.collection('members').doc(uid);
+
+        final hubDoc = await transaction.get(hubRef);
+        final memberDoc = await transaction.get(memberRef);
+
+        if (!hubDoc.exists) throw Exception('Hub not found');
+
+        final hubData = hubDoc.data()!;
+        final createdBy = hubData['createdBy'] as String;
+
+        // Cannot ban hub creator
+        if (uid == createdBy) {
+          throw Exception('Cannot ban hub creator');
+        }
+
+        if (!memberDoc.exists) {
+          throw Exception('User is not a member of this hub');
+        }
+
+        // Update member status to banned
+        transaction.update(memberRef, {
+          'status': 'banned',
+          'statusReason': reason,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'updatedBy': bannedBy,
+        });
+
+        // Remove from user.hubIds
+        transaction.update(userRef, {
+          'hubIds': FieldValue.arrayRemove([hubId]),
+        });
+
+        // NOTE: memberCount updated by Cloud Function trigger
+      });
+    } catch (e) {
+      throw Exception('Failed to ban member: $e');
+    }
+  }
+
+  /// Set player rating for hub-specific team balancing (REFACTORED)
+  ///
+  /// Updates HubMember.managerRating field (1.0-10.0 scale).
+  /// This rating is used by the team generation algorithm.
   Future<void> setPlayerRating(
       String hubId, String playerId, double rating) async {
     if (!Env.isFirebaseAvailable) {
@@ -430,27 +505,23 @@ class HubsRepository {
     }
 
     try {
-      final hub = await getHub(hubId);
-      if (hub == null) throw Exception('Hub not found');
-
-      // Check hub membership via subcollection
-      final memberDoc = await _firestore
-          .collection('hubs')
-          .doc(hubId)
-          .collection('members')
-          .doc(playerId)
-          .get();
+      // Check if member exists and is active
+      final memberDoc =
+          await _firestore.doc('hubs/$hubId/members/$playerId').get();
 
       if (!memberDoc.exists) {
         throw Exception('Player is not a member of this hub');
       }
 
-      // Update managerRatings map
-      final updatedRatings = Map<String, double>.from(hub.managerRatings);
-      updatedRatings[playerId] = rating;
+      final memberData = memberDoc.data()!;
+      if (memberData['status'] != 'active') {
+        throw Exception('Cannot rate inactive member');
+      }
 
-      await _firestore.doc(FirestorePaths.hub(hubId)).update({
-        'managerRatings': updatedRatings,
+      // Update rating in HubMember document
+      await _firestore.doc('hubs/$hubId/members/$playerId').update({
+        'managerRating': rating,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // Invalidate cache
@@ -460,7 +531,7 @@ class HubsRepository {
     }
   }
 
-  /// Get user role in hub
+  /// Get user role in hub (REFACTORED - reads from HubMember)
   Future<String?> getUserRole(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) return null;
 
@@ -471,8 +542,15 @@ class HubsRepository {
       // Creator is always manager
       if (uid == hub.createdBy) return 'manager';
 
-      // Check roles map
-      return hub.roles[uid] ?? 'member';
+      // Read role from HubMember subcollection
+      final memberDoc = await _firestore.doc('hubs/$hubId/members/$uid').get();
+
+      if (!memberDoc.exists) return null;
+
+      final memberData = memberDoc.data()!;
+      if (memberData['status'] != 'active') return null;
+
+      return memberData['role'] as String? ?? 'member';
     } catch (e) {
       return null;
     }
@@ -495,15 +573,34 @@ class HubsRepository {
     }
   }
 
-  /// Get all member IDs for a hub
+  /// Get all member IDs for a hub (REFACTORED - filters by active status)
+  ///
+  /// Returns list of active member user IDs.
   Future<List<String>> getHubMemberIds(String hubId) async {
     if (!Env.isFirebaseAvailable) return [];
     try {
       final snapshot = await _firestore
-          .doc(FirestorePaths.hub(hubId))
-          .collection('members')
+          .collection('hubs/$hubId/members')
+          .where('status', isEqualTo: 'active')
           .get();
       return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get all active members for a hub
+  Future<List<HubMember>> getHubMembers(String hubId) async {
+    if (!Env.isFirebaseAvailable) return [];
+    try {
+      final snapshot = await _firestore
+          .collection('hubs/$hubId/members')
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => HubMember.fromJson(doc.data()))
+          .toList();
     } catch (e) {
       return [];
     }
@@ -1013,21 +1110,24 @@ class HubsRepository {
     }
   }
 
-  /// Get list of banned users for a hub
-  /// Returns list of User objects for users in hub's bannedUserIds
+  /// Get list of banned users for a hub (REFACTORED)
+  ///
+  /// Returns User objects for all members with status='banned'.
   Future<List<User>> getBannedUsers(String hubId) async {
     if (!Env.isFirebaseAvailable) return [];
 
     try {
-      final hub = await getHub(hubId);
-      if (hub == null || hub.bannedUserIds.isEmpty) return [];
+      // Query members with status='banned'
+      final bannedSnapshot = await _firestore
+          .collection('hubs/$hubId/members')
+          .where('status', isEqualTo: 'banned')
+          .get();
 
-      // Fetch user documents for all banned user IDs
-      // Firestore 'in' query is limited to 10 items, but banned users should be rare
-      final bannedUserIds = hub.bannedUserIds;
-      if (bannedUserIds.isEmpty) return [];
+      if (bannedSnapshot.docs.isEmpty) return [];
 
-      // Split into chunks of 10 to handle Firestore limit
+      final bannedUserIds = bannedSnapshot.docs.map((doc) => doc.id).toList();
+
+      // Fetch user documents (batch in chunks of 10 for Firestore limit)
       final List<User> bannedUsers = [];
       for (var i = 0; i < bannedUserIds.length; i += 10) {
         final chunk = bannedUserIds.skip(i).take(10).toList();
@@ -1036,15 +1136,13 @@ class HubsRepository {
             .where(FieldPath.documentId, whereIn: chunk)
             .get();
 
-        final users = snapshot.docs
-            .map((doc) => User.fromJson({...doc.data(), 'uid': doc.id}))
-            .toList();
-        bannedUsers.addAll(users);
+        for (final doc in snapshot.docs) {
+          bannedUsers.add(User.fromJson({...doc.data(), 'uid': doc.id}));
+        }
       }
 
       return bannedUsers;
     } catch (e) {
-      debugPrint('Error getting banned users: $e');
       return [];
     }
   }

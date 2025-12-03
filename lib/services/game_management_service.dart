@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
+
 import 'package:kattrick/data/games_repository.dart';
 import 'package:kattrick/data/hubs_repository.dart';
 import 'package:kattrick/data/signups_repository.dart';
@@ -454,10 +455,22 @@ class GameManagementService {
         }
 
         final hubData = hubDoc.data()!;
-        final isManager = hubData['createdBy'] == currentUserId ||
-            (hubData['roles'] as Map?)?[currentUserId] == 'manager' ||
-            (hubData['roles'] as Map?)?[currentUserId] == 'admin' ||
-            (hubData['roles'] as Map?)?[currentUserId] == 'moderator';
+        bool isManager = hubData['createdBy'] == currentUserId;
+
+        if (!isManager) {
+          // Check member role from subcollection
+          final memberRef =
+              _firestore.doc('hubs/$gameHubId/members/$currentUserId');
+          final memberDoc = await transaction.get(memberRef);
+
+          if (memberDoc.exists) {
+            final memberData = memberDoc.data()!;
+            final role = memberData['role'] as String?;
+            if (role == 'manager' || role == 'admin' || role == 'moderator') {
+              isManager = true;
+            }
+          }
+        }
 
         if (!isManager) {
           throw Exception('Unauthorized: Only Hub Managers can rollback games');

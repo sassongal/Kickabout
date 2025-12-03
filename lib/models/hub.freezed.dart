@@ -20,21 +20,21 @@ Hub _$HubFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$Hub {
+// Core identity
   String get hubId => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String? get description => throw _privateConstructorUsedError;
   String get createdBy => throw _privateConstructorUsedError;
   @TimestampConverter()
-  DateTime get createdAt => throw _privateConstructorUsedError;
-  int get memberCount => throw _privateConstructorUsedError;
-  @TimestampMapConverter()
-  Map<String, Timestamp> get memberJoinDates =>
-      throw _privateConstructorUsedError; // userId -> join date timestamp
-  Map<String, dynamic> get settings => throw _privateConstructorUsedError;
-  Map<String, String> get roles =>
-      throw _privateConstructorUsedError; // userId -> role (manager, moderator, member)
+  DateTime get createdAt =>
+      throw _privateConstructorUsedError; // Member count (denormalized for display, kept in sync by Cloud Function)
+  int get memberCount => throw _privateConstructorUsedError; // Settings
+  Map<String, dynamic> get settings =>
+      throw _privateConstructorUsedError; // Custom permissions (RARE overrides only)
+// Example: Allow specific user to create events even if not moderator
+// Format: {'canCreateEvents': ['userId1', 'userId2']}
   Map<String, dynamic> get permissions =>
-      throw _privateConstructorUsedError; // Custom permissions: {canCreateEvents: [userId1, userId2], canCreatePosts: [userId1, userId2]}
+      throw _privateConstructorUsedError; // Location & venues
   @NullableGeoPointConverter()
   GeoPoint? get location =>
       throw _privateConstructorUsedError; // Primary location (deprecated, use venues)
@@ -42,8 +42,6 @@ mixin _$Hub {
   double? get radius => throw _privateConstructorUsedError; // radius in km
   List<String> get venueIds =>
       throw _privateConstructorUsedError; // IDs of venues where this hub plays
-  String? get profileImageUrl =>
-      throw _privateConstructorUsedError; // Profile picture chosen by hub manager
   String? get mainVenueId =>
       throw _privateConstructorUsedError; // ID of the main venue (home field) - required
   String? get primaryVenueId =>
@@ -51,30 +49,28 @@ mixin _$Hub {
   @NullableGeoPointConverter()
   GeoPoint? get primaryVenueLocation =>
       throw _privateConstructorUsedError; // Location of primary venue - denormalized
+// Branding
+  String? get profileImageUrl =>
+      throw _privateConstructorUsedError; // Profile picture chosen by hub manager
   String? get logoUrl =>
       throw _privateConstructorUsedError; // Hub logo URL (used for feed posts)
+// Rules & region
   String? get hubRules =>
       throw _privateConstructorUsedError; // Rules and guidelines for the hub
   String? get region =>
       throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים
-// Privacy settings
+// Privacy
   bool get isPrivate =>
-      throw _privateConstructorUsedError; // If true, requires "Request to Join" (create notification for manager)
-// Manager-only ratings for team balancing (1-10 scale)
-  Map<String, double> get managerRatings =>
-      throw _privateConstructorUsedError; // userId -> rating (1-10, manager-only, for team balancing)
-// Payment settings
+      throw _privateConstructorUsedError; // If true, requires "Request to Join"
+// Payment
   String? get paymentLink =>
       throw _privateConstructorUsedError; // PayBox/Bit payment link URL
-// Denormalized fields (updated by Cloud Functions, not written by client)
+// Denormalized stats (updated by Cloud Functions, not written by client)
   int? get gameCount =>
-      throw _privateConstructorUsedError; // Denormalized: Total games created (updated by onGameCreated)
+      throw _privateConstructorUsedError; // Total games created (updated by onGameCreated)
   @TimestampConverter()
   DateTime? get lastActivity =>
-      throw _privateConstructorUsedError; // Denormalized: Last activity time (updated by Cloud Functions)
-// Banned users - users banned from this hub
-  List<String> get bannedUserIds =>
-      throw _privateConstructorUsedError; // Activity score - measures hub activity (updated by Cloud Functions)
+      throw _privateConstructorUsedError; // Last activity time (updated by Cloud Functions)
   double get activityScore => throw _privateConstructorUsedError;
 
   /// Serializes this Hub to a JSON map.
@@ -98,27 +94,23 @@ abstract class $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       int memberCount,
-      @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
-      Map<String, String> roles,
       Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius,
       List<String> venueIds,
-      String? profileImageUrl,
       String? mainVenueId,
       String? primaryVenueId,
       @NullableGeoPointConverter() GeoPoint? primaryVenueLocation,
+      String? profileImageUrl,
       String? logoUrl,
       String? hubRules,
       String? region,
       bool isPrivate,
-      Map<String, double> managerRatings,
       String? paymentLink,
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity,
-      List<String> bannedUserIds,
       double activityScore});
 }
 
@@ -142,27 +134,23 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? createdBy = null,
     Object? createdAt = null,
     Object? memberCount = null,
-    Object? memberJoinDates = null,
     Object? settings = null,
-    Object? roles = null,
     Object? permissions = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
     Object? venueIds = null,
-    Object? profileImageUrl = freezed,
     Object? mainVenueId = freezed,
     Object? primaryVenueId = freezed,
     Object? primaryVenueLocation = freezed,
+    Object? profileImageUrl = freezed,
     Object? logoUrl = freezed,
     Object? hubRules = freezed,
     Object? region = freezed,
     Object? isPrivate = null,
-    Object? managerRatings = null,
     Object? paymentLink = freezed,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
-    Object? bannedUserIds = null,
     Object? activityScore = null,
   }) {
     return _then(_value.copyWith(
@@ -190,18 +178,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.memberCount
           : memberCount // ignore: cast_nullable_to_non_nullable
               as int,
-      memberJoinDates: null == memberJoinDates
-          ? _value.memberJoinDates
-          : memberJoinDates // ignore: cast_nullable_to_non_nullable
-              as Map<String, Timestamp>,
       settings: null == settings
           ? _value.settings
           : settings // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
-      roles: null == roles
-          ? _value.roles
-          : roles // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
       permissions: null == permissions
           ? _value.permissions
           : permissions // ignore: cast_nullable_to_non_nullable
@@ -222,10 +202,6 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.venueIds
           : venueIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      profileImageUrl: freezed == profileImageUrl
-          ? _value.profileImageUrl
-          : profileImageUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
       mainVenueId: freezed == mainVenueId
           ? _value.mainVenueId
           : mainVenueId // ignore: cast_nullable_to_non_nullable
@@ -238,6 +214,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.primaryVenueLocation
           : primaryVenueLocation // ignore: cast_nullable_to_non_nullable
               as GeoPoint?,
+      profileImageUrl: freezed == profileImageUrl
+          ? _value.profileImageUrl
+          : profileImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       logoUrl: freezed == logoUrl
           ? _value.logoUrl
           : logoUrl // ignore: cast_nullable_to_non_nullable
@@ -254,10 +234,6 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.isPrivate
           : isPrivate // ignore: cast_nullable_to_non_nullable
               as bool,
-      managerRatings: null == managerRatings
-          ? _value.managerRatings
-          : managerRatings // ignore: cast_nullable_to_non_nullable
-              as Map<String, double>,
       paymentLink: freezed == paymentLink
           ? _value.paymentLink
           : paymentLink // ignore: cast_nullable_to_non_nullable
@@ -270,10 +246,6 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.lastActivity
           : lastActivity // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      bannedUserIds: null == bannedUserIds
-          ? _value.bannedUserIds
-          : bannedUserIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       activityScore: null == activityScore
           ? _value.activityScore
           : activityScore // ignore: cast_nullable_to_non_nullable
@@ -295,27 +267,23 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       int memberCount,
-      @TimestampMapConverter() Map<String, Timestamp> memberJoinDates,
       Map<String, dynamic> settings,
-      Map<String, String> roles,
       Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
       double? radius,
       List<String> venueIds,
-      String? profileImageUrl,
       String? mainVenueId,
       String? primaryVenueId,
       @NullableGeoPointConverter() GeoPoint? primaryVenueLocation,
+      String? profileImageUrl,
       String? logoUrl,
       String? hubRules,
       String? region,
       bool isPrivate,
-      Map<String, double> managerRatings,
       String? paymentLink,
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity,
-      List<String> bannedUserIds,
       double activityScore});
 }
 
@@ -336,27 +304,23 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? createdBy = null,
     Object? createdAt = null,
     Object? memberCount = null,
-    Object? memberJoinDates = null,
     Object? settings = null,
-    Object? roles = null,
     Object? permissions = null,
     Object? location = freezed,
     Object? geohash = freezed,
     Object? radius = freezed,
     Object? venueIds = null,
-    Object? profileImageUrl = freezed,
     Object? mainVenueId = freezed,
     Object? primaryVenueId = freezed,
     Object? primaryVenueLocation = freezed,
+    Object? profileImageUrl = freezed,
     Object? logoUrl = freezed,
     Object? hubRules = freezed,
     Object? region = freezed,
     Object? isPrivate = null,
-    Object? managerRatings = null,
     Object? paymentLink = freezed,
     Object? gameCount = freezed,
     Object? lastActivity = freezed,
-    Object? bannedUserIds = null,
     Object? activityScore = null,
   }) {
     return _then(_$HubImpl(
@@ -384,18 +348,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.memberCount
           : memberCount // ignore: cast_nullable_to_non_nullable
               as int,
-      memberJoinDates: null == memberJoinDates
-          ? _value._memberJoinDates
-          : memberJoinDates // ignore: cast_nullable_to_non_nullable
-              as Map<String, Timestamp>,
       settings: null == settings
           ? _value._settings
           : settings // ignore: cast_nullable_to_non_nullable
               as Map<String, dynamic>,
-      roles: null == roles
-          ? _value._roles
-          : roles // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
       permissions: null == permissions
           ? _value._permissions
           : permissions // ignore: cast_nullable_to_non_nullable
@@ -416,10 +372,6 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value._venueIds
           : venueIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
-      profileImageUrl: freezed == profileImageUrl
-          ? _value.profileImageUrl
-          : profileImageUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
       mainVenueId: freezed == mainVenueId
           ? _value.mainVenueId
           : mainVenueId // ignore: cast_nullable_to_non_nullable
@@ -432,6 +384,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.primaryVenueLocation
           : primaryVenueLocation // ignore: cast_nullable_to_non_nullable
               as GeoPoint?,
+      profileImageUrl: freezed == profileImageUrl
+          ? _value.profileImageUrl
+          : profileImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       logoUrl: freezed == logoUrl
           ? _value.logoUrl
           : logoUrl // ignore: cast_nullable_to_non_nullable
@@ -448,10 +404,6 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.isPrivate
           : isPrivate // ignore: cast_nullable_to_non_nullable
               as bool,
-      managerRatings: null == managerRatings
-          ? _value._managerRatings
-          : managerRatings // ignore: cast_nullable_to_non_nullable
-              as Map<String, double>,
       paymentLink: freezed == paymentLink
           ? _value.paymentLink
           : paymentLink // ignore: cast_nullable_to_non_nullable
@@ -464,10 +416,6 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.lastActivity
           : lastActivity // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      bannedUserIds: null == bannedUserIds
-          ? _value._bannedUserIds
-          : bannedUserIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       activityScore: null == activityScore
           ? _value.activityScore
           : activityScore // ignore: cast_nullable_to_non_nullable
@@ -486,44 +434,36 @@ class _$HubImpl implements _Hub {
       required this.createdBy,
       @TimestampConverter() required this.createdAt,
       this.memberCount = 0,
-      @TimestampMapConverter()
-      final Map<String, Timestamp> memberJoinDates = const {},
       final Map<String, dynamic> settings = const {
         'ratingMode': 'basic',
         'showManagerContactInfo': true,
         'allowJoinRequests': true
       },
-      final Map<String, String> roles = const {},
       final Map<String, dynamic> permissions = const {},
       @NullableGeoPointConverter() this.location,
       this.geohash,
       this.radius,
       final List<String> venueIds = const [],
-      this.profileImageUrl,
       this.mainVenueId,
       this.primaryVenueId,
       @NullableGeoPointConverter() this.primaryVenueLocation,
+      this.profileImageUrl,
       this.logoUrl,
       this.hubRules,
       this.region,
       this.isPrivate = false,
-      final Map<String, double> managerRatings = const {},
       this.paymentLink,
       this.gameCount,
       @TimestampConverter() this.lastActivity,
-      final List<String> bannedUserIds = const [],
       this.activityScore = 0})
-      : _memberJoinDates = memberJoinDates,
-        _settings = settings,
-        _roles = roles,
+      : _settings = settings,
         _permissions = permissions,
-        _venueIds = venueIds,
-        _managerRatings = managerRatings,
-        _bannedUserIds = bannedUserIds;
+        _venueIds = venueIds;
 
   factory _$HubImpl.fromJson(Map<String, dynamic> json) =>
       _$$HubImplFromJson(json);
 
+// Core identity
   @override
   final String hubId;
   @override
@@ -535,22 +475,13 @@ class _$HubImpl implements _Hub {
   @override
   @TimestampConverter()
   final DateTime createdAt;
+// Member count (denormalized for display, kept in sync by Cloud Function)
   @override
   @JsonKey()
   final int memberCount;
-  final Map<String, Timestamp> _memberJoinDates;
-  @override
-  @JsonKey()
-  @TimestampMapConverter()
-  Map<String, Timestamp> get memberJoinDates {
-    if (_memberJoinDates is EqualUnmodifiableMapView) return _memberJoinDates;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_memberJoinDates);
-  }
-
-// userId -> join date timestamp
+// Settings
   final Map<String, dynamic> _settings;
-// userId -> join date timestamp
+// Settings
   @override
   @JsonKey()
   Map<String, dynamic> get settings {
@@ -559,18 +490,13 @@ class _$HubImpl implements _Hub {
     return EqualUnmodifiableMapView(_settings);
   }
 
-  final Map<String, String> _roles;
-  @override
-  @JsonKey()
-  Map<String, String> get roles {
-    if (_roles is EqualUnmodifiableMapView) return _roles;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_roles);
-  }
-
-// userId -> role (manager, moderator, member)
+// Custom permissions (RARE overrides only)
+// Example: Allow specific user to create events even if not moderator
+// Format: {'canCreateEvents': ['userId1', 'userId2']}
   final Map<String, dynamic> _permissions;
-// userId -> role (manager, moderator, member)
+// Custom permissions (RARE overrides only)
+// Example: Allow specific user to create events even if not moderator
+// Format: {'canCreateEvents': ['userId1', 'userId2']}
   @override
   @JsonKey()
   Map<String, dynamic> get permissions {
@@ -579,7 +505,7 @@ class _$HubImpl implements _Hub {
     return EqualUnmodifiableMapView(_permissions);
   }
 
-// Custom permissions: {canCreateEvents: [userId1, userId2], canCreatePosts: [userId1, userId2]}
+// Location & venues
   @override
   @NullableGeoPointConverter()
   final GeoPoint? location;
@@ -601,9 +527,6 @@ class _$HubImpl implements _Hub {
 
 // IDs of venues where this hub plays
   @override
-  final String? profileImageUrl;
-// Profile picture chosen by hub manager
-  @override
   final String? mainVenueId;
 // ID of the main venue (home field) - required
   @override
@@ -613,65 +536,44 @@ class _$HubImpl implements _Hub {
   @NullableGeoPointConverter()
   final GeoPoint? primaryVenueLocation;
 // Location of primary venue - denormalized
+// Branding
+  @override
+  final String? profileImageUrl;
+// Profile picture chosen by hub manager
   @override
   final String? logoUrl;
 // Hub logo URL (used for feed posts)
+// Rules & region
   @override
   final String? hubRules;
 // Rules and guidelines for the hub
   @override
   final String? region;
 // אזור: צפון, מרכז, דרום, ירושלים
-// Privacy settings
+// Privacy
   @override
   @JsonKey()
   final bool isPrivate;
-// If true, requires "Request to Join" (create notification for manager)
-// Manager-only ratings for team balancing (1-10 scale)
-  final Map<String, double> _managerRatings;
-// If true, requires "Request to Join" (create notification for manager)
-// Manager-only ratings for team balancing (1-10 scale)
-  @override
-  @JsonKey()
-  Map<String, double> get managerRatings {
-    if (_managerRatings is EqualUnmodifiableMapView) return _managerRatings;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_managerRatings);
-  }
-
-// userId -> rating (1-10, manager-only, for team balancing)
-// Payment settings
+// If true, requires "Request to Join"
+// Payment
   @override
   final String? paymentLink;
 // PayBox/Bit payment link URL
-// Denormalized fields (updated by Cloud Functions, not written by client)
+// Denormalized stats (updated by Cloud Functions, not written by client)
   @override
   final int? gameCount;
-// Denormalized: Total games created (updated by onGameCreated)
+// Total games created (updated by onGameCreated)
   @override
   @TimestampConverter()
   final DateTime? lastActivity;
-// Denormalized: Last activity time (updated by Cloud Functions)
-// Banned users - users banned from this hub
-  final List<String> _bannedUserIds;
-// Denormalized: Last activity time (updated by Cloud Functions)
-// Banned users - users banned from this hub
-  @override
-  @JsonKey()
-  List<String> get bannedUserIds {
-    if (_bannedUserIds is EqualUnmodifiableListView) return _bannedUserIds;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_bannedUserIds);
-  }
-
-// Activity score - measures hub activity (updated by Cloud Functions)
+// Last activity time (updated by Cloud Functions)
   @override
   @JsonKey()
   final double activityScore;
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, memberJoinDates: $memberJoinDates, settings: $settings, roles: $roles, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, profileImageUrl: $profileImageUrl, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, managerRatings: $managerRatings, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, bannedUserIds: $bannedUserIds, activityScore: $activityScore)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, settings: $settings, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, profileImageUrl: $profileImageUrl, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, activityScore: $activityScore)';
   }
 
   @override
@@ -689,10 +591,7 @@ class _$HubImpl implements _Hub {
                 other.createdAt == createdAt) &&
             (identical(other.memberCount, memberCount) ||
                 other.memberCount == memberCount) &&
-            const DeepCollectionEquality()
-                .equals(other._memberJoinDates, _memberJoinDates) &&
             const DeepCollectionEquality().equals(other._settings, _settings) &&
-            const DeepCollectionEquality().equals(other._roles, _roles) &&
             const DeepCollectionEquality()
                 .equals(other._permissions, _permissions) &&
             (identical(other.location, location) ||
@@ -700,30 +599,26 @@ class _$HubImpl implements _Hub {
             (identical(other.geohash, geohash) || other.geohash == geohash) &&
             (identical(other.radius, radius) || other.radius == radius) &&
             const DeepCollectionEquality().equals(other._venueIds, _venueIds) &&
-            (identical(other.profileImageUrl, profileImageUrl) ||
-                other.profileImageUrl == profileImageUrl) &&
             (identical(other.mainVenueId, mainVenueId) ||
                 other.mainVenueId == mainVenueId) &&
             (identical(other.primaryVenueId, primaryVenueId) ||
                 other.primaryVenueId == primaryVenueId) &&
             (identical(other.primaryVenueLocation, primaryVenueLocation) ||
                 other.primaryVenueLocation == primaryVenueLocation) &&
+            (identical(other.profileImageUrl, profileImageUrl) ||
+                other.profileImageUrl == profileImageUrl) &&
             (identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl) &&
             (identical(other.hubRules, hubRules) ||
                 other.hubRules == hubRules) &&
             (identical(other.region, region) || other.region == region) &&
             (identical(other.isPrivate, isPrivate) ||
                 other.isPrivate == isPrivate) &&
-            const DeepCollectionEquality()
-                .equals(other._managerRatings, _managerRatings) &&
             (identical(other.paymentLink, paymentLink) ||
                 other.paymentLink == paymentLink) &&
             (identical(other.gameCount, gameCount) ||
                 other.gameCount == gameCount) &&
             (identical(other.lastActivity, lastActivity) ||
                 other.lastActivity == lastActivity) &&
-            const DeepCollectionEquality()
-                .equals(other._bannedUserIds, _bannedUserIds) &&
             (identical(other.activityScore, activityScore) ||
                 other.activityScore == activityScore));
   }
@@ -738,27 +633,23 @@ class _$HubImpl implements _Hub {
         createdBy,
         createdAt,
         memberCount,
-        const DeepCollectionEquality().hash(_memberJoinDates),
         const DeepCollectionEquality().hash(_settings),
-        const DeepCollectionEquality().hash(_roles),
         const DeepCollectionEquality().hash(_permissions),
         location,
         geohash,
         radius,
         const DeepCollectionEquality().hash(_venueIds),
-        profileImageUrl,
         mainVenueId,
         primaryVenueId,
         primaryVenueLocation,
+        profileImageUrl,
         logoUrl,
         hubRules,
         region,
         isPrivate,
-        const DeepCollectionEquality().hash(_managerRatings),
         paymentLink,
         gameCount,
         lastActivity,
-        const DeepCollectionEquality().hash(_bannedUserIds),
         activityScore
       ]);
 
@@ -786,31 +677,28 @@ abstract class _Hub implements Hub {
       required final String createdBy,
       @TimestampConverter() required final DateTime createdAt,
       final int memberCount,
-      @TimestampMapConverter() final Map<String, Timestamp> memberJoinDates,
       final Map<String, dynamic> settings,
-      final Map<String, String> roles,
       final Map<String, dynamic> permissions,
       @NullableGeoPointConverter() final GeoPoint? location,
       final String? geohash,
       final double? radius,
       final List<String> venueIds,
-      final String? profileImageUrl,
       final String? mainVenueId,
       final String? primaryVenueId,
       @NullableGeoPointConverter() final GeoPoint? primaryVenueLocation,
+      final String? profileImageUrl,
       final String? logoUrl,
       final String? hubRules,
       final String? region,
       final bool isPrivate,
-      final Map<String, double> managerRatings,
       final String? paymentLink,
       final int? gameCount,
       @TimestampConverter() final DateTime? lastActivity,
-      final List<String> bannedUserIds,
       final double activityScore}) = _$HubImpl;
 
   factory _Hub.fromJson(Map<String, dynamic> json) = _$HubImpl.fromJson;
 
+// Core identity
   @override
   String get hubId;
   @override
@@ -821,19 +709,16 @@ abstract class _Hub implements Hub {
   String get createdBy;
   @override
   @TimestampConverter()
-  DateTime get createdAt;
+  DateTime
+      get createdAt; // Member count (denormalized for display, kept in sync by Cloud Function)
   @override
-  int get memberCount;
+  int get memberCount; // Settings
   @override
-  @TimestampMapConverter()
-  Map<String, Timestamp> get memberJoinDates; // userId -> join date timestamp
+  Map<String, dynamic> get settings; // Custom permissions (RARE overrides only)
+// Example: Allow specific user to create events even if not moderator
+// Format: {'canCreateEvents': ['userId1', 'userId2']}
   @override
-  Map<String, dynamic> get settings;
-  @override
-  Map<String, String> get roles; // userId -> role (manager, moderator, member)
-  @override
-  Map<String, dynamic>
-      get permissions; // Custom permissions: {canCreateEvents: [userId1, userId2], canCreatePosts: [userId1, userId2]}
+  Map<String, dynamic> get permissions; // Location & venues
   @override
   @NullableGeoPointConverter()
   GeoPoint? get location; // Primary location (deprecated, use venues)
@@ -844,8 +729,6 @@ abstract class _Hub implements Hub {
   @override
   List<String> get venueIds; // IDs of venues where this hub plays
   @override
-  String? get profileImageUrl; // Profile picture chosen by hub manager
-  @override
   String? get mainVenueId; // ID of the main venue (home field) - required
   @override
   String?
@@ -854,35 +737,28 @@ abstract class _Hub implements Hub {
   @NullableGeoPointConverter()
   GeoPoint?
       get primaryVenueLocation; // Location of primary venue - denormalized
+// Branding
+  @override
+  String? get profileImageUrl; // Profile picture chosen by hub manager
   @override
   String? get logoUrl; // Hub logo URL (used for feed posts)
+// Rules & region
   @override
   String? get hubRules; // Rules and guidelines for the hub
   @override
   String? get region; // אזור: צפון, מרכז, דרום, ירושלים
-// Privacy settings
+// Privacy
   @override
-  bool
-      get isPrivate; // If true, requires "Request to Join" (create notification for manager)
-// Manager-only ratings for team balancing (1-10 scale)
-  @override
-  Map<String, double>
-      get managerRatings; // userId -> rating (1-10, manager-only, for team balancing)
-// Payment settings
+  bool get isPrivate; // If true, requires "Request to Join"
+// Payment
   @override
   String? get paymentLink; // PayBox/Bit payment link URL
-// Denormalized fields (updated by Cloud Functions, not written by client)
+// Denormalized stats (updated by Cloud Functions, not written by client)
   @override
-  int?
-      get gameCount; // Denormalized: Total games created (updated by onGameCreated)
+  int? get gameCount; // Total games created (updated by onGameCreated)
   @override
   @TimestampConverter()
-  DateTime?
-      get lastActivity; // Denormalized: Last activity time (updated by Cloud Functions)
-// Banned users - users banned from this hub
-  @override
-  List<String>
-      get bannedUserIds; // Activity score - measures hub activity (updated by Cloud Functions)
+  DateTime? get lastActivity; // Last activity time (updated by Cloud Functions)
   @override
   double get activityScore;
 

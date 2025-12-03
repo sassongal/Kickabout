@@ -8,7 +8,7 @@ import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kattrick/widgets/futuristic/loading_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_role.dart';
+
 import 'package:kattrick/utils/snackbar_helper.dart';
 
 class CreateRecruitingPostScreen extends ConsumerStatefulWidget {
@@ -147,11 +147,22 @@ class _CreateRecruitingPostScreenState
       return;
     }
 
-    // Check permissions
-    final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
-    if (!hubPermissions.canCreatePosts()) {
+    // Check permissions - fetch asynchronously with membership data
+    try {
+      final hubPermissionsAsync = await ref.read(
+        hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId))
+            .future,
+      );
+
+      if (!hubPermissionsAsync.canCreatePosts()) {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'אין לך הרשאה לפרסם');
+        }
+        return;
+      }
+    } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'אין לך הרשאה לפרסם');
+        SnackbarHelper.showError(context, 'שגיאה בבדיקת הרשאות');
       }
       return;
     }
@@ -241,7 +252,8 @@ class _CreateRecruitingPostScreenState
                               placeholder: (context, url) => const SizedBox(
                                 height: 48,
                                 width: 48,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                               errorWidget: (context, url, error) =>
                                   const CircleAvatar(

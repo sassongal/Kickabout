@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
@@ -45,17 +46,33 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
             return const Center(child: Text('אין חברים בהוב'));
           }
 
-          return FutureBuilder<List<User>>(
+          return FutureBuilder<Map<String, dynamic>>(
             future: () async {
-              final memberIds = await hubsRepo.getHubMemberIds(hub.hubId);
-              return usersRepo.getUsers(memberIds);
+              // 1. Fetch all active members
+              final members = await hubsRepo.getHubMembers(hub.hubId);
+
+              // 2. Extract user IDs
+              final memberIds = members.map((m) => m.userId).toList();
+
+              // 3. Fetch user details
+              final users = await usersRepo.getUsers(memberIds);
+
+              // 4. Create a map of userId -> role
+              final rolesMap = {for (var m in members) m.userId: m.role};
+
+              return {
+                'users': users,
+                'roles': rolesMap,
+              };
             }(),
-            builder: (context, usersSnapshot) {
-              if (usersSnapshot.connectionState == ConnectionState.waiting) {
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final users = usersSnapshot.data ?? [];
+              final data = snapshot.data;
+              final users = (data?['users'] as List<User>?) ?? [];
+              final rolesMap = (data?['roles'] as Map<String, String>?) ?? {};
 
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -65,7 +82,7 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                   final isCreator = user.uid == hub.createdBy;
                   final currentRole = isCreator
                       ? HubRole.manager
-                      : HubRole.fromFirestore(hub.roles[user.uid] ?? 'member');
+                      : HubRole.fromFirestore(rolesMap[user.uid] ?? 'member');
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -89,10 +106,14 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                                 if (newRole == null) return;
 
                                 try {
+                                  final currentUserId = auth.FirebaseAuth
+                                          .instance.currentUser?.uid ??
+                                      '';
                                   await hubsRepo.updateMemberRole(
                                     widget.hubId,
                                     user.uid,
                                     newRole.firestoreValue,
+                                    currentUserId,
                                   );
 
                                   if (!context.mounted) return;
