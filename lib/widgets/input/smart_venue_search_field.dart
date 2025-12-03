@@ -150,7 +150,13 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialValue != oldWidget.initialValue &&
         widget.initialValue != _controller.text) {
-      _controller.text = widget.initialValue ?? '';
+      // Defer text update to next frame to avoid "setState() called during build"
+      // when the inner TextFormField notifies the ancestor Form
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _controller.text = widget.initialValue ?? '';
+        }
+      });
     }
   }
 

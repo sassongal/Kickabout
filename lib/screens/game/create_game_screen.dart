@@ -10,6 +10,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/screens/location/map_picker_screen.dart';
+import 'package:kattrick/routing/app_paths.dart';
 
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 import 'package:kattrick/models/targeting_criteria.dart';
@@ -951,6 +952,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                                   setState(() {
                                     _selectedLocation = null;
                                     _locationAddress = null;
+                                    _locationController.clear(); // Clear the controller too
+                                    _selectedVenueId = null; // Reset selected venue ID
                                   });
                                 },
                               ),
@@ -981,18 +984,16 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MapPickerScreen(
-                                      initialLocation: _selectedLocation,
-                                    ),
-                                  ),
+                                final result = await context.push(
+                                  AppPaths.mapPicker,
+                                  extra: _selectedLocation,
                                 );
-                                if (result != null && mounted) {
+                                if (result != null &&
+                                    result is Map<String, dynamic> &&
+                                    mounted) {
                                   setState(() {
                                     _selectedLocation =
-                                        result['location'] as GeoPoint;
+                                        result['location'] as GeoPoint?;
                                     _locationAddress =
                                         result['address'] as String?;
                                     _locationController.text =

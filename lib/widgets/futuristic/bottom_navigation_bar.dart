@@ -43,11 +43,11 @@ class FuturisticBottomNavBar extends ConsumerWidget {
                   onTap: () => context.go('/'),
                 ),
                 _NavItem(
-                  icon: Icons.favorite, // Heartbeat/vital signs icon
-                  label: 'פעילות',
-                  route: '/activity',
+                  icon: Icons.sports_soccer, // Soccer ball icon
+                  label: 'משחקים',
+                  route: '/games',
                   currentRoute: currentRoute,
-                  onTap: () => context.go('/activity'),
+                  onTap: () => context.go('/games'),
                 ),
                 _NavItem(
                   icon: Icons.message_rounded,
@@ -89,21 +89,22 @@ class _NavItem extends StatelessWidget {
 
   bool get isActive {
     if (route == '/') {
-      return currentRoute == '/' || 
-             currentRoute == '/home' ||
-             currentRoute.isEmpty;
+      return currentRoute == '/' ||
+          currentRoute == '/home' ||
+          currentRoute.isEmpty;
     }
     // For profile, check if route starts with /profile/
     if (route == '/profile') {
       return currentRoute.startsWith('/profile/');
     }
-    // For activity feed
-    if (route == '/activity') {
-      return currentRoute == '/activity' || currentRoute.startsWith('/activity');
+    // For games
+    if (route == '/games') {
+      return currentRoute == '/games' || currentRoute.startsWith('/games');
     }
     // For community
     if (route == AppPaths.community) {
-      return currentRoute == AppPaths.community || currentRoute.startsWith(AppPaths.community);
+      return currentRoute == AppPaths.community ||
+          currentRoute.startsWith(AppPaths.community);
     }
     // For other routes, check if it starts with the route
     return currentRoute.startsWith(route);
