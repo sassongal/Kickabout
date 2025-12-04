@@ -59,3 +59,10 @@ const autoClose = require('./scheduledGameAutoClose');
 exports.scheduledGameAutoClose = autoClose.scheduledGameAutoClose;
 const reminders = require('./scheduledGameReminders');
 exports.scheduledGameReminders = reminders.scheduledGameReminders;
+
+// Membership (HubMember subcollection functions)
+const membership = require('./src/membership');
+exports.onMembershipChange = membership.onMembershipChange;
+exports.onChatMessage = membership.onChatMessage;
+exports.onGameSignup = membership.onGameSignup;
+exports.promoteVeterans = membership.promoteVeterans;

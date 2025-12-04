@@ -1,5 +1,6 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const admin = require('firebase-admin');
+const { info, error, warn } = require('firebase-functions/logger');
 
 const VETERAN_THRESHOLD_DAYS = 60;
 const BATCH_SIZE = 500;
@@ -11,17 +12,21 @@ const BATCH_SIZE = 500;
  * This function ensures veteran status is SERVER-MANAGED, not client-computed.
  * Eliminates DateTime.now() issues, timezone problems, and audit trail gaps.
  */
-export const promoteVeterans = functions.pubsub
-    .schedule('0 2 * * *') // Daily at 2 AM UTC
-    .timeZone('UTC')
-    .onRun(async (context) => {
+exports.promoteVeterans = onSchedule(
+    {
+        schedule: '0 2 * * *', // Daily at 2 AM UTC
+        timeZone: 'UTC',
+        region: 'us-central1',
+        memory: '256MiB',
+    },
+    async (event) => {
         const db = admin.firestore();
         const now = admin.firestore.Timestamp.now();
         const thresholdDate = new Date(
             now.toMillis() - (VETERAN_THRESHOLD_DAYS * 24 * 60 * 60 * 1000)
         );
 
-        console.log(`[promoteVeterans] Starting check for members joined before ${thresholdDate.toISOString()}`);
+        info(`[promoteVeterans] Starting check for members joined before ${thresholdDate.toISOString()}`);
 
         try {
             // Query all active members eligible for promotion:
@@ -37,22 +42,22 @@ export const promoteVeterans = functions.pubsub
                 .get();
 
             if (membersSnapshot.empty) {
-                console.log('[promoteVeterans] No members eligible for promotion');
+                info('[promoteVeterans] No members eligible for promotion');
                 return null;
             }
 
-            console.log(`[promoteVeterans] Found ${membersSnapshot.docs.length} members eligible`);
+            info(`[promoteVeterans] Found ${membersSnapshot.docs.length} members eligible`);
 
             // Process in batches to avoid write limits (500 per batch)
             let promotedCount = 0;
             let errorCount = 0;
-            const batches: admin.firestore.WriteBatch[] = [];
+            const batches = [];
             let currentBatch = db.batch();
             let batchOpsCount = 0;
 
             for (const doc of membersSnapshot.docs) {
                 const memberData = doc.data();
-                const hubId = doc.ref.parent.parent!.id;
+                const hubId = doc.ref.parent.parent.id;
                 const userId = doc.id;
 
                 // Safety check: Double-verify eligibility
@@ -61,7 +66,7 @@ export const promoteVeterans = functions.pubsub
                 );
 
                 if (daysSinceJoined < VETERAN_THRESHOLD_DAYS) {
-                    console.warn(`[promoteVeterans] Skipping ${userId} in ${hubId}: only ${daysSinceJoined} days`);
+                    warn(`[promoteVeterans] Skipping ${userId} in ${hubId}: only ${daysSinceJoined} days`);
                     continue;
                 }
 
@@ -94,14 +99,14 @@ export const promoteVeterans = functions.pubsub
                     await batches[i].commit();
                     const promotedInBatch = Math.min(BATCH_SIZE, membersSnapshot.docs.length - (i * BATCH_SIZE));
                     promotedCount += promotedInBatch;
-                    console.log(`[promoteVeterans] Batch ${i + 1}/${batches.length} committed: ${promotedInBatch} promotions`);
-                } catch (error) {
-                    console.error(`[promoteVeterans] Batch ${i + 1} error:`, error);
+                    info(`[promoteVeterans] Batch ${i + 1}/${batches.length} committed: ${promotedInBatch} promotions`);
+                } catch (err) {
+                    error(`[promoteVeterans] Batch ${i + 1} error:`, err);
                     errorCount++;
                 }
             }
 
-            console.log(`[promoteVeterans] Complete: ${promotedCount} promoted, ${errorCount} errors`);
+            info(`[promoteVeterans] Complete: ${promotedCount} promoted, ${errorCount} errors`);
 
             // Log to system logs for monitoring
             await db.collection('_system_logs').add({
@@ -113,8 +118,9 @@ export const promoteVeterans = functions.pubsub
             });
 
             return null;
-        } catch (error) {
-            console.error('[promoteVeterans] Fatal error:', error);
-            throw error;
+        } catch (err) {
+            error('[promoteVeterans] Fatal error:', err);
+            throw err;
         }
-    });
+    }
+);

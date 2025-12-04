@@ -393,7 +393,7 @@ class GameManagementService {
 
       // Check if user is manager/admin
       final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
-      if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
+      if (!hubPermissions.isManager && !hubPermissions.isModerator) {
         throw Exception('Unauthorized: Only Hub Managers can rollback games');
       }
 

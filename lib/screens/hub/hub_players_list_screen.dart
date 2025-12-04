@@ -7,6 +7,7 @@ import 'package:kattrick/widgets/futuristic/loading_state.dart';
 import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/hub_member.dart' as models;
 import 'package:kattrick/screens/hub/add_manual_player_dialog.dart';
 import 'package:kattrick/screens/hub/edit_manual_player_dialog.dart';
 import 'package:kattrick/widgets/dialogs/merge_player_dialog.dart';
@@ -16,16 +17,20 @@ import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 
-class HubMember {
+/// View model combining HubMember with User for display
+class HubMemberWithUser {
+  final models.HubMember member;
   final User user;
-  final DateTime? joinedAt;
-  final String role;
 
-  HubMember({
-    required this.user,
-    this.joinedAt,
-    required this.role,
-  });
+  HubMemberWithUser({required this.member, required this.user});
+
+  // Convenience getters for backward compatibility
+  String get userId => member.userId;
+  DateTime? get joinedAt => member.joinedAt;
+  String get role => member.role.name;
+  double? get managerRating => member.managerRating;
+  models.HubMemberStatus get status => member.status;
+  bool get isVeteran => member.isVeteran;
 }
 
 /// Dedicated screen for viewing all players in a hub
@@ -51,7 +56,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
   // Pagination state for subcollection
   final ScrollController _scrollController = ScrollController();
-  final List<HubMember> _members = [];
+  final List<HubMemberWithUser> _members = [];
   DocumentSnapshot? _lastDocument;
   bool _isLoading = false;
   bool _hasMore = true;
@@ -115,6 +120,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
         metadata[doc.id] = {
           'joinedAt': data['joinedAt'] as Timestamp?,
           'role': data['role'] as String? ?? 'member',
+          'managerRating': data['managerRating'] as double?,
         };
       }
 
@@ -122,10 +128,17 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
       final newMembers = users.map((u) {
         final meta = metadata[u.uid];
-        return HubMember(
+        final roleString = meta?['role'] as String? ?? 'member';
+        return HubMemberWithUser(
           user: u,
-          joinedAt: meta?['joinedAt']?.toDate(),
-          role: meta?['role'] as String? ?? 'member',
+          member: models.HubMember(
+            hubId: widget.hubId,
+            userId: u.uid,
+            joinedAt: meta?['joinedAt']?.toDate() ?? DateTime.now(),
+            role: models.HubMemberRole.fromString(roleString),
+            status: models.HubMemberStatus.active,
+            managerRating: meta?['managerRating'] as double? ?? 0.0,
+          ),
         );
       }).toList();
 
@@ -147,9 +160,9 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     }
   }
 
-  List<HubMember> _filterAndSort(
-      List<HubMember> members, Hub? hub, bool isHubManager) {
-    var filtered = List<HubMember>.from(members);
+  List<HubMemberWithUser> _filterAndSort(
+      List<HubMemberWithUser> members, Hub? hub, bool isHubManager) {
+    var filtered = List<HubMemberWithUser>.from(members);
 
     // Search filter
     if (_searchQuery.isNotEmpty) {
@@ -177,11 +190,11 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
         case 'rating':
           // Only managers can see and use manager ratings for sorting
           // Non-managers always use global rating
-          final aRating = isHubManager && hub != null
-              ? (hub.managerRatings[a.user.uid] ?? a.user.currentRankScore)
+          final aRating = isHubManager
+              ? (a.managerRating ?? a.user.currentRankScore)
               : a.user.currentRankScore;
-          final bRating = isHubManager && hub != null
-              ? (hub.managerRatings[b.user.uid] ?? b.user.currentRankScore)
+          final bRating = isHubManager
+              ? (b.managerRating ?? b.user.currentRankScore)
               : b.user.currentRankScore;
           return bRating.compareTo(aRating);
         case 'name':
@@ -234,17 +247,20 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
               : null;
           final hubPermissions = hubPermissionsAsync?.valueOrNull;
 
-          final canManageRatings = (hubPermissions?.isManager() ?? false) ||
-              (hubPermissions?.isModerator() ?? false);
+          final canManageRatings = (hubPermissions?.isManager ?? false) ||
+              (hubPermissions?.isModerator ?? false);
 
           // Load existing ratings when entering rating mode
-          if (_isRatingMode &&
-              _tempRatings.isEmpty &&
-              hub.managerRatings.isNotEmpty) {
+          if (_isRatingMode && _tempRatings.isEmpty && _members.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 setState(() {
-                  _tempRatings = Map<String, double>.from(hub.managerRatings);
+                  // Load ratings from members list
+                  for (final member in _members) {
+                    if (member.managerRating != null) {
+                      _tempRatings[member.user.uid] = member.managerRating!;
+                    }
+                  }
                 });
               }
             });
@@ -430,9 +446,13 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                     setState(() {
                                       _isRatingMode = value;
                                       if (value) {
-                                        // Load existing ratings
-                                        _tempRatings = Map<String, double>.from(
-                                            hub.managerRatings);
+                                        // Load existing ratings from members
+                                        for (final member in _members) {
+                                          if (member.managerRating != null) {
+                                            _tempRatings[member.user.uid] =
+                                                member.managerRating!;
+                                          }
+                                        }
                                       } else {
                                         // Clear temp ratings when exiting mode
                                         _tempRatings.clear();
@@ -580,7 +600,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                   user.email.startsWith('manual_');
                               final isCreator = user.uid == hub.createdBy;
                               final currentRating = _tempRatings[user.uid] ??
-                                  hub.managerRatings[user.uid] ??
+                                  member.managerRating ??
                                   user.currentRankScore.clamp(1.0, 7.0);
 
                               return Padding(
@@ -612,12 +632,10 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                       ? _buildRatingModeTile(
                                           user, currentRating, hub)
                                       : _buildNormalModeTile(
-                                          user,
-                                          member.role,
+                                          member,
                                           isManualPlayer,
                                           isCreator,
-                                          isHubManager,
-                                          hub),
+                                          isHubManager),
                                 ),
                               );
                             },
@@ -632,17 +650,18 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     );
   }
 
-  Widget _buildNormalModeTile(User user, String role, bool isManualPlayer,
-      bool isCreator, bool isHubManager, Hub hub) {
-    // Get manager rating if it exists, but only show it to managers
-    final managerRating = isHubManager ? hub.managerRatings[user.uid] : null;
+  Widget _buildNormalModeTile(HubMemberWithUser member, bool isManualPlayer,
+      bool isCreator, bool isHubManager) {
+    final user = member.user;
+    // Get manager rating from member if it exists, but only show it to managers
+    final managerRating = isHubManager ? member.managerRating : null;
     // For non-managers, always show global rating
     // For managers, show manager rating if exists, otherwise global rating
     final displayRating = isHubManager
         ? (managerRating ?? user.currentRankScore)
         : user.currentRankScore;
     final hasManagerRating = managerRating != null;
-    final isManagerRole = role == 'manager' || role == 'admin';
+    final isManagerRole = member.role == 'manager' || member.role == 'admin';
 
     return ListTile(
       contentPadding: const EdgeInsets.all(12),

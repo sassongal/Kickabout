@@ -1,5 +1,3 @@
-import 'package:kattrick/models/models.dart';
-
 /// Simple user role enum for permission checks
 enum UserRole {
   admin,
@@ -67,21 +65,7 @@ enum HubRole {
     }
   }
 
-  // Determine role using user profile membership (not hub.memberIds)
-  static HubRole determine(Hub hub, User user) {
-    if (hub.createdBy == user.uid) return HubRole.manager;
-
-    final roleString = hub.roles[user.uid];
-    if (roleString != null) {
-      return HubRole.fromFirestore(roleString);
-    }
-
-    if (user.hubIds.contains(hub.hubId)) {
-      return HubRole.member;
-    }
-
-    return HubRole.guest;
-  }
+  ///
 
   /// Check if role has permission to perform action
   ///

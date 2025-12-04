@@ -1092,15 +1092,18 @@ class HubsRepository {
   }
 
   /// Unban user from hub
-  /// Removes user ID from hub's bannedUserIds array
+  /// Updates HubMember status from 'banned' to 'active'
   Future<void> unbanUserFromHub(String hubId, String userId) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
-      await _firestore.doc(FirestorePaths.hub(hubId)).update({
-        'bannedUserIds': FieldValue.arrayRemove([userId]),
+      // Update HubMember status in subcollection
+      await _firestore.doc('hubs/$hubId/members/$userId').update({
+        'status': 'active',
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': 'system:unban',
       });
 
       // Invalidate cache

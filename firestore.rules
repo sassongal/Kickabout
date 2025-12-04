@@ -16,55 +16,94 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+
     function getHubData(hubId) {
       return get(/databases/$(database)/documents/hubs/$(hubId)).data;
     }
 
-    function getRole(hub) {
-      return (hub.roles != null && request.auth.uid in hub.roles)
-        ? hub.roles[request.auth.uid]
-        : null;
+    // ============================================
+    // HubMember Subcollection Helpers (NEW)
+    // ============================================
+    //
+    // IMPORTANT: These rules are aligned with the permission logic in:
+    // lib/services/hub_permissions_service.dart (HubPermissionsService class)
+    //
+    // Permission Matrix (must match Dart service):
+    // - Manager:   Full access to all operations
+    // - Moderator: Can create games/events, record results, moderate content
+    // - Veteran:   Can record results, create games (with restrictions)
+    // - Member:    Can create games, send messages, view content
+    // - Guest:     No permissions (inactive or non-member)
+    //
+    // Key Principles:
+    // 1. Hub creator is ALWAYS manager (even without HubMember doc)
+    // 2. Active status (status == 'active') is REQUIRED for all permissions
+    // 3. Banned users have status == 'banned' and get zero permissions
+    // 4. All permission checks query /hubs/{hubId}/members/{userId}
+    // ============================================
+
+    /// Get user's HubMember document
+    /// Returns null if doesn't exist
+    function getMembership(hubId, userId) {
+      let memberPath = /databases/$(database)/documents/hubs/$(hubId)/members/$(userId);
+      return exists(memberPath) ? get(memberPath).data : null;
     }
 
-    function isHubAdmin(hubId) {
+    /// Check if user is an active member of hub
+    /// Hub creator is ALWAYS considered active (even without HubMember doc)
+    /// Check if user is an active member of hub
+    /// Hub creator is ALWAYS considered active (even without HubMember doc)
+    function isActiveHubMember(hubId) {
       let hub = getHubData(hubId);
+      let membership = getMembership(hubId, request.auth.uid);
+      
       return isAuthenticated() && (
+        // Creator is always active
         hub.createdBy == request.auth.uid ||
-        (getRole(hub) in ['manager'])
+        // Or has active membership
+        (membership != null && membership.status == 'active')
       );
     }
 
-    function isHubManagerOrModerator(hubId) {
+    /// Check if user has one of the allowed roles in hub
+    /// Hub creator is ALWAYS manager (even without HubMember doc)
+    function hasRole(hubId, userId, allowedRoles) {
       let hub = getHubData(hubId);
-      let role = getRole(hub);
-      return isAuthenticated() && (
-        hub.createdBy == request.auth.uid ||
-        role in ['manager', 'moderator']
+      let membership = getMembership(hubId, userId);
+      
+      return (
+        // Creator is always manager
+        (hub.createdBy == userId && 'manager' in allowedRoles) ||
+        // Or has active membership with allowed role
+        (membership != null && 
+         membership.status == 'active' && 
+         membership.role in allowedRoles)
       );
     }
 
-    function isHubMember(hubId) {
-      let user = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      let hub = getHubData(hubId);
-      return isAuthenticated() && 
-        !(hub.bannedUserIds != null && hub.bannedUserIds is list && request.auth.uid in hub.bannedUserIds) &&
-        (user.data.hubIds != null && hubId in user.data.hubIds);
-    }
-
-    function isHubModerator(hubId) {
-      let hub = getHubData(hubId);
-      return isAuthenticated() && (
-        hub.createdBy == request.auth.uid ||
-        (getRole(hub) in ['manager', 'moderator'])
-      );
-    }
-
+    /// Check if current user is hub manager
     function isHubManager(hubId) {
-      let hub = getHubData(hubId);
-      return isAuthenticated() && (
-        hub.createdBy == request.auth.uid ||
-        (getRole(hub) in ['manager', 'admin'])
-      );
+      return isAuthenticated() && hasRole(hubId, request.auth.uid, ['manager']);
+    }
+
+    /// Check if current user is hub moderator or manager
+    function isHubModerator(hubId) {
+      return isAuthenticated() && hasRole(hubId, request.auth.uid, ['manager', 'moderator']);
+    }
+
+    /// Alias for backward compatibility
+    function isHubAdmin(hubId) {
+      return isHubManager(hubId);
+    }
+
+    /// Alias for backward compatibility
+    function isHubManagerOrModerator(hubId) {
+      return isHubModerator(hubId);
+    }
+
+    /// Check if user is a member (backward compatibility - now checks active status)
+    function isHubMember(hubId) {
+      return isActiveHubMember(hubId);
     }
 
     function canManageGames(hubId) {
@@ -81,10 +120,14 @@ service cloud.firestore {
 
     function canCreateEvents(hubId) {
       let hub = getHubData(hubId);
-      return isAuthenticated() && 
-        !(hub.bannedUserIds != null && hub.bannedUserIds is list && request.auth.uid in hub.bannedUserIds) && (
+      
+      return isAuthenticated() &&
+             isActiveHubMember(hubId) && (
+        // Creator can always create
         hub.createdBy == request.auth.uid ||
-        (hub.roles != null && request.auth.uid in hub.roles && hub.roles[request.auth.uid] in ['manager', 'moderator', 'admin']) ||
+        // Check role-based permissions
+        hasRole(hubId, request.auth.uid, ['manager', 'moderator']) ||
+        // Check custom permission overrides
         (hub.permissions != null &&
          hub.permissions.canCreateEvents != null &&
          hub.permissions.canCreateEvents is list &&
@@ -94,13 +137,18 @@ service cloud.firestore {
 
     function canCreatePosts(hubId) {
       let hub = getHubData(hubId);
-      return isAuthenticated() && 
-        !(hub.bannedUserIds != null && hub.bannedUserIds is list && request.auth.uid in hub.bannedUserIds) &&
-        (isHubMember(hubId) || hub.createdBy == request.auth.uid) && (
-        hub.permissions == null ||
-        hub.permissions.canCreatePosts == null ||
-        !(hub.permissions.canCreatePosts is list) ||
-        request.auth.uid in hub.permissions.canCreatePosts
+      
+      return isAuthenticated() &&
+             isActiveHubMember(hubId) && (
+        // Check custom permission overrides (if they exist, respect them)
+        (hub.permissions != null &&
+         hub.permissions.canCreatePosts != null &&
+         hub.permissions.canCreatePosts is list &&
+         request.auth.uid in hub.permissions.canCreatePosts) ||
+        // By default, all active members can create posts if no override
+        (hub.permissions == null ||
+         hub.permissions.canCreatePosts == null ||
+         !(hub.permissions.canCreatePosts is list))
       );
     }
 

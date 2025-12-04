@@ -152,8 +152,8 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
             return AppScaffold(
               title: hub.name,
               floatingActionButton: hubPermissions != null &&
-                      (hubPermissions.canCreateGames() ||
-                          hubPermissions.canInvitePlayers())
+                      (hubPermissions.canCreateGames ||
+                          hubPermissions.canInvitePlayers)
                   ? _HubAdminSpeedDial(
                       hubId: widget.hubId, permissions: hubPermissions)
                   : null,
@@ -272,8 +272,8 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                   const SizedBox(height: 8),
                                   // Command Center - Compact Header (for managers/moderators)
                                   if (hubPermissions != null &&
-                                      (hubPermissions.isManager() ||
-                                          hubPermissions.isModerator())) ...[
+                                      (hubPermissions.isManager ||
+                                          hubPermissions.isModerator)) ...[
                                     // Row 1: Top Actions (Manager Mode Toggle + IconButtons)
                                     Row(
                                       mainAxisAlignment:
@@ -310,7 +310,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                                 return Stack(
                                                   children: [
                                                     if (hubPermissions
-                                                        .canManageMembers())
+                                                        .canManageMembers)
                                                       IconButton(
                                                         icon: const Icon(
                                                             Icons.inbox,
@@ -364,7 +364,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
                                               },
                                             ),
                                             if (hubPermissions
-                                                .canManageMembers())
+                                                .canManageMembers)
                                               IconButton(
                                                 icon: const Icon(Icons.gpp_bad,
                                                     size: 20),
@@ -770,7 +770,7 @@ class _GamesTabState extends ConsumerState<_GamesTab> {
                 (hubId: widget.hubId, userId: currentUserId)))
             : null;
         final hubPermissions = hubPermissionsAsync?.valueOrNull;
-        final canCreateGames = hubPermissions?.canCreateGames() ?? false;
+        final canCreateGames = hubPermissions?.canCreateGames ?? false;
 
         return Column(
           children: [
@@ -1147,7 +1147,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
         return Column(
           children: [
             // Add manual player button (for managers/moderators)
-            if (hubPermissions != null && hubPermissions.canManageMembers())
+            if (hubPermissions != null && hubPermissions.canManageMembers)
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: SizedBox(
@@ -2435,7 +2435,7 @@ class _HubAdminSpeedDial extends StatelessWidget {
       overlayColor: Colors.black,
       overlayOpacity: 0.5,
       children: [
-        if (permissions.canCreateGames())
+        if (permissions.canCreateGames)
           SpeedDialChild(
             child: const Icon(Icons.event, color: Colors.black),
             backgroundColor: const Color(0xFFFF6B35), // Vibrant orange
