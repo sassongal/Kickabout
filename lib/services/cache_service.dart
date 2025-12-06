@@ -27,16 +27,20 @@ class CacheService {
 
   // In-memory cache
   final Map<String, _CacheEntry<dynamic>> _memoryCache = {};
-  
+
   // Persistent cache (SharedPreferences)
   SharedPreferences? _prefs;
   bool _prefsInitialized = false;
-  
+
+  // OPTIMIZATION: Request deduplication - prevents multiple concurrent fetches for same key
+  final Map<String, Future<dynamic>> _pendingRequests = {};
+
   // Cache analytics
   int _cacheHits = 0;
   int _cacheMisses = 0;
   int _persistentCacheHits = 0;
   int _persistentCacheMisses = 0;
+  int _deduplicatedRequests = 0;
   
   // Cache configuration
   static const Duration defaultTtl = Duration(minutes: 5);
@@ -273,6 +277,7 @@ class CacheService {
   }
 
   /// Get or fetch data with caching (checks memory, then persistent async, then fetches)
+  /// OPTIMIZED: Deduplicates concurrent requests for the same key
   Future<T> getOrFetch<T>(
     String key,
     Future<T> Function() fetch, {
@@ -286,7 +291,7 @@ class CacheService {
         debugPrint('📦 Cache hit (memory): $key');
         return cached;
       }
-      
+
       // Check persistent cache asynchronously (non-blocking)
       if (_shouldPersist(key)) {
         await _initPrefs();
@@ -300,9 +305,36 @@ class CacheService {
           }
         }
       }
+
+      // OPTIMIZATION: Check if already fetching this key
+      if (_pendingRequests.containsKey(key)) {
+        _deduplicatedRequests++;
+        debugPrint('🔄 Request deduplicated: $key (reusing pending fetch)');
+        return await _pendingRequests[key] as T;
+      }
     }
 
     debugPrint('🌐 Cache miss: $key - fetching...');
+
+    // Create and store the fetch promise
+    final fetchFuture = _executeFetch<T>(key, fetch, ttl);
+    _pendingRequests[key] = fetchFuture;
+
+    try {
+      final result = await fetchFuture;
+      return result;
+    } finally {
+      // Always clean up pending request, even on error
+      _pendingRequests.remove(key);
+    }
+  }
+
+  /// Execute fetch and handle errors with fallback to expired cache
+  Future<T> _executeFetch<T>(
+    String key,
+    Future<T> Function() fetch,
+    Duration? ttl,
+  ) async {
     try {
       final data = await fetch();
       set(key, data, ttl: ttl);
@@ -314,7 +346,7 @@ class CacheService {
         debugPrint('⚠️ Using expired cache for $key due to error');
         return expired.data as T;
       }
-      
+
       // Try persistent cache as last resort (async, but we're already in error state)
       if (_shouldPersist(key)) {
         await _initPrefs();
@@ -326,7 +358,7 @@ class CacheService {
           }
         }
       }
-      
+
       rethrow;
     }
   }
@@ -375,13 +407,13 @@ class CacheService {
     final total = _memoryCache.length;
     final expired = _memoryCache.values.where((e) => e.isExpired).length;
     final active = total - expired;
-    
+
     final totalRequests = _cacheHits + _cacheMisses;
     final hitRate = totalRequests > 0 ? (_cacheHits / totalRequests * 100) : 0.0;
-    
+
     final persistentTotal = _persistentCacheHits + _persistentCacheMisses;
-    final persistentHitRate = persistentTotal > 0 
-        ? (_persistentCacheHits / persistentTotal * 100) 
+    final persistentHitRate = persistentTotal > 0
+        ? (_persistentCacheHits / persistentTotal * 100)
         : 0.0;
 
     return {
@@ -390,12 +422,14 @@ class CacheService {
         'active': active,
         'expired': expired,
         'maxSize': maxMemoryCacheSize,
+        'pendingRequests': _pendingRequests.length,
       },
       'analytics': {
         'hits': _cacheHits,
         'misses': _cacheMisses,
         'hitRate': '${hitRate.toStringAsFixed(2)}%',
         'totalRequests': totalRequests,
+        'deduplicatedRequests': _deduplicatedRequests,
       },
       'persistent': {
         'hits': _persistentCacheHits,
@@ -412,6 +446,7 @@ class CacheService {
     _cacheMisses = 0;
     _persistentCacheHits = 0;
     _persistentCacheMisses = 0;
+    _deduplicatedRequests = 0;
   }
 
   /// Convert Timestamp and GeoPoint objects to JSON-serializable format

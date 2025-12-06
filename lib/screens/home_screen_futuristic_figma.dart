@@ -39,6 +39,40 @@ class HomeScreenFuturisticFigma extends ConsumerStatefulWidget {
 
 class _HomeScreenFuturisticFigmaState
     extends ConsumerState<HomeScreenFuturisticFigma> {
+  bool _hasPreloaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Schedule prefetching for next frame to avoid blocking initial render
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prefetchData();
+    });
+  }
+
+  /// OPTIMIZATION: Prefetch common data to warm up the cache
+  void _prefetchData() {
+    if (_hasPreloaded) return;
+    _hasPreloaded = true;
+
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
+
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
+
+    // Prefetch user and hubs in parallel (will be cached for immediate use)
+    Future.wait([
+      usersRepo.getUser(currentUserId),
+      hubsRepo.getHubsByMember(currentUserId),
+    ]).then((_) {
+      debugPrint('✅ Prefetch completed successfully');
+    }).catchError((e) {
+      // Silently fail - data will be fetched on demand if prefetch fails
+      debugPrint('⚠️ Prefetch failed (non-critical): $e');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -241,7 +275,8 @@ class _HomeScreenFuturisticFigmaState
                           const SizedBox(height: 16),
                         ],
 
-                        // My Hubs Carousel (Unified)
+                        // My Hubs Carousel (Unified) + Upcoming Games
+                        // OPTIMIZED: Single stream query for both carousel and games
                         StreamBuilder<List<Hub>>(
                           stream: hubsRepo.watchAllMyHubs(currentUserId),
                           builder: (context, snapshot) {
@@ -254,55 +289,42 @@ class _HomeScreenFuturisticFigmaState
                             }
 
                             final hubs = snapshot.data ?? [];
-
-                            return HubsCarousel(
-                              hubs: hubs,
-                              currentUserId: currentUserId,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Upcoming Games
-                        StreamBuilder<List<Hub>>(
-                          stream: hubsRepo.watchHubsByMember(currentUserId),
-                          builder: (context, hubsSnapshot) {
-                            if (hubsSnapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const SizedBox.shrink();
-                            }
-
-                            final hubs = hubsSnapshot.data ?? [];
-                            if (hubs.isEmpty) {
-                              return const SizedBox.shrink();
-                            }
-
                             final hubIds = hubs.map((h) => h.hubId).toList();
                             final now = DateTime.now();
                             final nextWeek = now.add(const Duration(days: 7));
 
-                            return FutureBuilder<List<Game>>(
-                              future: _getUpcomingGames(
-                                  gamesRepo, hubIds, now, nextWeek),
-                              builder: (context, snapshot) {
-                                final games = snapshot.data ?? [];
-                                if (games.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
+                            return Column(
+                              children: [
+                                // Hubs Carousel
+                                HubsCarousel(
+                                  hubs: hubs,
+                                  currentUserId: currentUserId,
+                                ),
+                                const SizedBox(height: 24),
 
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'UPCOMING GAMES',
-                                      style: GoogleFonts.orbitron(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 2.0,
-                                        color: const Color(0xFF212121),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
+                                // Upcoming Games Section
+                                FutureBuilder<List<Game>>(
+                                  future: _getUpcomingGames(
+                                      gamesRepo, hubIds, now, nextWeek),
+                                  builder: (context, gamesSnapshot) {
+                                    final games = gamesSnapshot.data ?? [];
+                                    if (games.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'UPCOMING GAMES',
+                                          style: GoogleFonts.orbitron(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 2.0,
+                                            color: const Color(0xFF212121),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
                                     ...games.take(2).map((game) => Padding(
                                           padding:
                                               const EdgeInsets.only(bottom: 12),
@@ -411,9 +433,11 @@ class _HomeScreenFuturisticFigmaState
                                             ),
                                           ),
                                         )),
-                                  ],
-                                );
-                              },
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
                             );
                           },
                         ),
