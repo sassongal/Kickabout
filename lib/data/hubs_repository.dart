@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/paginated_result.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
@@ -90,10 +91,8 @@ class HubsRepository {
       // Initialize memberCount to 1 (creator)
       data['memberCount'] = 1;
 
-      // Ensure creator is ALWAYS set as manager in roles
-      final roles = Map<String, String>.from(data['roles'] ?? {});
-      roles[hub.createdBy] = 'manager';
-      data['roles'] = roles;
+      // Remove legacy 'roles' field - we now use HubMember subcollection exclusively
+      data.remove('roles');
 
       // Use batch to write hub and add creator to members subcollection
       final batch = _firestore.batch();
@@ -103,8 +102,12 @@ class HubsRepository {
       // Add creator to members subcollection
       final memberRef = docRef.collection('members').doc(hub.createdBy);
       batch.set(memberRef, {
+        'hubId': docRef.id,
+        'userId': hub.createdBy,
         'joinedAt': FieldValue.serverTimestamp(),
-        'role': 'manager', // Creator is manager
+        'role': 'manager',
+        'status': 'active',
+        'managerRating': 0.0,
       });
 
       // Update user's hubIds
@@ -499,9 +502,15 @@ class HubsRepository {
       throw Exception('Firebase not available');
     }
 
-    // Validate rating (1.0 to 10.0)
-    if (rating < 1.0 || rating > 10.0) {
-      throw Exception('Rating must be between 1.0 and 10.0');
+    // Validate rating (1.0 to 7.0 with 0.5 increments)
+    if (rating < 1.0 || rating > 7.0) {
+      throw Exception('Rating must be between 1.0 and 7.0');
+    }
+
+    // Validate 0.5 increments
+    final remainder = (rating * 2) % 1;
+    if (remainder != 0.0) {
+      throw Exception('Rating must be in 0.5 increments (e.g., 3.5, 4.0, 5.5)');
     }
 
     try {
@@ -593,22 +602,68 @@ class HubsRepository {
   Future<List<HubMember>> getHubMembers(String hubId) async {
     if (!Env.isFirebaseAvailable) return [];
     try {
-      final snapshot = await _firestore
-          .collection('hubs/$hubId/members')
-          .where('status', isEqualTo: 'active')
-          .get();
+      final snapshot = await _firestore.collection('hubs/$hubId/members').get();
 
       return snapshot.docs
-          .map((doc) => HubMember.fromJson(doc.data()))
+          .map((doc) {
+            final data = doc.data();
+            // Ensure required fields are present (handling potential bad data)
+            data['hubId'] = hubId;
+            data['userId'] = doc.id;
+            // Default status if missing (for creators added via old createHub)
+            if (data['status'] == null) data['status'] = 'active';
+            return HubMember.fromJson(data);
+          })
+          .where((member) => member.status == 'active')
           .toList();
     } catch (e) {
+      debugPrint('Error in getHubMembers for hub $hubId: $e');
       return [];
     }
   }
 
-  /// Find hubs within radius (km) using geohash
-  /// This is an approximate search - results are filtered by actual distance
-  /// Get all hubs (with limit for pagination)
+  /// Get specific members from a hub by their IDs
+  /// Optimize for TeamMaker to avoid fetching all hub members
+  Future<List<HubMember>> getHubMembersByIds(
+      String hubId, List<String> memberIds) async {
+    if (!Env.isFirebaseAvailable || memberIds.isEmpty) return [];
+
+    try {
+      // Firestore 'in' query limit is 30
+      final chunks = <List<String>>[];
+      for (var i = 0; i < memberIds.length; i += 30) {
+        chunks.add(memberIds.sublist(
+            i, i + 30 > memberIds.length ? memberIds.length : i + 30));
+      }
+
+      final results = <HubMember>[];
+
+      for (final chunk in chunks) {
+        final snapshot = await _firestore
+            .collection('hubs/$hubId/members')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+
+        final chunkMembers = snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['hubId'] = hubId;
+          data['userId'] = doc.id;
+          if (data['status'] == null) data['status'] = 'active';
+          return HubMember.fromJson(data);
+        }).toList();
+
+        results.addAll(chunkMembers);
+      }
+
+      return results;
+    } catch (e) {
+      debugPrint('Error in getHubMembersByIds for hub $hubId: $e');
+      return [];
+    }
+  }
+
+  /// Get all hubs (DEPRECATED - use getHubsPaginated instead)
+  @Deprecated('Use getHubsPaginated instead for better performance and pagination support')
   Future<List<Hub>> getAllHubs({int limit = 100}) async {
     if (!Env.isFirebaseAvailable) return [];
 
@@ -623,6 +678,63 @@ class HubsRepository {
       return [];
     }
   }
+
+  /// Get hubs with pagination support
+  ///
+  /// Example usage:
+  /// ```dart
+  /// // First page
+  /// final page1 = await getHubsPaginated(limit: 20);
+  ///
+  /// // Next page
+  /// if (page1.hasMore) {
+  ///   final page2 = await getHubsPaginated(
+  ///     limit: 20,
+  ///     startAfter: page1.lastDoc,
+  ///   );
+  /// }
+  /// ```
+  Future<PaginatedResult<Hub>> getHubsPaginated({
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+    String? orderBy = 'createdAt',
+    bool descending = true,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      return PaginatedResult.empty();
+    }
+
+    try {
+      var query = _firestore.collection(FirestorePaths.hubs()) as Query;
+
+      // Apply ordering
+      if (orderBy != null) {
+        query = query.orderBy(orderBy, descending: descending);
+      }
+
+      // Apply cursor
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      // Request limit+1 to detect if there are more pages
+      query = query.limit(limit + 1);
+
+      final snapshot = await query.get();
+
+      return PaginatedResult.fromSnapshot(
+        snapshot: snapshot,
+        limit: limit,
+        mapper: (doc) => Hub.fromJson({...doc.data() as Map<String, dynamic>, 'hubId': doc.id}),
+      );
+    } catch (e) {
+      debugPrint('Error in getHubsPaginated: $e');
+      return PaginatedResult.empty();
+    }
+  }
+
+  /// Find hubs within radius (km) using geohash
+  /// This is an approximate search - results are filtered by actual distance
 
   Future<List<Hub>> findHubsNearby({
     required double latitude,

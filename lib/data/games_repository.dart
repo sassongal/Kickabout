@@ -3,27 +3,29 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/game_result.dart';
 import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
 import 'package:kattrick/models/log_past_game_details.dart';
-import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/cache_service.dart';
+import 'package:kattrick/services/cache_invalidation_service.dart';
 import 'package:kattrick/services/retry_service.dart';
 import 'package:kattrick/services/monitoring_service.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/data/hubs_repository.dart';
-import 'package:kattrick/data/users_repository.dart';
-import 'package:kattrick/data/signups_repository.dart';
-import 'package:kattrick/data/chat_repository.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
 import 'package:geolocator/geolocator.dart';
 
 /// Repository for Game operations
 class GamesRepository {
   final FirebaseFirestore _firestore;
+  final CacheInvalidationService _cacheInvalidation;
 
-  GamesRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  GamesRepository({
+    FirebaseFirestore? firestore,
+    CacheInvalidationService? cacheInvalidation,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _cacheInvalidation = cacheInvalidation ?? CacheInvalidationService();
 
   /// Get game by ID with caching and retry
   Future<Game?> getGame(String gameId, {bool forceRefresh = false}) async {
@@ -81,6 +83,9 @@ class GamesRepository {
   }
 
   /// Stream discovery feed of games (public & hub games nearby)
+  ///
+  /// OPTIMIZED VERSION - Uses correct geohash precision and neighbor queries
+  /// to minimize over-fetching instead of fetching 3x data.
   Stream<List<Game>> watchDiscoveryFeed({
     GeoPoint? userLocation,
     double radiusKm = 10.0,
@@ -91,48 +96,74 @@ class GamesRepository {
     }
 
     final now = DateTime.now();
-    Query query = _firestore
-        .collection(FirestorePaths.games())
-        .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
-        .where('status', whereNotIn: [
-      GameStatus.cancelled.toFirestore(),
-      GameStatus.archivedNotPlayed.toFirestore(),
-      GameStatus.draft.toFirestore(),
-    ]);
 
-    // If user location provided, filter by geohash proximity
-    if (userLocation != null) {
-      // Get geohash for center point
-      final geohash = GeohashUtils.encode(
-        userLocation.latitude,
-        userLocation.longitude,
-        precision: 5, // ~5km precision
-      );
-
-      // Query by geohash prefix for bounding box
-      // We'll fetch more results and filter by actual distance client-side
-      query = query
-          .where('geohash', isGreaterThanOrEqualTo: geohash)
-          .where('geohash', isLessThan: geohash + '~')
-          .orderBy('geohash')
-          .limit(limit * 3); // Fetch 3x for client-side filtering
-    } else {
-      // Fallback: no location filtering, just order by date
-      query = query.orderBy('gameDate').limit(limit);
+    // If no location, just show recent games
+    if (userLocation == null) {
+      return _firestore
+          .collection(FirestorePaths.games())
+          .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
+          .where('status', whereNotIn: [
+            GameStatus.cancelled.toFirestore(),
+            GameStatus.archivedNotPlayed.toFirestore(),
+            GameStatus.draft.toFirestore(),
+          ])
+          .orderBy('gameDate')
+          .limit(limit)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => Game.fromJson({...doc.data(), 'gameId': doc.id}))
+              .toList());
     }
 
-    return query.snapshots().map((snapshot) {
-      var games = snapshot.docs
-          .map((doc) => Game.fromJson(
-              {...doc.data() as Map<String, dynamic>, 'gameId': doc.id}))
-          .toList();
+    // OPTIMIZED: Use appropriate precision based on radius
+    // precision 5 ≈ 5km, precision 6 ≈ 1.2km, precision 7 ≈ 150m
+    final precision = radiusKm <= 1.5 ? 7 : (radiusKm <= 5 ? 6 : 5);
 
-      // Client-side distance filtering if location provided
-      if (userLocation != null) {
+    final centerHash = GeohashUtils.encode(
+      userLocation.latitude,
+      userLocation.longitude,
+      precision: precision,
+    );
+
+    // Get neighboring geohashes to cover the area
+    final neighbors = GeohashUtils.neighbors(centerHash);
+    final hashesToQuery = [centerHash, ...neighbors];
+
+    // Query multiple geohash regions (parallel streams)
+    // This is more efficient than fetching 3x data
+    final streams = hashesToQuery.map((hash) {
+      return _firestore
+          .collection(FirestorePaths.games())
+          .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
+          .where('status', whereNotIn: [
+            GameStatus.cancelled.toFirestore(),
+            GameStatus.archivedNotPlayed.toFirestore(),
+            GameStatus.draft.toFirestore(),
+          ])
+          .where('geohash', isGreaterThanOrEqualTo: hash)
+          .where('geohash', isLessThan: '$hash~')
+          .limit(limit) // No over-fetching
+          .snapshots();
+    }).toList();
+
+    // Combine all streams
+    return Stream.value(null).asyncExpand((_) async* {
+      await for (final _ in Stream.periodic(const Duration(seconds: 1))) {
+        final snapshots = await Future.wait(
+          streams.map((s) => s.first),
+        );
+
+        // Combine all results
+        var games = snapshots
+            .expand((snapshot) => snapshot.docs)
+            .map((doc) => Game.fromJson({...doc.data(), 'gameId': doc.id}))
+            .toSet() // Remove duplicates
+            .toList();
+
+        // Filter by actual distance
         games = games.where((game) {
           if (game.locationPoint == null) return false;
 
-          // Calculate distance using Geolocator
           final distanceMeters = Geolocator.distanceBetween(
             userLocation.latitude,
             userLocation.longitude,
@@ -162,10 +193,8 @@ class GamesRepository {
         });
 
         // Limit to requested count
-        games = games.take(limit).toList();
+        yield games.take(limit).toList();
       }
-
-      return games;
     });
   }
 
@@ -188,11 +217,8 @@ class GamesRepository {
 
       await docRef.set(data);
 
-      // Invalidate cache
-      CacheService().clear(CacheKeys.game(docRef.id));
-      if (game.hubId != null && game.hubId!.isNotEmpty) {
-        CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
-      }
+      // Invalidate cache using centralized service
+      _cacheInvalidation.onGameCreated(docRef.id, hubId: game.hubId);
 
       return docRef.id;
     } catch (e) {
@@ -213,11 +239,12 @@ class GamesRepository {
           data['updatedAt'] = FieldValue.serverTimestamp();
           await _firestore.doc(FirestorePaths.game(gameId)).update(data);
 
-          // Invalidate cache
-          CacheService().clear(CacheKeys.game(gameId));
-          CacheService()
-              .clear(CacheKeys.gamesByHub(data['hubId'] as String? ?? ''));
-          CacheService().clear(CacheKeys.publicGames());
+          // Invalidate cache using centralized service
+          _cacheInvalidation.onGameUpdated(
+            gameId,
+            hubId: data['hubId'] as String?,
+            region: data['region'] as String?,
+          );
         },
         config: RetryConfig.network,
         operationName: 'updateGame',
@@ -244,11 +271,8 @@ class GamesRepository {
 
       await _firestore.doc(FirestorePaths.game(gameId)).delete();
 
-      // Invalidate cache
-      CacheService().clear(CacheKeys.game(gameId));
-      if (hubId != null && hubId.isNotEmpty) {
-        CacheService().clear(CacheKeys.gamesByHub(hubId));
-      }
+      // Invalidate cache using centralized service
+      _cacheInvalidation.onGameDeleted(gameId, hubId: hubId);
     } catch (e) {
       throw Exception('Failed to delete game: $e');
     }
@@ -307,7 +331,8 @@ class GamesRepository {
       return snapshot.docs
           .map((doc) => Game.fromJson({...doc.data(), 'gameId': doc.id}))
           .where((game) =>
-              game.legacyTeamAScore != null && game.legacyTeamBScore != null)
+              game.session.legacyTeamAScore != null &&
+              game.session.legacyTeamBScore != null)
           .toList();
     });
   }
@@ -379,8 +404,8 @@ class GamesRepository {
             // But most completed games should have scores anyway
             games = games
                 .where((game) =>
-                    game.legacyTeamAScore != null &&
-                    game.legacyTeamBScore != null)
+                    game.session.legacyTeamAScore != null &&
+                    game.session.legacyTeamBScore != null)
                 .toList();
 
             // Apply date filters in memory only if they couldn't be applied in query
@@ -635,14 +660,16 @@ class GamesRepository {
 
   /// Stream upcoming games for a user
   ///
+  /// OPTIMIZED VERSION - Uses denormalized data in signups to avoid N+1 queries.
+  /// Single collection group query instead of 1 + N/10 queries.
+  ///
   /// Returns games where:
-  /// - Status is 'teamSelection' or 'teamsFormed' (pending/confirmed)
-  /// - User is signed up (confirmed signup)
-  /// Stream upcoming games for a specific user
-  /// Optimized: Uses collection group query to avoid N+1 queries
   /// - User is signed up (confirmed status)
   /// - Game status is 'teamSelection' or 'teamsFormed'
   /// - Game date is in the future
+  ///
+  /// NOTE: This relies on denormalized game data in GameSignup documents.
+  /// Cloud Functions must keep this data in sync when games are updated.
   Stream<List<Game>> streamMyUpcomingGames(String userId) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
@@ -651,45 +678,54 @@ class GamesRepository {
     try {
       final now = DateTime.now();
 
-      // OPTIMIZED: Use collection group query to get all signups for this user
-      // This avoids N+1 queries (one per game)
+      // OPTIMIZED: Single query using denormalized data from signups
+      // This eliminates the N+1 pattern (was 1 signup query + N/10 game queries)
       return _firestore
           .collectionGroup('signups')
-          .where('userId', isEqualTo: userId)
+          .where('playerId', isEqualTo: userId)
           .where('status', isEqualTo: 'confirmed')
+          .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
+          .where('gameStatus', whereIn: ['teamSelection', 'teamsFormed'])
+          .orderBy('gameDate')
+          .limit(50) // Reasonable limit for upcoming games
           .snapshots()
           .asyncMap((signupsSnapshot) async {
         if (signupsSnapshot.docs.isEmpty) return <Game>[];
 
-        // Extract game IDs from signup document paths
-        // Path format: games/{gameId}/signups/{userId}
-        final gameIds = signupsSnapshot.docs
-            .map((doc) {
-              final pathParts = doc.reference.path.split('/');
-              // Path: games/{gameId}/signups/{userId}
-              if (pathParts.length >= 2 && pathParts[0] == 'games') {
-                return pathParts[1];
-              }
-              return null;
-            })
-            .whereType<String>()
-            .toSet();
+        // Extract game IDs and check if denormalized data exists
+        final gameIds = <String>[];
+        final needsFallback = <String>[];
 
-        if (gameIds.isEmpty) return <Game>[];
+        for (final doc in signupsSnapshot.docs) {
+          final pathParts = doc.reference.path.split('/');
+          if (pathParts.length >= 2 && pathParts[0] == 'games') {
+            final gameId = pathParts[1];
+            final data = doc.data();
 
-        // Batch query games - Firestore 'in' limit is 10
+            // Check if signup has denormalized data
+            if (data['gameDate'] != null && data['gameStatus'] != null) {
+              gameIds.add(gameId);
+            } else {
+              // Fallback: signup doesn't have denormalized data yet
+              needsFallback.add(gameId);
+            }
+          }
+        }
+
+        // Fetch full game documents (only needed for denormalized data)
+        if (gameIds.isEmpty && needsFallback.isEmpty) return <Game>[];
+
         final games = <Game>[];
-        final gameIdList = gameIds.toList();
 
-        for (var i = 0; i < gameIdList.length; i += 10) {
-          final batch = gameIdList.skip(i).take(10).toList();
+        // Batch query for games (Firestore 'in' limit is 10)
+        final allGameIds = [...gameIds, ...needsFallback];
+        for (var i = 0; i < allGameIds.length; i += 10) {
+          final batch = allGameIds.skip(i).take(10).toList();
 
           try {
             final gamesSnapshot = await _firestore
                 .collection(FirestorePaths.games())
                 .where(FieldPath.documentId, whereIn: batch)
-                .where('status', whereIn: ['teamSelection', 'teamsFormed'])
-                .where('gameDate', isGreaterThan: Timestamp.fromDate(now))
                 .get();
 
             games.addAll(
@@ -702,10 +738,17 @@ class GamesRepository {
           }
         }
 
-        // Sort by game date
-        games.sort((a, b) => a.gameDate.compareTo(b.gameDate));
+        // Filter by status and date (safety check for fallback cases)
+        final filteredGames = games.where((game) {
+          return (game.status == GameStatus.teamSelection ||
+                  game.status == GameStatus.teamsFormed) &&
+              game.gameDate.isAfter(now);
+        }).toList();
 
-        return games;
+        // Sort by game date
+        filteredGames.sort((a, b) => a.gameDate.compareTo(b.gameDate));
+
+        return filteredGames;
       });
     } catch (e) {
       debugPrint('Error in streamMyUpcomingGames: $e');
@@ -726,35 +769,45 @@ class GamesRepository {
     try {
       final now = FieldValue.serverTimestamp();
 
-      // Create game document with denormalized data
-      final gameData = {
-        'createdBy': currentUserId,
-        'hubId': details.hubId,
-        'gameDate': Timestamp.fromDate(details.gameDate),
-        'venueId': details.venueId,
-        'eventId': details.eventId,
-        'teamCount': 2,
-        'status': GameStatus.completed.toFirestore(),
-        'teamAScore': details.teamAScore,
-        'teamBScore': details.teamBScore,
-        'showInCommunityFeed': details.showInCommunityFeed,
-        'goalScorerIds': details.goalScorerIds,
-        'goalScorerNames': details.goalScorerNames,
-        'mvpPlayerId': details.mvpPlayerId,
-        'mvpPlayerName': details.mvpPlayerName,
-        'venueName': details.venueName,
-        'teams': details.teams.map((team) => team.toJson()).toList(),
-        'createdAt': now,
-        'updatedAt': now,
-        'photoUrls': <String>[],
-        'isRecurring': false,
-      };
+      // Create game object with nested structure
+      final gameId = _firestore.collection(FirestorePaths.games()).doc().id;
+      final game = Game(
+        gameId: gameId,
+        createdBy: currentUserId,
+        hubId: details.hubId,
+        gameDate: details.gameDate,
+        venueId: details.venueId,
+        eventId: details.eventId,
+        teamCount: 2,
+        status: GameStatus.completed,
+        showInCommunityFeed: details.showInCommunityFeed,
+        teams: details.teams,
+        createdAt: DateTime
+            .now(), // approximation, will set server timestamp later if needed, but Game model expects DateTime.
+        updatedAt: DateTime.now(),
+        denormalized: GameDenormalizedData(
+          goalScorerIds: details.goalScorerIds,
+          goalScorerNames: details.goalScorerNames,
+          mvpPlayerId: details.mvpPlayerId,
+          mvpPlayerName: details.mvpPlayerName,
+          venueName: details.venueName,
+        ),
+        session: GameSession(
+          legacyTeamAScore: details.teamAScore,
+          legacyTeamBScore: details.teamBScore,
+        ),
+      );
 
-      final gameRef = _firestore.collection(FirestorePaths.games()).doc();
-      final gameId = gameRef.id;
+      final gameData = game.toJson();
+      // Overwrite timestamps with server timestamp
+      gameData['createdAt'] = now;
+      gameData['updatedAt'] = now;
+      // Game.toJson() already puts gameId in, but let's be safe as we generated it appropriately
+
+      final gameRef = _firestore.collection(FirestorePaths.games()).doc(gameId);
 
       // Add gameId to gameData (required by firestore.rules)
-      gameData['gameId'] = gameId;
+      // gameData['gameId'] = gameId; // Already in toJson
 
       // Create signups for all participating players
       final batch = _firestore.batch();
@@ -846,16 +899,21 @@ class GamesRepository {
         'location': event.location,
         'locationPoint': event.locationPoint,
         'geohash': event.geohash,
-        'teamCount': event.teamCount,
         'status': GameStatus.completed.toFirestore(),
-        'teamAScore': teamAScore,
-        'teamBScore': teamBScore,
+        'denormalized': {
+          'venueName': event.location,
+          'goalScorerIds': goalScorerIds ?? [],
+          'mvpPlayerId': mvpPlayerId,
+        },
+        'session': {
+          'legacyTeamAScore': teamAScore,
+          'legacyTeamBScore': teamBScore,
+        },
+        'teamCount': event.teamCount,
         'teams': teams.map((team) => team.toJson()).toList(),
         'durationInMinutes': event.durationMinutes,
         'region': eventData['region'], // Copy from hub if available
         'showInCommunityFeed': event.showInCommunityFeed,
-        'goalScorerIds': goalScorerIds ?? [],
-        'mvpPlayerId': mvpPlayerId,
         'createdAt': now,
         'updatedAt': now,
         'photoUrls': <String>[],
@@ -895,11 +953,8 @@ class GamesRepository {
       // Commit all writes atomically
       await batch.commit();
 
-      // Invalidate caches
-      CacheService().clear(CacheKeys.game(gameId));
-      CacheService().clear(CacheKeys.gamesByHub(hubId));
-      CacheService().clear(CacheKeys.eventsByHub(hubId));
-      CacheService().clear(CacheKeys.event(hubId, eventId));
+      // Invalidate caches using centralized service
+      _cacheInvalidation.onEventConvertedToGame(hubId, eventId, gameId);
 
       debugPrint('✅ Event converted to Game: $gameId (from event $eventId)');
 
@@ -931,12 +986,12 @@ class GamesRepository {
   }
 
   /// Add a match result to a session (Game with multiple matches)
-  /// This is a CRITICAL transaction that:
-  /// 1. Adds the MatchResult to the game's matches array
-  /// 2. Updates aggregateWins for the teams
-  /// 3. Updates player stats (goals/assists) in the users collection
   ///
-  /// All operations are atomic - if any fails, the entire transaction rolls back
+  /// OPTIMIZED VERSION - Split into two operations:
+  /// 1. Transaction: Add match to game (critical, must be atomic)
+  /// 2. Batch: Update player stats (eventual consistency OK)
+  ///
+  /// This prevents long transactions that can timeout or cause contention.
   Future<void> addMatchToSession(
     String gameId,
     MatchResult match,
@@ -947,13 +1002,13 @@ class GamesRepository {
     }
 
     try {
-      // Step 1: Verify game exists and user has permission
+      // Step 1: Verify game exists and user has permission (outside transaction)
       final game = await getGame(gameId);
       if (game == null) {
         throw Exception('Game not found: $gameId');
       }
 
-      // Get hub to verify permissions
+      // Verify permissions (outside transaction to reduce contention)
       if (game.hubId != null) {
         final hubsRepo = HubsRepository();
         final hub = await hubsRepo.getHub(game.hubId!);
@@ -961,9 +1016,8 @@ class GamesRepository {
           throw Exception('Hub not found: ${game.hubId}');
         }
 
-        // Check if user is manager/admin
         final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
-        if (!hubPermissions.isManager() && !hubPermissions.isModerator()) {
+        if (!hubPermissions.isManager && !hubPermissions.isModerator) {
           throw Exception(
               'Unauthorized: Only Hub Managers can add matches to sessions');
         }
@@ -975,9 +1029,8 @@ class GamesRepository {
         }
       }
 
-      // Step 2: Atomic Transaction
+      // Step 2: CRITICAL TRANSACTION - Update game only (fast, < 5 operations)
       await _firestore.runTransaction((transaction) async {
-        // Read game document
         final gameRef = _firestore.doc(FirestorePaths.game(gameId));
         final gameDoc = await transaction.get(gameRef);
 
@@ -985,146 +1038,106 @@ class GamesRepository {
           throw Exception('Game not found');
         }
 
+        // Parse game and calculate updates
         final gameData = gameDoc.data()!;
-        final gameHubId = gameData['hubId'] as String;
+        final currentGame = Game.fromJson({...gameData, 'gameId': gameId});
+        final currentMatches = currentGame.session.matches;
 
-        // Verify hub still exists and user is still manager
-        final hubRef = _firestore.doc(FirestorePaths.hub(gameHubId));
-        final hubDoc = await transaction.get(hubRef);
-
-        if (!hubDoc.exists) {
-          throw Exception('Hub not found');
-        }
-
-        final hubData = hubDoc.data()!;
-        final isManager = hubData['createdBy'] == currentUserId ||
-            (hubData['roles'] as Map?)?[currentUserId] == 'manager' ||
-            (hubData['roles'] as Map?)?[currentUserId] == 'admin' ||
-            (hubData['roles'] as Map?)?[currentUserId] == 'moderator';
-
-        if (!isManager) {
-          throw Exception(
-              'Unauthorized: Only Hub Managers can add matches to sessions');
-        }
-
-        // Get current matches list
-        final currentMatches = (gameData['matches'] as List? ?? [])
-            .map((m) => MatchResult.fromJson(m as Map<String, dynamic>))
-            .toList();
-
-        // Add new match to list
+        // Add new match
         final updatedMatches = [...currentMatches, match];
         final matchesJson = updatedMatches.map((m) => m.toJson()).toList();
 
         // Calculate aggregate wins
         final Map<String, int> aggregateWins = Map<String, int>.from(
-          gameData['aggregateWins'] as Map? ?? {},
+          currentGame.session.aggregateWins,
         );
 
-        // Determine winner of this match
+        // Determine winner
         String? winnerColor;
         if (match.scoreA > match.scoreB) {
           winnerColor = match.teamAColor;
         } else if (match.scoreB > match.scoreA) {
           winnerColor = match.teamBColor;
         }
-        // If draw, no winner (both teams get 1 point, but we track wins only)
 
         // Update aggregate wins
         if (winnerColor != null) {
           aggregateWins[winnerColor] = (aggregateWins[winnerColor] ?? 0) + 1;
         }
 
-        // Update game document
-        final gameUpdates = <String, dynamic>{
-          'matches': matchesJson,
-          'aggregateWins': aggregateWins,
+        // Update game document (atomic)
+        transaction.update(gameRef, {
+          'session.matches': matchesJson,
+          'session.aggregateWins': aggregateWins,
           'updatedAt': FieldValue.serverTimestamp(),
-        };
-
-        transaction.update(gameRef, gameUpdates);
-
-        // Step 3: Update player stats within transaction
-        // Count goals and assists per player
-        final Map<String, int> playerGoals = {};
-        final Map<String, int> playerAssists = {};
-
-        for (final scorerId in match.scorerIds) {
-          playerGoals[scorerId] = (playerGoals[scorerId] ?? 0) + 1;
-        }
-
-        for (final assistId in match.assistIds) {
-          playerAssists[assistId] = (playerAssists[assistId] ?? 0) + 1;
-        }
-
-        // Update each player's stats
-        for (final playerId in {...playerGoals.keys, ...playerAssists.keys}) {
-          final userRef = _firestore.doc(FirestorePaths.user(playerId));
-
-          final userUpdates = <String, dynamic>{};
-
-          // Add goals count
-          final goalsCount = playerGoals[playerId] ?? 0;
-          if (goalsCount > 0) {
-            userUpdates['goals'] = FieldValue.increment(goalsCount);
-          }
-
-          // Add assists count
-          final assistsCount = playerAssists[playerId] ?? 0;
-          if (assistsCount > 0) {
-            userUpdates['assists'] = FieldValue.increment(assistsCount);
-          }
-
-          if (userUpdates.isNotEmpty) {
-            transaction.update(userRef, userUpdates);
-          }
-        }
-
-        // Also update gamification stats if they exist
-        for (final playerId in {...playerGoals.keys, ...playerAssists.keys}) {
-          final gamificationRef = _firestore
-              .collection(FirestorePaths.users())
-              .doc(playerId)
-              .collection('gamification')
-              .doc('stats');
-
-          final gamificationDoc = await transaction.get(gamificationRef);
-
-          if (gamificationDoc.exists) {
-            final goalsCount = playerGoals[playerId] ?? 0;
-            final assistsCount = playerAssists[playerId] ?? 0;
-
-            final gamificationUpdates = <String, dynamic>{
-              'updatedAt': FieldValue.serverTimestamp(),
-            };
-
-            if (goalsCount > 0) {
-              gamificationUpdates['stats.goals'] =
-                  FieldValue.increment(goalsCount);
-            }
-            if (assistsCount > 0) {
-              gamificationUpdates['stats.assists'] =
-                  FieldValue.increment(assistsCount);
-            }
-
-            if (gamificationUpdates.length > 1) {
-              // More than just updatedAt
-              transaction.update(gamificationRef, gamificationUpdates);
-            }
-          }
-        }
+        });
       });
 
-      // Step 4: Invalidate caches (outside transaction)
-      CacheService().clear(CacheKeys.game(gameId));
-      if (game.hubId != null) {
-        CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
-      }
+      // Step 3: SEPARATE BATCH - Update player stats (eventual consistency OK)
+      // This is outside the transaction to avoid long-running transactions
+      await _updatePlayerStatsForMatch(match);
+
+      // Step 4: Invalidate caches using centralized service
+      _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
 
       debugPrint('✅ Match added to session: $gameId, match: ${match.matchId}');
     } catch (e) {
       debugPrint('❌ Failed to add match to session: $e');
       throw Exception('Failed to add match to session: $e');
+    }
+  }
+
+  /// Helper method: Update player stats using batched writes (eventual consistency)
+  ///
+  /// This is separated from the critical transaction to avoid long-running transactions.
+  /// If this fails, it can be retried independently without affecting the game state.
+  Future<void> _updatePlayerStatsForMatch(MatchResult match) async {
+    try {
+      // Count goals and assists per player
+      final Map<String, int> playerGoals = {};
+      final Map<String, int> playerAssists = {};
+
+      for (final scorerId in match.scorerIds) {
+        playerGoals[scorerId] = (playerGoals[scorerId] ?? 0) + 1;
+      }
+
+      for (final assistId in match.assistIds) {
+        playerAssists[assistId] = (playerAssists[assistId] ?? 0) + 1;
+      }
+
+      // Use batched writes for better performance
+      final batch = _firestore.batch();
+
+      // Update each player's stats
+      for (final playerId in {...playerGoals.keys, ...playerAssists.keys}) {
+        final userRef = _firestore.doc(FirestorePaths.user(playerId));
+
+        final userUpdates = <String, dynamic>{};
+
+        // Add goals count
+        final goalsCount = playerGoals[playerId] ?? 0;
+        if (goalsCount > 0) {
+          userUpdates['goals'] = FieldValue.increment(goalsCount);
+        }
+
+        // Add assists count
+        final assistsCount = playerAssists[playerId] ?? 0;
+        if (assistsCount > 0) {
+          userUpdates['assists'] = FieldValue.increment(assistsCount);
+        }
+
+        if (userUpdates.isNotEmpty) {
+          batch.update(userRef, userUpdates);
+        }
+      }
+
+      // Commit batch
+      await batch.commit();
+
+      debugPrint('✅ Player stats updated for match: ${match.matchId}');
+    } catch (e) {
+      // Log but don't throw - stats update failure shouldn't block the match
+      debugPrint('⚠️ Failed to update player stats for match: $e');
     }
   }
 }

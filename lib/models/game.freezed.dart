@@ -24,112 +24,56 @@ mixin _$Game {
   String get createdBy => throw _privateConstructorUsedError;
   String? get hubId =>
       throw _privateConstructorUsedError; // Nullable for public pickup games
-// Event reference - Game should always be created from an Event (legacy games may not have this)
   String? get eventId =>
       throw _privateConstructorUsedError; // ID of the event this game belongs to (required for new games, optional for legacy)
   @TimestampConverter()
   DateTime get gameDate => throw _privateConstructorUsedError;
   String? get location =>
-      throw _privateConstructorUsedError; // Legacy text location (kept for backward compatibility)
+      throw _privateConstructorUsedError; // Legacy text location
   @NullableGeoPointConverter()
   GeoPoint? get locationPoint =>
       throw _privateConstructorUsedError; // New geographic location
   String? get geohash => throw _privateConstructorUsedError;
   String? get venueId =>
-      throw _privateConstructorUsedError; // Reference to venue (not denormalized - use venueId to fetch)
+      throw _privateConstructorUsedError; // Reference to venue
   int get teamCount => throw _privateConstructorUsedError; // 2, 3, or 4
   @GameStatusConverter()
   GameStatus get status => throw _privateConstructorUsedError;
   @GameVisibilityConverter()
   GameVisibility get visibility =>
       throw _privateConstructorUsedError; // private, public, or recruiting
-// Public game support
   TargetingCriteria? get targetingCriteria =>
-      throw _privateConstructorUsedError; // Targeting criteria for public games
-  bool get requiresApproval =>
-      throw _privateConstructorUsedError; // Force true for public games
-  int get minPlayersToPlay =>
-      throw _privateConstructorUsedError; // Minimum players needed to start
-  int? get maxPlayers =>
-      throw _privateConstructorUsedError; // Maximum capacity (hard cap)
-  List<String> get photoUrls =>
-      throw _privateConstructorUsedError; // URLs of game photos
+      throw _privateConstructorUsedError;
+  bool get requiresApproval => throw _privateConstructorUsedError;
+  int get minPlayersToPlay => throw _privateConstructorUsedError;
+  int? get maxPlayers => throw _privateConstructorUsedError;
+  List<String> get photoUrls => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime get createdAt => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime get updatedAt =>
       throw _privateConstructorUsedError; // Recurring game fields
-  bool get isRecurring =>
-      throw _privateConstructorUsedError; // Is this a recurring game?
-  String? get parentGameId =>
-      throw _privateConstructorUsedError; // ID of the original recurring game (for child games)
-  String? get recurrencePattern =>
-      throw _privateConstructorUsedError; // 'weekly', 'biweekly', 'monthly'
+  bool get isRecurring => throw _privateConstructorUsedError;
+  String? get parentGameId => throw _privateConstructorUsedError;
+  String? get recurrencePattern => throw _privateConstructorUsedError;
   @NullableTimestampConverter()
   DateTime? get recurrenceEndDate =>
-      throw _privateConstructorUsedError; // When to stop creating recurring games
-// Denormalized fields for efficient display (no need to fetch user/hub)
-  String? get createdByName =>
-      throw _privateConstructorUsedError; // Denormalized from users/{createdBy}.name
-  String? get createdByPhotoUrl =>
-      throw _privateConstructorUsedError; // Denormalized from users/{createdBy}.photoUrl
-  String? get hubName =>
-      throw _privateConstructorUsedError; // Denormalized from hubs/{hubId}.name (optional, for feed posts)
-// Teams and scores
+      throw _privateConstructorUsedError; // Teams
   List<Team> get teams =>
-      throw _privateConstructorUsedError; // List of teams created in TeamMaker
-// Legacy single-match scores (deprecated - use matches list for session mode)
-// These fields are kept for backward compatibility with old games
-  @JsonKey(name: 'teamAScore')
-  int? get legacyTeamAScore =>
-      throw _privateConstructorUsedError; // Legacy: Score for team A - use matches for session mode
-  @JsonKey(name: 'teamBScore')
-  int? get legacyTeamBScore =>
-      throw _privateConstructorUsedError; // Legacy: Score for team B - use matches for session mode
-// Multi-match session support (for Events converted to Games)
-  List<MatchResult> get matches =>
-      throw _privateConstructorUsedError; // List of individual match outcomes within this session
-  Map<String, int> get aggregateWins =>
-      throw _privateConstructorUsedError; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
+      throw _privateConstructorUsedError; // Teams created in TeamMaker
 // Game rules
-  int? get durationInMinutes =>
-      throw _privateConstructorUsedError; // Duration of the game in minutes
-  String? get gameEndCondition =>
-      throw _privateConstructorUsedError; // Condition for game end (e.g., "first to 5 goals", "time limit")
-  String? get region =>
-      throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
-// Community feed
+  int? get durationInMinutes => throw _privateConstructorUsedError;
+  String? get gameEndCondition => throw _privateConstructorUsedError;
+  String? get region => throw _privateConstructorUsedError; // Community feed
   bool get showInCommunityFeed =>
-      throw _privateConstructorUsedError; // Show this game in the community activity feed
-// Denormalized fields for community feed (optimization)
-  List<String> get goalScorerIds =>
-      throw _privateConstructorUsedError; // IDs of players who scored (denormalized from events)
-  List<String> get goalScorerNames =>
-      throw _privateConstructorUsedError; // Names of goal scorers (denormalized for quick display)
-  String? get mvpPlayerId =>
-      throw _privateConstructorUsedError; // MVP player ID (denormalized from events)
-  String? get mvpPlayerName =>
-      throw _privateConstructorUsedError; // MVP player name (denormalized for quick display)
-  String? get venueName =>
-      throw _privateConstructorUsedError; // Venue name (denormalized from venue or event.location)
-// Denormalized fields for signups (optimization - avoids N+1 queries)
-  List<String> get confirmedPlayerIds =>
-      throw _privateConstructorUsedError; // IDs of confirmed players (denormalized from signups)
-  int get confirmedPlayerCount =>
-      throw _privateConstructorUsedError; // Count of confirmed players (denormalized)
-  bool get isFull =>
-      throw _privateConstructorUsedError; // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
-  int? get maxParticipants =>
-      throw _privateConstructorUsedError; // Maximum number of participants (for games created from events)
-// Attendance confirmation settings
-  bool get enableAttendanceReminder =>
-      throw _privateConstructorUsedError; // Organizer can choose to send 2h reminders
-  bool? get reminderSent2Hours =>
-      throw _privateConstructorUsedError; // Whether reminder was already sent (set by Cloud Function)
+      throw _privateConstructorUsedError; // Attendance
+  bool get enableAttendanceReminder => throw _privateConstructorUsedError;
+  bool? get reminderSent2Hours => throw _privateConstructorUsedError;
   DateTime? get reminderSent2HoursAt =>
-      throw _privateConstructorUsedError; // When reminder was sent
-// Audit trail for admin actions
-  List<GameAuditEvent> get auditLog => throw _privateConstructorUsedError;
+      throw _privateConstructorUsedError; // Sub-models
+  GameDenormalizedData get denormalized => throw _privateConstructorUsedError;
+  GameSession get session => throw _privateConstructorUsedError;
+  GameAudit get audit => throw _privateConstructorUsedError;
 
   /// Serializes this Game to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -169,33 +113,22 @@ abstract class $GameCopyWith<$Res> {
       String? parentGameId,
       String? recurrencePattern,
       @NullableTimestampConverter() DateTime? recurrenceEndDate,
-      String? createdByName,
-      String? createdByPhotoUrl,
-      String? hubName,
       List<Team> teams,
-      @JsonKey(name: 'teamAScore') int? legacyTeamAScore,
-      @JsonKey(name: 'teamBScore') int? legacyTeamBScore,
-      List<MatchResult> matches,
-      Map<String, int> aggregateWins,
       int? durationInMinutes,
       String? gameEndCondition,
       String? region,
       bool showInCommunityFeed,
-      List<String> goalScorerIds,
-      List<String> goalScorerNames,
-      String? mvpPlayerId,
-      String? mvpPlayerName,
-      String? venueName,
-      List<String> confirmedPlayerIds,
-      int confirmedPlayerCount,
-      bool isFull,
-      int? maxParticipants,
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
       DateTime? reminderSent2HoursAt,
-      List<GameAuditEvent> auditLog});
+      GameDenormalizedData denormalized,
+      GameSession session,
+      GameAudit audit});
 
   $TargetingCriteriaCopyWith<$Res>? get targetingCriteria;
+  $GameDenormalizedDataCopyWith<$Res> get denormalized;
+  $GameSessionCopyWith<$Res> get session;
+  $GameAuditCopyWith<$Res> get audit;
 }
 
 /// @nodoc
@@ -236,31 +169,17 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? parentGameId = freezed,
     Object? recurrencePattern = freezed,
     Object? recurrenceEndDate = freezed,
-    Object? createdByName = freezed,
-    Object? createdByPhotoUrl = freezed,
-    Object? hubName = freezed,
     Object? teams = null,
-    Object? legacyTeamAScore = freezed,
-    Object? legacyTeamBScore = freezed,
-    Object? matches = null,
-    Object? aggregateWins = null,
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
     Object? showInCommunityFeed = null,
-    Object? goalScorerIds = null,
-    Object? goalScorerNames = null,
-    Object? mvpPlayerId = freezed,
-    Object? mvpPlayerName = freezed,
-    Object? venueName = freezed,
-    Object? confirmedPlayerIds = null,
-    Object? confirmedPlayerCount = null,
-    Object? isFull = null,
-    Object? maxParticipants = freezed,
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
     Object? reminderSent2HoursAt = freezed,
-    Object? auditLog = null,
+    Object? denormalized = null,
+    Object? session = null,
+    Object? audit = null,
   }) {
     return _then(_value.copyWith(
       gameId: null == gameId
@@ -355,38 +274,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.recurrenceEndDate
           : recurrenceEndDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      createdByName: freezed == createdByName
-          ? _value.createdByName
-          : createdByName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      createdByPhotoUrl: freezed == createdByPhotoUrl
-          ? _value.createdByPhotoUrl
-          : createdByPhotoUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
-      hubName: freezed == hubName
-          ? _value.hubName
-          : hubName // ignore: cast_nullable_to_non_nullable
-              as String?,
       teams: null == teams
           ? _value.teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
-      legacyTeamAScore: freezed == legacyTeamAScore
-          ? _value.legacyTeamAScore
-          : legacyTeamAScore // ignore: cast_nullable_to_non_nullable
-              as int?,
-      legacyTeamBScore: freezed == legacyTeamBScore
-          ? _value.legacyTeamBScore
-          : legacyTeamBScore // ignore: cast_nullable_to_non_nullable
-              as int?,
-      matches: null == matches
-          ? _value.matches
-          : matches // ignore: cast_nullable_to_non_nullable
-              as List<MatchResult>,
-      aggregateWins: null == aggregateWins
-          ? _value.aggregateWins
-          : aggregateWins // ignore: cast_nullable_to_non_nullable
-              as Map<String, int>,
       durationInMinutes: freezed == durationInMinutes
           ? _value.durationInMinutes
           : durationInMinutes // ignore: cast_nullable_to_non_nullable
@@ -403,42 +294,6 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.showInCommunityFeed
           : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
               as bool,
-      goalScorerIds: null == goalScorerIds
-          ? _value.goalScorerIds
-          : goalScorerIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      goalScorerNames: null == goalScorerNames
-          ? _value.goalScorerNames
-          : goalScorerNames // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      mvpPlayerId: freezed == mvpPlayerId
-          ? _value.mvpPlayerId
-          : mvpPlayerId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      mvpPlayerName: freezed == mvpPlayerName
-          ? _value.mvpPlayerName
-          : mvpPlayerName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      venueName: freezed == venueName
-          ? _value.venueName
-          : venueName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      confirmedPlayerIds: null == confirmedPlayerIds
-          ? _value.confirmedPlayerIds
-          : confirmedPlayerIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      confirmedPlayerCount: null == confirmedPlayerCount
-          ? _value.confirmedPlayerCount
-          : confirmedPlayerCount // ignore: cast_nullable_to_non_nullable
-              as int,
-      isFull: null == isFull
-          ? _value.isFull
-          : isFull // ignore: cast_nullable_to_non_nullable
-              as bool,
-      maxParticipants: freezed == maxParticipants
-          ? _value.maxParticipants
-          : maxParticipants // ignore: cast_nullable_to_non_nullable
-              as int?,
       enableAttendanceReminder: null == enableAttendanceReminder
           ? _value.enableAttendanceReminder
           : enableAttendanceReminder // ignore: cast_nullable_to_non_nullable
@@ -451,10 +306,18 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.reminderSent2HoursAt
           : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      auditLog: null == auditLog
-          ? _value.auditLog
-          : auditLog // ignore: cast_nullable_to_non_nullable
-              as List<GameAuditEvent>,
+      denormalized: null == denormalized
+          ? _value.denormalized
+          : denormalized // ignore: cast_nullable_to_non_nullable
+              as GameDenormalizedData,
+      session: null == session
+          ? _value.session
+          : session // ignore: cast_nullable_to_non_nullable
+              as GameSession,
+      audit: null == audit
+          ? _value.audit
+          : audit // ignore: cast_nullable_to_non_nullable
+              as GameAudit,
     ) as $Val);
   }
 
@@ -469,6 +332,36 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
 
     return $TargetingCriteriaCopyWith<$Res>(_value.targetingCriteria!, (value) {
       return _then(_value.copyWith(targetingCriteria: value) as $Val);
+    });
+  }
+
+  /// Create a copy of Game
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $GameDenormalizedDataCopyWith<$Res> get denormalized {
+    return $GameDenormalizedDataCopyWith<$Res>(_value.denormalized, (value) {
+      return _then(_value.copyWith(denormalized: value) as $Val);
+    });
+  }
+
+  /// Create a copy of Game
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $GameSessionCopyWith<$Res> get session {
+    return $GameSessionCopyWith<$Res>(_value.session, (value) {
+      return _then(_value.copyWith(session: value) as $Val);
+    });
+  }
+
+  /// Create a copy of Game
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $GameAuditCopyWith<$Res> get audit {
+    return $GameAuditCopyWith<$Res>(_value.audit, (value) {
+      return _then(_value.copyWith(audit: value) as $Val);
     });
   }
 }
@@ -504,34 +397,26 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       String? parentGameId,
       String? recurrencePattern,
       @NullableTimestampConverter() DateTime? recurrenceEndDate,
-      String? createdByName,
-      String? createdByPhotoUrl,
-      String? hubName,
       List<Team> teams,
-      @JsonKey(name: 'teamAScore') int? legacyTeamAScore,
-      @JsonKey(name: 'teamBScore') int? legacyTeamBScore,
-      List<MatchResult> matches,
-      Map<String, int> aggregateWins,
       int? durationInMinutes,
       String? gameEndCondition,
       String? region,
       bool showInCommunityFeed,
-      List<String> goalScorerIds,
-      List<String> goalScorerNames,
-      String? mvpPlayerId,
-      String? mvpPlayerName,
-      String? venueName,
-      List<String> confirmedPlayerIds,
-      int confirmedPlayerCount,
-      bool isFull,
-      int? maxParticipants,
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
       DateTime? reminderSent2HoursAt,
-      List<GameAuditEvent> auditLog});
+      GameDenormalizedData denormalized,
+      GameSession session,
+      GameAudit audit});
 
   @override
   $TargetingCriteriaCopyWith<$Res>? get targetingCriteria;
+  @override
+  $GameDenormalizedDataCopyWith<$Res> get denormalized;
+  @override
+  $GameSessionCopyWith<$Res> get session;
+  @override
+  $GameAuditCopyWith<$Res> get audit;
 }
 
 /// @nodoc
@@ -569,31 +454,17 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? parentGameId = freezed,
     Object? recurrencePattern = freezed,
     Object? recurrenceEndDate = freezed,
-    Object? createdByName = freezed,
-    Object? createdByPhotoUrl = freezed,
-    Object? hubName = freezed,
     Object? teams = null,
-    Object? legacyTeamAScore = freezed,
-    Object? legacyTeamBScore = freezed,
-    Object? matches = null,
-    Object? aggregateWins = null,
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
     Object? showInCommunityFeed = null,
-    Object? goalScorerIds = null,
-    Object? goalScorerNames = null,
-    Object? mvpPlayerId = freezed,
-    Object? mvpPlayerName = freezed,
-    Object? venueName = freezed,
-    Object? confirmedPlayerIds = null,
-    Object? confirmedPlayerCount = null,
-    Object? isFull = null,
-    Object? maxParticipants = freezed,
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
     Object? reminderSent2HoursAt = freezed,
-    Object? auditLog = null,
+    Object? denormalized = null,
+    Object? session = null,
+    Object? audit = null,
   }) {
     return _then(_$GameImpl(
       gameId: null == gameId
@@ -688,38 +559,10 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.recurrenceEndDate
           : recurrenceEndDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      createdByName: freezed == createdByName
-          ? _value.createdByName
-          : createdByName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      createdByPhotoUrl: freezed == createdByPhotoUrl
-          ? _value.createdByPhotoUrl
-          : createdByPhotoUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
-      hubName: freezed == hubName
-          ? _value.hubName
-          : hubName // ignore: cast_nullable_to_non_nullable
-              as String?,
       teams: null == teams
           ? _value._teams
           : teams // ignore: cast_nullable_to_non_nullable
               as List<Team>,
-      legacyTeamAScore: freezed == legacyTeamAScore
-          ? _value.legacyTeamAScore
-          : legacyTeamAScore // ignore: cast_nullable_to_non_nullable
-              as int?,
-      legacyTeamBScore: freezed == legacyTeamBScore
-          ? _value.legacyTeamBScore
-          : legacyTeamBScore // ignore: cast_nullable_to_non_nullable
-              as int?,
-      matches: null == matches
-          ? _value._matches
-          : matches // ignore: cast_nullable_to_non_nullable
-              as List<MatchResult>,
-      aggregateWins: null == aggregateWins
-          ? _value._aggregateWins
-          : aggregateWins // ignore: cast_nullable_to_non_nullable
-              as Map<String, int>,
       durationInMinutes: freezed == durationInMinutes
           ? _value.durationInMinutes
           : durationInMinutes // ignore: cast_nullable_to_non_nullable
@@ -736,42 +579,6 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.showInCommunityFeed
           : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
               as bool,
-      goalScorerIds: null == goalScorerIds
-          ? _value._goalScorerIds
-          : goalScorerIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      goalScorerNames: null == goalScorerNames
-          ? _value._goalScorerNames
-          : goalScorerNames // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      mvpPlayerId: freezed == mvpPlayerId
-          ? _value.mvpPlayerId
-          : mvpPlayerId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      mvpPlayerName: freezed == mvpPlayerName
-          ? _value.mvpPlayerName
-          : mvpPlayerName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      venueName: freezed == venueName
-          ? _value.venueName
-          : venueName // ignore: cast_nullable_to_non_nullable
-              as String?,
-      confirmedPlayerIds: null == confirmedPlayerIds
-          ? _value._confirmedPlayerIds
-          : confirmedPlayerIds // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      confirmedPlayerCount: null == confirmedPlayerCount
-          ? _value.confirmedPlayerCount
-          : confirmedPlayerCount // ignore: cast_nullable_to_non_nullable
-              as int,
-      isFull: null == isFull
-          ? _value.isFull
-          : isFull // ignore: cast_nullable_to_non_nullable
-              as bool,
-      maxParticipants: freezed == maxParticipants
-          ? _value.maxParticipants
-          : maxParticipants // ignore: cast_nullable_to_non_nullable
-              as int?,
       enableAttendanceReminder: null == enableAttendanceReminder
           ? _value.enableAttendanceReminder
           : enableAttendanceReminder // ignore: cast_nullable_to_non_nullable
@@ -784,17 +591,25 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.reminderSent2HoursAt
           : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      auditLog: null == auditLog
-          ? _value._auditLog
-          : auditLog // ignore: cast_nullable_to_non_nullable
-              as List<GameAuditEvent>,
+      denormalized: null == denormalized
+          ? _value.denormalized
+          : denormalized // ignore: cast_nullable_to_non_nullable
+              as GameDenormalizedData,
+      session: null == session
+          ? _value.session
+          : session // ignore: cast_nullable_to_non_nullable
+              as GameSession,
+      audit: null == audit
+          ? _value.audit
+          : audit // ignore: cast_nullable_to_non_nullable
+              as GameAudit,
     ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$GameImpl implements _Game {
+class _$GameImpl extends _Game {
   const _$GameImpl(
       {required this.gameId,
       required this.createdBy,
@@ -819,39 +634,20 @@ class _$GameImpl implements _Game {
       this.parentGameId,
       this.recurrencePattern,
       @NullableTimestampConverter() this.recurrenceEndDate,
-      this.createdByName,
-      this.createdByPhotoUrl,
-      this.hubName,
       final List<Team> teams = const [],
-      @JsonKey(name: 'teamAScore') this.legacyTeamAScore,
-      @JsonKey(name: 'teamBScore') this.legacyTeamBScore,
-      final List<MatchResult> matches = const [],
-      final Map<String, int> aggregateWins = const {},
       this.durationInMinutes,
       this.gameEndCondition,
       this.region,
       this.showInCommunityFeed = false,
-      final List<String> goalScorerIds = const [],
-      final List<String> goalScorerNames = const [],
-      this.mvpPlayerId,
-      this.mvpPlayerName,
-      this.venueName,
-      final List<String> confirmedPlayerIds = const [],
-      this.confirmedPlayerCount = 0,
-      this.isFull = false,
-      this.maxParticipants,
       this.enableAttendanceReminder = true,
       this.reminderSent2Hours,
       this.reminderSent2HoursAt,
-      final List<GameAuditEvent> auditLog = const []})
+      this.denormalized = const GameDenormalizedData(),
+      this.session = const GameSession(),
+      this.audit = const GameAudit()})
       : _photoUrls = photoUrls,
         _teams = teams,
-        _matches = matches,
-        _aggregateWins = aggregateWins,
-        _goalScorerIds = goalScorerIds,
-        _goalScorerNames = goalScorerNames,
-        _confirmedPlayerIds = confirmedPlayerIds,
-        _auditLog = auditLog;
+        super._();
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameImplFromJson(json);
@@ -863,7 +659,6 @@ class _$GameImpl implements _Game {
   @override
   final String? hubId;
 // Nullable for public pickup games
-// Event reference - Game should always be created from an Event (legacy games may not have this)
   @override
   final String? eventId;
 // ID of the event this game belongs to (required for new games, optional for legacy)
@@ -872,7 +667,7 @@ class _$GameImpl implements _Game {
   final DateTime gameDate;
   @override
   final String? location;
-// Legacy text location (kept for backward compatibility)
+// Legacy text location
   @override
   @NullableGeoPointConverter()
   final GeoPoint? locationPoint;
@@ -881,7 +676,7 @@ class _$GameImpl implements _Game {
   final String? geohash;
   @override
   final String? venueId;
-// Reference to venue (not denormalized - use venueId to fetch)
+// Reference to venue
   @override
   @JsonKey()
   final int teamCount;
@@ -895,23 +690,17 @@ class _$GameImpl implements _Game {
   @GameVisibilityConverter()
   final GameVisibility visibility;
 // private, public, or recruiting
-// Public game support
   @override
   final TargetingCriteria? targetingCriteria;
-// Targeting criteria for public games
   @override
   @JsonKey()
   final bool requiresApproval;
-// Force true for public games
   @override
   @JsonKey()
   final int minPlayersToPlay;
-// Minimum players needed to start
   @override
   final int? maxPlayers;
-// Maximum capacity (hard cap)
   final List<String> _photoUrls;
-// Maximum capacity (hard cap)
   @override
   @JsonKey()
   List<String> get photoUrls {
@@ -920,7 +709,6 @@ class _$GameImpl implements _Game {
     return EqualUnmodifiableListView(_photoUrls);
   }
 
-// URLs of game photos
   @override
   @TimestampConverter()
   final DateTime createdAt;
@@ -931,31 +719,16 @@ class _$GameImpl implements _Game {
   @override
   @JsonKey()
   final bool isRecurring;
-// Is this a recurring game?
   @override
   final String? parentGameId;
-// ID of the original recurring game (for child games)
   @override
   final String? recurrencePattern;
-// 'weekly', 'biweekly', 'monthly'
   @override
   @NullableTimestampConverter()
   final DateTime? recurrenceEndDate;
-// When to stop creating recurring games
-// Denormalized fields for efficient display (no need to fetch user/hub)
-  @override
-  final String? createdByName;
-// Denormalized from users/{createdBy}.name
-  @override
-  final String? createdByPhotoUrl;
-// Denormalized from users/{createdBy}.photoUrl
-  @override
-  final String? hubName;
-// Denormalized from hubs/{hubId}.name (optional, for feed posts)
-// Teams and scores
+// Teams
   final List<Team> _teams;
-// Denormalized from hubs/{hubId}.name (optional, for feed posts)
-// Teams and scores
+// Teams
   @override
   @JsonKey()
   List<Team> get teams {
@@ -964,140 +737,40 @@ class _$GameImpl implements _Game {
     return EqualUnmodifiableListView(_teams);
   }
 
-// List of teams created in TeamMaker
-// Legacy single-match scores (deprecated - use matches list for session mode)
-// These fields are kept for backward compatibility with old games
-  @override
-  @JsonKey(name: 'teamAScore')
-  final int? legacyTeamAScore;
-// Legacy: Score for team A - use matches for session mode
-  @override
-  @JsonKey(name: 'teamBScore')
-  final int? legacyTeamBScore;
-// Legacy: Score for team B - use matches for session mode
-// Multi-match session support (for Events converted to Games)
-  final List<MatchResult> _matches;
-// Legacy: Score for team B - use matches for session mode
-// Multi-match session support (for Events converted to Games)
-  @override
-  @JsonKey()
-  List<MatchResult> get matches {
-    if (_matches is EqualUnmodifiableListView) return _matches;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_matches);
-  }
-
-// List of individual match outcomes within this session
-  final Map<String, int> _aggregateWins;
-// List of individual match outcomes within this session
-  @override
-  @JsonKey()
-  Map<String, int> get aggregateWins {
-    if (_aggregateWins is EqualUnmodifiableMapView) return _aggregateWins;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_aggregateWins);
-  }
-
-// Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
+// Teams created in TeamMaker
 // Game rules
   @override
   final int? durationInMinutes;
-// Duration of the game in minutes
   @override
   final String? gameEndCondition;
-// Condition for game end (e.g., "first to 5 goals", "time limit")
   @override
   final String? region;
-// אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
 // Community feed
   @override
   @JsonKey()
   final bool showInCommunityFeed;
-// Show this game in the community activity feed
-// Denormalized fields for community feed (optimization)
-  final List<String> _goalScorerIds;
-// Show this game in the community activity feed
-// Denormalized fields for community feed (optimization)
-  @override
-  @JsonKey()
-  List<String> get goalScorerIds {
-    if (_goalScorerIds is EqualUnmodifiableListView) return _goalScorerIds;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_goalScorerIds);
-  }
-
-// IDs of players who scored (denormalized from events)
-  final List<String> _goalScorerNames;
-// IDs of players who scored (denormalized from events)
-  @override
-  @JsonKey()
-  List<String> get goalScorerNames {
-    if (_goalScorerNames is EqualUnmodifiableListView) return _goalScorerNames;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_goalScorerNames);
-  }
-
-// Names of goal scorers (denormalized for quick display)
-  @override
-  final String? mvpPlayerId;
-// MVP player ID (denormalized from events)
-  @override
-  final String? mvpPlayerName;
-// MVP player name (denormalized for quick display)
-  @override
-  final String? venueName;
-// Venue name (denormalized from venue or event.location)
-// Denormalized fields for signups (optimization - avoids N+1 queries)
-  final List<String> _confirmedPlayerIds;
-// Venue name (denormalized from venue or event.location)
-// Denormalized fields for signups (optimization - avoids N+1 queries)
-  @override
-  @JsonKey()
-  List<String> get confirmedPlayerIds {
-    if (_confirmedPlayerIds is EqualUnmodifiableListView)
-      return _confirmedPlayerIds;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_confirmedPlayerIds);
-  }
-
-// IDs of confirmed players (denormalized from signups)
-  @override
-  @JsonKey()
-  final int confirmedPlayerCount;
-// Count of confirmed players (denormalized)
-  @override
-  @JsonKey()
-  final bool isFull;
-// Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
-  @override
-  final int? maxParticipants;
-// Maximum number of participants (for games created from events)
-// Attendance confirmation settings
+// Attendance
   @override
   @JsonKey()
   final bool enableAttendanceReminder;
-// Organizer can choose to send 2h reminders
   @override
   final bool? reminderSent2Hours;
-// Whether reminder was already sent (set by Cloud Function)
   @override
   final DateTime? reminderSent2HoursAt;
-// When reminder was sent
-// Audit trail for admin actions
-  final List<GameAuditEvent> _auditLog;
-// When reminder was sent
-// Audit trail for admin actions
+// Sub-models
   @override
   @JsonKey()
-  List<GameAuditEvent> get auditLog {
-    if (_auditLog is EqualUnmodifiableListView) return _auditLog;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_auditLog);
-  }
+  final GameDenormalizedData denormalized;
+  @override
+  @JsonKey()
+  final GameSession session;
+  @override
+  @JsonKey()
+  final GameAudit audit;
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, targetingCriteria: $targetingCriteria, requiresApproval: $requiresApproval, minPlayersToPlay: $minPlayersToPlay, maxPlayers: $maxPlayers, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, createdByName: $createdByName, createdByPhotoUrl: $createdByPhotoUrl, hubName: $hubName, teams: $teams, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore, matches: $matches, aggregateWins: $aggregateWins, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, confirmedPlayerIds: $confirmedPlayerIds, confirmedPlayerCount: $confirmedPlayerCount, isFull: $isFull, maxParticipants: $maxParticipants, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt, auditLog: $auditLog)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, targetingCriteria: $targetingCriteria, requiresApproval: $requiresApproval, minPlayersToPlay: $minPlayersToPlay, maxPlayers: $maxPlayers, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, teams: $teams, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt, denormalized: $denormalized, session: $session, audit: $audit)';
   }
 
   @override
@@ -1145,19 +818,7 @@ class _$GameImpl implements _Game {
                 other.recurrencePattern == recurrencePattern) &&
             (identical(other.recurrenceEndDate, recurrenceEndDate) ||
                 other.recurrenceEndDate == recurrenceEndDate) &&
-            (identical(other.createdByName, createdByName) ||
-                other.createdByName == createdByName) &&
-            (identical(other.createdByPhotoUrl, createdByPhotoUrl) ||
-                other.createdByPhotoUrl == createdByPhotoUrl) &&
-            (identical(other.hubName, hubName) || other.hubName == hubName) &&
             const DeepCollectionEquality().equals(other._teams, _teams) &&
-            (identical(other.legacyTeamAScore, legacyTeamAScore) ||
-                other.legacyTeamAScore == legacyTeamAScore) &&
-            (identical(other.legacyTeamBScore, legacyTeamBScore) ||
-                other.legacyTeamBScore == legacyTeamBScore) &&
-            const DeepCollectionEquality().equals(other._matches, _matches) &&
-            const DeepCollectionEquality()
-                .equals(other._aggregateWins, _aggregateWins) &&
             (identical(other.durationInMinutes, durationInMinutes) ||
                 other.durationInMinutes == durationInMinutes) &&
             (identical(other.gameEndCondition, gameEndCondition) ||
@@ -1165,23 +826,6 @@ class _$GameImpl implements _Game {
             (identical(other.region, region) || other.region == region) &&
             (identical(other.showInCommunityFeed, showInCommunityFeed) ||
                 other.showInCommunityFeed == showInCommunityFeed) &&
-            const DeepCollectionEquality()
-                .equals(other._goalScorerIds, _goalScorerIds) &&
-            const DeepCollectionEquality()
-                .equals(other._goalScorerNames, _goalScorerNames) &&
-            (identical(other.mvpPlayerId, mvpPlayerId) ||
-                other.mvpPlayerId == mvpPlayerId) &&
-            (identical(other.mvpPlayerName, mvpPlayerName) ||
-                other.mvpPlayerName == mvpPlayerName) &&
-            (identical(other.venueName, venueName) ||
-                other.venueName == venueName) &&
-            const DeepCollectionEquality()
-                .equals(other._confirmedPlayerIds, _confirmedPlayerIds) &&
-            (identical(other.confirmedPlayerCount, confirmedPlayerCount) ||
-                other.confirmedPlayerCount == confirmedPlayerCount) &&
-            (identical(other.isFull, isFull) || other.isFull == isFull) &&
-            (identical(other.maxParticipants, maxParticipants) ||
-                other.maxParticipants == maxParticipants) &&
             (identical(
                     other.enableAttendanceReminder, enableAttendanceReminder) ||
                 other.enableAttendanceReminder == enableAttendanceReminder) &&
@@ -1189,7 +833,10 @@ class _$GameImpl implements _Game {
                 other.reminderSent2Hours == reminderSent2Hours) &&
             (identical(other.reminderSent2HoursAt, reminderSent2HoursAt) ||
                 other.reminderSent2HoursAt == reminderSent2HoursAt) &&
-            const DeepCollectionEquality().equals(other._auditLog, _auditLog));
+            (identical(other.denormalized, denormalized) ||
+                other.denormalized == denormalized) &&
+            (identical(other.session, session) || other.session == session) &&
+            (identical(other.audit, audit) || other.audit == audit));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1219,31 +866,17 @@ class _$GameImpl implements _Game {
         parentGameId,
         recurrencePattern,
         recurrenceEndDate,
-        createdByName,
-        createdByPhotoUrl,
-        hubName,
         const DeepCollectionEquality().hash(_teams),
-        legacyTeamAScore,
-        legacyTeamBScore,
-        const DeepCollectionEquality().hash(_matches),
-        const DeepCollectionEquality().hash(_aggregateWins),
         durationInMinutes,
         gameEndCondition,
         region,
         showInCommunityFeed,
-        const DeepCollectionEquality().hash(_goalScorerIds),
-        const DeepCollectionEquality().hash(_goalScorerNames),
-        mvpPlayerId,
-        mvpPlayerName,
-        venueName,
-        const DeepCollectionEquality().hash(_confirmedPlayerIds),
-        confirmedPlayerCount,
-        isFull,
-        maxParticipants,
         enableAttendanceReminder,
         reminderSent2Hours,
         reminderSent2HoursAt,
-        const DeepCollectionEquality().hash(_auditLog)
+        denormalized,
+        session,
+        audit
       ]);
 
   /// Create a copy of Game
@@ -1262,7 +895,7 @@ class _$GameImpl implements _Game {
   }
 }
 
-abstract class _Game implements Game {
+abstract class _Game extends Game {
   const factory _Game(
       {required final String gameId,
       required final String createdBy,
@@ -1287,31 +920,18 @@ abstract class _Game implements Game {
       final String? parentGameId,
       final String? recurrencePattern,
       @NullableTimestampConverter() final DateTime? recurrenceEndDate,
-      final String? createdByName,
-      final String? createdByPhotoUrl,
-      final String? hubName,
       final List<Team> teams,
-      @JsonKey(name: 'teamAScore') final int? legacyTeamAScore,
-      @JsonKey(name: 'teamBScore') final int? legacyTeamBScore,
-      final List<MatchResult> matches,
-      final Map<String, int> aggregateWins,
       final int? durationInMinutes,
       final String? gameEndCondition,
       final String? region,
       final bool showInCommunityFeed,
-      final List<String> goalScorerIds,
-      final List<String> goalScorerNames,
-      final String? mvpPlayerId,
-      final String? mvpPlayerName,
-      final String? venueName,
-      final List<String> confirmedPlayerIds,
-      final int confirmedPlayerCount,
-      final bool isFull,
-      final int? maxParticipants,
       final bool enableAttendanceReminder,
       final bool? reminderSent2Hours,
       final DateTime? reminderSent2HoursAt,
-      final List<GameAuditEvent> auditLog}) = _$GameImpl;
+      final GameDenormalizedData denormalized,
+      final GameSession session,
+      final GameAudit audit}) = _$GameImpl;
+  const _Game._() : super._();
 
   factory _Game.fromJson(Map<String, dynamic> json) = _$GameImpl.fromJson;
 
@@ -1321,7 +941,6 @@ abstract class _Game implements Game {
   String get createdBy;
   @override
   String? get hubId; // Nullable for public pickup games
-// Event reference - Game should always be created from an Event (legacy games may not have this)
   @override
   String?
       get eventId; // ID of the event this game belongs to (required for new games, optional for legacy)
@@ -1329,16 +948,14 @@ abstract class _Game implements Game {
   @TimestampConverter()
   DateTime get gameDate;
   @override
-  String?
-      get location; // Legacy text location (kept for backward compatibility)
+  String? get location; // Legacy text location
   @override
   @NullableGeoPointConverter()
   GeoPoint? get locationPoint; // New geographic location
   @override
   String? get geohash;
   @override
-  String?
-      get venueId; // Reference to venue (not denormalized - use venueId to fetch)
+  String? get venueId; // Reference to venue
   @override
   int get teamCount; // 2, 3, or 4
   @override
@@ -1347,18 +964,16 @@ abstract class _Game implements Game {
   @override
   @GameVisibilityConverter()
   GameVisibility get visibility; // private, public, or recruiting
-// Public game support
   @override
-  TargetingCriteria?
-      get targetingCriteria; // Targeting criteria for public games
+  TargetingCriteria? get targetingCriteria;
   @override
-  bool get requiresApproval; // Force true for public games
+  bool get requiresApproval;
   @override
-  int get minPlayersToPlay; // Minimum players needed to start
+  int get minPlayersToPlay;
   @override
-  int? get maxPlayers; // Maximum capacity (hard cap)
+  int? get maxPlayers;
   @override
-  List<String> get photoUrls; // URLs of game photos
+  List<String> get photoUrls;
   @override
   @TimestampConverter()
   DateTime get createdAt;
@@ -1366,92 +981,37 @@ abstract class _Game implements Game {
   @TimestampConverter()
   DateTime get updatedAt; // Recurring game fields
   @override
-  bool get isRecurring; // Is this a recurring game?
+  bool get isRecurring;
   @override
-  String?
-      get parentGameId; // ID of the original recurring game (for child games)
+  String? get parentGameId;
   @override
-  String? get recurrencePattern; // 'weekly', 'biweekly', 'monthly'
+  String? get recurrencePattern;
   @override
   @NullableTimestampConverter()
-  DateTime? get recurrenceEndDate; // When to stop creating recurring games
-// Denormalized fields for efficient display (no need to fetch user/hub)
+  DateTime? get recurrenceEndDate; // Teams
   @override
-  String? get createdByName; // Denormalized from users/{createdBy}.name
-  @override
-  String? get createdByPhotoUrl; // Denormalized from users/{createdBy}.photoUrl
-  @override
-  String?
-      get hubName; // Denormalized from hubs/{hubId}.name (optional, for feed posts)
-// Teams and scores
-  @override
-  List<Team> get teams; // List of teams created in TeamMaker
-// Legacy single-match scores (deprecated - use matches list for session mode)
-// These fields are kept for backward compatibility with old games
-  @override
-  @JsonKey(name: 'teamAScore')
-  int?
-      get legacyTeamAScore; // Legacy: Score for team A - use matches for session mode
-  @override
-  @JsonKey(name: 'teamBScore')
-  int?
-      get legacyTeamBScore; // Legacy: Score for team B - use matches for session mode
-// Multi-match session support (for Events converted to Games)
-  @override
-  List<MatchResult>
-      get matches; // List of individual match outcomes within this session
-  @override
-  Map<String, int>
-      get aggregateWins; // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
+  List<Team> get teams; // Teams created in TeamMaker
 // Game rules
   @override
-  int? get durationInMinutes; // Duration of the game in minutes
+  int? get durationInMinutes;
   @override
-  String?
-      get gameEndCondition; // Condition for game end (e.g., "first to 5 goals", "time limit")
+  String? get gameEndCondition;
   @override
-  String? get region; // אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
-// Community feed
+  String? get region; // Community feed
   @override
-  bool get showInCommunityFeed; // Show this game in the community activity feed
-// Denormalized fields for community feed (optimization)
+  bool get showInCommunityFeed; // Attendance
   @override
-  List<String>
-      get goalScorerIds; // IDs of players who scored (denormalized from events)
+  bool get enableAttendanceReminder;
   @override
-  List<String>
-      get goalScorerNames; // Names of goal scorers (denormalized for quick display)
+  bool? get reminderSent2Hours;
   @override
-  String? get mvpPlayerId; // MVP player ID (denormalized from events)
+  DateTime? get reminderSent2HoursAt; // Sub-models
   @override
-  String? get mvpPlayerName; // MVP player name (denormalized for quick display)
+  GameDenormalizedData get denormalized;
   @override
-  String?
-      get venueName; // Venue name (denormalized from venue or event.location)
-// Denormalized fields for signups (optimization - avoids N+1 queries)
+  GameSession get session;
   @override
-  List<String>
-      get confirmedPlayerIds; // IDs of confirmed players (denormalized from signups)
-  @override
-  int get confirmedPlayerCount; // Count of confirmed players (denormalized)
-  @override
-  bool
-      get isFull; // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
-  @override
-  int?
-      get maxParticipants; // Maximum number of participants (for games created from events)
-// Attendance confirmation settings
-  @override
-  bool
-      get enableAttendanceReminder; // Organizer can choose to send 2h reminders
-  @override
-  bool?
-      get reminderSent2Hours; // Whether reminder was already sent (set by Cloud Function)
-  @override
-  DateTime? get reminderSent2HoursAt; // When reminder was sent
-// Audit trail for admin actions
-  @override
-  List<GameAuditEvent> get auditLog;
+  GameAudit get audit;
 
   /// Create a copy of Game
   /// with the given fields replaced by the non-null parameter values.

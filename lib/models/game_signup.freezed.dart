@@ -25,7 +25,16 @@ mixin _$GameSignup {
   DateTime get signedUpAt => throw _privateConstructorUsedError;
   @SignupStatusConverter()
   SignupStatus get status => throw _privateConstructorUsedError;
-  String? get adminActionReason => throw _privateConstructorUsedError;
+  String? get adminActionReason =>
+      throw _privateConstructorUsedError; // Mandatory for rejections/kicks
+// Denormalized game data (to avoid N+1 queries)
+  @TimestampConverter()
+  DateTime? get gameDate => throw _privateConstructorUsedError;
+  String? get gameStatus =>
+      throw _privateConstructorUsedError; // 'teamSelection', 'teamsFormed', etc.
+  String? get hubId => throw _privateConstructorUsedError;
+  String? get location => throw _privateConstructorUsedError;
+  String? get venueName => throw _privateConstructorUsedError;
 
   /// Serializes this GameSignup to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -47,7 +56,12 @@ abstract class $GameSignupCopyWith<$Res> {
       {String playerId,
       @TimestampConverter() DateTime signedUpAt,
       @SignupStatusConverter() SignupStatus status,
-      String? adminActionReason});
+      String? adminActionReason,
+      @TimestampConverter() DateTime? gameDate,
+      String? gameStatus,
+      String? hubId,
+      String? location,
+      String? venueName});
 }
 
 /// @nodoc
@@ -69,6 +83,11 @@ class _$GameSignupCopyWithImpl<$Res, $Val extends GameSignup>
     Object? signedUpAt = null,
     Object? status = null,
     Object? adminActionReason = freezed,
+    Object? gameDate = freezed,
+    Object? gameStatus = freezed,
+    Object? hubId = freezed,
+    Object? location = freezed,
+    Object? venueName = freezed,
   }) {
     return _then(_value.copyWith(
       playerId: null == playerId
@@ -87,6 +106,26 @@ class _$GameSignupCopyWithImpl<$Res, $Val extends GameSignup>
           ? _value.adminActionReason
           : adminActionReason // ignore: cast_nullable_to_non_nullable
               as String?,
+      gameDate: freezed == gameDate
+          ? _value.gameDate
+          : gameDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      gameStatus: freezed == gameStatus
+          ? _value.gameStatus
+          : gameStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubId: freezed == hubId
+          ? _value.hubId
+          : hubId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueName: freezed == venueName
+          ? _value.venueName
+          : venueName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -103,7 +142,12 @@ abstract class _$$GameSignupImplCopyWith<$Res>
       {String playerId,
       @TimestampConverter() DateTime signedUpAt,
       @SignupStatusConverter() SignupStatus status,
-      String? adminActionReason});
+      String? adminActionReason,
+      @TimestampConverter() DateTime? gameDate,
+      String? gameStatus,
+      String? hubId,
+      String? location,
+      String? venueName});
 }
 
 /// @nodoc
@@ -123,6 +167,11 @@ class __$$GameSignupImplCopyWithImpl<$Res>
     Object? signedUpAt = null,
     Object? status = null,
     Object? adminActionReason = freezed,
+    Object? gameDate = freezed,
+    Object? gameStatus = freezed,
+    Object? hubId = freezed,
+    Object? location = freezed,
+    Object? venueName = freezed,
   }) {
     return _then(_$GameSignupImpl(
       playerId: null == playerId
@@ -141,6 +190,26 @@ class __$$GameSignupImplCopyWithImpl<$Res>
           ? _value.adminActionReason
           : adminActionReason // ignore: cast_nullable_to_non_nullable
               as String?,
+      gameDate: freezed == gameDate
+          ? _value.gameDate
+          : gameDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      gameStatus: freezed == gameStatus
+          ? _value.gameStatus
+          : gameStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
+      hubId: freezed == hubId
+          ? _value.hubId
+          : hubId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      location: freezed == location
+          ? _value.location
+          : location // ignore: cast_nullable_to_non_nullable
+              as String?,
+      venueName: freezed == venueName
+          ? _value.venueName
+          : venueName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -152,7 +221,12 @@ class _$GameSignupImpl implements _GameSignup {
       {required this.playerId,
       @TimestampConverter() required this.signedUpAt,
       @SignupStatusConverter() this.status = SignupStatus.pending,
-      this.adminActionReason});
+      this.adminActionReason,
+      @TimestampConverter() this.gameDate,
+      this.gameStatus,
+      this.hubId,
+      this.location,
+      this.venueName});
 
   factory _$GameSignupImpl.fromJson(Map<String, dynamic> json) =>
       _$$GameSignupImplFromJson(json);
@@ -168,10 +242,24 @@ class _$GameSignupImpl implements _GameSignup {
   final SignupStatus status;
   @override
   final String? adminActionReason;
+// Mandatory for rejections/kicks
+// Denormalized game data (to avoid N+1 queries)
+  @override
+  @TimestampConverter()
+  final DateTime? gameDate;
+  @override
+  final String? gameStatus;
+// 'teamSelection', 'teamsFormed', etc.
+  @override
+  final String? hubId;
+  @override
+  final String? location;
+  @override
+  final String? venueName;
 
   @override
   String toString() {
-    return 'GameSignup(playerId: $playerId, signedUpAt: $signedUpAt, status: $status, adminActionReason: $adminActionReason)';
+    return 'GameSignup(playerId: $playerId, signedUpAt: $signedUpAt, status: $status, adminActionReason: $adminActionReason, gameDate: $gameDate, gameStatus: $gameStatus, hubId: $hubId, location: $location, venueName: $venueName)';
   }
 
   @override
@@ -185,13 +273,22 @@ class _$GameSignupImpl implements _GameSignup {
                 other.signedUpAt == signedUpAt) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.adminActionReason, adminActionReason) ||
-                other.adminActionReason == adminActionReason));
+                other.adminActionReason == adminActionReason) &&
+            (identical(other.gameDate, gameDate) ||
+                other.gameDate == gameDate) &&
+            (identical(other.gameStatus, gameStatus) ||
+                other.gameStatus == gameStatus) &&
+            (identical(other.hubId, hubId) || other.hubId == hubId) &&
+            (identical(other.location, location) ||
+                other.location == location) &&
+            (identical(other.venueName, venueName) ||
+                other.venueName == venueName));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, playerId, signedUpAt, status, adminActionReason);
+  int get hashCode => Object.hash(runtimeType, playerId, signedUpAt, status,
+      adminActionReason, gameDate, gameStatus, hubId, location, venueName);
 
   /// Create a copy of GameSignup
   /// with the given fields replaced by the non-null parameter values.
@@ -214,7 +311,12 @@ abstract class _GameSignup implements GameSignup {
       {required final String playerId,
       @TimestampConverter() required final DateTime signedUpAt,
       @SignupStatusConverter() final SignupStatus status,
-      final String? adminActionReason}) = _$GameSignupImpl;
+      final String? adminActionReason,
+      @TimestampConverter() final DateTime? gameDate,
+      final String? gameStatus,
+      final String? hubId,
+      final String? location,
+      final String? venueName}) = _$GameSignupImpl;
 
   factory _GameSignup.fromJson(Map<String, dynamic> json) =
       _$GameSignupImpl.fromJson;
@@ -228,7 +330,19 @@ abstract class _GameSignup implements GameSignup {
   @SignupStatusConverter()
   SignupStatus get status;
   @override
-  String? get adminActionReason;
+  String? get adminActionReason; // Mandatory for rejections/kicks
+// Denormalized game data (to avoid N+1 queries)
+  @override
+  @TimestampConverter()
+  DateTime? get gameDate;
+  @override
+  String? get gameStatus; // 'teamSelection', 'teamsFormed', etc.
+  @override
+  String? get hubId;
+  @override
+  String? get location;
+  @override
+  String? get venueName;
 
   /// Create a copy of GameSignup
   /// with the given fields replaced by the non-null parameter values.

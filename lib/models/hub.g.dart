@@ -16,9 +16,9 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
       memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
       settings: json['settings'] as Map<String, dynamic>? ??
           const {
-            'ratingMode': 'basic',
             'showManagerContactInfo': true,
-            'allowJoinRequests': true
+            'allowJoinRequests': true,
+            'allowModeratorsToCreateGames': false
           },
       permissions: json['permissions'] as Map<String, dynamic>? ?? const {},
       location: const NullableGeoPointConverter().fromJson(json['location']),

@@ -16,6 +16,7 @@ import 'package:kattrick/services/google_places_service.dart';
 import 'package:kattrick/services/custom_api_service.dart';
 import 'package:kattrick/services/weather_service.dart';
 import 'package:kattrick/services/cache_service.dart';
+import 'package:kattrick/services/hub_analytics_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
@@ -189,6 +190,11 @@ final googlePlacesServiceProvider = Provider<GooglePlacesService>((ref) {
 /// Custom API service provider
 final customApiServiceProvider = Provider<CustomApiService>((ref) {
   return CustomApiService();
+});
+
+/// Hub analytics service provider
+final hubAnalyticsServiceProvider = Provider<HubAnalyticsService>((ref) {
+  return HubAnalyticsService(ref.watch(firestoreProvider));
 });
 
 /// Leaderboard provider - watches top ranked users

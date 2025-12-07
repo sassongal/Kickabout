@@ -6,6 +6,9 @@ part 'game_signup.freezed.dart';
 part 'game_signup.g.dart';
 
 /// Game signup model matching Firestore schema: /games/{id}/signups/{uid}
+///
+/// IMPORTANT: Includes denormalized game data to avoid N+1 queries.
+/// When creating signups, always populate these fields from the game document.
 @freezed
 class GameSignup with _$GameSignup {
   const factory GameSignup({
@@ -13,6 +16,13 @@ class GameSignup with _$GameSignup {
     @TimestampConverter() required DateTime signedUpAt,
     @SignupStatusConverter() @Default(SignupStatus.pending) SignupStatus status,
     String? adminActionReason, // Mandatory for rejections/kicks
+
+    // Denormalized game data (to avoid N+1 queries)
+    @TimestampConverter() DateTime? gameDate,
+    String? gameStatus, // 'teamSelection', 'teamsFormed', etc.
+    String? hubId,
+    String? location,
+    String? venueName,
   }) = _GameSignup;
 
   factory GameSignup.fromJson(Map<String, dynamic> json) =>

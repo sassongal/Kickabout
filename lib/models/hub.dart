@@ -32,9 +32,10 @@ class Hub with _$Hub {
 
     // Settings
     @Default({
-      'ratingMode': 'basic',
       'showManagerContactInfo': true,
       'allowJoinRequests': true,
+      'allowModeratorsToCreateGames':
+          false, // Allow moderators to open games from events
     })
     Map<String, dynamic> settings,
 

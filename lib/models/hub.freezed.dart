@@ -435,9 +435,9 @@ class _$HubImpl implements _Hub {
       @TimestampConverter() required this.createdAt,
       this.memberCount = 0,
       final Map<String, dynamic> settings = const {
-        'ratingMode': 'basic',
         'showManagerContactInfo': true,
-        'allowJoinRequests': true
+        'allowJoinRequests': true,
+        'allowModeratorsToCreateGames': false
       },
       final Map<String, dynamic> permissions = const {},
       @NullableGeoPointConverter() this.location,

@@ -45,56 +45,30 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       recurrencePattern: json['recurrencePattern'] as String?,
       recurrenceEndDate: const NullableTimestampConverter()
           .fromJson(json['recurrenceEndDate']),
-      createdByName: json['createdByName'] as String?,
-      createdByPhotoUrl: json['createdByPhotoUrl'] as String?,
-      hubName: json['hubName'] as String?,
       teams: (json['teams'] as List<dynamic>?)
               ?.map((e) => Team.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      legacyTeamAScore: (json['teamAScore'] as num?)?.toInt(),
-      legacyTeamBScore: (json['teamBScore'] as num?)?.toInt(),
-      matches: (json['matches'] as List<dynamic>?)
-              ?.map((e) => MatchResult.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-      aggregateWins: (json['aggregateWins'] as Map<String, dynamic>?)?.map(
-            (k, e) => MapEntry(k, (e as num).toInt()),
-          ) ??
-          const {},
       durationInMinutes: (json['durationInMinutes'] as num?)?.toInt(),
       gameEndCondition: json['gameEndCondition'] as String?,
       region: json['region'] as String?,
       showInCommunityFeed: json['showInCommunityFeed'] as bool? ?? false,
-      goalScorerIds: (json['goalScorerIds'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      goalScorerNames: (json['goalScorerNames'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      mvpPlayerId: json['mvpPlayerId'] as String?,
-      mvpPlayerName: json['mvpPlayerName'] as String?,
-      venueName: json['venueName'] as String?,
-      confirmedPlayerIds: (json['confirmedPlayerIds'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      confirmedPlayerCount:
-          (json['confirmedPlayerCount'] as num?)?.toInt() ?? 0,
-      isFull: json['isFull'] as bool? ?? false,
-      maxParticipants: (json['maxParticipants'] as num?)?.toInt(),
       enableAttendanceReminder:
           json['enableAttendanceReminder'] as bool? ?? true,
       reminderSent2Hours: json['reminderSent2Hours'] as bool?,
       reminderSent2HoursAt: json['reminderSent2HoursAt'] == null
           ? null
           : DateTime.parse(json['reminderSent2HoursAt'] as String),
-      auditLog: (json['auditLog'] as List<dynamic>?)
-              ?.map((e) => GameAuditEvent.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
+      denormalized: json['denormalized'] == null
+          ? const GameDenormalizedData()
+          : GameDenormalizedData.fromJson(
+              json['denormalized'] as Map<String, dynamic>),
+      session: json['session'] == null
+          ? const GameSession()
+          : GameSession.fromJson(json['session'] as Map<String, dynamic>),
+      audit: json['audit'] == null
+          ? const GameAudit()
+          : GameAudit.fromJson(json['audit'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
@@ -124,29 +98,15 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'recurrencePattern': instance.recurrencePattern,
       'recurrenceEndDate':
           const NullableTimestampConverter().toJson(instance.recurrenceEndDate),
-      'createdByName': instance.createdByName,
-      'createdByPhotoUrl': instance.createdByPhotoUrl,
-      'hubName': instance.hubName,
       'teams': instance.teams,
-      'teamAScore': instance.legacyTeamAScore,
-      'teamBScore': instance.legacyTeamBScore,
-      'matches': instance.matches,
-      'aggregateWins': instance.aggregateWins,
       'durationInMinutes': instance.durationInMinutes,
       'gameEndCondition': instance.gameEndCondition,
       'region': instance.region,
       'showInCommunityFeed': instance.showInCommunityFeed,
-      'goalScorerIds': instance.goalScorerIds,
-      'goalScorerNames': instance.goalScorerNames,
-      'mvpPlayerId': instance.mvpPlayerId,
-      'mvpPlayerName': instance.mvpPlayerName,
-      'venueName': instance.venueName,
-      'confirmedPlayerIds': instance.confirmedPlayerIds,
-      'confirmedPlayerCount': instance.confirmedPlayerCount,
-      'isFull': instance.isFull,
-      'maxParticipants': instance.maxParticipants,
       'enableAttendanceReminder': instance.enableAttendanceReminder,
       'reminderSent2Hours': instance.reminderSent2Hours,
       'reminderSent2HoursAt': instance.reminderSent2HoursAt?.toIso8601String(),
-      'auditLog': instance.auditLog,
+      'denormalized': instance.denormalized,
+      'session': instance.session,
+      'audit': instance.audit,
     };

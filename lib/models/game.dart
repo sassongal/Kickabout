@@ -5,113 +5,179 @@ import 'package:kattrick/models/enums/game_visibility.dart';
 import 'package:kattrick/models/converters/timestamp_converter.dart';
 import 'package:kattrick/models/converters/geopoint_converter.dart';
 import 'package:kattrick/models/team.dart';
-import 'package:kattrick/models/match_result.dart';
 import 'package:kattrick/models/targeting_criteria.dart';
-import 'package:kattrick/models/game_audit_event.dart';
+import 'package:kattrick/models/game_denormalized_data.dart';
+import 'package:kattrick/models/game_session.dart';
+import 'package:kattrick/models/game_audit.dart';
 
 part 'game.freezed.dart';
 part 'game.g.dart';
 
 /// Game model matching Firestore schema: /games/{gameId}
-/// Denormalized fields: createdByName, createdByPhotoUrl, hubName for efficient display
 @freezed
 class Game with _$Game {
   const factory Game({
     required String gameId,
     required String createdBy,
     String? hubId, // Nullable for public pickup games
-    // Event reference - Game should always be created from an Event (legacy games may not have this)
     String?
         eventId, // ID of the event this game belongs to (required for new games, optional for legacy)
     @TimestampConverter() required DateTime gameDate,
-    String? location, // Legacy text location (kept for backward compatibility)
+    String? location, // Legacy text location
     @NullableGeoPointConverter()
     GeoPoint? locationPoint, // New geographic location
     String? geohash,
-    String?
-        venueId, // Reference to venue (not denormalized - use venueId to fetch)
+    String? venueId, // Reference to venue
     @Default(2) int teamCount, // 2, 3, or 4
     @GameStatusConverter() @Default(GameStatus.teamSelection) GameStatus status,
     @GameVisibilityConverter()
     @Default(GameVisibility.private)
     GameVisibility visibility, // private, public, or recruiting
-    // Public game support
-    TargetingCriteria? targetingCriteria, // Targeting criteria for public games
-    @Default(false) bool requiresApproval, // Force true for public games
-    @Default(10) int minPlayersToPlay, // Minimum players needed to start
-    int? maxPlayers, // Maximum capacity (hard cap)
-    @Default([]) List<String> photoUrls, // URLs of game photos
+    TargetingCriteria? targetingCriteria,
+    @Default(false) bool requiresApproval,
+    @Default(10) int minPlayersToPlay,
+    int? maxPlayers,
+    @Default([]) List<String> photoUrls,
     @TimestampConverter() required DateTime createdAt,
     @TimestampConverter() required DateTime updatedAt,
     // Recurring game fields
-    @Default(false) bool isRecurring, // Is this a recurring game?
-    String? parentGameId, // ID of the original recurring game (for child games)
-    String? recurrencePattern, // 'weekly', 'biweekly', 'monthly'
-    @NullableTimestampConverter()
-    DateTime? recurrenceEndDate, // When to stop creating recurring games
-    // Denormalized fields for efficient display (no need to fetch user/hub)
-    String? createdByName, // Denormalized from users/{createdBy}.name
-    String? createdByPhotoUrl, // Denormalized from users/{createdBy}.photoUrl
-    String?
-        hubName, // Denormalized from hubs/{hubId}.name (optional, for feed posts)
-    // Teams and scores
-    @Default([]) List<Team> teams, // List of teams created in TeamMaker
-    // Legacy single-match scores (deprecated - use matches list for session mode)
-    // These fields are kept for backward compatibility with old games
-    @JsonKey(name: 'teamAScore')
-    int?
-        legacyTeamAScore, // Legacy: Score for team A - use matches for session mode
-    @JsonKey(name: 'teamBScore')
-    int?
-        legacyTeamBScore, // Legacy: Score for team B - use matches for session mode
-    // Multi-match session support (for Events converted to Games)
-    @Default([])
-    List<MatchResult>
-        matches, // List of individual match outcomes within this session
-    @Default({})
-    Map<String, int>
-        aggregateWins, // Summary: {'Blue': 6, 'Red': 4, 'Green': 2}
+    @Default(false) bool isRecurring,
+    String? parentGameId,
+    String? recurrencePattern,
+    @NullableTimestampConverter() DateTime? recurrenceEndDate,
+    // Teams
+    @Default([]) List<Team> teams, // Teams created in TeamMaker
     // Game rules
-    int? durationInMinutes, // Duration of the game in minutes
-    String?
-        gameEndCondition, // Condition for game end (e.g., "first to 5 goals", "time limit")
-    String? region, // אזור: צפון, מרכז, דרום, ירושלים (מועתק מה-Hub)
+    int? durationInMinutes,
+    String? gameEndCondition,
+    String? region,
     // Community feed
-    @Default(false)
-    bool showInCommunityFeed, // Show this game in the community activity feed
-    // Denormalized fields for community feed (optimization)
-    @Default([])
-    List<String>
-        goalScorerIds, // IDs of players who scored (denormalized from events)
-    @Default([])
-    List<String>
-        goalScorerNames, // Names of goal scorers (denormalized for quick display)
-    String? mvpPlayerId, // MVP player ID (denormalized from events)
-    String? mvpPlayerName, // MVP player name (denormalized for quick display)
-    String? venueName, // Venue name (denormalized from venue or event.location)
-    // Denormalized fields for signups (optimization - avoids N+1 queries)
-    @Default([])
-    List<String>
-        confirmedPlayerIds, // IDs of confirmed players (denormalized from signups)
-    @Default(0)
-    int confirmedPlayerCount, // Count of confirmed players (denormalized)
-    @Default(false)
-    bool
-        isFull, // Is the game full? (denormalized - calculated from confirmedPlayerCount >= maxParticipants)
-    int?
-        maxParticipants, // Maximum number of participants (for games created from events)
-    // Attendance confirmation settings
-    @Default(true)
-    bool enableAttendanceReminder, // Organizer can choose to send 2h reminders
-    bool?
-        reminderSent2Hours, // Whether reminder was already sent (set by Cloud Function)
-    DateTime? reminderSent2HoursAt, // When reminder was sent
-    // Audit trail for admin actions
-    @Default([])
-    List<GameAuditEvent> auditLog, // Track approve/kick/reschedule actions
+    @Default(false) bool showInCommunityFeed,
+    // Attendance
+    @Default(true) bool enableAttendanceReminder,
+    bool? reminderSent2Hours,
+    DateTime? reminderSent2HoursAt,
+    // Sub-models
+    @Default(GameDenormalizedData()) GameDenormalizedData denormalized,
+    @Default(GameSession()) GameSession session,
+    @Default(GameAudit()) GameAudit audit,
   }) = _Game;
 
+  // Private constructor needed for custom methods
+  const Game._();
+
+  /// Factory constructor from Firestore - applies migration from flat to nested structure
+  factory Game.fromFirestore(Map<String, dynamic> json) {
+    final migratedJson = _migrateGameJson(json);
+    return Game.fromJson(migratedJson);
+  }
+
+  /// Standard JSON deserialization (generated by freezed)
   factory Game.fromJson(Map<String, dynamic> json) => _$GameFromJson(json);
+}
+
+/// Migrates legacy flat Game JSON structure to new nested structure
+Map<String, dynamic> _migrateGameJson(Map<String, dynamic> json) {
+  // If already has nested structure, return as-is
+  if (json.containsKey('denormalized') &&
+      json.containsKey('session') &&
+      json.containsKey('audit')) {
+    return json;
+  }
+
+  final result = Map<String, dynamic>.from(json);
+
+  // 1. Migrate Denormalized Data
+  final denormalizedJson = json['denormalized'] as Map<String, dynamic>? ?? {};
+  final hasDenormalized = json.containsKey('denormalized');
+
+  if (!hasDenormalized) {
+    final migratedDenormalized = <String, dynamic>{};
+
+    if (json.containsKey('createdByName')) {
+      migratedDenormalized['createdByName'] = json['createdByName'];
+    }
+    if (json.containsKey('createdByPhotoUrl')) {
+      migratedDenormalized['createdByPhotoUrl'] = json['createdByPhotoUrl'];
+    }
+    if (json.containsKey('hubName')) {
+      migratedDenormalized['hubName'] = json['hubName'];
+    }
+    if (json.containsKey('venueName')) {
+      migratedDenormalized['venueName'] = json['venueName'];
+    }
+    if (json.containsKey('goalScorerIds')) {
+      migratedDenormalized['goalScorerIds'] = json['goalScorerIds'];
+    }
+    if (json.containsKey('goalScorerNames')) {
+      migratedDenormalized['goalScorerNames'] = json['goalScorerNames'];
+    }
+    if (json.containsKey('mvpPlayerId')) {
+      migratedDenormalized['mvpPlayerId'] = json['mvpPlayerId'];
+    }
+    if (json.containsKey('mvpPlayerName')) {
+      migratedDenormalized['mvpPlayerName'] = json['mvpPlayerName'];
+    }
+    if (json.containsKey('confirmedPlayerIds')) {
+      migratedDenormalized['confirmedPlayerIds'] = json['confirmedPlayerIds'];
+    }
+    if (json.containsKey('confirmedPlayerCount')) {
+      migratedDenormalized['confirmedPlayerCount'] = json['confirmedPlayerCount'];
+    }
+    if (json.containsKey('isFull')) {
+      migratedDenormalized['isFull'] = json['isFull'];
+    }
+    if (json.containsKey('maxParticipants')) {
+      migratedDenormalized['maxParticipants'] = json['maxParticipants'];
+    }
+
+    result['denormalized'] = migratedDenormalized;
+  } else {
+    result['denormalized'] = denormalizedJson;
+  }
+
+  // 2. Migrate Session Data
+  final sessionJson = json['session'] as Map<String, dynamic>? ?? {};
+  final hasSession = json.containsKey('session');
+
+  if (!hasSession) {
+    final migratedSession = <String, dynamic>{};
+
+    if (json.containsKey('matches')) {
+      migratedSession['matches'] = json['matches'];
+    }
+    if (json.containsKey('aggregateWins')) {
+      migratedSession['aggregateWins'] = json['aggregateWins'];
+    }
+    if (json.containsKey('teamAScore')) {
+      migratedSession['legacyTeamAScore'] = json['teamAScore'];
+    }
+    if (json.containsKey('teamBScore')) {
+      migratedSession['legacyTeamBScore'] = json['teamBScore'];
+    }
+
+    result['session'] = migratedSession;
+  } else {
+    result['session'] = sessionJson;
+  }
+
+  // 3. Migrate Audit Data
+  final auditJson = json['audit'] as Map<String, dynamic>? ?? {};
+  final hasAudit = json.containsKey('audit');
+
+  if (!hasAudit) {
+    final migratedAudit = <String, dynamic>{};
+
+    if (json.containsKey('auditLog')) {
+      migratedAudit['auditLog'] = json['auditLog'];
+    }
+
+    result['audit'] = migratedAudit;
+  } else {
+    result['audit'] = auditJson;
+  }
+
+  return result;
 }
 
 /// Firestore converter for Game
@@ -119,10 +185,17 @@ class GameConverter implements JsonConverter<Game, Map<String, dynamic>> {
   const GameConverter();
 
   @override
-  Game fromJson(Map<String, dynamic> json) => Game.fromJson(json);
+  Game fromJson(Map<String, dynamic> json) {
+    // Migration is handled automatically in Game.fromJson
+    return Game.fromJson(json);
+  }
 
   @override
-  Map<String, dynamic> toJson(Game object) => object.toJson();
+  Map<String, dynamic> toJson(Game object) {
+    // Write nested structure
+    // We do NOT flatten on write. This is a one-way migration to better structure.
+    return object.toJson();
+  }
 }
 
 /// GameStatus converter for Firestore
@@ -135,4 +208,5 @@ class GameStatusConverter implements JsonConverter<GameStatus, String> {
   @override
   String toJson(GameStatus object) => object.toFirestore();
 }
+
 // ignore_for_file: invalid_annotation_target
