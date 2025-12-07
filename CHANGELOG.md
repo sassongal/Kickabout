@@ -48,8 +48,25 @@
   - תיקון `validateRating` function signature ב-test files
 - **Code Cleanup** - ניקוי מקיף של הקוד:
   - תיקון מעל 140 אזהרות `unused_import`
+- **Firestore Rules - Hub Members Access** - תיקון הרשאות קריאה:
+  - כל המשתמשים המחוברים יכולים כעת לקרוא פרופילים של משתמשים אחרים
+  - פתרון בעיית "permission-denied" במסך חברי ההאב ובאירועים
+  - הפרטיות נשמרת ברמת האפליקציה (הסתרת אימייל, טלפון וכו')
+- **Hub Players Rating Screen** - שיפור מקיף של מסך דירוג שחקני ההאב:
+  - יצירת מסך חדש ומשופר [hub_players_list_screen_v2.dart](lib/screens/hub/hub_players_list_screen_v2.dart)
+  - תיקון בעיית קריסה כאשר נכנסים למצב דירוג
+  - שמירת דירוגים תקינה - כל דירוג נשמר ישירות ל-`hubs/{hubId}/members/{userId}.managerRating`
+  - מיון לפי דירוג מנהל או שם עם מנהלים תמיד למעלה
+  - ממשק משתמש נקי עם slider ו-dropdown לדירוג שחקנים (1.0-7.0 ברמות של 0.5)
+  - טעינה עם pagination (30 שחקנים בכל פעם) לביצועים משופרים
   - הסרת קבצי .md מיותרים (25+ קבצים)
   - הסרת ספריות מיותרות (`Kickadoor Mobile App Design/`, `client/`, `client_backup/`)
+- **Event Details Screen** - שיפורי UX למסך ניהול אירועים [event_management_screen.dart](lib/screens/events/event_management_screen.dart):
+  - הוספת כפתור ניווט למיקום האירוע (פותח Google Maps)
+  - מסך כוחות משופר שתמיד מוצג:
+    - אם נבחרו כוחות - מציג את הכוחות עם פרטים מלאים
+    - אם לא נבחרו כוחות - מציג הודעה "לא נבחרו עוד כוחות" וכפתור יצירה
+  - שיפור התנהגות כפתור "יצירת כוחות" - מוצג רק כשיש מספיק שחקנים
 - **Build Process** - הוספת שלב `build_runner` להוראות ההתקנה
 
 ### Removed
@@ -246,11 +263,16 @@
    firebase deploy --only firestore:indexes
    ```
 
-4. ✅ **Run Tests**:
+4. **Run Tests**:
    ```bash
-   flutter test test/unit/repositories/hubs_repository_membership_test.dart
-   flutter test test/unit/services/game_management_service_test.dart
+   flutter test test/unit/repositories/hubs_repository_membership_test.dart  # ⚠️ IN PROGRESS - Mock transaction issues
+   flutter test test/unit/services/game_management_service_test.dart  # ✅ PASSING (placeholder tests)
    ```
+
+   **Known Issue**: The hubs_repository_membership_test.dart tests are encountering mock transaction setup issues.
+   The error "type 'Null' is not a subtype of type 'Transaction'" suggests that transaction method stubs
+   are not being matched properly by mocktail. This is a test infrastructure issue, not a bug in the
+   production code fixes.
 
 5. ✅ **Monitor Production**:
    - Watch Firebase Console for errors

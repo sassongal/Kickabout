@@ -9,6 +9,7 @@ import 'package:kattrick/services/weather_service.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Event Management Screen - displays event details, registered players,
 /// weather forecast, and team generation functionality
@@ -82,6 +83,20 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     context.go('/hubs/${widget.hubId}/events/${widget.eventId}/team-generator/config');
   }
 
+  Future<void> _navigateToLocation(double latitude, double longitude) async {
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('לא ניתן לפתוח ניווט')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventsRepo = HubEventsRepository();
@@ -131,14 +146,9 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         _buildRegisteredPlayersCard(event, players, hub),
                         const SizedBox(height: 16),
 
-                        // Team Generation Button
-                        if (hub != null && players.length >= 6)
-                          _buildGenerateTeamsButton(event, players, hub),
+                        // Teams Section - always show
+                        _buildTeamsCard(event, players, hub),
                         const SizedBox(height: 16),
-
-                        // Generated Teams Display
-                        if (event.teams.isNotEmpty)
-                          _buildGeneratedTeamsCard(event),
                       ],
                     ),
                   );
@@ -211,6 +221,16 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                       style: FuturisticTypography.bodyLarge,
                     ),
                   ),
+                  if (event.locationPoint != null)
+                    IconButton(
+                      icon: const Icon(Icons.navigation),
+                      onPressed: () => _navigateToLocation(
+                        event.locationPoint!.latitude,
+                        event.locationPoint!.longitude,
+                      ),
+                      tooltip: 'ניווט למיקום',
+                      color: FuturisticColors.primary,
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -412,21 +432,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     );
   }
 
-  Widget _buildGenerateTeamsButton(
-      HubEvent event, List<User> players, Hub hub) {
-    return ElevatedButton.icon(
-      onPressed: () => _navigateToTeamGenerator(players),
-      icon: const Icon(Icons.group_work),
-      label: const Text('יצירת כוחות'),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        backgroundColor: FuturisticColors.primary,
-        foregroundColor: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildGeneratedTeamsCard(HubEvent event) {
+  Widget _buildTeamsCard(HubEvent event, List<User> players, Hub? hub) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -435,75 +441,127 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.groups, color: FuturisticColors.success),
+                Icon(
+                  event.teams.isNotEmpty ? Icons.groups : Icons.group_work,
+                  color: event.teams.isNotEmpty
+                      ? FuturisticColors.success
+                      : FuturisticColors.primary,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                  // Wrap with Expanded to prevent overflow
                   child: Text(
-                    'קבוצות שנוצרו',
+                    'כוחות',
                     style: FuturisticTypography.labelLarge,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            ...event.teams.asMap().entries.map((entry) {
-              final index = entry.key;
-              final team = entry.value;
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _getTeamColor(team.name).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize:
-                          MainAxisSize.min, // Prevent Row from expanding
-                      children: [
-                        Flexible(
-                          // Wrap with Flexible to allow text to wrap
-                          child: Text(
-                            team.name,
-                            style: FuturisticTypography.labelMedium.copyWith(
-                              color: _getTeamColor(team.name),
-                              fontWeight: FontWeight.bold,
+            // Show teams if they exist
+            if (event.teams.isNotEmpty) ...[
+              ...event.teams.asMap().entries.map((entry) {
+                final index = entry.key;
+                final team = entry.value;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _getTeamColor(team.name).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              team.name,
+                              style: FuturisticTypography.labelMedium.copyWith(
+                                color: _getTeamColor(team.name),
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow
-                                .ellipsis, // Add ellipsis for long names
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '(${team.playerIds.length} שחקנים)',
+                            style: FuturisticTypography.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: team.playerIds.map((playerId) {
+                        return Chip(
+                          label: Text(
+                            playerId, // In real implementation, fetch player name
+                            style: FuturisticTypography.bodySmall,
+                          ),
+                          backgroundColor:
+                              _getTeamColor(team.name).withValues(alpha: 0.1),
+                        );
+                      }).toList(),
+                    ),
+                    if (index < event.teams.length - 1) const Divider(height: 24),
+                  ],
+                );
+              }),
+            ]
+            // Show message if no teams selected yet
+            else ...[
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.groups_outlined,
+                        size: 48,
+                        color: FuturisticColors.textSecondary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'לא נבחרו עוד כוחות',
+                        style: FuturisticTypography.bodyLarge.copyWith(
+                          color: FuturisticColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Show generate teams button if enough players
+                      if (hub != null && players.length >= 6)
+                        ElevatedButton.icon(
+                          onPressed: () => _navigateToTeamGenerator(players),
+                          icon: const Icon(Icons.group_work),
+                          label: const Text('יצירת כוחות'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                            backgroundColor: FuturisticColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                        )
+                      else if (players.length < 6)
+                        Text(
+                          'נדרשים לפחות 6 שחקנים ליצירת כוחות',
+                          style: FuturisticTypography.bodySmall.copyWith(
+                            color: FuturisticColors.textSecondary,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '(${team.playerIds.length} שחקנים)',
-                          style: FuturisticTypography.bodySmall,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: team.playerIds.map((playerId) {
-                      return Chip(
-                        label: Text(
-                          playerId, // In real implementation, fetch player name
-                          style: FuturisticTypography.bodySmall,
-                        ),
-                        backgroundColor:
-                            _getTeamColor(team.name).withValues(alpha: 0.1),
-                      );
-                    }).toList(),
-                  ),
-                  if (index < event.teams.length - 1) const Divider(height: 24),
-                ],
-              );
-            }),
+                ),
+              ),
+            ],
           ],
         ),
       ),

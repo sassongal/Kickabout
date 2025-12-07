@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kattrick/services/game_management_service.dart';
 import 'package:kattrick/data/games_repository.dart';
+import 'package:kattrick/data/hubs_repository.dart';
 import 'package:kattrick/data/signups_repository.dart';
 import 'package:kattrick/data/notifications_repository.dart';
 import '../../helpers/mock_firestore.dart';
@@ -112,5 +113,6 @@ void main() {
 
 // Mock classes
 class MockGamesRepository extends Mock implements GamesRepository {}
+class MockHubsRepository extends Mock implements HubsRepository {}
 class MockSignupsRepository extends Mock implements SignupsRepository {}
 class MockNotificationsRepository extends Mock implements NotificationsRepository {}

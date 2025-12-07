@@ -171,6 +171,15 @@ service cloud.firestore {
       return score is int && score >= 0 && score <= 99;
     }
 
+    /// Validates that signup updates don't allow users to self-confirm
+    /// Status changes should only be done by admins or Cloud Functions
+    /// Prevents users from bypassing payment/capacity checks
+    function isValidSignupUpdate() {
+      // On update: user cannot change their own status field
+      // Status must be managed by admins or Cloud Functions only
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']);
+    }
+
     function isValidGame(game) {
       return game.keys().hasAll(['createdBy', 'hubId', 'gameDate']) &&
         game.createdBy is string &&
@@ -219,12 +228,10 @@ service cloud.firestore {
     // Users Collection
     // ============================================
     match /users/{userId} {
-      // Users can read their own profile always
-      // Users can read other users' profiles UNLESS they blocked them
-      // This allows seeing Hub members, game participants, etc.
-      allow read: if isAuthenticated() && 
-                     (request.auth.uid == userId || 
-                      true); // Allow reading all users (blocking check removed for now - can add back if needed)
+      // SIMPLIFIED: All authenticated users can read all user profiles
+      // This is needed for hub members to see each other's info
+      // Individual privacy is controlled at the application level (e.g., hiding email, phone)
+      allow read: if isAuthenticated();
       
       function isValidBirthDate(birthDate) {
         return birthDate != null &&
@@ -410,10 +417,22 @@ service cloud.firestore {
 
       match /signups/{userId} {
         allow read: if isAuthenticated();
-        allow create, update, delete: if (isAuthenticated() && (
-          isOwner(userId) ||
+
+        // SECURITY FIX: Users can create their own signups
+        // Initial status will be set by Cloud Function based on game settings
+        allow create: if (isAuthenticated() && isOwner(userId)) || isSuperAdmin();
+
+        // SECURITY FIX: Users can update their own signups, but NOT the status field
+        // This prevents self-confirmation and bypassing payment/capacity checks
+        allow update: if (isAuthenticated() && (
+          (isOwner(userId) && isValidSignupUpdate()) ||
           isHubAdmin(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
         )) || isSuperAdmin();
+
+        // Only admins can delete signups
+        allow delete: if (isAuthenticated() &&
+          isHubAdmin(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
+        ) || isSuperAdmin();
       }
 
       match /chatMessages/{messageId} {

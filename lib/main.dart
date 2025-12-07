@@ -89,8 +89,10 @@ Future<bool> _initializeAppServices() async {
     // Enable Firestore offline persistence.
     _initializeFirestoreCache();
 
-    // Sign out anonymous users to enforce proper login.
-    await _handleAnonymousUserSignOut();
+    // UX FIX: Keep guest sessions active to improve retention
+    // Anonymous users can now persist their data across app restarts
+    // They should explicitly sign out or link their account to save data permanently
+    // await _handleAnonymousUserSignOut();  // REMOVED
 
     // Initialize non-critical services in parallel.
     await Future.wait([
@@ -167,15 +169,22 @@ Future<void> _initializePushNotifications() async {
   }
 }
 
-/// Signs out anonymous users on startup to prevent race conditions.
-Future<void> _handleAnonymousUserSignOut() async {
-  final auth = FirebaseAuth.instance;
-  if (auth.currentUser?.isAnonymous ?? false) {
-    debugPrint('🔓 Signing out anonymous user on startup...');
-    await auth.signOut();
-    debugPrint('✅ Anonymous user signed out.');
-  }
-}
+/// UX FIX: Guest sessions are now persisted to improve retention
+/// Previously this function signed out anonymous users on every app restart,
+/// causing data loss and poor UX for users trying the app.
+///
+/// Users who want to try the app anonymously can keep their data
+/// until they explicitly sign out or link their account.
+///
+/// REMOVED - Keeping for reference
+// Future<void> _handleAnonymousUserSignOut() async {
+//   final auth = FirebaseAuth.instance;
+//   if (auth.currentUser?.isAnonymous ?? false) {
+//     debugPrint('🔓 Signing out anonymous user on startup...');
+//     await auth.signOut();
+//     debugPrint('✅ Anonymous user signed out.');
+//   }
+// }
 
 /// Limited mode screen - shown when Firebase initialization fails
 class LimitedModeScreen extends StatefulWidget {

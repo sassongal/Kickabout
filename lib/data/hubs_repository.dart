@@ -281,7 +281,7 @@ class HubsRepository {
 
     try {
       // Use transaction to ensure atomicity
-      await _firestore.runTransaction((transaction) async {
+      await _firestore.runTransaction<void>((transaction) async {
         final hubRef = _firestore.doc(FirestorePaths.hub(hubId));
         final userRef = _firestore.doc(FirestorePaths.user(uid));
         final memberRef = hubRef.collection('members').doc(uid);

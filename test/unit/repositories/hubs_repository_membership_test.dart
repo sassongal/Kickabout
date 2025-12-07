@@ -45,6 +45,14 @@ void main() {
             Function(Transaction);
         await callback(mockTransaction);
       });
+
+      // CRITICAL: Stub all transaction methods to return mockTransaction
+      // This allows method chaining and prevents null return errors
+      // Using thenReturn for synchronous methods with explicit type matchers
+      when(() => mockTransaction.set<Map<String, dynamic>>(any(), any())).thenReturn(mockTransaction);
+      when(() => mockTransaction.set<Map<String, dynamic>>(any(), any(), any())).thenReturn(mockTransaction);
+      when(() => mockTransaction.update(any(), any())).thenReturn(mockTransaction);
+      when(() => mockTransaction.delete(any())).thenReturn(mockTransaction);
     });
 
     group('addMember', () {
@@ -63,6 +71,12 @@ void main() {
             .thenAnswer((_) async => mockUserDoc);
         when(() => mockTransaction.get(mockMemberRef))
             .thenAnswer((_) async => mockMemberDoc);
+
+        // Stub transaction methods for this group (matching removeMember pattern)
+        when(() => mockTransaction.set<Map<String, dynamic>>(any(), any()))
+            .thenReturn(mockTransaction);
+        when(() => mockTransaction.update(any(), any()))
+            .thenReturn(mockTransaction);
 
         // Default: hub exists with capacity
         when(() => mockHubDoc.exists).thenReturn(true);
@@ -277,7 +291,7 @@ void main() {
             .thenAnswer((_) async => mockUserDoc);
 
         when(() => mockTransaction.update(any(), any()))
-            .thenAnswer((_) => mockTransaction);
+            .thenReturn(mockTransaction);
       });
 
       test('sets status to left (soft-delete)', () async {

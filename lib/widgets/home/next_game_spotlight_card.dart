@@ -209,7 +209,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
         return GestureDetector(
           onTap: () {
             if (gameData.isEvent) {
-              context.push('/hubs/${gameData.hubId}/events/${gameData.id}');
+              context.push('/hubs/${gameData.hubId}/events/${gameData.id}/manage');
             } else {
               context.push('/games/${gameData.id}');
             }

@@ -99,7 +99,7 @@ import 'package:kattrick/screens/social/create_post_screen.dart'
     deferred as create_post_screen;
 import 'package:kattrick/screens/hub/scouting_screen.dart'
     deferred as scouting_screen;
-import 'package:kattrick/screens/hub/hub_players_list_screen.dart'
+import 'package:kattrick/screens/hub/hub_players_list_screen_v2.dart'
     deferred as hub_players_list_screen;
 import 'package:kattrick/screens/hub/hub_rules_screen.dart'
     deferred as hub_rules_screen;
@@ -776,7 +776,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     loader: hub_players_list_screen.loadLibrary(),
                     builder: () {
                       final hubId = state.pathParameters['id']!;
-                      return hub_players_list_screen.HubPlayersListScreen(
+                      return hub_players_list_screen.HubPlayersListScreenV2(
                           hubId: hubId);
                     }),
               ),
