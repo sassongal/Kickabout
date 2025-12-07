@@ -38,28 +38,12 @@ void main() {
 
       repository = HubsRepository(firestore: mockFirestore);
 
-      // Setup transaction execution - pass our mockTransaction to callback
+      // Mock transaction execution
       when(() => mockFirestore.runTransaction<void>(any()))
           .thenAnswer((invocation) async {
-        final callback = invocation.positionalArguments[0]
-            as Future<void> Function(Transaction);
-
-        // Setup get() mocks on the transaction
-        when(() => mockTransaction.get(any()))
-            .thenAnswer((inv) async {
-          final ref = inv.positionalArguments[0] as DocumentReference;
-          if (ref == mockHubRef) return mockHubDoc;
-          if (ref == mockUserRef) return mockUserDoc;
-          if (ref == mockMemberRef) return mockMemberDoc;
-          throw Exception('Unexpected ref: $ref');
-        });
-
-        // Stub void methods to prevent mocktail from returning null
-        when(() => mockTransaction.set(any(), any())).thenReturn(null);
-        when(() => mockTransaction.update(any(), any())).thenReturn(null);
-
-        // Execute the callback
-        return await callback(mockTransaction);
+        final callback = invocation.positionalArguments[0] as Future<void>
+            Function(Transaction);
+        await callback(mockTransaction);
       });
     });
 
@@ -68,8 +52,10 @@ void main() {
         // Setup default mocks for addMember
         when(() => mockFirestore.doc('hubs/hub123')).thenReturn(mockHubRef);
         when(() => mockFirestore.doc('users/user456')).thenReturn(mockUserRef);
-        when(() => mockHubRef.collection('members')).thenReturn(mockMembersCollection);
-        when(() => mockMembersCollection.doc('user456')).thenReturn(mockMemberRef);
+        when(() => mockHubRef.collection('members'))
+            .thenReturn(mockMembersCollection);
+        when(() => mockMembersCollection.doc('user456'))
+            .thenReturn(mockMemberRef);
 
         when(() => mockTransaction.get(mockHubRef))
             .thenAnswer((_) async => mockHubDoc);
@@ -103,7 +89,8 @@ void main() {
         // Arrange
         Map<String, dynamic>? capturedMemberData;
         when(() => mockTransaction.set(mockMemberRef, any())).thenAnswer((inv) {
-          capturedMemberData = inv.positionalArguments[1] as Map<String, dynamic>;
+          capturedMemberData =
+              inv.positionalArguments[1] as Map<String, dynamic>;
           return mockTransaction;
         });
 
@@ -124,8 +111,10 @@ void main() {
       test('updates user.hubIds array', () async {
         // Arrange
         Map<String, dynamic>? capturedUserUpdate;
-        when(() => mockTransaction.update(mockUserRef, any())).thenAnswer((inv) {
-          capturedUserUpdate = inv.positionalArguments[1] as Map<String, dynamic>;
+        when(() => mockTransaction.update(mockUserRef, any()))
+            .thenAnswer((inv) {
+          capturedUserUpdate =
+              inv.positionalArguments[1] as Map<String, dynamic>;
           return mockTransaction;
         });
 
@@ -135,6 +124,26 @@ void main() {
         // Assert
         expect(capturedUserUpdate, isNotNull);
         verify(() => mockTransaction.update(mockUserRef, any())).called(1);
+      });
+
+      test('atomically increments memberCount using FieldValue.increment', () async {
+        // Arrange
+        Map<String, dynamic>? capturedHubUpdate;
+        when(() => mockTransaction.update(mockHubRef, any()))
+            .thenAnswer((inv) {
+          capturedHubUpdate =
+              inv.positionalArguments[1] as Map<String, dynamic>;
+          return mockTransaction;
+        });
+
+        // Act
+        await repository.addMember('hub123', 'user456');
+
+        // Assert - Verify memberCount is incremented atomically in transaction
+        expect(capturedHubUpdate, isNotNull);
+        expect(capturedHubUpdate!['memberCount'].toString(), contains('FieldValue.increment(1)'));
+        // This verifies the critical fix: memberCount is updated atomically,
+        // preventing race conditions where concurrent joins could exceed capacity
       });
 
       test('rejects when hub is full (50 members)', () async {
@@ -148,9 +157,8 @@ void main() {
         // Act & Assert
         expect(
           () => repository.addMember('hub123', 'user456'),
-          throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('Hub is full'))),
+          throwsA(predicate(
+              (e) => e is Exception && e.toString().contains('Hub is full'))),
         );
       });
 
@@ -164,9 +172,8 @@ void main() {
         // Act & Assert
         expect(
           () => repository.addMember('hub123', 'user456'),
-          throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('max hubs'))),
+          throwsA(predicate(
+              (e) => e is Exception && e.toString().contains('max hubs'))),
         );
       });
 
@@ -183,9 +190,8 @@ void main() {
         // Act & Assert
         expect(
           () => repository.addMember('hub123', 'user456'),
-          throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('banned'))),
+          throwsA(predicate(
+              (e) => e is Exception && e.toString().contains('banned'))),
         );
       });
 
@@ -200,7 +206,8 @@ void main() {
         });
 
         Map<String, dynamic>? capturedUpdate;
-        when(() => mockTransaction.update(mockMemberRef, any())).thenAnswer((inv) {
+        when(() => mockTransaction.update(mockMemberRef, any()))
+            .thenAnswer((inv) {
           capturedUpdate = inv.positionalArguments[1] as Map<String, dynamic>;
           return mockTransaction;
         });
@@ -212,7 +219,8 @@ void main() {
         expect(capturedUpdate, isNotNull);
         expect(capturedUpdate!['status'], 'active');
         expect(capturedUpdate!['updatedBy'], 'user456');
-        verify(() => mockTransaction.update(mockMemberRef, any())).called(greaterThan(0));
+        verify(() => mockTransaction.update(mockMemberRef, any()))
+            .called(greaterThan(0));
       });
 
       test('is idempotent (no error if already member)', () async {
@@ -236,9 +244,8 @@ void main() {
         // Act & Assert
         expect(
           () => repository.addMember('hub123', 'user456'),
-          throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('Hub not found'))),
+          throwsA(predicate(
+              (e) => e is Exception && e.toString().contains('Hub not found'))),
         );
       });
 
@@ -250,8 +257,7 @@ void main() {
         expect(
           () => repository.addMember('hub123', 'user456'),
           throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('User not found'))),
+              e is Exception && e.toString().contains('User not found'))),
         );
       });
     });
@@ -260,15 +266,18 @@ void main() {
       setUp(() {
         when(() => mockFirestore.doc('hubs/hub123')).thenReturn(mockHubRef);
         when(() => mockFirestore.doc('users/user456')).thenReturn(mockUserRef);
-        when(() => mockHubRef.collection('members')).thenReturn(mockMembersCollection);
-        when(() => mockMembersCollection.doc('user456')).thenReturn(mockMemberRef);
+        when(() => mockHubRef.collection('members'))
+            .thenReturn(mockMembersCollection);
+        when(() => mockMembersCollection.doc('user456'))
+            .thenReturn(mockMemberRef);
 
         when(() => mockTransaction.get(mockMemberRef))
             .thenAnswer((_) async => mockMemberDoc);
         when(() => mockTransaction.get(mockUserRef))
             .thenAnswer((_) async => mockUserDoc);
 
-        when(() => mockTransaction.update(any(), any())).thenAnswer((_) => mockTransaction);
+        when(() => mockTransaction.update(any(), any()))
+            .thenAnswer((_) => mockTransaction);
       });
 
       test('sets status to left (soft-delete)', () async {
@@ -283,7 +292,8 @@ void main() {
         when(() => mockUserDoc.exists).thenReturn(true);
 
         Map<String, dynamic>? capturedUpdate;
-        when(() => mockTransaction.update(mockMemberRef, any())).thenAnswer((inv) {
+        when(() => mockTransaction.update(mockMemberRef, any()))
+            .thenAnswer((inv) {
           capturedUpdate = inv.positionalArguments[1] as Map<String, dynamic>;
           return mockTransaction;
         });
@@ -310,6 +320,34 @@ void main() {
         verify(() => mockTransaction.update(mockUserRef, any())).called(1);
       });
 
+      test('atomically decrements memberCount when removing active member', () async {
+        // Arrange
+        when(() => mockMemberDoc.exists).thenReturn(true);
+        when(() => mockMemberDoc.data()).thenReturn({
+          'hubId': 'hub123',
+          'userId': 'user456',
+          'status': 'active', // Active member
+          'role': 'member',
+        });
+        when(() => mockUserDoc.exists).thenReturn(true);
+
+        Map<String, dynamic>? capturedHubUpdate;
+        when(() => mockTransaction.update(mockHubRef, any()))
+            .thenAnswer((inv) {
+          capturedHubUpdate =
+              inv.positionalArguments[1] as Map<String, dynamic>;
+          return mockTransaction;
+        });
+
+        // Act
+        await repository.removeMember('hub123', 'user456');
+
+        // Assert - Verify memberCount is decremented atomically
+        expect(capturedHubUpdate, isNotNull);
+        expect(capturedHubUpdate!['memberCount'].toString(), contains('FieldValue.increment(-1)'));
+        // This ensures count accuracy when members leave
+      });
+
       test('is idempotent (no error if already gone)', () async {
         // Arrange
         when(() => mockMemberDoc.exists).thenReturn(false);
@@ -331,8 +369,7 @@ void main() {
         expect(
           () => repository.removeMember('hub123', 'user456'),
           throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('User not found'))),
+              e is Exception && e.toString().contains('User not found'))),
         );
       });
     });
@@ -340,7 +377,8 @@ void main() {
     group('updateMemberRole', () {
       setUp(() {
         when(() => mockFirestore.doc('hubs/hub123')).thenReturn(mockHubRef);
-        when(() => mockFirestore.doc('hubs/hub123/members/user456')).thenReturn(mockMemberRef);
+        when(() => mockFirestore.doc('hubs/hub123/members/user456'))
+            .thenReturn(mockMemberRef);
         when(() => mockHubRef.get()).thenAnswer((_) async => mockHubDoc);
         when(() => mockHubDoc.exists).thenReturn(true);
         when(() => mockHubDoc.data()).thenReturn({
@@ -359,7 +397,8 @@ void main() {
         });
 
         // Act
-        await repository.updateMemberRole('hub123', 'user456', 'moderator', 'manager123');
+        await repository.updateMemberRole(
+            'hub123', 'user456', 'moderator', 'manager123');
 
         // Assert
         expect(capturedUpdate, isNotNull);
@@ -371,17 +410,18 @@ void main() {
       test('rejects invalid role', () async {
         // Act & Assert
         expect(
-          () => repository.updateMemberRole('hub123', 'user456', 'invalid_role', 'manager123'),
-          throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('Invalid role'))),
+          () => repository.updateMemberRole(
+              'hub123', 'user456', 'invalid_role', 'manager123'),
+          throwsA(predicate(
+              (e) => e is Exception && e.toString().contains('Invalid role'))),
         );
       });
 
       test('prevents changing creator role', () async {
         // Act & Assert
         expect(
-          () => repository.updateMemberRole('hub123', 'creator123', 'member', 'manager123'),
+          () => repository.updateMemberRole(
+              'hub123', 'creator123', 'member', 'manager123'),
           throwsA(predicate((e) =>
               e is Exception &&
               e.toString().contains('Cannot change creator role'))),
@@ -393,9 +433,12 @@ void main() {
         when(() => mockMemberRef.update(any())).thenAnswer((_) async {});
 
         // Act & Assert - should not throw
-        await repository.updateMemberRole('hub123', 'user456', 'member', 'manager123');
-        await repository.updateMemberRole('hub123', 'user456', 'moderator', 'manager123');
-        await repository.updateMemberRole('hub123', 'user456', 'manager', 'manager123');
+        await repository.updateMemberRole(
+            'hub123', 'user456', 'member', 'manager123');
+        await repository.updateMemberRole(
+            'hub123', 'user456', 'moderator', 'manager123');
+        await repository.updateMemberRole(
+            'hub123', 'user456', 'manager', 'manager123');
 
         verify(() => mockMemberRef.update(any())).called(3);
       });
@@ -405,8 +448,10 @@ void main() {
       setUp(() {
         when(() => mockFirestore.doc('hubs/hub123')).thenReturn(mockHubRef);
         when(() => mockFirestore.doc('users/user456')).thenReturn(mockUserRef);
-        when(() => mockHubRef.collection('members')).thenReturn(mockMembersCollection);
-        when(() => mockMembersCollection.doc('user456')).thenReturn(mockMemberRef);
+        when(() => mockHubRef.collection('members'))
+            .thenReturn(mockMembersCollection);
+        when(() => mockMembersCollection.doc('user456'))
+            .thenReturn(mockMemberRef);
 
         when(() => mockTransaction.get(mockHubRef))
             .thenAnswer((_) async => mockHubDoc);
@@ -419,7 +464,8 @@ void main() {
           'createdBy': 'creator123',
         });
 
-        when(() => mockTransaction.update(any(), any())).thenAnswer((_) => mockTransaction);
+        when(() => mockTransaction.update(any(), any()))
+            .thenAnswer((_) => mockTransaction);
       });
 
       test('sets status to banned with reason', () async {
@@ -427,13 +473,15 @@ void main() {
         when(() => mockMemberDoc.exists).thenReturn(true);
 
         Map<String, dynamic>? capturedUpdate;
-        when(() => mockTransaction.update(mockMemberRef, any())).thenAnswer((inv) {
+        when(() => mockTransaction.update(mockMemberRef, any()))
+            .thenAnswer((inv) {
           capturedUpdate = inv.positionalArguments[1] as Map<String, dynamic>;
           return mockTransaction;
         });
 
         // Act
-        await repository.banMember('hub123', 'user456', 'Violation of rules', 'manager123');
+        await repository.banMember(
+            'hub123', 'user456', 'Violation of rules', 'manager123');
 
         // Assert
         expect(capturedUpdate, isNotNull);
@@ -456,7 +504,8 @@ void main() {
       test('prevents banning creator', () async {
         // Act & Assert
         expect(
-          () => repository.banMember('hub123', 'creator123', 'Test', 'manager123'),
+          () => repository.banMember(
+              'hub123', 'creator123', 'Test', 'manager123'),
           throwsA(predicate((e) =>
               e is Exception &&
               e.toString().contains('Cannot ban hub creator'))),
@@ -470,16 +519,16 @@ void main() {
         // Act & Assert
         expect(
           () => repository.banMember('hub123', 'user456', 'Spam', 'manager123'),
-          throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('not a member'))),
+          throwsA(predicate(
+              (e) => e is Exception && e.toString().contains('not a member'))),
         );
       });
     });
 
     group('setPlayerRating', () {
       setUp(() {
-        when(() => mockFirestore.doc('hubs/hub123/members/user456')).thenReturn(mockMemberRef);
+        when(() => mockFirestore.doc('hubs/hub123/members/user456'))
+            .thenReturn(mockMemberRef);
         when(() => mockMemberRef.get()).thenAnswer((_) async => mockMemberDoc);
         when(() => mockMemberRef.update(any())).thenAnswer((_) async {});
       });
@@ -498,28 +547,26 @@ void main() {
         });
 
         // Act
-        await repository.setPlayerRating('hub123', 'user456', 7.5);
+        await repository.setPlayerRating('hub123', 'user456', 6.5);
 
         // Assert
         expect(capturedUpdate, isNotNull);
-        expect(capturedUpdate!['managerRating'], 7.5);
+        expect(capturedUpdate!['managerRating'], 6.5);
         verify(() => mockMemberRef.update(any())).called(1);
       });
 
-      test('validates rating range (1.0-10.0)', () async {
+      test('validates rating range (1.0-7.0)', () async {
         // Act & Assert
         expect(
           () => repository.setPlayerRating('hub123', 'user456', 0.5),
           throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('between 1.0 and 10.0'))),
+              e is Exception && e.toString().contains('between 1.0 and 7.0'))),
         );
 
         expect(
-          () => repository.setPlayerRating('hub123', 'user456', 10.5),
+          () => repository.setPlayerRating('hub123', 'user456', 7.5),
           throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('between 1.0 and 10.0'))),
+              e is Exception && e.toString().contains('between 1.0 and 7.0'))),
         );
       });
 
@@ -533,7 +580,7 @@ void main() {
 
         // Act & Assert
         expect(
-          () => repository.setPlayerRating('hub123', 'user456', 7.5),
+          () => repository.setPlayerRating('hub123', 'user456', 6.5),
           throwsA(predicate((e) =>
               e is Exception &&
               e.toString().contains('Cannot rate inactive member'))),
@@ -546,10 +593,9 @@ void main() {
 
         // Act & Assert
         expect(
-          () => repository.setPlayerRating('hub123', 'user456', 7.5),
-          throwsA(predicate((e) =>
-              e is Exception &&
-              e.toString().contains('not a member'))),
+          () => repository.setPlayerRating('hub123', 'user456', 6.5),
+          throwsA(predicate(
+              (e) => e is Exception && e.toString().contains('not a member'))),
         );
       });
     });

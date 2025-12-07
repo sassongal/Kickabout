@@ -10,8 +10,21 @@ class FirestorePaths {
   static String hub(String hubId) => '${AppConstants.hubsCollection}/$hubId';
   static String hubs() => AppConstants.hubsCollection;
 
+  // Hub Members
+  static String hubMember(String hubId, String uid) =>
+      '${AppConstants.hubsCollection}/$hubId/members/$uid';
+  static String hubMembers(String hubId) =>
+      '${AppConstants.hubsCollection}/$hubId/members';
+
+  // Hub Events
+  static String hubEvent(String hubId, String eventId) =>
+      '${AppConstants.hubsCollection}/$hubId/events/$eventId';
+  static String hubEvents(String hubId) =>
+      '${AppConstants.hubsCollection}/$hubId/events';
+
   // Games
-  static String game(String gameId) => '${AppConstants.gamesCollection}/$gameId';
+  static String game(String gameId) =>
+      '${AppConstants.gamesCollection}/$gameId';
   static String games() => AppConstants.gamesCollection;
 
   // Game Signups
@@ -42,4 +55,3 @@ class FirestorePaths {
   static String venue(String venueId) => 'venues/$venueId';
   static String venues() => 'venues';
 }
-

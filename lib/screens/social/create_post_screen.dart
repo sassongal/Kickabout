@@ -160,7 +160,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             .future,
       );
 
-      if (!hubPermissionsAsync.canCreatePosts()) {
+      if (!hubPermissionsAsync.canCreatePosts) {
         if (mounted) {
           SnackbarHelper.showError(
               context, 'אין לך הרשאה ליצור פוסטים בהאב זה');

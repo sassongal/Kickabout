@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:kattrick/models/player.dart';
 import 'package:kattrick/models/player_stats.dart';
+import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/optimized_image.dart';
 
 class PlayerCard extends StatelessWidget {
   final Player player;
@@ -27,289 +30,285 @@ class PlayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: isSelected ? 8 : 2,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: isSelected 
-          ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
-          : BorderSide.none,
-      ),
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: isSelected 
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
-              : null,
+    // If showRadarChart is true, we display the full "Profile Card" layout.
+    // Otherwise, we display the compact row layout for lists.
+    final bool isEnhanced = showRadarChart && latestStats != null;
+
+    return FuturisticCard(
+      onTap: onTap,
+      borderColor: isSelected ? FuturisticColors.primary : null,
+      showGlow: isSelected,
+      padding: EdgeInsets.zero, // We handle padding internally for full control
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: isEnhanced
+          ? _buildProfileCard(context)
+          : _buildCompactListCard(context),
+    );
+  }
+
+  // --- COMPACT LIST CARD ---
+  Widget _buildCompactListCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          _buildRankBadge(context),
+          const SizedBox(width: 12),
+          _buildAvatar(size: 48),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        player.name,
+                        style: FuturisticTypography.heading3
+                            .copyWith(fontSize: 16),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (player.isInForm)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(Icons.local_fire_department,
+                            size: 16, color: FuturisticColors.accent),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      player.attributes.preferredPosition,
+                      style: FuturisticTypography.bodySmall.copyWith(
+                        color: FuturisticColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildConsistencyBadge(),
+                  ],
+                ),
+              ],
+            ),
           ),
-          child: showRadarChart && latestStats != null
-              ? _buildEnhancedPlayerCard(context)
-              : _buildCompactPlayerCard(context),
-        ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildRatingBadge(context),
+              const SizedBox(height: 4),
+              Text(
+                '${player.gamesPlayed} משחקים',
+                style: FuturisticTypography.labelSmall.copyWith(fontSize: 10),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPlayerAvatar() {
+  // --- FULL PROFILE CARD (ReactBits Style) ---
+  Widget _buildProfileCard(BuildContext context) {
+    return Column(
+      children: [
+        // 1. Cover Image / Gradient Banner
+        SizedBox(
+          height: 80,
+          width: double.infinity,
+          child: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF1E3C72), Color(0xFF2A5298)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(14),
+                    topRight: Radius.circular(14),
+                  ),
+                ),
+              ),
+              // Abstract curve or pattern could go here
+              Positioned(
+                top: 8,
+                right: 8,
+                child: _buildRankBadge(context), // Rank floats on cover
+              ),
+            ],
+          ),
+        ),
+
+        // 2. Avatar Area (Overlapping)
+        Transform.translate(
+          offset: const Offset(0, -32),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: FuturisticColors.surface, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: _buildAvatar(size: 80),
+              ),
+              const SizedBox(height: 8),
+
+              // 3. Name & Key Info
+              Text(
+                player.name,
+                style: FuturisticTypography.heading2,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.sports_soccer,
+                      size: 14, color: FuturisticColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    player.attributes.preferredPosition.toUpperCase(),
+                    style: FuturisticTypography.bodySmall.copyWith(
+                      color: FuturisticColors.primary,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                      width: 1, height: 12, color: FuturisticColors.divider),
+                  const SizedBox(width: 12),
+                  Text(
+                    'דירוג ${player.currentRankScore.toStringAsFixed(1)}',
+                    style: FuturisticTypography.bodySmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // 4. Stats Grid
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            children: [
+              _buildStatsRow(context),
+              const SizedBox(height: 16),
+              if (latestStats != null) ...[
+                SizedBox(
+                  height: 140,
+                  child: _buildRadarChart(context),
+                ),
+                const SizedBox(height: 16),
+                _buildAttributesList(context),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- HELPER WIDGETS ---
+
+  Widget _buildAvatar({required double size}) {
+    if (player.photoUrl != null && player.photoUrl!.isNotEmpty) {
+      return ClipOval(
+        child: OptimizedImage(
+          imageUrl: player.photoUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: _buildInitialsAvatar(size),
+        ),
+      );
+    }
+    return _buildInitialsAvatar(size);
+  }
+
+  Widget _buildInitialsAvatar(double size) {
     return Container(
-      width: 56,
-      height: 56,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [
-            _getAvatarColor(player.name).withValues(alpha: 0.7),
             _getAvatarColor(player.name),
+            _getAvatarColor(player.name).withOpacity(0.7),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.bottomRight,
+          end: Alignment.topLeft,
         ),
       ),
       child: Center(
         child: Text(
-          player.name.split(' ').map((e) => e[0]).take(2).join().toUpperCase(),
-          style: const TextStyle(
+          player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: size * 0.4,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactPlayerCard(BuildContext context) {
-    return Row(
-      children: [
-        if (showRank && rank != null) ...[
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: _getRankColor(rank!, context),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '#$rank',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+  Widget _buildRankBadge(BuildContext context) {
+    if (!showRank || rank == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: _getRankColor(rank!, context),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
           ),
-          const SizedBox(width: 12),
         ],
-        _buildPlayerAvatar(),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      player.name,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (player.isInForm) ...[
-                    Icon(Icons.trending_up, size: 16, color: Colors.green),
-                    const SizedBox(width: 4),
-                  ],
-                  if (player.isImproving) ...[
-                    Icon(Icons.arrow_upward, size: 16, color: Colors.blue),
-                    const SizedBox(width: 4),
-                  ],
-                  _buildGradeBadge(),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                player.attributes.preferredPosition,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.star,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    player.currentRankScore.toStringAsFixed(1),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${player.gamesPlayed} games',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+      ),
+      child: Text(
+        '#$rank',
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
         ),
-        _buildPlayerStats(),
-      ],
+      ),
     );
   }
 
-  Widget _buildEnhancedPlayerCard(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            if (showRank && rank != null) ...[
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _getRankColor(rank!, context),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '#$rank',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-            ],
-            _buildPlayerAvatar(),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          player.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      _buildGradeBadge(),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        player.attributes.preferredPosition,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (player.isInForm) ...[
-                        Icon(Icons.trending_up, size: 16, color: Colors.green),
-                        const SizedBox(width: 4),
-                        Text('Hot Form', style: TextStyle(color: Colors.green, fontSize: 12)),
-                      ],
-                      if (player.isImproving) ...[
-                        const SizedBox(width: 8),
-                        Icon(Icons.arrow_upward, size: 16, color: Colors.blue),
-                        const SizedBox(width: 4),
-                        Text('Improving', style: TextStyle(color: Colors.blue, fontSize: 12)),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.star,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        player.currentRankScore.toStringAsFixed(1),
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.sports_soccer,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${player.gamesPlayed} games',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: _buildRadarChart(context),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildAttributesList(context),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGradeBadge() {
+  Widget _buildRatingBadge(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _getGradeColor(player.overallGrade),
+        color: _getGradeColor(player.overallGrade).withOpacity(0.15),
+        border:
+            Border.all(color: _getGradeColor(player.overallGrade), width: 1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        player.overallGrade,
-        style: const TextStyle(
-          color: Colors.white,
+        player.currentRankScore.toStringAsFixed(1),
+        style: TextStyle(
+          color: _getGradeColor(player.overallGrade),
           fontWeight: FontWeight.bold,
           fontSize: 12,
         ),
@@ -317,45 +316,95 @@ class PlayerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRadarChart(BuildContext context) {
-    if (latestStats == null) return const SizedBox();
-    
-    return SizedBox(
-      height: 120,
-      child: RadarChart(
-        RadarChartData(
-          radarTouchData: RadarTouchData(enabled: false),
-          dataSets: [
-            RadarDataSet(
-              fillColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-              borderColor: Theme.of(context).colorScheme.primary,
-              borderWidth: 2,
-              entryRadius: 3,
-              dataEntries: latestStats!.attributesList
-                  .map((value) => RadarEntry(value: value))
-                  .toList(),
-            ),
-          ],
-          radarBorderData: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-          ),
-          titleTextStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+  Widget _buildConsistencyBadge() {
+    // Example of "tasteful sub-sections/slots"
+    if (!player.isInForm) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: FuturisticColors.accent.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        'IN FORM',
+        style: TextStyle(
             fontSize: 8,
+            color: FuturisticColors.accent,
+            fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(BuildContext context) {
+    // Map available data to a clean row
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildStatItem('GAMES', '${player.gamesPlayed}'),
+        // We don't have Age/Foot, keeping it clean with existing data.
+        // Maybe add "Grade" here prominently?
+        _buildStatItem('GRADE', player.overallGrade,
+            color: _getGradeColor(player.overallGrade)),
+        // Speed/Strength form attributes
+        _buildStatItem('SPD', '${player.attributes.speed}'),
+        _buildStatItem('STR', '${player.attributes.strength}'),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, {Color? color}) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: FuturisticTypography.labelSmall
+              .copyWith(color: FuturisticColors.textSecondary, fontSize: 10),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: FuturisticTypography.heading3.copyWith(
+              fontSize: 16, color: color ?? FuturisticColors.textPrimary),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRadarChart(BuildContext context) {
+    return RadarChart(
+      RadarChartData(
+        radarTouchData: RadarTouchData(enabled: false),
+        dataSets: [
+          RadarDataSet(
+            fillColor: FuturisticColors.primary.withOpacity(0.2),
+            borderColor: FuturisticColors.primary,
+            borderWidth: 2,
+            entryRadius: 3,
+            dataEntries: latestStats!.attributesList
+                .map((value) => RadarEntry(value: value))
+                .toList(),
           ),
-          getTitle: (index, angle) {
-            final titles = ['DEF', 'PAS', 'SHO', 'DRI', 'PHY', 'LEA', 'TEA', 'CON'];
-            return RadarChartTitle(
-              text: titles[index % titles.length],
-              angle: angle,
-            );
-          },
-          tickCount: 5,
-          tickBorderData: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          ),
-          gridBorderData: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-          ),
+        ],
+        radarBorderData: BorderSide(
+          color: FuturisticColors.surfaceVariant,
+        ),
+        titleTextStyle: FuturisticTypography.labelSmall.copyWith(fontSize: 9),
+        getTitle: (index, angle) {
+          final titles = PlayerStats.attributeNames
+              .map((e) => e.substring(0, 3).toUpperCase())
+              .toList();
+          // Adjust usage based on list length
+          final safeTitle = index < titles.length ? titles[index] : '';
+          return RadarChartTitle(
+            text: safeTitle,
+            angle: angle,
+          );
+        },
+        tickCount: 5,
+        tickBorderData:
+            const BorderSide(color: Colors.transparent), // Cleaner look
+        gridBorderData: BorderSide(
+          color: FuturisticColors.divider.withOpacity(0.1),
         ),
       ),
     );
@@ -363,49 +412,53 @@ class PlayerCard extends StatelessWidget {
 
   Widget _buildAttributesList(BuildContext context) {
     if (latestStats == null) return const SizedBox();
-    
+
     final attributes = latestStats!.attributesList;
     final names = PlayerStats.attributeNames;
-    
+
     return Column(
       children: [
         for (int i = 0; i < attributes.length; i++)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 1),
+            padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
               children: [
-                Expanded(
+                SizedBox(
+                  width: 70,
                   child: Text(
                     names[i],
-                    style: Theme.of(context).textTheme.labelSmall,
+                    style:
+                        FuturisticTypography.labelSmall.copyWith(fontSize: 10),
                   ),
                 ),
-                Container(
-                  width: 30,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: _getAttributeColor(attributes[i]).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: attributes[i] / 10.0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _getAttributeColor(attributes[i]),
-                        borderRadius: BorderRadius.circular(4),
+                Expanded(
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: _getAttributeColor(attributes[i]).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: attributes[i] / 10.0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _getAttributeColor(attributes[i]),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 8),
                 SizedBox(
-                  width: 20,
+                  width: 24,
                   child: Text(
                     attributes[i].toStringAsFixed(1),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    style: FuturisticTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.bold,
                       color: _getAttributeColor(attributes[i]),
+                      fontSize: 10,
                     ),
                     textAlign: TextAlign.end,
                   ),
@@ -417,58 +470,19 @@ class PlayerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPlayerStats() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildStatChip('SPD', player.attributes.speed),
-        const SizedBox(height: 4),
-        _buildStatChip('STR', player.attributes.strength),
-      ],
-    );
-  }
-
-  Widget _buildStatChip(String label, int value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: _getStatColor(value).withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 2),
-          Text(
-            value.toString(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: _getStatColor(value),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // --- COLORS ---
 
   Color _getAvatarColor(String name) {
+    if (name.isEmpty) return Colors.grey;
     final colors = [
-      Colors.red,
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
-      Colors.indigo,
-      Colors.pink,
+      Colors.redAccent,
+      Colors.blueAccent,
+      Colors.greenAccent,
+      Colors.orangeAccent,
+      Colors.purpleAccent,
+      Colors.tealAccent,
+      Colors.indigoAccent,
+      Colors.pinkAccent,
     ];
     return colors[name.hashCode % colors.length];
   }
@@ -476,36 +490,26 @@ class PlayerCard extends StatelessWidget {
   Color _getRankColor(int rank, BuildContext context) {
     switch (rank) {
       case 1:
-        return Colors.amber;
+        return const Color(0xFFFFD700); // Gold
       case 2:
-        return Colors.grey[400]!;
+        return const Color(0xFFC0C0C0); // Silver
       case 3:
-        return Colors.brown[400]!;
+        return const Color(0xFFCD7F32); // Bronze
       default:
-        return Theme.of(context).colorScheme.primary;
+        return FuturisticColors.primary;
     }
   }
 
-  Color _getStatColor(int value) {
-    if (value >= 8) return Colors.green;
-    if (value >= 6) return Colors.orange;
+  Color _getGradeColor(String grade) {
+    if (grade.startsWith('S') || grade.startsWith('A'))
+      return FuturisticColors.success;
+    if (grade.startsWith('B')) return FuturisticColors.primary;
+    if (grade.startsWith('C')) return Colors.orange;
     return Colors.red;
   }
-  
-  Color _getGradeColor(String grade) {
-    switch (grade) {
-      case 'S': return Colors.purple;
-      case 'A+': case 'A': case 'A-': return Colors.green;
-      case 'B+': case 'B': case 'B-': return Colors.blue;
-      case 'C+': case 'C': case 'C-': return Colors.orange;
-      case 'D': return Colors.red;
-      case 'F': return Colors.grey;
-      default: return Colors.grey;
-    }
-  }
-  
+
   Color _getAttributeColor(double value) {
-    if (value >= 8.5) return Colors.green;
+    if (value >= 8.5) return FuturisticColors.success;
     if (value >= 7.0) return Colors.lightGreen;
     if (value >= 5.5) return Colors.orange;
     if (value >= 4.0) return Colors.redAccent;

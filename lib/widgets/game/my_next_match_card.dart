@@ -156,7 +156,7 @@ class _MyNextMatchCardState extends State<MyNextMatchCard> {
                                 ),
                               ),
                               const Spacer(),
-                              if (widget.game.hubName != null)
+                              if (widget.game.denormalized.hubName != null)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 12,
@@ -167,7 +167,7 @@ class _MyNextMatchCardState extends State<MyNextMatchCard> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    widget.game.hubName!,
+                                    widget.game.denormalized.hubName!,
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
@@ -202,7 +202,8 @@ class _MyNextMatchCardState extends State<MyNextMatchCard> {
                                 ],
                               ),
                               if (widget.game.location != null ||
-                                  widget.game.venueName != null) ...[
+                                  widget.game.denormalized.venueName !=
+                                      null) ...[
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
@@ -214,7 +215,7 @@ class _MyNextMatchCardState extends State<MyNextMatchCard> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      widget.game.venueName ??
+                                      widget.game.denormalized.venueName ??
                                           widget.game.location!,
                                       style: GoogleFonts.inter(
                                         fontSize: 14,

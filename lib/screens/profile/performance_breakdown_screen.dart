@@ -41,7 +41,8 @@ class _PerformanceBreakdownScreenState
       try {
         final games = await gamesRepo.getGamesByHub(hub.hubId);
         final myGames = games
-            .where((g) => g.confirmedPlayerIds.contains(widget.userId))
+            .where((g) =>
+                g.denormalized.confirmedPlayerIds.contains(widget.userId))
             .toList();
 
         int wins = 0;
@@ -63,7 +64,7 @@ class _PerformanceBreakdownScreenState
           }
 
           if (myTeamColor != null) {
-            for (final match in game.matches) {
+            for (final match in game.session.matches) {
               // Count goals and assists
               goals +=
                   match.scorerIds.where((id) => id == widget.userId).length;
@@ -154,8 +155,7 @@ class _PerformanceBreakdownScreenState
             );
           }
 
-          final totalGames =
-              hubs.fold<int>(0, (sum, h) => sum + h.gamesPlayed);
+          final totalGames = hubs.fold<int>(0, (sum, h) => sum + h.gamesPlayed);
           final totalWins = hubs.fold<int>(0, (sum, h) => sum + h.wins);
           final totalGoals = hubs.fold<int>(0, (sum, h) => sum + h.goals);
           final totalAssists = hubs.fold<int>(0, (sum, h) => sum + h.assists);
@@ -282,10 +282,16 @@ class _SummaryCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _StatBadge(label: 'משחקים', value: '$totalGames', color: Colors.blue),
-              _StatBadge(label: 'ניצחונות', value: '$totalWins', color: Colors.green),
-              _StatBadge(label: 'שערים', value: '$totalGoals', color: Colors.orange),
-              _StatBadge(label: 'בישולים', value: '$totalAssists', color: Colors.purple),
+              _StatBadge(
+                  label: 'משחקים', value: '$totalGames', color: Colors.blue),
+              _StatBadge(
+                  label: 'ניצחונות', value: '$totalWins', color: Colors.green),
+              _StatBadge(
+                  label: 'שערים', value: '$totalGoals', color: Colors.orange),
+              _StatBadge(
+                  label: 'בישולים',
+                  value: '$totalAssists',
+                  color: Colors.purple),
               _StatBadge(
                   label: 'אחוז ניצחונות',
                   value: '${winRate.toStringAsFixed(1)}%',

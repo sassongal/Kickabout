@@ -65,7 +65,7 @@ class SessionLogic {
   /// Returns TeamA, TeamB, or Draw
   /// Logic: Points (Win=3, Draw=1) -> Goal Difference -> Goals For
   static SessionWinner? calculateSessionWinner(Game game) {
-    if (game.matches.isEmpty) {
+    if (game.session.matches.isEmpty) {
       // No matches played yet - return null
       return null;
     }
@@ -76,7 +76,7 @@ class SessionLogic {
     }
 
     // For 3+ teams, calculate based on aggregateWins if available
-    if (game.aggregateWins.isNotEmpty) {
+    if (game.session.aggregateWins.isNotEmpty) {
       return _calculateMultiTeamWinner(game);
     }
 
@@ -132,7 +132,7 @@ class SessionLogic {
     int maxWins = 0;
     bool isTie = false;
 
-    for (final entry in game.aggregateWins.entries) {
+    for (final entry in game.session.aggregateWins.entries) {
       if (entry.value > maxWins) {
         maxWins = entry.value;
         winnerColor = entry.key;
@@ -161,7 +161,7 @@ class SessionLogic {
 
   /// Calculate winner from matches list (fallback)
   static SessionWinner _calculateFromMatches(Game game) {
-    if (game.matches.isEmpty || game.teams.length < 2) {
+    if (game.session.matches.isEmpty || game.teams.length < 2) {
       return SessionWinner.draw;
     }
 
@@ -196,7 +196,7 @@ class SessionLogic {
   static TeamSessionStats _calculateTeamStats(Game game, String teamColor) {
     final stats = TeamSessionStats(teamColor: teamColor);
 
-    for (final match in game.matches) {
+    for (final match in game.session.matches) {
       final isTeamA = match.teamAColor == teamColor;
       final isTeamB = match.teamBColor == teamColor;
 
@@ -241,7 +241,7 @@ class SessionLogic {
   ) {
     final Map<String, PlayerSessionStats> playerStats = {};
 
-    for (final match in game.matches) {
+    for (final match in game.session.matches) {
       // Count goals
       for (final scorerId in match.scorerIds) {
         playerStats.putIfAbsent(
@@ -286,7 +286,7 @@ class SessionLogic {
 
   /// Get series score display string (e.g., "Team A: 2 Wins | Team B: 1 Win")
   static String getSeriesScoreDisplay(Game game) {
-    if (game.matches.isEmpty) {
+    if (game.session.matches.isEmpty) {
       return 'No matches played yet';
     }
 
@@ -304,8 +304,10 @@ class SessionLogic {
     final teamAStats = _calculateTeamStats(game, teamA.color ?? 'TeamA');
     final teamBStats = _calculateTeamStats(game, teamB.color ?? 'TeamB');
 
-    final teamAName = teamA.name.isNotEmpty ? teamA.name : (teamA.color ?? 'Team A');
-    final teamBName = teamB.name.isNotEmpty ? teamB.name : (teamB.color ?? 'Team B');
+    final teamAName =
+        teamA.name.isNotEmpty ? teamA.name : (teamA.color ?? 'Team A');
+    final teamBName =
+        teamB.name.isNotEmpty ? teamB.name : (teamB.color ?? 'Team B');
 
     return '$teamAName: ${teamAStats.wins} Wins | $teamBName: ${teamBStats.wins} Wins';
   }
@@ -313,21 +315,21 @@ class SessionLogic {
   /// Check if a game is in session mode (has matches or is designed for multi-match)
   static bool isSessionMode(Game game) {
     // If it has matches, it's definitely a session
-    if (game.matches.isNotEmpty) {
+    if (game.session.matches.isNotEmpty) {
       return true;
     }
 
     // If it has aggregateWins, it's a session
-    if (game.aggregateWins.isNotEmpty) {
+    if (game.session.aggregateWins.isNotEmpty) {
       return true;
     }
 
     // If teams have colors assigned, it's likely a session
-    if (game.teams.any((team) => team.color != null && team.color!.isNotEmpty)) {
+    if (game.teams
+        .any((team) => team.color != null && team.color!.isNotEmpty)) {
       return true;
     }
 
     return false;
   }
 }
-

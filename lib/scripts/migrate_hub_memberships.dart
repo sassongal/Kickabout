@@ -314,7 +314,7 @@ Future<void> validateMigration(String hubId) async {
   // 1. Count active members in subcollection
   final membersSnapshot = await db
       .collection('hubs/$hubId/members')
-      .where('status', '==', 'active')
+      .where('status', isEqualTo: 'active')
       .get();
 
   final subcollectionActiveCount = membersSnapshot.docs.length;

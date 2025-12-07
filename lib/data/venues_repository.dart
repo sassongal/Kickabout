@@ -316,9 +316,8 @@ class VenuesRepository {
         final existingHubId = existingData['hubId'] as String? ?? '';
         final newHubId = venueFromGoogle.hubId;
 
-        // If existing venue has empty hubId and new venue has hubId, update it
-        if ((existingHubId.isEmpty || existingHubId == '') &&
-            newHubId.isNotEmpty) {
+        // Update hubId if provided and different (allows re-associating venues)
+        if (newHubId.isNotEmpty && existingHubId != newHubId) {
           debugPrint(
               '📝 Updating existing venue ${doc.id} with hubId: $newHubId');
           await doc.reference.update({

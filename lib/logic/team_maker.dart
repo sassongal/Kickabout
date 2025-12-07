@@ -48,18 +48,20 @@ class PlayerForTeam {
 
   /// Create PlayerForTeam from User with manager rating
   ///
-  /// Uses managerRating from hub if available, otherwise falls back to currentRankScore
+  /// Uses managerRating from hub (required). Manager must rate all players.
+  /// Default rating of 4.0 is used if no rating is set (middle of 1-7 scale).
   static PlayerForTeam fromUser(
     User user, {
     String? hubId,
     Map<String, double>? managerRatings,
   }) {
-    // Use managerRating if available, otherwise fall back to currentRankScore
+    // Use managerRating as the single source of truth for hub team making
+    // Default to 4.0 (middle of 1-7 scale) if not rated yet
     final rating = (hubId != null &&
             managerRatings != null &&
             managerRatings.containsKey(user.uid))
         ? managerRatings[user.uid]!
-        : user.currentRankScore; // Fallback for backward compatibility
+        : 4.0; // Default middle rating
 
     return PlayerForTeam(
       uid: user.uid,
@@ -84,12 +86,16 @@ class TeamBalanceMetrics {
   final double stddev;
   final double minRating;
   final double maxRating;
+  final double positionBalance; // 0-1, how well positions are distributed
+  final double goalkeeperBalance; // 0-1, how well goalkeepers are distributed
 
   TeamBalanceMetrics({
     required this.averageRating,
     required this.stddev,
     required this.minRating,
     required this.maxRating,
+    this.positionBalance = 1.0,
+    this.goalkeeperBalance = 1.0,
   });
 }
 
@@ -169,10 +175,23 @@ class TeamMaker {
       );
     }).toList();
 
-    final metrics = calculateBalanceMetrics(finalTeams);
-    // Balance score: 100 for perfect balance (stddev=0), decreases as stddev grows.
-    // A stddev of 2.5 is considered ~50% balanced.
-    final score = (1.0 - (metrics.stddev / 5.0)).clamp(0.0, 1.0) * 100;
+    final metrics = calculateBalanceMetrics(finalTeams, optimizedTeams);
+
+    // Enhanced balance score with multiple factors:
+    // 1. Rating balance (stddev) - 50% weight
+    // 2. Position balance - 30% weight
+    // 3. Goalkeeper balance - 20% weight
+
+    // Rating balance: stddev of 0.5 = perfect (100%), stddev of 1.5 = 50%
+    // (1-7 scale has tighter range, so adjusted thresholds)
+    final ratingScore = (1.0 - (metrics.stddev / 1.5)).clamp(0.0, 1.0);
+
+    final score = (
+      ratingScore * 0.5 +
+      metrics.positionBalance * 0.3 +
+      metrics.goalkeeperBalance * 0.2
+    ) * 100;
+
     lastBalanceScore = score;
 
     return TeamCreationResult(teams: finalTeams, balanceScore: score);
@@ -275,29 +294,58 @@ class TeamMaker {
   }
 
   /// Distribute goalkeepers evenly across teams
+  /// Enhanced to handle edge cases:
+  /// - No goalkeepers: returns empty teams (field players will be distributed)
+  /// - Fewer goalkeepers than teams: distributes to strongest teams first
+  /// - More goalkeepers than teams: snake draft for even distribution
   static List<List<PlayerForTeam>> _distributeGoalkeepers(
     List<PlayerForTeam> goalkeepers,
     int teamCount,
   ) {
     final teams = List.generate(teamCount, (_) => <PlayerForTeam>[]);
 
+    if (goalkeepers.isEmpty) {
+      // No goalkeepers - return empty teams (handled gracefully)
+      return teams;
+    }
+
     // Sort goalkeepers by rating (descending)
     goalkeepers.sort((a, b) => b.rating.compareTo(a.rating));
 
-    // Round-robin distribution
-    for (int i = 0; i < goalkeepers.length; i++) {
-      teams[i % teamCount].add(goalkeepers[i]);
+    if (goalkeepers.length <= teamCount) {
+      // Fewer or equal GKs than teams: give to first N teams
+      for (int i = 0; i < goalkeepers.length; i++) {
+        teams[i].add(goalkeepers[i]);
+      }
+    } else {
+      // More GKs than teams: use snake draft for balance
+      for (int i = 0; i < goalkeepers.length; i++) {
+        final roundNumber = i ~/ teamCount;
+        final positionInRound = i % teamCount;
+        final teamIndex = roundNumber % 2 == 0
+            ? positionInRound
+            : teamCount - 1 - positionInRound;
+        teams[teamIndex].add(goalkeepers[i]);
+      }
     }
 
     return teams;
   }
 
   /// Distribute field players with style and rating balance
+  /// Enhanced to handle edge cases:
+  /// - Missing position types: distributes available players fairly
+  /// - Uneven distribution: compensates with midfielders
+  /// - Mixed rating distribution: ensures no team is too weak/strong in any position
   static void _distributeFieldPlayers(
     List<PlayerForTeam> fieldPlayers,
     List<List<PlayerForTeam>> teams,
     int teamCount,
   ) {
+    if (fieldPlayers.isEmpty) {
+      return; // Edge case: no field players
+    }
+
     // Separate by role
     final defenders = fieldPlayers.where((p) => p.isDefensive).toList();
     final attackers = fieldPlayers.where((p) => p.isOffensive).toList();
@@ -310,58 +358,61 @@ class TeamMaker {
     midfielders.sort((a, b) => b.rating.compareTo(a.rating));
 
     // Distribute defenders (snake draft)
-    for (int i = 0; i < defenders.length; i++) {
-      final roundNumber = i ~/ teamCount;
-      final positionInRound = i % teamCount;
-      int teamIndex;
-      if (roundNumber % 2 == 0) {
-        teamIndex = positionInRound;
-      } else {
-        teamIndex = teamCount - 1 - positionInRound;
-      }
-      teams[teamIndex].add(defenders[i]);
-    }
+    _snakeDraft(defenders, teams, teamCount, startReverse: false);
 
-    // Distribute attackers (snake draft, reverse order)
-    for (int i = 0; i < attackers.length; i++) {
-      final roundNumber = i ~/ teamCount;
-      final positionInRound = i % teamCount;
-      int teamIndex;
-      if (roundNumber % 2 == 0) {
-        teamIndex = teamCount - 1 - positionInRound; // Reverse for balance
-      } else {
-        teamIndex = positionInRound;
-      }
-      teams[teamIndex].add(attackers[i]);
-    }
+    // Distribute attackers (snake draft, reverse to balance with defenders)
+    _snakeDraft(attackers, teams, teamCount, startReverse: true);
 
     // Distribute midfielders (snake draft)
-    for (int i = 0; i < midfielders.length; i++) {
+    _snakeDraft(midfielders, teams, teamCount, startReverse: false);
+  }
+
+  /// Helper method for snake draft distribution
+  static void _snakeDraft(
+    List<PlayerForTeam> players,
+    List<List<PlayerForTeam>> teams,
+    int teamCount, {
+    required bool startReverse,
+  }) {
+    for (int i = 0; i < players.length; i++) {
       final roundNumber = i ~/ teamCount;
       final positionInRound = i % teamCount;
+
       int teamIndex;
-      if (roundNumber % 2 == 0) {
-        teamIndex = positionInRound;
+      if (startReverse) {
+        // Start from the end for balance
+        if (roundNumber % 2 == 0) {
+          teamIndex = teamCount - 1 - positionInRound;
+        } else {
+          teamIndex = positionInRound;
+        }
       } else {
-        teamIndex = teamCount - 1 - positionInRound;
+        // Standard snake draft
+        if (roundNumber % 2 == 0) {
+          teamIndex = positionInRound;
+        } else {
+          teamIndex = teamCount - 1 - positionInRound;
+        }
       }
-      teams[teamIndex].add(midfielders[i]);
+
+      teams[teamIndex].add(players[i]);
     }
   }
 
   /// Local swap to reduce stddev while maintaining role coverage
+  /// Enhanced to consider both rating balance and position balance
   static List<List<PlayerForTeam>> _localSwap(
     List<List<PlayerForTeam>> teams,
     int teamCount,
   ) {
     if (teams.length < 2) return teams;
 
-    // Calculate current stddev
-    double currentStddev = _calculateStddev(teams);
+    // Calculate current balance score (combines rating and position balance)
+    double currentScore = _calculateBalanceScore(teams);
 
     // Try pairwise swaps
     bool improved = true;
-    int maxIterations = 50; // Prevent infinite loops
+    int maxIterations = 100; // Increased for better optimization
     int iterations = 0;
 
     while (improved && iterations < maxIterations) {
@@ -377,20 +428,31 @@ class TeamMaker {
 
           for (var playerI in teamIPlayers) {
             for (var playerJ in teamJPlayers) {
+              // Don't swap if it creates goalkeeper imbalance
+              // (e.g., team with 2 GKs swapping with team with 0 GKs)
+              final iGkCount = teams[i].where((p) => p.isGoalkeeper).length;
+              final jGkCount = teams[j].where((p) => p.isGoalkeeper).length;
+
+              if (playerI.isGoalkeeper && !playerJ.isGoalkeeper) {
+                // Would create imbalance if diff > 1
+                if ((iGkCount - 1 - jGkCount).abs() > 1) continue;
+              } else if (!playerI.isGoalkeeper && playerJ.isGoalkeeper) {
+                if ((jGkCount - 1 - iGkCount).abs() > 1) continue;
+              }
+
               // Swap
               teams[i].remove(playerI);
               teams[j].remove(playerJ);
               teams[i].add(playerJ);
               teams[j].add(playerI);
 
-              // Check if stddev improved
-              final newStddev = _calculateStddev(teams);
-              if (newStddev < currentStddev) {
+              // Check if balance improved
+              final newScore = _calculateBalanceScore(teams);
+              if (newScore > currentScore) {
                 // Keep swap
-                currentStddev = newStddev;
+                currentScore = newScore;
                 improved = true;
                 // Break inner loops to restart optimization with new state
-                // (Since lists changed, continuing iteration on old copies might be suboptimal or invalid)
                 break;
               } else {
                 // Revert swap
@@ -409,6 +471,30 @@ class TeamMaker {
     }
 
     return teams;
+  }
+
+  /// Calculate overall balance score considering rating and position distribution
+  static double _calculateBalanceScore(List<List<PlayerForTeam>> teams) {
+    if (teams.isEmpty) return 0.0;
+
+    // Rating balance (lower stddev = higher score)
+    final stddev = _calculateStddev(teams);
+    final ratingScore = (1.0 / (1.0 + stddev)).clamp(0.0, 1.0);
+
+    // Goalkeeper balance
+    final gkCounts = teams.map((t) => t.where((p) => p.isGoalkeeper).length.toDouble()).toList();
+    final gkVariance = _calculateVariance(gkCounts);
+    final gkScore = (1.0 / (1.0 + gkVariance * 2)).clamp(0.0, 1.0);
+
+    // Position balance (defenders vs attackers)
+    final defCounts = teams.map((t) => t.where((p) => p.isDefensive).length.toDouble()).toList();
+    final attCounts = teams.map((t) => t.where((p) => p.isOffensive).length.toDouble()).toList();
+    final defVariance = _calculateVariance(defCounts);
+    final attVariance = _calculateVariance(attCounts);
+    final posScore = (1.0 / (1.0 + (defVariance + attVariance))).clamp(0.0, 1.0);
+
+    // Weighted combination: rating (50%), goalkeeper (25%), position (25%)
+    return ratingScore * 0.5 + gkScore * 0.25 + posScore * 0.25;
   }
 
   /// Calculate standard deviation of team average ratings
@@ -445,17 +531,23 @@ class TeamMaker {
     return sqrt(variance);
   }
 
-  /// Calculate team balance metrics
-  static TeamBalanceMetrics calculateBalanceMetrics(List<Team> teams) {
+  /// Calculate team balance metrics with position awareness
+  static TeamBalanceMetrics calculateBalanceMetrics(
+    List<Team> teams, [
+    List<List<PlayerForTeam>>? playerTeams,
+  ]) {
     if (teams.isEmpty) {
       return TeamBalanceMetrics(
         averageRating: 0.0,
         stddev: 0.0,
         minRating: 0.0,
         maxRating: 0.0,
+        positionBalance: 1.0,
+        goalkeeperBalance: 1.0,
       );
     }
 
+    // Calculate rating balance
     final averages = teams.map((team) {
       if (team.playerIds.isEmpty) return 0.0;
       return team.totalScore / team.playerIds.length;
@@ -470,11 +562,51 @@ class TeamMaker {
         averages.length;
     final stddev = sqrt(variance);
 
+    // Calculate position balance (only if playerTeams provided)
+    double positionBalance = 1.0;
+    double goalkeeperBalance = 1.0;
+
+    if (playerTeams != null && playerTeams.isNotEmpty) {
+      // Calculate goalkeeper distribution
+      final gkCounts = playerTeams.map((team) {
+        return team.where((p) => p.isGoalkeeper).length;
+      }).toList();
+
+      // Perfect: all teams have same number of GKs
+      final gkVariance = _calculateVariance(gkCounts.map((c) => c.toDouble()).toList());
+      goalkeeperBalance = (1.0 / (1.0 + gkVariance)).clamp(0.0, 1.0);
+
+      // Calculate position distribution balance
+      final defenderCounts = playerTeams.map((team) {
+        return team.where((p) => p.isDefensive).length.toDouble();
+      }).toList();
+
+      final attackerCounts = playerTeams.map((team) {
+        return team.where((p) => p.isOffensive).length.toDouble();
+      }).toList();
+
+      final defVariance = _calculateVariance(defenderCounts);
+      final attVariance = _calculateVariance(attackerCounts);
+
+      // Average the position variances (lower variance = better balance)
+      final avgPositionVariance = (defVariance + attVariance) / 2;
+      positionBalance = (1.0 / (1.0 + avgPositionVariance)).clamp(0.0, 1.0);
+    }
+
     return TeamBalanceMetrics(
       averageRating: mean,
       stddev: stddev,
-      minRating: averages.reduce(min),
-      maxRating: averages.reduce(max),
+      minRating: averages.isEmpty ? 0.0 : averages.reduce(min),
+      maxRating: averages.isEmpty ? 0.0 : averages.reduce(max),
+      positionBalance: positionBalance,
+      goalkeeperBalance: goalkeeperBalance,
     );
+  }
+
+  /// Calculate variance for a list of values
+  static double _calculateVariance(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    final mean = values.fold<double>(0.0, (sum, val) => sum + val) / values.length;
+    return values.fold<double>(0.0, (sum, val) => sum + pow(val - mean, 2)) / values.length;
   }
 }

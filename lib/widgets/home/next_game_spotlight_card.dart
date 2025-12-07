@@ -565,18 +565,19 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
         // Process Games
         for (final game in latestGames) {
           // Use denormalized data
-          final isSignedUp = game.confirmedPlayerIds.contains(userId);
+          final isSignedUp =
+              game.denormalized.confirmedPlayerIds.contains(userId);
           if (isSignedUp) {
             final hub = hubsMap[game.hubId];
             allItems.add(_NextGameData(
               id: game.gameId,
               title: null,
               dateTime: game.gameDate,
-              location: game.location ?? game.venueName,
+              location: game.location ?? game.denormalized.venueName,
               hubId: game.hubId ?? '',
-              hubName: game.hubName ?? hub?.name ?? 'Public Game',
-              creatorName: game.createdByName ?? 'משתמש',
-              participantCount: game.confirmedPlayerCount,
+              hubName: game.denormalized.hubName ?? hub?.name ?? 'Public Game',
+              creatorName: game.denormalized.createdByName ?? 'משתמש',
+              participantCount: game.denormalized.confirmedPlayerCount,
               isEvent: false,
             ));
           }

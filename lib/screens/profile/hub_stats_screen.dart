@@ -81,16 +81,18 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
 
     for (final game in _games) {
       // Count Goals
-      goals += game.goalScorerIds.where((id) => id == widget.playerId).length;
+      goals += game.denormalized.goalScorerIds
+          .where((id) => id == widget.playerId)
+          .length;
 
       // Count MVPs
-      if (game.mvpPlayerId == widget.playerId) {
+      if (game.denormalized.mvpPlayerId == widget.playerId) {
         mvps++;
       }
 
       // Determine Result
-      final teamAScore = game.legacyTeamAScore ?? 0;
-      final teamBScore = game.legacyTeamBScore ?? 0;
+      final teamAScore = game.session.legacyTeamAScore ?? 0;
+      final teamBScore = game.session.legacyTeamBScore ?? 0;
 
       // Find player's team
       String playerTeamId = 'teamA'; // Default

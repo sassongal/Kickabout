@@ -87,6 +87,10 @@ import 'package:kattrick/screens/admin/generate_dummy_data_screen.dart'
 import 'package:kattrick/screens/hub/manage_roles_screen.dart'
     deferred as manage_roles_screen;
 import 'package:kattrick/screens/hub/hub_settings_screen.dart';
+import 'package:kattrick/screens/hub/custom_permissions_screen.dart'
+    deferred as custom_permissions_screen;
+import 'package:kattrick/screens/hub/hub_insights_screen.dart'
+    deferred as hub_insights_screen;
 import 'package:kattrick/screens/hub/join_by_invite_screen.dart'
     deferred as join_by_invite_screen;
 import 'package:kattrick/screens/game/game_calendar_screen.dart'
@@ -121,12 +125,12 @@ import 'package:kattrick/screens/activity/community_activity_feed_screen.dart'
 import 'package:kattrick/screens/weather/weather_detail_screen.dart';
 import 'package:kattrick/screens/game/game_recording_screen.dart'
     deferred as game_recording_screen;
-import 'package:kattrick/screens/event/event_management_screen.dart'
-    deferred as event_management_screen;
 import 'package:kattrick/screens/event/team_generator_config_screen.dart'
     deferred as team_generator_config_screen;
 import 'package:kattrick/screens/event/team_generator_result_screen.dart'
     deferred as team_generator_result_screen;
+import 'package:kattrick/screens/event/game_session_screen.dart'
+    deferred as game_session_screen;
 import 'package:kattrick/screens/debug/create_dummy_players_screen.dart'
     deferred as create_dummy_players_screen;
 import 'package:kattrick/screens/debug/auth_status_screen.dart';
@@ -504,11 +508,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/hubs/:hubId/events/:eventId/manage',
         name: 'eventManagement',
         builder: (context, state) => LazyRouteLoader(
-            loader: event_management_screen.loadLibrary(),
+            loader: hub_event_management_screen.loadLibrary(),
             builder: () {
               final eventId = state.pathParameters['eventId']!;
               final hubId = state.pathParameters['hubId']!;
-              return event_management_screen.EventManagementScreen(
+              return hub_event_management_screen.EventManagementScreen(
                 hubId: hubId,
                 eventId: eventId,
               );
@@ -554,6 +558,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                     eventId: eventId,
                     players: players,
                     teamCount: teamCount,
+                  );
+                }),
+          ),
+          GoRoute(
+            path: 'game-session',
+            name: 'gameSession',
+            builder: (context, state) => LazyRouteLoader(
+                loader: game_session_screen.loadLibrary(),
+                builder: () {
+                  final eventId = state.pathParameters['eventId']!;
+                  final hubId = state.pathParameters['hubId']!;
+                  return game_session_screen.GameSessionScreen(
+                    hubId: hubId,
+                    eventId: eventId,
                   );
                 }),
           ),
@@ -609,6 +627,28 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: () {
                       final hubId = state.pathParameters['id']!;
                       return manage_roles_screen.ManageRolesScreen(
+                          hubId: hubId);
+                    }),
+              ),
+              GoRoute(
+                path: 'custom-permissions',
+                name: 'customPermissions',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: custom_permissions_screen.loadLibrary(),
+                    builder: () {
+                      final hubId = state.pathParameters['id']!;
+                      return custom_permissions_screen.CustomPermissionsScreen(
+                          hubId: hubId);
+                    }),
+              ),
+              GoRoute(
+                path: 'insights',
+                name: 'hubInsights',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: hub_insights_screen.loadLibrary(),
+                    builder: () {
+                      final hubId = state.pathParameters['id']!;
+                      return hub_insights_screen.HubInsightsScreen(
                           hubId: hubId);
                     }),
               ),

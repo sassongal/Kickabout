@@ -134,7 +134,6 @@ class DummyPlayersCreator {
     }
 
     final playerIds = <String>[];
-    final managerRatings = <String, double>{};
 
     print('Creating $count dummy players for Hub: ${hub.name}...');
     print('Hub location: ${hub.primaryVenueLocation ?? hub.location}');
@@ -149,8 +148,9 @@ class DummyPlayersCreator {
       final lastName = _lastNames[_random.nextInt(_lastNames.length)];
       final position = _positions[_random.nextInt(_positions.length)];
 
-      // Generate rating (5.0 to 9.5)
-      final rating = 5.0 + (_random.nextDouble() * 4.5);
+      // Generate rating (1.0 to 7.0) in 0.5 increments
+      final ratingSteps = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0];
+      final rating = ratingSteps[_random.nextInt(ratingSteps.length)];
 
       // Generate age (18-45 for realistic distribution)
       final age = 18 + _random.nextInt(28); // 18-45
@@ -224,20 +224,10 @@ class DummyPlayersCreator {
       }
 
       // Set manager rating
-      managerRatings[userId] = rating;
+      await _hubsRepo.setPlayerRating(hubId, userId, rating);
 
       print(
           '✓ Created player: $firstName $lastName (גיל: $age, דירוג: ${rating.toStringAsFixed(1)}, תפקיד: $position)');
-    }
-
-    // Update hub with manager ratings
-    if (managerRatings.isNotEmpty) {
-      final currentRatings = Map<String, double>.from(hub.managerRatings);
-      currentRatings.addAll(managerRatings);
-
-      await _firestore.doc(FirestorePaths.hub(hubId)).update({
-        'managerRatings': currentRatings,
-      });
     }
 
     print('\n✅ Successfully created ${playerIds.length} dummy players!');

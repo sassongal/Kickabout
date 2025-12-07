@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kattrick/widgets/futuristic/gradient_button.dart';
 import 'package:kattrick/scripts/generate_dummy_data.dart';
+import 'package:kattrick/scripts/team_balancing_test_script.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,6 +30,11 @@ class _GenerateDummyDataScreenState
 
   bool _isGenerating = false;
   String? _statusMessage;
+
+  // Last created test scenario (for cleanup)
+  String? _lastTestHubId;
+  String? _lastTestEventId;
+  List<String>? _lastTestPlayerIds;
 
   @override
   void dispose() {
@@ -304,6 +311,175 @@ class _GenerateDummyDataScreenState
     }
   }
 
+  Future<void> _generateTeamBalancingTest() async {
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'מתחיל ליצור תרחיש בדיקת איזון קבוצות...';
+    });
+
+    try {
+      final script = TeamBalancingTestScript();
+      final result = await script.createCompleteTestScenario();
+
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          // שמירת IDs למחיקה מאוחר יותר
+          _lastTestHubId = result['hubId'] as String?;
+          _lastTestEventId = result['eventId'] as String?;
+          _lastTestPlayerIds = (result['playerIds'] as List?)?.cast<String>();
+
+          _statusMessage = '✅ תרחיש איזון קבוצות נוצר בהצלחה!\n'
+              '🏟️ Hub ID: ${result['hubId']}\n'
+              '📅 Event ID: ${result['eventId']}\n'
+              '👥 15 שחקנים רשומים ואישרו הגעה\n'
+              '📈 טווח דירוגים: 4.2 - 8.5';
+        });
+        SnackbarHelper.showSuccess(
+          context,
+          'נוצר Hub + 15 שחקנים + אירוע עם 3 קבוצות (Winner Stays)',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _statusMessage = '❌ שגיאה: $e';
+        });
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  /// Create complete team balance scenario: Hub + Event + 15 confirmed players
+  /// with current user as manager
+  Future<void> _createTeamBalanceScenario() async {
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'יוצר תרחיש איזון קבOצות...';
+    });
+
+    try {
+      final generator = DummyDataGenerator();
+      final result = await generator.createTeamBalanceScenario();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isGenerating = false;
+        _statusMessage = '''✅ תרחיש נוצר בהצלחה!
+        
+🏟️ האב: ${result['hubName']}
+📅 אירוע: ${result['eventTitle']}
+👥 15 שחקנים מאושרים (כולל אתה כמנהל)
+        
+מנווט לאירוע...''';
+      });
+
+      // Navigate to the hub
+      final hubId = result['hubId']!;
+
+      // Delay to show success message
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (!mounted) return;
+
+      // Navigate to hub
+      context.push('/hubs/$hubId');
+
+      SnackbarHelper.showSuccess(
+        context,
+        'תרחיש נוצר! לחץ על האירוע כדי ליצור קבוצות',
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isGenerating = false;
+        _statusMessage = 'שגיאה: ${e.toString()}';
+      });
+
+      SnackbarHelper.showError(context, 'שגיאה ביצירת תרחיש: ${e.toString()}');
+    }
+  }
+
+  Future<void> _cleanupLastTestScenario() async {
+    if (_lastTestHubId == null ||
+        _lastTestEventId == null ||
+        _lastTestPlayerIds == null) {
+      SnackbarHelper.showWarning(context, 'אין תרחיש בדיקה זמין למחיקה');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('מחיקת תרחיש בדיקה'),
+        content: Text(
+          'האם אתה בטוח שברצונך למחוק את תרחיש הבדיקה?\n\n'
+          '🏟️ Hub: $_lastTestHubId\n'
+          '📅 אירוע: $_lastTestEventId\n'
+          '👥 ${(_lastTestPlayerIds?.length ?? 0) - 1} שחקנים דמה',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('מחק'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isGenerating = true;
+      _statusMessage = 'מוחק תרחיש בדיקה...';
+    });
+
+    try {
+      final script = TeamBalancingTestScript();
+
+      // מחיקת השחקנים הדמה בלבד (לא המנהל הנוכחי)
+      final dummyPlayerIds =
+          _lastTestPlayerIds!.skip(1).toList(); // דילוג על המנהל
+
+      await script.cleanupTestScenario(
+        hubId: _lastTestHubId!,
+        eventId: _lastTestEventId!,
+        playerIds: dummyPlayerIds,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isGenerating = false;
+        _statusMessage = '✅ תרחיש הבדיקה נמחק בהצלחה!';
+        // איפוס ה-IDs
+        _lastTestHubId = null;
+        _lastTestEventId = null;
+        _lastTestPlayerIds = null;
+      });
+      SnackbarHelper.showSuccess(context, 'תרחיש הבדיקה נמחק');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isGenerating = false;
+        _statusMessage = '❌ שגיאה במחיקה: $e';
+      });
+      SnackbarHelper.showErrorFromException(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FuturisticScaffold(
@@ -400,6 +576,125 @@ class _GenerateDummyDataScreenState
                 icon: Icons.star,
                 onPressed: _isGenerating ? null : _generateComprehensiveData,
                 isLoading: _isGenerating,
+              ),
+              const SizedBox(height: 16),
+              // Team Balancing Test button (NEW - for testing team generation)
+              Card(
+                color: Colors.green.withValues(alpha: 0.1),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.balance, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text(
+                            'בדיקת איזון קבוצות ⚖️',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'יוצר Hub חדש + 15 שחקנים + אירוע עם 3 קבוצות (Winner Stays)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      GradientButton(
+                        label: 'צור תרחיש בדיקת איזון קבוצות',
+                        icon: Icons.sports_soccer,
+                        onPressed:
+                            _isGenerating ? null : _generateTeamBalancingTest,
+                        isLoading: _isGenerating,
+                        width: double.infinity,
+                        gradient: const LinearGradient(
+                          colors: [Colors.green, Colors.lightGreen],
+                        ),
+                      ),
+                      if (_lastTestHubId != null) ...[
+                        const SizedBox(height: 12),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline,
+                                size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'תרחיש אחרון נוצר: Hub $_lastTestHubId',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed:
+                              _isGenerating ? null : _cleanupLastTestScenario,
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('מחק תרחיש אחרון'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade100,
+                            foregroundColor: Colors.red.shade900,
+                            minimumSize: const Size(double.infinity, 42),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // NEW: Team Balance Scenario with current user
+              Card(
+                color: Colors.purple.withValues(alpha: 0.1),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.groups, color: Colors.purple),
+                          SizedBox(width: 8),
+                          Text(
+                            'תרחיש איזון קבוצות - אתה מנהל 👑',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'יוצר האב חדש + 15 שחקנים מאושרים + אירוע, כאשר אתה המנהל וגם אחד מהשחקנים',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      GradientButton(
+                        label: 'צור תרחיש איזון קבוצות',
+                        icon: Icons.auto_awesome,
+                        onPressed:
+                            _isGenerating ? null : _createTeamBalanceScenario,
+                        isLoading: _isGenerating,
+                        width: double.infinity,
+                        gradient: const LinearGradient(
+                          colors: [Colors.purple, Colors.deepPurple],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               // Generate real field hubs button

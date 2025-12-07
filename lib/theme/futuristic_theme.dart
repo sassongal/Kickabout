@@ -36,6 +36,9 @@ class FuturisticColors {
   static const error = Color(0xFFE53935); // Red
   static const info = Color(0xFF1976D2); // Blue
 
+  // Divider
+  static const divider = Color(0xFFEEEEEE); // Very light gray
+
   // Gradients
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,

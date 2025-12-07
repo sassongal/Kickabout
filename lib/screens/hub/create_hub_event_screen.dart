@@ -80,8 +80,15 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
         });
 
         // Pre-fill location with hub main venue if available
-        // Check both mainVenueId and primaryVenueId (fallback)
-        final venueIdToLoad = hub?.mainVenueId ?? hub?.primaryVenueId;
+        // Priority: mainVenueId > primaryVenueId > venueIds[0]
+        String? venueIdToLoad = hub?.mainVenueId ?? hub?.primaryVenueId;
+
+        // Fallback to first venue in venueIds if mainVenueId is null
+        if ((venueIdToLoad == null || venueIdToLoad.isEmpty) &&
+            hub != null &&
+            hub.venueIds.isNotEmpty) {
+          venueIdToLoad = hub.venueIds[0];
+        }
 
         if (venueIdToLoad != null &&
             venueIdToLoad.isNotEmpty &&
@@ -100,7 +107,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
               debugPrint('⚠️ Main venue not found: $venueIdToLoad');
               if (mounted) {
                 setState(() {
-                  _locationController.text = venueIdToLoad;
+                  _locationController.text = venueIdToLoad!;
                 });
               }
             }
@@ -108,7 +115,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
             debugPrint('❌ Error loading main venue: $e');
             if (mounted) {
               setState(() {
-                _locationController.text = venueIdToLoad;
+                _locationController.text = venueIdToLoad!;
               });
             }
           }
@@ -207,7 +214,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
             .future,
       );
 
-      if (!hubPermissionsAsync.canCreateEvents()) {
+      if (!hubPermissionsAsync.canCreateEvents) {
         // Get manager names
         final managers = await _getManagerNames();
         if (mounted) {
@@ -321,22 +328,31 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
       debugPrint('Failed to get creator name: $e');
     }
 
-    // Add managers from roles (max 2 more to total 3)
-    final managerIds = _hub!.roles.entries
-        .where((e) => e.value == 'manager' && e.key != _hub!.createdBy)
-        .take(2)
-        .map((e) => e.key)
-        .toList();
+    // Add managers from HubMember subcollection (max 2 more to total 3)
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final allMembers = await hubsRepo.getHubMembers(_hub!.hubId);
 
-    for (final managerId in managerIds) {
-      try {
-        final manager = await usersRepo.getUser(managerId);
-        if (manager != null) {
-          managers.add(manager.name);
+      // Filter for managers other than creator (max 2)
+      final otherManagers = allMembers
+          .where((m) =>
+              m.role == HubMemberRole.manager &&
+              m.userId != _hub!.createdBy &&
+              m.status == HubMemberStatus.active)
+          .take(2);
+
+      for (final member in otherManagers) {
+        try {
+          final manager = await usersRepo.getUser(member.userId);
+          if (manager != null) {
+            managers.add(manager.name);
+          }
+        } catch (e) {
+          debugPrint('Failed to get manager name: $e');
         }
-      } catch (e) {
-        debugPrint('Failed to get manager name: $e');
       }
+    } catch (e) {
+      debugPrint('Failed to fetch managers: $e');
     }
 
     return managers;

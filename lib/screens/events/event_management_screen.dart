@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/hub_events_repository.dart';
 import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/data/hubs_repository.dart';
 import 'package:kattrick/services/weather_service.dart';
-import 'package:kattrick/logic/team_maker.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:intl/intl.dart';
@@ -33,7 +31,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
   final _weatherService = WeatherService();
   WeatherData? _weatherData;
   bool _isLoadingWeather = false;
-  bool _isGeneratingTeams = false;
 
   @override
   void initState() {
@@ -73,8 +70,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     }
   }
 
-  Future<void> _generateTeams(
-      HubEvent event, List<User> players, Hub hub) async {
+  void _navigateToTeamGenerator(List<User> players) {
     if (players.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('נדרשים לפחות 6 שחקנים ליצירת קבוצות')),
@@ -82,55 +78,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
       return;
     }
 
-    setState(() => _isGeneratingTeams = true);
-
-    try {
-      // Convert users to PlayerForTeam with manager ratings
-      final playersForTeam = players.map((user) {
-        return PlayerForTeam.fromUser(
-          user,
-          hubId: widget.hubId,
-          managerRatings: hub.managerRatings,
-        );
-      }).toList();
-
-      // Generate balanced teams
-      final result = TeamMaker.createBalancedTeams(
-        playersForTeam,
-        teamCount: event.teamCount,
-        playersPerSide: null, // Auto-calculate
-      );
-
-      // Update event with generated teams
-      final eventsRepo = HubEventsRepository();
-      await eventsRepo.updateHubEvent(
-        widget.hubId,
-        widget.eventId,
-        {
-          'teams': result.teams.map((t) => t.toJson()).toList(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('קבוצות נוצרו בהצלחה! ציון איזון: ${result.balanceScore}'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה ביצירת קבוצות: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGeneratingTeams = false);
-      }
-    }
+    // Navigate to team generator config screen
+    context.go('/hubs/${widget.hubId}/events/${widget.eventId}/team-generator/config');
   }
 
   @override
@@ -422,9 +371,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (context, index) {
                   final player = players[index];
-                  final managerRating = hub?.managerRatings[player.uid];
-                  final displayRating =
-                      managerRating ?? player.currentRankScore;
+                  // Use system rating for display (managerRating would require async fetch)
+                  final displayRating = player.currentRankScore;
 
                   return ListTile(
                     leading: CircleAvatar(
@@ -443,17 +391,13 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         Icon(
                           Icons.star,
                           size: 16,
-                          color: managerRating != null
-                              ? Colors.orange
-                              : FuturisticColors.warning,
+                          color: FuturisticColors.warning,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           displayRating.toStringAsFixed(1),
                           style: FuturisticTypography.labelMedium.copyWith(
-                            color: managerRating != null
-                                ? Colors.orange
-                                : FuturisticColors.warning,
+                            color: FuturisticColors.warning,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -471,16 +415,9 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
   Widget _buildGenerateTeamsButton(
       HubEvent event, List<User> players, Hub hub) {
     return ElevatedButton.icon(
-      onPressed:
-          _isGeneratingTeams ? null : () => _generateTeams(event, players, hub),
-      icon: _isGeneratingTeams
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.group_work),
-      label: Text(_isGeneratingTeams ? 'מייצר קבוצות...' : 'יצירת כוחות'),
+      onPressed: () => _navigateToTeamGenerator(players),
+      icon: const Icon(Icons.group_work),
+      label: const Text('יצירת כוחות'),
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
         backgroundColor: FuturisticColors.primary,

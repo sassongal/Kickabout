@@ -6,6 +6,9 @@ export 'hub.dart';
 export 'hub_member.dart'; // NEW: First-class membership model
 export 'hub_event.dart';
 export 'game.dart';
+export 'game_session.dart';
+export 'game_denormalized_data.dart';
+export 'game_audit.dart';
 export 'game_signup.dart';
 export 'team.dart';
 export 'team_data.dart';
@@ -26,3 +29,6 @@ export 'enums/event_type.dart';
 export 'converters/timestamp_converter.dart';
 export 'converters/geopoint_converter.dart';
 export 'contact_message.dart';
+// Player and Stats
+export 'player.dart';
+export 'player_stats.dart';

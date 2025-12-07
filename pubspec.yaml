@@ -52,6 +52,8 @@ dependencies:
   google_maps_flutter: ^2.5.0
   # HTTP requests
   http: ^1.2.0
+  # Image processing (compression/resizing)
+  image: ^4.2.0
   # Freezed + JSON Serialization
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
@@ -76,6 +78,7 @@ dev_dependencies:
   freezed: ^2.5.7
   json_serializable: ^6.8.0
   riverpod_generator: ^2.6.2
+  flutter_native_splash: ^2.4.3
 
 flutter:
   uses-material-design: true
@@ -87,3 +90,11 @@ flutter:
     - assets/logo/
     - assets/images/
     - assets/icons/
+    - assets/splash.png
+
+flutter_native_splash:
+  color: "#0B0C10"
+  image: assets/splash.png
+  android_12:
+    color: "#0B0C10"
+    image: assets/splash.png

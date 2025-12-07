@@ -47,35 +47,42 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
   List<Team> _teams = [];
   bool _isLoading = false;
   bool _isSaving = false;
-  Hub? _hub; // Cache hub for manager ratings
+  final Map<String, double> _managerRatings = {}; // Cache manager ratings
 
   @override
   void initState() {
     super.initState();
-    _loadHub();
+    _loadManagerRatings();
     _loadTeams();
   }
 
-  Future<void> _loadHub() async {
+  Future<void> _loadManagerRatings() async {
     if (widget.hubId == null) return;
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(widget.hubId!);
+      // Fetch members to get manager ratings
+      final members =
+          await hubsRepo.getHubMembersByIds(widget.hubId!, widget.playerIds);
+
       if (mounted) {
         setState(() {
-          _hub = hub;
+          _managerRatings.clear();
+          for (final member in members) {
+            if (member.managerRating != null) {
+              _managerRatings[member.userId] = member.managerRating!;
+            }
+          }
         });
       }
     } catch (e) {
-      debugPrint('Failed to load hub: $e');
+      debugPrint('Failed to load manager ratings: $e');
     }
   }
 
   /// Get player rating (manager rating if available, otherwise currentRankScore)
   double _getPlayerRating(User user) {
-    if (_hub?.managerRatings != null &&
-        _hub!.managerRatings.containsKey(user.uid)) {
-      return _hub!.managerRatings[user.uid]!;
+    if (_managerRatings.containsKey(user.uid)) {
+      return _managerRatings[user.uid]!;
     }
     return user.currentRankScore; // Fallback
   }
@@ -98,19 +105,16 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
 
     try {
       final usersRepo = ref.read(usersRepositoryProvider);
-      final hubsRepo = ref.read(hubsRepositoryProvider);
 
-      // Load users and hub (for manager ratings)
+      // Load users
       final users = await usersRepo.getUsers(widget.playerIds);
-      final hub =
-          widget.hubId != null ? await hubsRepo.getHub(widget.hubId!) : null;
 
       // Use manager ratings if available
       final players = users
           .map((u) => PlayerForTeam.fromUser(
                 u,
                 hubId: widget.hubId,
-                managerRatings: hub?.managerRatings,
+                managerRatings: _managerRatings,
               ))
           .toList();
 

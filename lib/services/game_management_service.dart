@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/game_result.dart';
 import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
 
 import 'package:kattrick/data/games_repository.dart';
@@ -78,9 +79,9 @@ class GameManagementService {
 
       // Check capacity
       if (game.maxPlayers != null &&
-          game.confirmedPlayerCount >= game.maxPlayers!) {
+          game.denormalized.confirmedPlayerCount >= game.maxPlayers!) {
         throw Exception(
-            'Game is full (${game.confirmedPlayerCount}/${game.maxPlayers})');
+            'Game is full (${game.denormalized.confirmedPlayerCount}/${game.maxPlayers})');
       }
 
       // Approve player
@@ -90,12 +91,12 @@ class GameManagementService {
       });
 
       transaction.update(gameRef, {
-        'confirmedPlayerCount': FieldValue.increment(1),
+        'denormalized.confirmedPlayerCount': FieldValue.increment(1),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // Check if now full
-      final newCount = game.confirmedPlayerCount + 1;
+      final newCount = game.denormalized.confirmedPlayerCount + 1;
       if (game.maxPlayers != null && newCount >= game.maxPlayers!) {
         transaction.update(gameRef, {
           'status': GameStatus.fullyBooked.toFirestore(),
@@ -111,7 +112,7 @@ class GameManagementService {
       );
 
       transaction.update(gameRef, {
-        'auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
+        'audit.auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
       });
     }).then((_) async {
       // Send notification (outside transaction)
@@ -190,7 +191,7 @@ class GameManagementService {
 
       // Decrement count
       transaction.update(gameRef, {
-        'confirmedPlayerCount': FieldValue.increment(-1),
+        'denormalized.confirmedPlayerCount': FieldValue.increment(-1),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -210,7 +211,7 @@ class GameManagementService {
       );
 
       transaction.update(gameRef, {
-        'auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
+        'audit.auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
       });
     }).then((_) async {
       // Send notification (outside transaction)
@@ -246,6 +247,8 @@ class GameManagementService {
   /// Parameters:
   /// - gameId: The game to reschedule
   /// - newDate: The new game date
+  ///
+  /// FIXED: All signup reads now happen inside transaction to prevent race conditions
   Future<void> rescheduleGame({
     required String gameId,
     required DateTime newDate,
@@ -280,30 +283,47 @@ class GameManagementService {
     }
 
     // Date changed - need to reset signups
-    final signups = await _signupsRepo.getSignups(gameId);
-    final confirmedPlayerIds = signups
-        .where((s) => s.status == SignupStatus.confirmed)
-        .map((s) => s.playerId)
-        .toList();
+    // Get signup document references (not data) to use in transaction
+    final signupsSnapshot = await _firestore
+        .collection(FirestorePaths.gameSignups(gameId))
+        .get();
 
+    // Track confirmed players for notifications (populated inside transaction)
+    final List<String> confirmedPlayerIds = [];
+
+    // Use transaction for atomic updates
     return _firestore.runTransaction((transaction) async {
       final gameRef = _firestore.doc(FirestorePaths.game(gameId));
 
-      // Update game date
+      // CRITICAL: Read all signup documents INSIDE transaction
+      // This ensures we see the current state, preventing race conditions
+      for (final signupDoc in signupsSnapshot.docs) {
+        final signupData = await transaction.get(signupDoc.reference);
+
+        if (!signupData.exists) {
+          continue; // Signup was deleted, skip it
+        }
+
+        final data = signupData.data() as Map<String, dynamic>;
+        final status = data['status'] as String?;
+
+        // Only reset if currently confirmed
+        if (status == SignupStatus.confirmed.toFirestore()) {
+          confirmedPlayerIds.add(signupDoc.id);
+
+          // Reset to pending
+          transaction.update(signupDoc.reference, {
+            'status': SignupStatus.pending.toFirestore(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // Update game date (after all reads complete)
       transaction.update(gameRef, {
         'gameDate': Timestamp.fromDate(newDate),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-
-      // Reset all confirmed signups to pending
-      for (final playerId in confirmedPlayerIds) {
-        final signupRef =
-            _firestore.doc(FirestorePaths.gameSignup(gameId, playerId));
-        transaction.update(signupRef, {
-          'status': SignupStatus.pending.toFirestore(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
 
       // Add audit log entry
       final auditEntry = GameAuditEvent(
@@ -315,7 +335,7 @@ class GameManagementService {
       );
 
       transaction.update(gameRef, {
-        'auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
+        'audit.auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
       });
     }).then((_) async {
       // Notify all players (outside transaction)
@@ -405,17 +425,17 @@ class GameManagementService {
       // Store original data for audit
       final originalData = <String, dynamic>{
         'gameId': gameId,
-        'teamAScore': game.legacyTeamAScore,
-        'teamBScore': game.legacyTeamBScore,
-        'goalScorerIds': game.goalScorerIds,
-        'mvpPlayerId': game.mvpPlayerId,
+        'teamAScore': game.session.legacyTeamAScore,
+        'teamBScore': game.session.legacyTeamBScore,
+        'goalScorerIds': game.denormalized.goalScorerIds,
+        'mvpPlayerId': game.denormalized.mvpPlayerId,
         'rolledBackAt': FieldValue.serverTimestamp(),
         'rolledBackBy': currentUserId,
       };
 
       // Step 3: Determine winning team from original scores
-      final teamAScore = game.legacyTeamAScore ?? 0;
-      final teamBScore = game.legacyTeamBScore ?? 0;
+      final teamAScore = game.session.legacyTeamAScore ?? 0;
+      final teamBScore = game.session.legacyTeamBScore ?? 0;
       final winningTeamId = teamAScore > teamBScore
           ? (game.teams.isNotEmpty ? game.teams[0].teamId : 'teamA')
           : (teamAScore < teamBScore
@@ -426,7 +446,7 @@ class GameManagementService {
       // Note: The original finalizeGame stores goalScorerIds as a List, not a Map
       // We need to count occurrences for rollback
       final Map<String, int> goalScorerCounts = {};
-      for (final scorerId in game.goalScorerIds) {
+      for (final scorerId in game.denormalized.goalScorerIds) {
         goalScorerCounts[scorerId] = (goalScorerCounts[scorerId] ?? 0) + 1;
       }
 
@@ -525,6 +545,13 @@ class GameManagementService {
         // Step 7: Reset game status and remove scores
         transaction.update(gameRef, {
           'status': GameStatus.teamsFormed.toFirestore(),
+          'session.legacyTeamAScore': FieldValue.delete(),
+          'session.legacyTeamBScore': FieldValue.delete(),
+          'denormalized.goalScorerIds': FieldValue.delete(),
+          'denormalized.goalScorerNames': FieldValue.delete(),
+          'denormalized.mvpPlayerId': FieldValue.delete(),
+          'denormalized.mvpPlayerName': FieldValue.delete(),
+          // Legacy field cleanup
           'teamAScore': FieldValue.delete(),
           'teamBScore': FieldValue.delete(),
           'goalScorerIds': FieldValue.delete(),
@@ -578,15 +605,23 @@ class GameManagementService {
       debugPrint(
           '   Rolled back original result: ${originalData['teamAScore']} vs ${originalData['teamBScore']}');
 
+      // Step 1.5: Get game to retrieve playerIds
+      final game = await _gamesRepo.getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
       // Step 2: Apply the new result
-      await _gamesRepo.finalizeGame(
-        gameId: gameId,
+      final result = GameResult(
         teamAScore: newTeamAScore,
         teamBScore: newTeamBScore,
+        playerIds: game.denormalized.confirmedPlayerIds,
         goalScorerIds: newGoalScorerIds,
-        assistPlayerIds: newAssistPlayerIds,
+        assistPlayerIds: newAssistPlayerIds ?? {},
         mvpPlayerId: newMvpPlayerId,
       );
+
+      await _gamesRepo.finalizeGame(gameId, result);
 
       debugPrint('✅ Game result edited successfully: $gameId');
       debugPrint(

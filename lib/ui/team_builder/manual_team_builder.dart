@@ -40,6 +40,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   bool _isLoading = false;
   bool _isSaving = false;
   Hub? _hub; // Cache hub for manager ratings
+  Map<String, double> _managerRatings = {}; // Cache manager ratings
 
   // Team colors - predefined neon colors
   static const List<Map<String, dynamic>> _teamColors = [
@@ -70,9 +71,20 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       if (widget.game.hubId != null) {
         final hub = await hubsRepo.getHub(widget.game.hubId!);
+
+        // Load manager ratings from HubMember subcollection
+        final hubMembers = await hubsRepo.getHubMembers(widget.game.hubId!);
+        final ratings = <String, double>{};
+        for (final member in hubMembers) {
+          if (member.managerRating > 0) {
+            ratings[member.userId] = member.managerRating;
+          }
+        }
+
         if (mounted) {
           setState(() {
             _hub = hub;
+            _managerRatings = ratings;
           });
         }
       }
@@ -81,13 +93,10 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     }
   }
 
-  /// Get player rating (manager rating if available, otherwise currentRankScore)
+  /// Get player rating - uses manager rating if available, otherwise defaults to 4.0
   double _getPlayerRating(User user) {
-    if (_hub?.managerRatings != null &&
-        _hub!.managerRatings.containsKey(user.uid)) {
-      return _hub!.managerRatings[user.uid]!;
-    }
-    return user.currentRankScore; // Fallback
+    // Use manager rating as single source of truth
+    return _managerRatings[user.uid] ?? 4.0;
   }
 
   void _initializeTeams() {

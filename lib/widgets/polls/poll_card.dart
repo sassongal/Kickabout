@@ -30,7 +30,7 @@ class PollCard extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
     final user = userAsync.valueOrNull;
     final summary = PollSummary.fromPoll(poll, userId: user?.uid);
-    
+
     final hasEnded =
         poll.endsAt != null && poll.endsAt!.isBefore(DateTime.now());
     final isActive = poll.status == PollStatus.active && !hasEnded;
@@ -78,7 +78,8 @@ class PollCard extends ConsumerWidget {
                 children: [
                   Chip(
                     label: Text(_getPollTypeLabel(poll.type)),
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    backgroundColor:
+                        Theme.of(context).primaryColor.withOpacity(0.1),
                     labelStyle: TextStyle(
                       color: Theme.of(context).primaryColor,
                       fontSize: 12,
@@ -88,7 +89,8 @@ class PollCard extends ConsumerWidget {
                   if (summary.hasVoted)
                     const Chip(
                       label: Text('הצבעת'),
-                      avatar: Icon(Icons.check_circle, size: 16, color: Colors.white),
+                      avatar: Icon(Icons.check_circle,
+                          size: 16, color: Colors.white),
                       backgroundColor: Colors.green,
                       labelStyle: TextStyle(color: Colors.white, fontSize: 12),
                       visualDensity: VisualDensity.compact,
@@ -148,35 +150,51 @@ class PollCard extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.how_to_vote, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${poll.totalVotes} הצבעות',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (poll.endsAt != null)
-                    Row(
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.how_to_vote,
+                            size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 4),
-                        Text(
-                          hasEnded
-                              ? 'הסתיים'
-                              : 'עד ${poll.endsAt!.day}/${poll.endsAt!.month}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: hasEnded ? Colors.red : Colors.grey[600],
+                        Flexible(
+                          child: Text(
+                            '${poll.totalVotes} הצבעות',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  if (poll.endsAt != null) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.access_time,
+                              size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              hasEnded
+                                  ? 'הסתיים'
+                                  : 'עד ${poll.endsAt!.day}/${poll.endsAt!.month}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: hasEnded ? Colors.red : Colors.grey[600],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -186,4 +204,3 @@ class PollCard extends ConsumerWidget {
     );
   }
 }
-

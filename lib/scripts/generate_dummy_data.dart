@@ -931,8 +931,10 @@ class DummyDataGenerator {
           createdAt: gameDate.subtract(const Duration(days: 7)),
           updatedAt: gameDate,
           teams: teams,
-          legacyTeamAScore: teamAScore,
-          legacyTeamBScore: teamBScore,
+          session: GameSession(
+            legacyTeamAScore: teamAScore,
+            legacyTeamBScore: teamBScore,
+          ),
           region: hubRegion, // Copy region from hub
         );
 
@@ -1422,6 +1424,153 @@ class DummyDataGenerator {
     debugPrint('   - Deleted $usersDeleted users.');
 
     debugPrint('✅ Deleted a total of $totalDeleted dummy documents.');
+  }
+
+  /// Create a scenario for testing team balancing
+  /// Creates:
+  /// 1. A new Hub
+  /// 2. 14 dummy players (plus current user = 15)
+  /// 3. An upcoming event
+  /// 4. Registers all 15 players to the event
+  Future<Map<String, String>> createTeamBalanceScenario() async {
+    print('⚖️ Setting up Team Balance Scenario...');
+
+    // 1. Get Current User
+    final currentUser = auth.FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      throw Exception('Must be logged in to create scenario');
+    }
+
+    final batch = firestore.batch();
+    final hubId = firestore.collection('hubs').doc().id;
+    final eventId =
+        firestore.collection('hubs').doc(hubId).collection('events').doc().id;
+
+    // 2. Create Hub
+    final hubName = 'Team Balance Arena ${random.nextInt(100)}';
+    final location = _randomCoordinateNearHaifa();
+    debugPrint('Creating Hub: $hubName ($hubId)');
+
+    final hub = Hub(
+      hubId: hubId,
+      name: hubName,
+      description: 'Testing arena for team balancing algorithms',
+      createdBy: currentUser.uid,
+      memberCount: 15,
+      location: location,
+      geohash: GeohashUtils.encode(location.latitude, location.longitude),
+      createdAt: DateTime.now(),
+      settings: {'ratingMode': 'advanced'},
+    );
+
+    batch.set(firestore.doc(FirestorePaths.hub(hubId)), hub.toJson());
+
+    // 3. Create 14 Dummy Players with varied ratings/positions
+    final dummyIds = <String>[];
+
+    // Distribution for 15 players (including user):
+    // 2 Goalkeepers, 6 Defenders, 5 Midfielders, 2 Attackers
+    // Current user will be one of them
+
+    final positionsToCreate = [
+      'Goalkeeper',
+      'Goalkeeper',
+      'Defender',
+      'Defender',
+      'Defender',
+      'Defender',
+      'Defender',
+      'Defender',
+      'Midfielder',
+      'Midfielder',
+      'Midfielder',
+      'Midfielder',
+      'Midfielder',
+      'Forward',
+      'Forward'
+    ];
+
+    // Remove one meaningful position for the current user (assume Midfielder/Attacker)
+    positionsToCreate.removeLast();
+
+    for (int i = 0; i < 14; i++) {
+      final userId = firestore.collection('users').doc().id;
+      final position = positionsToCreate[i % positionsToCreate.length];
+
+      // Ratings between 4.0 and 9.0
+      final rating = 4.0 + random.nextDouble() * 5.0;
+
+      final user = User(
+        uid: userId,
+        name: 'Player ${i + 1} ($position)',
+        email: 'dummy${random.nextInt(10000)}@test.com',
+        preferredPosition: position,
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
+        currentRankScore: rating,
+        location: location,
+        geohash: GeohashUtils.encode(location.latitude, location.longitude),
+        createdAt: DateTime.now(),
+        // Important: Tag as dummy for cleanup
+        availabilityStatus: 'dummy',
+      );
+
+      batch.set(firestore.doc(FirestorePaths.user(userId)), user.toJson());
+      dummyIds.add(userId);
+
+      // Add as Hub Member
+      batch.set(
+        firestore.doc(FirestorePaths.hubMember(hubId, userId)),
+        {
+          'joinedAt': FieldValue.serverTimestamp(),
+          'role': 'member',
+          'userId': userId,
+          'managerRating': rating, // Set explicit manager rating for team maker
+          'status': 'active'
+        },
+      );
+    }
+
+    // Add current user as Hub Member (Manager)
+    batch.set(
+      firestore.doc(FirestorePaths.hubMember(hubId, currentUser.uid)),
+      {
+        'joinedAt': FieldValue.serverTimestamp(),
+        'role': 'manager',
+        'userId': currentUser.uid,
+        'managerRating': 7.5, // Default rating for manager
+        'status': 'active'
+      },
+    );
+
+    // 4. Create Event
+    final eventDate = DateTime.now().add(const Duration(days: 2));
+    final event = HubEvent(
+      eventId: eventId,
+      hubId: hubId,
+      createdBy: currentUser.uid,
+      title: 'Balancing Test Match',
+      eventDate: eventDate,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      maxParticipants: 15,
+      teamCount: 3, // 3 teams of 5
+      registeredPlayerIds: [currentUser.uid, ...dummyIds],
+      locationPoint: location,
+      status: 'upcoming',
+    );
+
+    batch.set(
+        firestore.doc(FirestorePaths.hubEvent(hubId, eventId)), event.toJson());
+
+    await batch.commit();
+
+    print('✅ Scenario Created!');
+    return {
+      'hubId': hubId,
+      'eventId': eventId,
+      'hubName': hubName,
+      'eventTitle': event.title,
+    };
   }
 
   /// Helper to delete a collection in batches to avoid memory issues.

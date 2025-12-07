@@ -35,7 +35,7 @@ class _ConfirmAttendanceScreenState
     try {
       final signupsRepo = ref.read(signupsRepositoryProvider);
       final currentUserId = ref.read(currentUserIdProvider);
-      
+
       if (currentUserId == null) return;
 
       final signup = await signupsRepo.getSignup(widget.gameId, currentUserId);
@@ -182,7 +182,7 @@ class _ConfirmAttendanceScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          game.hubName ?? 'משחק',
+                          game.denormalized.hubName ?? 'משחק',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 8),
@@ -193,13 +193,14 @@ class _ConfirmAttendanceScreenState
                             Text(gameDate),
                           ],
                         ),
-                        if (game.venueName != null) ...[
+                        if (game.denormalized.venueName != null) ...[
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               const Icon(Icons.location_on, size: 16),
                               const SizedBox(width: 8),
-                              Expanded(child: Text(game.venueName!)),
+                              Expanded(
+                                  child: Text(game.denormalized.venueName!)),
                             ],
                           ),
                         ],
@@ -306,4 +307,3 @@ class _ConfirmAttendanceScreenState
     );
   }
 }
-

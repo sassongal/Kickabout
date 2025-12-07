@@ -2,17 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
-import 'package:kattrick/logic/team_maker.dart';
 import 'package:kattrick/theme/futuristic_theme.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
 import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/dialogs/unrated_players_warning_dialog.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/widgets/team_card.dart';
+import 'package:kattrick/screens/game/team_maker_controller.dart';
+import 'package:kattrick/logic/team_maker.dart';
 
 /// Premium team maker screen with advanced UI
 class TeamMakerScreen extends ConsumerStatefulWidget {
@@ -55,15 +57,21 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
 
     final hubEventsRepo = ref.watch(hubEventsRepositoryProvider);
 
+    // Use a key to ensure this builder is identified
     return FuturisticScaffold(
       title: 'יוצר כוחות',
       body: FutureBuilder<HubEvent?>(
+        // Create a memoized future or rely on repo caching.
+        // We rely on the repo's internal caching for now.
         future: hubEventsRepo.getHubEvent(widget.hubId!, widget.gameId),
         builder: (context, eventSnapshot) {
-          if (eventSnapshot.connectionState == ConnectionState.waiting) {
+          // 1. Handle Loading (only if we have no data at all)
+          if (eventSnapshot.connectionState == ConnectionState.waiting &&
+              !eventSnapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // 2. Handle Error
           if (eventSnapshot.hasError) {
             return Center(
               child: Column(
@@ -77,9 +85,15 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
             );
           }
 
+          // 3. Handle Data (Success)
           final event = eventSnapshot.data;
           if (event == null) {
-            return Center(child: Text(l10n.eventNotFound));
+            // If connection is done but data is null
+            if (eventSnapshot.connectionState == ConnectionState.done) {
+              return Center(child: Text(l10n.eventNotFound));
+            }
+            // Should verify if we are just waiting with no data
+            return const Center(child: CircularProgressIndicator());
           }
 
           // Check admin permissions
@@ -167,11 +181,13 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
               }
 
               return PremiumTeamBuilder(
-                playerIds: registeredPlayerIds,
-                teamCount: event.teamCount,
-                hubId: widget.hubId!,
-                isEvent: true,
-                eventId: widget.gameId,
+                args: TeamMakerArgs(
+                  hubId: widget.hubId!,
+                  playerIds: registeredPlayerIds,
+                  teamCount: event.teamCount,
+                  isEvent: true,
+                  eventId: widget.gameId,
+                ),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -203,21 +219,11 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
 
 /// Premium team builder with advanced UI
 class PremiumTeamBuilder extends ConsumerStatefulWidget {
-  final List<String> playerIds;
-  final int teamCount;
-  final String hubId;
-  final bool isEvent;
-  final String? eventId;
-  final String? gameId;
+  final TeamMakerArgs args;
 
   const PremiumTeamBuilder({
     super.key,
-    required this.playerIds,
-    required this.teamCount,
-    required this.hubId,
-    required this.isEvent,
-    this.eventId,
-    this.gameId,
+    required this.args,
   });
 
   @override
@@ -225,136 +231,79 @@ class PremiumTeamBuilder extends ConsumerStatefulWidget {
 }
 
 class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
-  List<PlayerForTeam> _players = [];
-  List<Team> _teams = [];
-  Map<String, User> _userMap = {};
-  double _balanceScore = 0.0;
-  bool _isLoading = true;
-  bool _isGenerating = false;
-  bool _isSaving = false;
-  bool _hasGenerated = false;
-
   @override
   void initState() {
     super.initState();
-    _loadPlayers();
-  }
-
-  Future<void> _loadPlayers() async {
-    setState(() => _isLoading = true);
-    try {
-      final usersRepo = ref.read(usersRepositoryProvider);
-      final hub = await ref.read(hubsRepositoryProvider).getHub(widget.hubId);
-      final managerRatings = hub?.managerRatings ?? {};
-
-      final users = await usersRepo.getUsers(widget.playerIds);
-
-      _userMap = {for (var user in users) user.uid: user};
-      _players = users
-          .map((user) => PlayerForTeam.fromUser(user,
-              hubId: widget.hubId, managerRatings: managerRatings))
-          .toList();
-
-      setState(() => _isLoading = false);
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        SnackbarHelper.showErrorFromException(context, e);
-      }
-    }
   }
 
   void _generateTeams() async {
-    setState(() => _isGenerating = true);
+    final controller =
+        ref.read(teamMakerControllerProvider(widget.args).notifier);
 
-    await Future.delayed(const Duration(milliseconds: 500)); // For UX
+    // Check for unrated players before generating
+    final unratedPlayers = await controller.checkUnratedPlayers();
 
-    final result = TeamMaker.createBalancedTeams(
-      _players,
-      teamCount: widget.teamCount,
-    );
+    // Show warning if there are unrated players
+    if (unratedPlayers.isNotEmpty && mounted) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => UnratedPlayersWarningDialog(
+          unratedPlayers: unratedPlayers,
+          onContinue: () => Navigator.of(context).pop(true),
+          onRateNow: () => Navigator.of(context).pop(false),
+        ),
+      );
 
-    if (mounted) {
-      setState(() {
-        _teams = result.teams;
-        _balanceScore = result.balanceScore;
-        _hasGenerated = true;
-        _isGenerating = false;
-      });
+      if (shouldContinue != true) {
+        // User chose to rate now, assume we should refresh?
+        // For now just return, user can go to rate and come back.
+        // Actually the dialog handling in old code just returned.
+        return;
+      }
     }
-  }
 
-  void _movePlayer(String playerId, int fromTeamIndex, int toTeamIndex) {
-    if (fromTeamIndex == toTeamIndex) return;
-
-    final player = _players.firstWhere((p) => p.uid == playerId);
-
-    setState(() {
-      final fromTeam = _teams[fromTeamIndex];
-      final toTeam = _teams[toTeamIndex];
-
-      final newFromPlayerIds = List<String>.from(fromTeam.playerIds)
-        ..remove(playerId);
-      final newFromScore = fromTeam.totalScore - player.rating;
-
-      final newToPlayerIds = List<String>.from(toTeam.playerIds)..add(playerId);
-      final newToScore = toTeam.totalScore + player.rating;
-
-      _teams[fromTeamIndex] = fromTeam.copyWith(
-        playerIds: newFromPlayerIds,
-        totalScore: newFromScore,
-      );
-      _teams[toTeamIndex] = toTeam.copyWith(
-        playerIds: newToPlayerIds,
-        totalScore: newToScore,
-      );
-
-      final metrics = TeamMaker.calculateBalanceMetrics(_teams);
-      _balanceScore = (1.0 - (metrics.stddev / 5.0)).clamp(0.0, 1.0) * 100;
-    });
+    controller.generateTeams();
   }
 
   Future<void> _saveTeams() async {
-    setState(() => _isSaving = true);
+    final controller =
+        ref.read(teamMakerControllerProvider(widget.args).notifier);
+    final success = await controller.saveTeams();
 
-    try {
-      if (widget.isEvent && widget.eventId != null) {
-        final eventsRepo = ref.read(hubEventsRepositoryProvider);
-        await eventsRepo.updateHubEvent(
-          widget.hubId,
-          widget.eventId!,
-          {
-            'teams': _teams.map((t) => t.toJson()).toList(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          },
-        );
-      }
-
-      if (mounted) {
-        SnackbarHelper.showSuccess(context, 'הכוחות נשמרו בהצלחה! 🎉');
-        context.pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
+    if (success && mounted) {
+      SnackbarHelper.showSuccess(context, 'הכוחות נשמרו בהצלחה! 🎉');
+      context.pop();
+    } else if (mounted) {
+      final state = ref.read(teamMakerControllerProvider(widget.args));
+      if (state.errorMessage != null) {
+        SnackbarHelper.showError(context, state.errorMessage!);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    final state = ref.watch(teamMakerControllerProvider(widget.args));
+    final controller =
+        ref.read(teamMakerControllerProvider(widget.args).notifier);
+
+    // Error handling listener
+    ref.listen(teamMakerControllerProvider(widget.args), (previous, next) {
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage) {
+        SnackbarHelper.showError(context, next.errorMessage!);
+      }
+    });
+
+    if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return Column(
       children: [
         // Balance Score Card (only show after generation)
-        if (_hasGenerated) ...[
+        if (state.hasGenerated) ...[
           Padding(
             padding: const EdgeInsets.all(16),
             child: FuturisticCard(
@@ -378,10 +327,10 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _balanceScore.toStringAsFixed(1),
+                          state.balanceScore.toStringAsFixed(1),
                           style: FuturisticTypography.heading1.copyWith(
                             fontSize: 56,
-                            color: _getBalanceColor(_balanceScore),
+                            color: _getBalanceColor(state.balanceScore),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -397,19 +346,19 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
-                        value: _balanceScore / 100,
+                        value: state.balanceScore / 100,
                         minHeight: 12,
                         backgroundColor: FuturisticColors.surfaceVariant,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          _getBalanceColor(_balanceScore),
+                          _getBalanceColor(state.balanceScore),
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _getBalanceMessage(_balanceScore),
+                      _getBalanceMessage(state.balanceScore),
                       style: FuturisticTypography.bodyMedium.copyWith(
-                        color: _getBalanceColor(_balanceScore),
+                        color: _getBalanceColor(state.balanceScore),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -422,7 +371,9 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
 
         // Teams or Generate Button
         Expanded(
-          child: _hasGenerated ? _buildTeamsView() : _buildGenerateView(),
+          child: state.hasGenerated
+              ? _buildTeamsView(state, controller)
+              : _buildGenerateView(state),
         ),
 
         // Bottom Actions
@@ -440,10 +391,10 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
           ),
           child: Row(
             children: [
-              if (_hasGenerated) ...[
+              if (state.hasGenerated) ...[
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _isGenerating ? null : _generateTeams,
+                    onPressed: state.isGenerating ? null : _generateTeams,
                     icon: const Icon(Icons.refresh),
                     label: const Text('צור כוחות מחדש'),
                     style: OutlinedButton.styleFrom(
@@ -456,10 +407,10 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
-                  onPressed: _hasGenerated && !_isSaving
+                  onPressed: state.hasGenerated && !state.isSaving
                       ? _saveTeams
-                      : (_isGenerating ? null : _generateTeams),
-                  icon: _isSaving || _isGenerating
+                      : (state.isGenerating ? null : _generateTeams),
+                  icon: state.isSaving || state.isGenerating
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -469,12 +420,13 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                                 AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Icon(_hasGenerated ? Icons.save : Icons.auto_awesome),
-                  label: Text(_isSaving
+                      : Icon(
+                          state.hasGenerated ? Icons.save : Icons.auto_awesome),
+                  label: Text(state.isSaving
                       ? 'שומר...'
-                      : _isGenerating
+                      : state.isGenerating
                           ? 'מייצר...'
-                          : _hasGenerated
+                          : state.hasGenerated
                               ? 'שמור כוחות'
                               : 'צור כוחות'),
                   style: ElevatedButton.styleFrom(
@@ -491,7 +443,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
     );
   }
 
-  Widget _buildGenerateView() {
+  Widget _buildGenerateView(TeamMakerState state) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -512,12 +464,12 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
             ),
             const SizedBox(height: 32),
             Text(
-              '${_players.length} שחקנים רשומים',
+              '${state.players.length} שחקנים רשומים',
               style: FuturisticTypography.heading1,
             ),
             const SizedBox(height: 8),
             Text(
-              '${widget.teamCount} קבוצות',
+              '${widget.args.teamCount} קבוצות',
               style: FuturisticTypography.heading3.copyWith(
                 color: FuturisticColors.textSecondary,
               ),
@@ -534,231 +486,41 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
     );
   }
 
-  Widget _buildTeamsView() {
+  Widget _buildTeamsView(TeamMakerState state, TeamMakerController controller) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _teams.length,
-      itemBuilder: (context, index) => _buildTeamCard(index),
+      itemCount: state.teams.length,
+      itemBuilder: (context, index) {
+        return TeamCard(
+          team: state.teams[index],
+          teamIndex: index,
+          userMap: state.userMap,
+          players: state.players,
+          onPlayerDropped: (playerId, toTeamIndex) {
+            // Find current team of player
+            int fromTeamIndex = -1;
+            for (int i = 0; i < state.teams.length; i++) {
+              if (state.teams[i].playerIds.contains(playerId)) {
+                fromTeamIndex = i;
+                break;
+              }
+            }
+            if (fromTeamIndex != -1) {
+              controller.movePlayer(playerId, fromTeamIndex, toTeamIndex);
+            }
+          },
+          onPlayerTap: (user, player, teamIndex) {
+            _showPlayerDialog(user, player, teamIndex, state, controller);
+          },
+        );
+      },
     );
   }
 
-  Widget _buildTeamCard(int teamIndex) {
-    final team = _teams[teamIndex];
-    final teamColor = team.colorValue != null
-        ? Color(team.colorValue!)
-        : FuturisticColors.primary;
-    final avgRating =
-        team.playerIds.isEmpty ? 0.0 : team.totalScore / team.playerIds.length;
+// Methods removed: _buildTeamCard, _buildPlayerCard
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: FuturisticCard(
-        child: Column(
-          children: [
-            // Team Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    teamColor,
-                    teamColor.withOpacity(0.7),
-                  ],
-                ),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: Center(
-                          child: Text(
-                            team.name[0],
-                            style: TextStyle(
-                              color: teamColor,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        team.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${team.playerIds.length} שחקנים',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        avgRating.toStringAsFixed(2),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Players
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: team.playerIds.map((playerId) {
-                  final user = _userMap[playerId];
-                  final player = _players.firstWhere((p) => p.uid == playerId);
-
-                  if (user == null) return const SizedBox.shrink();
-
-                  return _buildPlayerCard(user, player, teamIndex);
-                }).toList(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlayerCard(User user, PlayerForTeam player, int teamIndex) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () => _showPlayerDialog(user, player, teamIndex),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: FuturisticColors.background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: FuturisticColors.surfaceVariant),
-          ),
-          child: Row(
-            children: [
-              PlayerAvatar(
-                user: user,
-                size: AvatarSize.md,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            user.displayName ?? user.name,
-                            style: FuturisticTypography.bodyLarge.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        // Social media icons (if enabled and links exist)
-                        if (user.showSocialLinks) ...[
-                          if (user.facebookProfileUrl != null &&
-                              user.facebookProfileUrl!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: Icon(
-                                Icons.facebook,
-                                size: 14,
-                                color: const Color(0xFF1877F2),
-                              ),
-                            ),
-                          if (user.instagramProfileUrl != null &&
-                              user.instagramProfileUrl!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: Icon(
-                                Icons.camera_alt,
-                                size: 14,
-                                color: const Color(0xFFE4405F),
-                              ),
-                            ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(
-                          _getRoleIcon(player.role),
-                          size: 14,
-                          color: FuturisticColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _getRoleDisplayName(player.role),
-                          style: FuturisticTypography.bodySmall.copyWith(
-                            color: FuturisticColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      FuturisticColors.primary,
-                      FuturisticColors.accent,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  player.rating.toStringAsFixed(1),
-                  style: FuturisticTypography.bodyLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.drag_indicator,
-                color: FuturisticColors.textSecondary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showPlayerDialog(
-      User user, PlayerForTeam player, int currentTeamIndex) {
+  void _showPlayerDialog(User user, PlayerForTeam player, int currentTeamIndex,
+      TeamMakerState state, TeamMakerController controller) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -787,7 +549,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
               style: FuturisticTypography.heading3.copyWith(fontSize: 16),
             ),
             const SizedBox(height: 12),
-            ..._teams.asMap().entries.map((entry) {
+            ...state.teams.asMap().entries.map((entry) {
               final teamIndex = entry.key;
               final team = entry.value;
               final isCurrent = teamIndex == currentTeamIndex;
@@ -798,7 +560,8 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                   onTap: isCurrent
                       ? null
                       : () {
-                          _movePlayer(player.uid, currentTeamIndex, teamIndex);
+                          controller.movePlayer(
+                              player.uid, currentTeamIndex, teamIndex);
                           Navigator.pop(context);
                         },
                   child: Container(
@@ -881,15 +644,6 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
         ],
       ),
     );
-  }
-
-  IconData _getRoleIcon(PlayerRole role) {
-    return switch (role) {
-      PlayerRole.goalkeeper => Icons.sports_soccer,
-      PlayerRole.defender => Icons.shield,
-      PlayerRole.midfielder => Icons.sports,
-      PlayerRole.attacker => Icons.flash_on,
-    };
   }
 
   String _getRoleDisplayName(PlayerRole role) {

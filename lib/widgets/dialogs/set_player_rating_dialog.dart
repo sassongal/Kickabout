@@ -30,8 +30,8 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
   @override
   void initState() {
     super.initState();
-    // Initialize with current rating or 5.0 default
-    _sliderValue = widget.currentRating ?? 5.0;
+    // Initialize with current rating or 4.0 default (middle of 1-7 scale)
+    _sliderValue = widget.currentRating ?? 4.0;
     _ratingController.text = _sliderValue.toStringAsFixed(1);
   }
 
@@ -43,7 +43,7 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
 
   void _updateSlider(String value) {
     final parsed = double.tryParse(value);
-    if (parsed != null && parsed >= 1.0 && parsed <= 10.0) {
+    if (parsed != null && parsed >= 1.0 && parsed <= 7.0) {
       setState(() {
         _sliderValue = parsed;
       });
@@ -79,6 +79,60 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Widget _buildRatingGuideRow(
+      String range, String level, String description, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.only(top: 6),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    range,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    level,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -138,14 +192,14 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text('10.0', style: theme.textTheme.bodySmall),
+                      Text('7.0', style: theme.textTheme.bodySmall),
                     ],
                   ),
                   Slider(
                     value: _sliderValue,
                     min: 1.0,
-                    max: 10.0,
-                    divisions: 90, // 0.1 increments
+                    max: 7.0,
+                    divisions: 12, // 0.5 increments (6 steps × 2 = 12 divisions)
                     onChanged: _isLoading
                         ? null
                         : (value) {
@@ -170,7 +224,7 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
                 ],
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  labelText: 'דירוג (1.0 - 10.0)',
+                  labelText: 'דירוג (1.0 - 7.0)',
                   prefixIcon: Icon(Icons.edit),
                 ),
                 validator: (value) {
@@ -181,8 +235,13 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
                   if (rating == null) {
                     return 'נא להזין מספר תקין';
                   }
-                  if (rating < 1.0 || rating > 10.0) {
-                    return 'דירוג חייב להיות בין 1.0 ל-10.0';
+                  if (rating < 1.0 || rating > 7.0) {
+                    return 'דירוג חייב להיות בין 1.0 ל-7.0';
+                  }
+                  // Validate 0.5 increments
+                  final remainder = (rating * 2) % 1;
+                  if (remainder != 0.0) {
+                    return 'דירוג חייב להיות במדרגות של 0.5 (למשל: 3.5, 4.0, 5.5)';
                   }
                   return null;
                 },
@@ -190,26 +249,79 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
               ),
               const SizedBox(height: 24),
 
-              // Info text
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline,
-                        size: 20, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'דירוג זה ישמש ליצירת קבוצות מאוזנות במשחקים של ההאב',
-                        style: theme.textTheme.bodySmall,
-                      ),
+              // Info text with rating guide
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 20, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'דירוג זה ישמש ליצירת קבוצות מאוזנות במשחקים של ההאב',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Rating scale guide
+                  ExpansionTile(
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+                    title: Row(
+                      children: [
+                        const Icon(Icons.help_outline, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'מדריך לסקלת הדירוג',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildRatingGuideRow('1.0 - 2.5', 'מתחיל',
+                                'שחקן חדש או עם ניסיון מועט', Colors.red),
+                            const SizedBox(height: 8),
+                            _buildRatingGuideRow('3.0 - 5.0', 'בינוני',
+                                'שחקן עם יכולות סבירות, משחק באופן קבוע', Colors.orange),
+                            const SizedBox(height: 8),
+                            _buildRatingGuideRow('5.5 - 7.0', 'מתקדם',
+                                'שחקן מנוסה עם יכולות גבוהות', Colors.green),
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            const SizedBox(height: 8),
+                            Text(
+                              'טיפ: השתמש בחצאי נקודות (0.5) כדי לדייק את הדירוג',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 

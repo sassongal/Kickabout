@@ -154,7 +154,7 @@ class _CreateRecruitingPostScreenState
             .future,
       );
 
-      if (!hubPermissionsAsync.canCreatePosts()) {
+      if (!hubPermissionsAsync.canCreatePosts) {
         if (mounted) {
           SnackbarHelper.showError(context, 'אין לך הרשאה לפרסם');
         }

@@ -188,14 +188,10 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
       // Priority 2: Sort by selected criterion
       switch (_sortBy) {
         case 'rating':
-          // Only managers can see and use manager ratings for sorting
-          // Non-managers always use global rating
-          final aRating = isHubManager
-              ? (a.managerRating ?? a.user.currentRankScore)
-              : a.user.currentRankScore;
-          final bRating = isHubManager
-              ? (b.managerRating ?? b.user.currentRankScore)
-              : b.user.currentRankScore;
+          // Use manager ratings as single source of truth for hub
+          // Default to 4.0 (middle of 1-7 scale) if not rated yet
+          final aRating = a.managerRating ?? 4.0;
+          final bRating = b.managerRating ?? 4.0;
           return bRating.compareTo(aRating);
         case 'name':
           return a.user.name.compareTo(b.user.name);

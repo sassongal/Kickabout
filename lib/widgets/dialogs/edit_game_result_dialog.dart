@@ -46,18 +46,21 @@ class _EditGameResultDialogState extends State<EditGameResultDialog> {
 
     // Initialize with current values
     _teamAScoreController = TextEditingController(
-      text: (widget.game.legacyTeamAScore ?? 0).toString(),
+      text: (widget.game.session.legacyTeamAScore ?? 0).toString(),
     );
     _teamBScoreController = TextEditingController(
-      text: (widget.game.legacyTeamBScore ?? 0).toString(),
+      text: (widget.game.session.legacyTeamBScore ?? 0).toString(),
     );
 
     // Initialize goal scorers from game data
-    for (final scorerId in widget.game.goalScorerIds) {
-      _goalScorers[scorerId] = (_goalScorers[scorerId] ?? 0) + 1;
+    if (widget.game.denormalized.goalScorerIds.isNotEmpty) {
+      for (final scorerId in widget.game.denormalized.goalScorerIds) {
+        _goalScorers[scorerId] = (_goalScorers[scorerId] ?? 0) + 1;
+      }
     }
-
-    _mvpPlayerId = widget.game.mvpPlayerId;
+    if (widget.game.denormalized.mvpPlayerId != null) {
+      _mvpPlayerId = widget.game.denormalized.mvpPlayerId;
+    }
   }
 
   @override

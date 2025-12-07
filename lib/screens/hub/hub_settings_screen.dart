@@ -11,6 +11,8 @@ import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/screens/hub/hub_invitations_screen.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:kattrick/services/storage_service.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
@@ -26,6 +28,50 @@ class HubSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
+  bool _isUploadingHero = false;
+
+  Future<void> _uploadHeroImage(Hub hub) async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 2000,
+        maxHeight: 2000,
+        imageQuality: 90,
+      );
+      if (image == null) return;
+
+      final sizeBytes = await image.length();
+      if (sizeBytes > 10 * 1024 * 1024) {
+        if (mounted) {
+          SnackbarHelper.showError(
+              context, 'הקובץ גדול מדי (מעל 10MB). בחר תמונה קלה יותר.');
+        }
+        return;
+      }
+
+      setState(() => _isUploadingHero = true);
+      final storage = StorageService();
+      await storage.deleteHubHeroPhoto(hub.hubId); // clean previous
+      final url = await storage.uploadHubHeroPhoto(hub.hubId, image);
+
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      await hubsRepo.updateHub(hub.hubId, {'profileImageUrl': url});
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'תמונת ה-Hub עודכנה בהצלחה');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בהעלאת תמונת ה-Hub: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingHero = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -99,51 +145,63 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Rating Mode
                   Card(
-                    child: ExpansionTile(
-                      title: Text(l10n.ratingMode),
-                      subtitle: Text(
-                        settings['ratingMode'] == 'advanced'
-                            ? l10n.advancedRating
-                            : l10n.basicRating,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('תמונת Hero של ההאב',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
+                              if (_isUploadingHero)
+                                const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: AspectRatio(
+                              aspectRatio: 16 / 9,
+                              child: hub.profileImageUrl != null &&
+                                      hub.profileImageUrl!.isNotEmpty
+                                  ? Image.network(
+                                      hub.profileImageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(
+                                            Icons.image_not_supported),
+                                      ),
+                                    )
+                                  : Container(
+                                      color: Colors.grey[200],
+                                      child: const Center(
+                                        child: Icon(Icons.photo, size: 48),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: _isUploadingHero
+                                ? null
+                                : () => _uploadHeroImage(hub),
+                            icon: const Icon(Icons.upload),
+                            label: const Text('העלה תמונה'),
+                          ),
+                        ],
                       ),
-                      children: [
-                        ListTile(
-                          title: Text(l10n.basicRating),
-                          subtitle: Text(l10n.basicRatingDescription),
-                          leading: Radio<String>(
-                            value: 'basic',
-                            // ignore: deprecated_member_use
-                            groupValue:
-                                settings['ratingMode'] as String? ?? 'basic',
-                            // ignore: deprecated_member_use
-                            onChanged: (value) {
-                              if (value != null) {
-                                _updateSetting('ratingMode', value);
-                              }
-                            },
-                          ),
-                          onTap: () => _updateSetting('ratingMode', 'basic'),
-                        ),
-                        ListTile(
-                          title: Text(l10n.advancedRating),
-                          subtitle: Text(l10n.advancedRatingDescription),
-                          leading: Radio<String>(
-                            value: 'advanced',
-                            // ignore: deprecated_member_use
-                            groupValue:
-                                settings['ratingMode'] as String? ?? 'basic',
-                            // ignore: deprecated_member_use
-                            onChanged: (value) {
-                              if (value != null) {
-                                _updateSetting('ratingMode', value);
-                              }
-                            },
-                          ),
-                          onTap: () => _updateSetting('ratingMode', 'advanced'),
-                        ),
-                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -246,15 +304,30 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Allow Join Requests
+                  // Allow Join Requests and Allow Moderators to Create Games
                   Card(
-                    child: SwitchListTile(
-                      title: const Text('אפשר בקשות הצטרפות'),
-                      subtitle: const Text(
-                          'אם כבוי, לא ניתן לשלוח בקשות הצטרפות להאב'),
-                      value: settings['allowJoinRequests'] as bool? ?? true,
-                      onChanged: (value) =>
-                          _updateSetting('allowJoinRequests', value),
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          title: const Text('אפשר בקשות הצטרפות'),
+                          subtitle: const Text(
+                              'אם כבוי, לא ניתן לשלוח בקשות הצטרפות להאב'),
+                          value: settings['allowJoinRequests'] as bool? ?? true,
+                          onChanged: (value) =>
+                              _updateSetting('allowJoinRequests', value),
+                        ),
+                        const Divider(),
+                        SwitchListTile(
+                          title: const Text('מנחים יכולים לפתוח משחקים'),
+                          subtitle: const Text(
+                              'אפשר למנחים ליצור משחקים מאירועים (ברירת מחדל: מנהל בלבד)'),
+                          value: settings['allowModeratorsToCreateGames']
+                                  as bool? ??
+                              false,
+                          onChanged: (value) => _updateSetting(
+                              'allowModeratorsToCreateGames', value),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -383,6 +456,32 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                               HubInvitationsScreen(hubId: widget.hubId),
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Custom Permissions Management
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.admin_panel_settings, color: Colors.blue),
+                      title: const Text('הרשאות מותאמות אישית'),
+                      subtitle: const Text(
+                        'ניהול הרשאות ספציפיות לשחקנים בודדים',
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () => context.push('/hubs/${widget.hubId}/custom-permissions'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Hub Insights Dashboard
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.analytics, color: Colors.purple),
+                      title: const Text('ניתוח נתונים ותובנות'),
+                      subtitle: const Text(
+                        'סטטיסטיקות מתקדמות ומעקב אחר ביצועי ההאב',
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () => context.push('/hubs/${widget.hubId}/insights'),
                     ),
                   ),
                   const SizedBox(height: 24),

@@ -140,22 +140,33 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     }
   }
 
-  /// Load default venue from hub's mainVenueId
+  /// Load default venue from hub's mainVenueId (or first venue from venueIds)
   Future<void> _loadDefaultVenue(String hubId) async {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(hubId);
 
-      if (hub?.mainVenueId != null && hub!.mainVenueId!.isNotEmpty) {
-        // Load the main venue
+      // Priority: mainVenueId > primaryVenueId > venueIds[0]
+      String? venueIdToLoad = hub?.mainVenueId ?? hub?.primaryVenueId;
+
+      // Fallback to first venue in venueIds if mainVenueId is null
+      if ((venueIdToLoad == null || venueIdToLoad.isEmpty) &&
+          hub != null &&
+          hub.venueIds.isNotEmpty) {
+        venueIdToLoad = hub.venueIds[0];
+      }
+
+      if (venueIdToLoad != null && venueIdToLoad.isNotEmpty) {
+        // Load the venue
         final venuesRepo = ref.read(venuesRepositoryProvider);
-        final venue = await venuesRepo.getVenue(hub.mainVenueId!);
+        final venue = await venuesRepo.getVenue(venueIdToLoad);
 
         if (venue != null && mounted) {
           setState(() {
             _selectedLocation = venue.location;
             _locationAddress = venue.address ?? venue.name;
             _locationController.text = venue.name;
+            _selectedVenueId = venue.venueId; // Store venueId for saving
           });
         }
       }

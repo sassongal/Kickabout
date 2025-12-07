@@ -19,6 +19,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kattrick/widgets/dialogs/location_search_dialog.dart';
+import 'package:kattrick/widgets/stopwatch_countdown_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -686,8 +687,8 @@ class _HomeScreenFuturisticFigmaState
           tooltip: 'הודעות',
           color: FuturisticColors.textSecondary,
         ),
-        // Location toggle
-        _LocationToggleButton(),
+        // Stopwatch/Countdown Timer
+        const StopwatchCountdownWidget(),
         // Discover icon
         IconButton(
           icon: const Icon(Icons.explore_outlined),

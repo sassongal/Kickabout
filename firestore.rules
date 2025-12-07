@@ -155,14 +155,30 @@ service cloud.firestore {
     // ============================================
     // Schema Validation Functions
     // ============================================
+
+    /// Validates player rating is on 1.0-7.0 scale with 0.5 increments
+    /// Examples: 1.0, 1.5, 2.0, ..., 6.5, 7.0 (valid)
+    ///           0.5, 7.5, 3.3, 4.7 (invalid)
+    function isValidRating(rating) {
+      return rating is number &&
+             rating >= 1.0 &&
+             rating <= 7.0 &&
+             (rating * 2) % 1 == 0;  // Must be 0.5 increments
+    }
+
+    /// Validates game score is a non-negative integer (max 99)
+    function isValidScore(score) {
+      return score is int && score >= 0 && score <= 99;
+    }
+
     function isValidGame(game) {
       return game.keys().hasAll(['createdBy', 'hubId', 'gameDate']) &&
         game.createdBy is string &&
         game.hubId is string &&
         game.gameDate is timestamp &&
         (!('teamCount' in game) || (game.teamCount is int && game.teamCount >= 2 && game.teamCount <= 6)) &&
-        (!('teamAScore' in game) || (game.teamAScore is int && game.teamAScore >= 0)) &&
-        (!('teamBScore' in game) || (game.teamBScore is int && game.teamBScore >= 0)) &&
+        (!('teamAScore' in game) || isValidScore(game.teamAScore)) &&
+        (!('teamBScore' in game) || isValidScore(game.teamBScore)) &&
         (!('aggregateWins' in game) || (game.aggregateWins is map)) &&
         (!('matches' in game) || (game.matches is list));
     }
@@ -274,9 +290,11 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow create: if (isAuthenticated() && isOwner(userId) &&
           request.resource.data.keys().hasAll(['joinedAt', 'role']) &&
-          request.resource.data.role in ['member', 'admin', 'manager']) || isSuperAdmin();
+          request.resource.data.role in ['member', 'admin', 'manager'] &&
+          (!('managerRating' in request.resource.data) || isValidRating(request.resource.data.managerRating))) || isSuperAdmin();
         allow update: if (isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId)) &&
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.memberCount < 50) || isSuperAdmin();
+          get(/databases/$(database)/documents/hubs/$(hubId)).data.memberCount < 50 &&
+          (!('managerRating' in request.resource.data) || isValidRating(request.resource.data.managerRating))) || isSuperAdmin();
         allow delete: if (isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId))) || isSuperAdmin();
       }
 

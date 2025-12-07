@@ -47,7 +47,7 @@ class GameFeedCard extends StatelessWidget {
       primaryColor = FuturisticColors.primary;
       secondaryColor = FuturisticColors.secondary;
       icon = Icons.group;
-      label = game.hubName ?? 'ה-Hub שלי';
+      label = game.denormalized.hubName ?? 'ה-Hub שלי';
     }
 
     return GestureDetector(
@@ -134,6 +134,38 @@ class GameFeedCard extends StatelessWidget {
                             ),
                           ),
                           const Spacer(),
+                          // Multi-match session badge
+                          if (game.session.matches.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Colors.purple.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.timer,
+                                      size: 10, color: Colors.purple),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '${game.session.matches.length} משחקים',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.purple,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           // Distance badge (if available and not locked)
                           if (distanceKm != null && !isLocked) ...[
                             Container(
@@ -235,7 +267,7 @@ class GameFeedCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                game.venueName ??
+                                game.denormalized.venueName ??
                                     game.location ??
                                     'מיקום לא נקבע',
                                 style: GoogleFonts.inter(
@@ -256,7 +288,7 @@ class GameFeedCard extends StatelessWidget {
                                 size: 16, color: colorScheme.primary),
                             const SizedBox(width: 8),
                             Text(
-                              '${game.confirmedPlayerCount} / ${game.maxPlayers ?? '?'} שחקנים',
+                              '${game.denormalized.confirmedPlayerCount} / ${game.denormalized.maxParticipants ?? '?'} שחקנים',
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
@@ -283,7 +315,7 @@ class GameFeedCard extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('משחק פרטי'),
         content: Text(
-          'משחק זה שייך ל-Hub "${game.hubName ?? 'פרטי'}".\n'
+          'משחק זה שייך ל-Hub "${game.denormalized.hubName ?? 'פרטי'}".\n'
           'עליך להצטרף ל-Hub כדי לצפות בפרטים ולהירשם.',
         ),
         actions: [

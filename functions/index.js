@@ -13,6 +13,11 @@ exports.startGameEarly = games.startGameEarly;
 exports.notifyHubOnNewGame = games.notifyHubOnNewGame;
 exports.onSignupStatusChanged = games.onSignupStatusChanged;
 
+// Game Signup Denormalization Sync (CRITICAL: Keeps signup data in sync with games)
+exports.onGameCreatedSyncSignups = games.onGameCreatedSyncSignups;
+exports.onGameUpdatedSyncSignups = games.onGameUpdatedSyncSignups;
+exports.onSignupCreatedPopulateGameData = games.onSignupCreatedPopulateGameData;
+
 // Social
 const social = require('./src/social');
 exports.onHubMessageCreated = social.onHubMessageCreated;

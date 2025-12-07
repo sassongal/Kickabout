@@ -140,8 +140,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (_selectedImage != null) {
         setState(() => _isUploading = true);
         final storageService = StorageService();
-        photoUrl = await storageService.uploadProfilePhoto(
-            widget.userId, _selectedImage!);
+        // Clean up any legacy file before writing new one (new path will overwrite)
+        await storageService.deleteProfilePhoto(widget.userId);
+        photoUrl =
+            await storageService.uploadProfilePhoto(widget.userId, _selectedImage!);
         setState(() => _isUploading = false);
       } else if (_currentUser?.photoUrl != null &&
           _currentUser!.photoUrl!.isNotEmpty &&
@@ -324,10 +326,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: ImagePickerButton(
                     size: 120,
                     currentImageUrl: _currentUser?.photoUrl,
-                    onImagePicked: (image) {
-                      setState(() {
-                        _selectedImage = image;
-                      });
+                    onImagePicked: (image) async {
+                      final sizeBytes = await image.length();
+                      if (sizeBytes > 8 * 1024 * 1024) {
+                        if (mounted) {
+                          SnackbarHelper.showError(
+                              context, 'הקובץ גדול מדי (מעל 8MB). נסה תמונה קלה יותר.');
+                        }
+                        return;
+                      }
+                      if (mounted) {
+                        setState(() {
+                          _selectedImage = image;
+                        });
+                      }
                     },
                   ),
                 ),

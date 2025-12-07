@@ -210,16 +210,17 @@ class PlayerMergeService {
         final updates = <String, dynamic>{};
 
         // Update MVP
-        if (game.mvpPlayerId == manualPlayerId) {
-          updates['mvpPlayerId'] = realUserId;
+        if (game.denormalized.mvpPlayerId == manualPlayerId) {
+          updates['denormalized.mvpPlayerId'] = realUserId;
         }
 
         // Update goal scorers list
-        if (game.goalScorerIds.contains(manualPlayerId)) {
-          final updatedIds = game.goalScorerIds
-              .map((id) => id == manualPlayerId ? realUserId : id)
-              .toList();
-          updates['goalScorerIds'] = updatedIds;
+        if (game.denormalized.goalScorerIds.contains(manualPlayerId)) {
+          final updatedScorers =
+              List<String>.from(game.denormalized.goalScorerIds)
+                  .map((id) => id == manualPlayerId ? realUserId : id)
+                  .toList();
+          updates['denormalized.goalScorerIds'] = updatedScorers;
         }
 
         // Update team player lists

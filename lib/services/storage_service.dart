@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/core/constants.dart';
 
@@ -22,22 +24,14 @@ class StorageService {
       final ref = _storage
           .ref()
           .child(AppConstants.profilePhotosPath)
-          .child('$uid.jpg');
+          .child(uid)
+          .child('avatar.jpg');
 
-      // Check if running on web
-      if (kIsWeb) {
-        // For web, read bytes and upload
-        final bytes = await imageFile.readAsBytes();
-        final uploadTask = ref.putData(
-          Uint8List.fromList(bytes),
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-        await uploadTask;
-      } else {
-        // For mobile, upload file directly
-        final uploadTask = ref.putFile(File(imageFile.path));
-        await uploadTask;
-      }
+      final compressedBytes = await _compressImage(imageFile);
+      await ref.putData(
+        compressedBytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
 
       // Get download URL
       final downloadUrl = await ref.getDownloadURL();
@@ -60,11 +54,13 @@ class StorageService {
       final ref = _storage
           .ref()
           .child(AppConstants.profilePhotosPath)
-          .child('$uid.jpg');
+          .child(uid)
+          .child('avatar.jpg');
 
-      // Upload bytes
+      final compressedBytes =
+          await _compressImageBytes(Uint8List.fromList(imageBytes));
       final uploadTask = ref.putData(
-        Uint8List.fromList(imageBytes),
+        compressedBytes,
         SettableMetadata(contentType: 'image/jpeg'),
       );
       await uploadTask;
@@ -84,13 +80,23 @@ class StorageService {
     }
 
     try {
-      final ref = _storage
+      final newRef = _storage
           .ref()
           .child(AppConstants.profilePhotosPath)
-          .child('$uid.jpg');
-      await ref.delete();
-    } catch (e) {
-      throw Exception('Failed to delete profile photo: $e');
+          .child(uid)
+          .child('avatar.jpg');
+      await newRef.delete();
+    } catch (_) {
+      // Fallback for legacy flat path profile_photos/uid.jpg
+      try {
+        final legacyRef = _storage
+            .ref()
+            .child(AppConstants.profilePhotosPath)
+            .child('$uid.jpg');
+        await legacyRef.delete();
+      } catch (e) {
+        throw Exception('Failed to delete profile photo: $e');
+      }
     }
   }
 
@@ -108,9 +114,12 @@ class StorageService {
           .child(gameId)
           .child('$timestamp.jpg');
 
-      // Upload file
-      final uploadTask = ref.putFile(File(imageFile.path));
-      await uploadTask;
+      final compressedBytes =
+          await _compressImage(imageFile, maxDimension: 1600, quality: 80);
+      await ref.putData(
+        compressedBytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
 
       // Get download URL
       final downloadUrl = await ref.getDownloadURL();
@@ -136,9 +145,12 @@ class StorageService {
           .child('photos')
           .child('${userId}_$timestamp.jpg');
 
-      // Upload file
-      final uploadTask = ref.putFile(File(imageFile.path));
-      await uploadTask;
+      final compressedBytes =
+          await _compressImage(imageFile, maxDimension: 1600, quality: 80);
+      await ref.putData(
+        compressedBytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
 
       // Get download URL
       final downloadUrl = await ref.getDownloadURL();
@@ -197,5 +209,93 @@ class StorageService {
       throw Exception('Failed to get download URL: $e');
     }
   }
-}
 
+  /// Compress image to JPEG, cap longest side, and reduce quality for storage savings
+  Future<Uint8List> _compressImage(
+    XFile imageFile, {
+    int maxDimension = 1080,
+    int quality = 80,
+  }) async {
+    final bytes = await imageFile.readAsBytes();
+    return _compressImageBytes(Uint8List.fromList(bytes),
+        maxDimension: maxDimension, quality: quality);
+  }
+
+  Future<Uint8List> _compressImageBytes(
+    Uint8List bytes, {
+    int maxDimension = 1080,
+    int quality = 80,
+  }) async {
+    try {
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) {
+        return bytes;
+      }
+
+      int targetWidth = decoded.width;
+      int targetHeight = decoded.height;
+
+      if (decoded.width >= decoded.height && decoded.width > maxDimension) {
+        targetWidth = maxDimension;
+        targetHeight = (decoded.height * maxDimension / decoded.width).round();
+      } else if (decoded.height > decoded.width && decoded.height > maxDimension) {
+        targetHeight = maxDimension;
+        targetWidth = (decoded.width * maxDimension / decoded.height).round();
+      }
+
+      final resized = img.copyResize(
+        decoded,
+        width: targetWidth,
+        height: targetHeight,
+      );
+
+      final compressed = img.encodeJpg(resized, quality: quality);
+      return Uint8List.fromList(compressed);
+    } catch (_) {
+      return bytes;
+    }
+  }
+
+  /// Upload hub hero/cover image
+  Future<String> uploadHubHeroPhoto(String hubId, XFile imageFile) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final ref = _storage
+          .ref()
+          .child(AppConstants.hubPhotosPath)
+          .child(hubId)
+          .child('hero.jpg');
+
+      final compressedBytes =
+          await _compressImage(imageFile, maxDimension: 1600, quality: 80);
+      await ref.putData(
+        compressedBytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      return await ref.getDownloadURL();
+    } catch (e) {
+      throw Exception('Failed to upload hub hero image: $e');
+    }
+  }
+
+  Future<void> deleteHubHeroPhoto(String hubId) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final ref = _storage
+          .ref()
+          .child(AppConstants.hubPhotosPath)
+          .child(hubId)
+          .child('hero.jpg');
+      await ref.delete();
+    } catch (e) {
+      debugPrint('Failed to delete hub hero image: $e');
+    }
+  }
+}

@@ -39,9 +39,16 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
   Venue? _selectedVenue;
   PlaceResult? _selectedPlace; // For creating new venue
 
+  // Custom icon cache
+  BitmapDescriptor? _venuePublicIcon;
+  BitmapDescriptor? _venueRentalIcon;
+  BitmapDescriptor? _selectedVenueIcon;
+  bool _iconsLoaded = false;
+
   @override
   void initState() {
     super.initState();
+    _loadCustomIcons();
     _loadVenues();
     _searchController.addListener(_onSearchChanged);
   }
@@ -52,6 +59,39 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
     _searchController.dispose();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCustomIcons() async {
+    try {
+      final icons = await Future.wait([
+        BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(80, 80)),
+          'assets/icons/venue_public.png',
+        ),
+        BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(80, 80)),
+          'assets/icons/venue_rental.png',
+        ),
+        BitmapDescriptor.fromAssetImage(
+          const ImageConfiguration(size: Size(100, 100)), // Slightly larger for selected
+          'assets/icons/venue_public.png',
+        ),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _venuePublicIcon = icons[0];
+          _venueRentalIcon = icons[1];
+          _selectedVenueIcon = icons[2];
+          _iconsLoaded = true;
+        });
+        // Update markers with new icons
+        _updateMarkers();
+      }
+    } catch (e) {
+      debugPrint('Error loading venue icons: $e');
+      // Fallback to default markers - icons already null
+    }
   }
 
   void _onSearchChanged() {
@@ -176,6 +216,25 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
     final markers = <Marker>{};
 
     for (final venue in _filteredVenues) {
+      final isSelected = _selectedVenue?.venueId == venue.venueId;
+
+      // Choose icon based on venue type and selection
+      BitmapDescriptor icon;
+      if (_iconsLoaded) {
+        if (isSelected) {
+          icon = _selectedVenueIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+        } else if (venue.isPublic) {
+          icon = _venuePublicIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+        } else {
+          icon = _venueRentalIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+        }
+      } else {
+        // Fallback to default markers while icons are loading
+        icon = BitmapDescriptor.defaultMarkerWithHue(
+          isSelected ? BitmapDescriptor.hueBlue : BitmapDescriptor.hueRed,
+        );
+      }
+
       markers.add(
         Marker(
           markerId: MarkerId(venue.venueId),
@@ -183,15 +242,11 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
             venue.location.latitude,
             venue.location.longitude,
           ),
+          icon: icon,
           infoWindow: InfoWindow(
             title: venue.name,
             snippet: venue.address ?? 'לחץ לפרטים',
             onTap: () => _selectVenue(venue),
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            _selectedVenue?.venueId == venue.venueId
-                ? BitmapDescriptor.hueBlue
-                : BitmapDescriptor.hueRed,
           ),
           onTap: () => _selectVenue(venue),
         ),

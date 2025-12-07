@@ -1017,9 +1017,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Final score widget (prominent) - Show Session Summary if matches exist, otherwise legacy score
-        if (game.matches.isNotEmpty || game.aggregateWins.isNotEmpty)
+        if (game.session.matches.isNotEmpty ||
+            game.session.aggregateWins.isNotEmpty)
           _SessionSummaryWidget(game: game)
-        else if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
+        else if (game.session.legacyTeamAScore != null &&
+            game.session.legacyTeamBScore != null)
           _FinalScoreWidget(game: game),
         const SizedBox(height: 24),
 
@@ -1888,10 +1890,10 @@ class _SessionSummaryWidget extends StatelessWidget {
                 );
               }),
             ],
-            if (game.matches.isNotEmpty) ...[
+            if (game.session.matches.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
-                'סה"כ ${game.matches.length} משחקים',
+                'סה"כ ${game.session.matches.length} משחקים',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.8),
                     ),
@@ -1912,8 +1914,8 @@ class _FinalScoreWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamAScore = game.legacyTeamAScore ?? 0;
-    final teamBScore = game.legacyTeamBScore ?? 0;
+    final teamAScore = game.session.legacyTeamAScore ?? 0;
+    final teamBScore = game.session.legacyTeamBScore ?? 0;
     final teamAName = game.teams.isNotEmpty ? game.teams[0].name : 'קבוצה א\'';
     final teamBName = game.teams.length > 1 ? game.teams[1].name : 'קבוצה ב\'';
 

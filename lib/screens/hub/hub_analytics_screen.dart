@@ -106,7 +106,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
 
       int totalConfirmedPlayers = 0;
       for (var game in _completedGames) {
-        totalConfirmedPlayers += game.confirmedPlayerIds.length;
+        totalConfirmedPlayers += game.denormalized.confirmedPlayerIds.length;
       }
       _avgPlayersPerGame =
           _totalGames > 0 ? totalConfirmedPlayers / _totalGames : 0;
@@ -123,17 +123,18 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
 
     for (final game in _completedGames) {
       // Goals
-      for (final playerId in game.goalScorerIds) {
+      for (final playerId in game.denormalized.goalScorerIds) {
         _topScorers[playerId] = (_topScorers[playerId] ?? 0) + 1;
       }
 
       // MVP
-      if (game.mvpPlayerId != null) {
-        _topMVPs[game.mvpPlayerId!] = (_topMVPs[game.mvpPlayerId!] ?? 0) + 1;
+      if (game.denormalized.mvpPlayerId != null) {
+        _topMVPs[game.denormalized.mvpPlayerId!] =
+            (_topMVPs[game.denormalized.mvpPlayerId!] ?? 0) + 1;
       }
 
       // Games Played
-      for (final playerId in game.confirmedPlayerIds) {
+      for (final playerId in game.denormalized.confirmedPlayerIds) {
         _mostGamesPlayed[playerId] = (_mostGamesPlayed[playerId] ?? 0) + 1;
       }
 
@@ -162,10 +163,11 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
   }
 
   Future<void> _calculateGameResult(Game game, gamesRepo, hubsRepo) async {
-    if (game.legacyTeamAScore == null || game.legacyTeamBScore == null) return;
+    if (game.session.legacyTeamAScore == null ||
+        game.session.legacyTeamBScore == null) return;
 
-    final scoreA = game.legacyTeamAScore!;
-    final scoreB = game.legacyTeamBScore!;
+    final scoreA = game.session.legacyTeamAScore!;
+    final scoreB = game.session.legacyTeamBScore!;
 
     if (scoreA == scoreB) {
       _draws++;

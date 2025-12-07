@@ -1050,7 +1050,9 @@ class _PlayerProfileScreenFuturisticState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          game.venueName ?? game.location ?? 'מיקום לא ידוע',
+                          game.denormalized.venueName ??
+                              game.location ??
+                              'מיקום לא ידוע',
                           style: FuturisticTypography.bodySmall.copyWith(
                             color: FuturisticColors.textSecondary,
                           ),
@@ -1070,7 +1072,7 @@ class _PlayerProfileScreenFuturisticState
                         ),
                       ),
                       Text(
-                        game.hubName ?? 'משחק פרטי',
+                        game.denormalized.hubName ?? 'משחק פרטי',
                         style: FuturisticTypography.labelSmall,
                       ),
                     ],

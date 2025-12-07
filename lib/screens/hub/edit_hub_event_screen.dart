@@ -228,7 +228,7 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
             .future,
       );
 
-      if (!hubPermissionsAsync.canCreateEvents()) {
+      if (!hubPermissionsAsync.canCreateEvents) {
         SnackbarHelper.showError(context, 'אין לך הרשאה לערוך אירועים בהאב זה');
         return;
       }
@@ -414,7 +414,7 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
             .future,
       );
 
-      if (!hubPermissionsAsync.canCreateEvents()) {
+      if (!hubPermissionsAsync.canCreateEvents) {
         SnackbarHelper.showError(context, 'אין לך הרשאה למחוק אירועים בהאב זה');
         return;
       }

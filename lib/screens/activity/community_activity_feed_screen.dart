@@ -424,12 +424,13 @@ class _GameFeedCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Score - LARGE and prominent
-            if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
+            if (game.session.legacyTeamAScore != null &&
+                game.session.legacyTeamBScore != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${game.legacyTeamAScore}',
+                    '${game.session.legacyTeamAScore}',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.primary,
@@ -446,7 +447,7 @@ class _GameFeedCard extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '${game.legacyTeamBScore}',
+                    '${game.session.legacyTeamBScore}',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.primary,
@@ -454,7 +455,8 @@ class _GameFeedCard extends ConsumerWidget {
                   ),
                 ],
               ),
-            if (game.legacyTeamAScore != null && game.legacyTeamBScore != null)
+            if (game.session.legacyTeamAScore != null &&
+                game.session.legacyTeamBScore != null)
               const SizedBox(height: 16),
 
             // Hub name - medium size
@@ -489,7 +491,8 @@ class _GameFeedCard extends ConsumerWidget {
             const SizedBox(height: 8),
 
             // Venue/Location - small - using denormalized data
-            if (game.venueName != null && game.venueName!.isNotEmpty)
+            if (game.denormalized.venueName != null &&
+                game.denormalized.venueName!.isNotEmpty)
               Row(
                 children: [
                   Icon(
@@ -502,7 +505,7 @@ class _GameFeedCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    game.venueName!,
+                    game.denormalized.venueName!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context)
                               .colorScheme
@@ -538,11 +541,11 @@ class _GameFeedCard extends ConsumerWidget {
             const SizedBox(height: 12),
 
             // Goal scorers - small list (like football results) - using denormalized data
-            if (game.goalScorerNames.isNotEmpty)
+            if (game.denormalized.goalScorerNames.isNotEmpty)
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children: game.goalScorerNames.map((fullName) {
+                children: game.denormalized.goalScorerNames.map((fullName) {
                   final nameParts = fullName.split(' ');
                   final firstName =
                       nameParts.isNotEmpty ? nameParts.first : fullName;
@@ -563,7 +566,8 @@ class _GameFeedCard extends ConsumerWidget {
               ),
 
             // MVP - bottom left with star icon - using denormalized data
-            if (game.mvpPlayerName != null && game.mvpPlayerName!.isNotEmpty)
+            if (game.denormalized.mvpPlayerName != null &&
+                game.denormalized.mvpPlayerName!.isNotEmpty)
               Align(
                 alignment: Alignment.centerRight,
                 child: Row(
@@ -577,10 +581,11 @@ class _GameFeedCard extends ConsumerWidget {
                     const SizedBox(width: 4),
                     Builder(
                       builder: (context) {
-                        final nameParts = game.mvpPlayerName!.split(' ');
+                        final nameParts =
+                            game.denormalized.mvpPlayerName!.split(' ');
                         final firstName = nameParts.isNotEmpty
                             ? nameParts.first
-                            : game.mvpPlayerName!;
+                            : game.denormalized.mvpPlayerName!;
                         final lastName = nameParts.length > 1
                             ? nameParts.sublist(1).join(' ')
                             : '';

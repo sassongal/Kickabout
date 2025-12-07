@@ -267,6 +267,13 @@ class HubsRepository {
   ///
   /// This method supports both first-time joins and rejoining after leaving.
   /// Cloud Function will handle memberCount updates via trigger.
+  /// FIXED: Race condition in hub membership capacity check
+  ///
+  /// Previously, memberCount was updated asynchronously by Cloud Function,
+  /// allowing concurrent joins to exceed the 50 member limit.
+  ///
+  /// Now, memberCount is incremented atomically inside the transaction,
+  /// ensuring accurate enforcement of capacity limits.
   Future<void> addMember(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
@@ -307,6 +314,9 @@ class HubsRepository {
           return; // Already a member, idempotent
         }
 
+        // Track whether we're adding a new active member
+        bool shouldIncrementCount = false;
+
         // Check if user was previously a member
         if (memberDoc.exists) {
           final memberData = memberDoc.data()!;
@@ -325,6 +335,8 @@ class HubsRepository {
               'updatedBy': uid,
               'statusReason': null,
             });
+            // Reactivating a left member counts as adding
+            shouldIncrementCount = true;
           }
           // If already active, do nothing (shouldn't happen, but safe)
         } else {
@@ -341,6 +353,8 @@ class HubsRepository {
             'updatedAt': FieldValue.serverTimestamp(),
             'updatedBy': uid,
           });
+          // New member counts as adding
+          shouldIncrementCount = true;
         }
 
         // Update user.hubIds
@@ -348,8 +362,17 @@ class HubsRepository {
           'hubIds': FieldValue.arrayUnion([hubId]),
         });
 
-        // NOTE: memberCount is updated by Cloud Function trigger
-        // (onMembershipChange in functions/src/triggers/membershipCounters.ts)
+        // CRITICAL FIX: Increment memberCount atomically in transaction
+        // This prevents race conditions where concurrent joins could exceed capacity
+        if (shouldIncrementCount) {
+          transaction.update(hubRef, {
+            'memberCount': FieldValue.increment(1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // NOTE: Cloud Function (onMembershipChange) should now only verify
+        // the count is correct, not set it. This transaction is the source of truth.
       });
     } catch (e) {
       throw Exception('Failed to add member: $e');
@@ -360,6 +383,8 @@ class HubsRepository {
   ///
   /// This performs a soft-delete by setting status='left' instead of deleting.
   /// Preserves membership history and allows rejoining.
+  ///
+  /// FIXED: Now decrements memberCount atomically to match addMember fix
   Future<void> removeMember(String hubId, String uid) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
@@ -382,6 +407,12 @@ class HubsRepository {
 
         if (!userDoc.exists) throw Exception('User not found');
 
+        final memberData = memberDoc.data()!;
+        final currentStatus = memberData['status'] as String?;
+
+        // Only decrement if transitioning from active to left
+        final shouldDecrementCount = currentStatus == 'active';
+
         // Soft-delete: Set status to 'left'
         transaction.update(memberRef, {
           'status': 'left',
@@ -395,8 +426,17 @@ class HubsRepository {
           'hubIds': FieldValue.arrayRemove([hubId]),
         });
 
-        // NOTE: memberCount is updated by Cloud Function trigger
-        // (onMembershipChange detects status change from active to left)
+        // CRITICAL FIX: Decrement memberCount atomically in transaction
+        // Matches the increment logic in addMember
+        if (shouldDecrementCount) {
+          transaction.update(hubRef, {
+            'memberCount': FieldValue.increment(-1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // NOTE: Cloud Function (onMembershipChange) should now only verify
+        // the count is correct, not set it. This transaction is the source of truth.
       });
     } catch (e) {
       throw Exception('Failed to remove member: $e');

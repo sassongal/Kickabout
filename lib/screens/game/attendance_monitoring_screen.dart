@@ -64,7 +64,7 @@ class AttendanceMonitoringScreen extends ConsumerWidget {
                   .where((s) => s.status == SignupStatus.pending)
                   .toList();
 
-              final maxPlayers = game.maxParticipants ??
+              final maxPlayers = game.denormalized.maxParticipants ??
                   (game.teamCount * 3); // Default: 3 per team
 
               return SingleChildScrollView(
@@ -80,7 +80,7 @@ class AttendanceMonitoringScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              game.hubName ?? 'משחק',
+                              game.denormalized.hubName ?? 'משחק',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 8),
@@ -91,13 +91,15 @@ class AttendanceMonitoringScreen extends ConsumerWidget {
                                 Text(gameDate),
                               ],
                             ),
-                            if (game.venueName != null) ...[
+                            if (game.denormalized.venueName != null) ...[
                               const SizedBox(height: 8),
                               Row(
                                 children: [
                                   const Icon(Icons.location_on, size: 16),
                                   const SizedBox(width: 8),
-                                  Expanded(child: Text(game.venueName!)),
+                                  Expanded(
+                                      child:
+                                          Text(game.denormalized.venueName!)),
                                 ],
                               ),
                             ],
@@ -316,4 +318,3 @@ class AttendanceMonitoringScreen extends ConsumerWidget {
     );
   }
 }
-

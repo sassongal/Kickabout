@@ -62,7 +62,7 @@ class PollsRepository {
 
       // Create poll document
       final pollRef = _firestore.collection('polls').doc();
-      
+
       final poll = Poll(
         pollId: pollRef.id,
         hubId: hubId,
@@ -81,7 +81,11 @@ class PollsRepository {
         description: description?.trim(),
       );
 
-      await pollRef.set(poll.toJson());
+      final pollJson = poll.toJson();
+      // Explicitly convert options to JSON for Firestore
+      pollJson['options'] = options.map((e) => e.toJson()).toList();
+
+      await pollRef.set(pollJson);
 
       debugPrint('✅ Poll created: ${pollRef.id}');
       return pollRef.id;
@@ -98,10 +102,10 @@ class PollsRepository {
     try {
       final doc = await _firestore.collection('polls').doc(pollId).get();
       if (!doc.exists) return null;
-      
+
       final data = doc.data();
       if (data == null) return null;
-      
+
       final jsonData = Map<String, dynamic>.from(data as Map<dynamic, dynamic>);
       jsonData['pollId'] = pollId;
       return Poll.fromJson(jsonData);
@@ -134,9 +138,8 @@ class PollsRepository {
     if (!Env.isFirebaseAvailable) return [];
 
     try {
-      Query query = _firestore
-          .collection('polls')
-          .where('hubId', isEqualTo: hubId);
+      Query query =
+          _firestore.collection('polls').where('hubId', isEqualTo: hubId);
 
       if (status != null) {
         query = query.where('status', isEqualTo: status.name);
@@ -145,12 +148,13 @@ class PollsRepository {
       query = query.orderBy('createdAt', descending: true).limit(limit);
 
       final snapshot = await query.get();
-      
+
       return snapshot.docs
           .map((doc) {
             try {
               final data = doc.data();
-              final jsonData = Map<String, dynamic>.from(data as Map<dynamic, dynamic>);
+              final jsonData =
+                  Map<String, dynamic>.from(data as Map<dynamic, dynamic>);
               jsonData['pollId'] = doc.id;
               return Poll.fromJson(jsonData);
             } catch (e) {
@@ -176,9 +180,8 @@ class PollsRepository {
       return Stream.value([]);
     }
 
-    Query query = _firestore
-        .collection('polls')
-        .where('hubId', isEqualTo: hubId);
+    Query query =
+        _firestore.collection('polls').where('hubId', isEqualTo: hubId);
 
     if (status != null) {
       query = query.where('status', isEqualTo: status.name);
@@ -191,7 +194,8 @@ class PollsRepository {
           .map((doc) {
             try {
               final data = doc.data();
-              final jsonData = Map<String, dynamic>.from(data as Map<dynamic, dynamic>);
+              final jsonData =
+                  Map<String, dynamic>.from(data as Map<dynamic, dynamic>);
               jsonData['pollId'] = doc.id;
               return Poll.fromJson(jsonData);
             } catch (e) {
@@ -218,7 +222,7 @@ class PollsRepository {
 
     try {
       final updates = <String, dynamic>{};
-      
+
       if (question != null) updates['question'] = question.trim();
       if (description != null) updates['description'] = description.trim();
       if (endsAt != null) updates['endsAt'] = Timestamp.fromDate(endsAt);
@@ -232,7 +236,7 @@ class PollsRepository {
       if (updates.isEmpty) return;
 
       await _firestore.collection('polls').doc(pollId).update(updates);
-      
+
       debugPrint('✅ Poll updated: $pollId');
     } catch (e) {
       debugPrint('❌ Error updating poll: $e');
@@ -264,7 +268,7 @@ class PollsRepository {
   Future<PollSummary?> getPollSummary(String pollId, String? userId) async {
     final poll = await getPoll(pollId);
     if (poll == null) return null;
-    
+
     return PollSummary.fromPoll(poll, userId: userId);
   }
 
@@ -277,11 +281,10 @@ class PollsRepository {
   List<String>? getUserVote(Poll poll, String userId) {
     if (poll.isAnonymous) return null;
     if (!hasUserVoted(poll, userId)) return null;
-    
+
     return poll.options
         .where((opt) => opt.voters.contains(userId))
         .map((opt) => opt.optionId)
         .toList();
   }
 }
-

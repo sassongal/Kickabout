@@ -138,14 +138,30 @@ class UsersRepository {
     try {
       if (uids.isEmpty) return [];
 
-      // OPTIMIZED: Batch queries in parallel instead of sequential
-      // Firestore 'in' query limit is 10, so we need to batch
       final List<User> users = [];
+      final List<String> missingIds = [];
+
+      // 1. Check Cache first
+      for (final uid in uids) {
+        final cachedUser =
+            CacheService().get<User>(CacheKeys.user(uid)); // Check memory only
+        if (cachedUser != null) {
+          users.add(cachedUser);
+        } else {
+          missingIds.add(uid);
+        }
+      }
+
+      if (missingIds.isEmpty) {
+        return users;
+      }
+
+      // 2. Fetch missing users from Firestore
+      // OPTIMIZED: Batch queries in parallel
       final batches = <Future<QuerySnapshot>>[];
 
-      // Create all batch queries
-      for (var i = 0; i < uids.length; i += 10) {
-        final batch = uids.skip(i).take(10).toList();
+      for (var i = 0; i < missingIds.length; i += 10) {
+        final batch = missingIds.skip(i).take(10).toList();
         batches.add(
           _firestore
               .collection(FirestorePaths.users())
@@ -154,7 +170,6 @@ class UsersRepository {
         );
       }
 
-      // Execute all batches in parallel (50% faster than sequential)
       final results = await Future.wait(batches);
 
       // Process results
@@ -164,16 +179,22 @@ class UsersRepository {
           if (docData != null) {
             final userData = Map<String, dynamic>.from(docData);
             userData['uid'] = doc.id;
-            users.add(User.fromJson(userData));
+            final user = User.fromJson(userData);
+            users.add(user);
+
+            // Cache the fetched user
+            CacheService().set(CacheKeys.user(user.uid), user,
+                ttl: CacheService.usersTtl);
           }
         }
       }
 
       // For users not found in Firestore, create placeholder users
       final foundIds = users.map((u) => u.uid).toSet();
-      final missingIds = uids.where((id) => !foundIds.contains(id)).toList();
+      final reallyMissingIds =
+          uids.where((id) => !foundIds.contains(id)).toList();
 
-      for (final missingId in missingIds) {
+      for (final missingId in reallyMissingIds) {
         // Create a placeholder user so it shows in the list
         users.add(User(
           uid: missingId,
@@ -352,7 +373,10 @@ class UsersRepository {
       throw Exception('Firebase not available');
     }
     try {
-      await _firestore.collection(FirestorePaths.users()).doc(currentUserId).update({
+      await _firestore
+          .collection(FirestorePaths.users())
+          .doc(currentUserId)
+          .update({
         'blockedUserIds': FieldValue.arrayUnion([userToBlockId]),
       });
     } catch (e) {
@@ -367,7 +391,10 @@ class UsersRepository {
       throw Exception('Firebase not available');
     }
     try {
-      await _firestore.collection(FirestorePaths.users()).doc(currentUserId).update({
+      await _firestore
+          .collection(FirestorePaths.users())
+          .doc(currentUserId)
+          .update({
         'blockedUserIds': FieldValue.arrayRemove([userToUnblockId]),
       });
     } catch (e) {

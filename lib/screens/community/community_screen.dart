@@ -225,7 +225,7 @@ class _GameCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    game.hubName ?? 'משחק פתוח',
+                    game.denormalized.hubName ?? 'Unknown Hub',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16),
                   ),
@@ -243,7 +243,9 @@ class _GameCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    game.venueName ?? game.location ?? 'מיקום לא ידוע',
+                    game.denormalized.venueName ??
+                        game.location ??
+                        'מיקום לא ידוע',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
