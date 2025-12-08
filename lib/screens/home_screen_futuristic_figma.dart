@@ -87,14 +87,10 @@ class _HomeScreenFuturisticFigmaState
       return Scaffold(
         backgroundColor: FuturisticColors.background,
         appBar: AppBar(
-          title: Text(
-            'DASHBOARD',
-            style: GoogleFonts.orbitron(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 2.0,
-              color: FuturisticColors.textPrimary,
-            ),
+          title: Image.asset(
+            'assets/logo/KattrickLOGO.png',
+            height: 40,
+            fit: BoxFit.contain,
           ),
           backgroundColor: FuturisticColors.surface,
           foregroundColor: FuturisticColors.textPrimary,
@@ -659,14 +655,10 @@ class _HomeScreenFuturisticFigmaState
     String currentUserId,
   ) {
     return AppBar(
-      title: Text(
-        'DASHBOARD',
-        style: GoogleFonts.orbitron(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 2.0,
-          color: FuturisticColors.textPrimary,
-        ),
+      title: Image.asset(
+        'assets/logo/KattrickLOGO.png',
+        height: 40,
+        fit: BoxFit.contain,
       ),
       backgroundColor: FuturisticColors.surface,
       foregroundColor: FuturisticColors.textPrimary,
