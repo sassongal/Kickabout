@@ -18,6 +18,7 @@ import 'package:kattrick/services/weather_service.dart';
 import 'package:kattrick/services/cache_service.dart';
 import 'package:kattrick/services/hub_analytics_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 /// Providers for repositories
@@ -108,7 +109,10 @@ final venuesRepositoryProvider = Provider<VenuesRepository>((ref) {
 });
 
 final storageServiceProvider = Provider<StorageService>((ref) {
-  return StorageService();
+  return StorageService(
+    functions: FirebaseFunctions.instance,
+    auth: firebase_auth.FirebaseAuth.instance,
+  );
 });
 
 /// Location service provider

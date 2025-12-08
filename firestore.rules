@@ -210,13 +210,12 @@ service cloud.firestore {
     // ============================================
     // Global Collection Group Queries
     // ============================================
-    match /{path=**}/events/{eventId} {
-      allow read: if isAuthenticated();
-    }
-
     // Collection group query for signups (used by streamMyUpcomingGames)
     // IMPORTANT: Users can only read their own signups
     // For collection group queries, Firestore checks each matching document
+    match /{path=**}/events/{eventId} {
+      allow read: if isAuthenticated() && (get(/databases/$(database)/documents/$(path)/events/$(eventId)).data.hubId == null || isHubMember(get(/databases/$(database)/documents/$(path)/events/$(eventId)).data.hubId));
+    }
     match /{path=**}/signups/{signupId} {
       allow read: if isAuthenticated() && (
         resource.data.playerId == request.auth.uid ||
@@ -272,7 +271,7 @@ service cloud.firestore {
       // Super Admin can read/write any hub
       allow read, write: if isSuperAdmin();
       
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (resource.data.isPrivate == false || isHubMember(hubId));
 
       allow create: if isAuthenticated() &&
         request.resource.data.keys().hasAll(['hubId', 'name', 'createdBy', 'createdAt']) &&
@@ -291,20 +290,29 @@ service cloud.firestore {
         request.resource.data.createdBy == resource.data.createdBy &&
         request.resource.data.createdAt == resource.data.createdAt;
       
-      allow delete: if canHandleRequests(hubId);
+      allow delete: if isHubManager(hubId);
 
       match /members/{userId} {
-        allow read: if isAuthenticated();
-        allow create: if (isAuthenticated() && isOwner(userId) &&
-          request.resource.data.keys().hasAll(['joinedAt', 'role']) &&
-          request.resource.data.role in ['member', 'admin', 'manager'] &&
-          (!('managerRating' in request.resource.data) || isValidRating(request.resource.data.managerRating))) || isSuperAdmin();
-        allow update: if (isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId)) &&
-          get(/databases/$(database)/documents/hubs/$(hubId)).data.memberCount < 50 &&
-          (!('managerRating' in request.resource.data) || isValidRating(request.resource.data.managerRating))) || isSuperAdmin();
-        allow delete: if (isAuthenticated() && (isOwner(userId) || isHubAdmin(hubId))) || isSuperAdmin();
-      }
+        allow read: if isHubMember(hubId) || isSuperAdmin();
+        
+        // CREATE: User can request to join (handled in /requests), or manager can add them.
+        // User cannot set their own role on creation.
+        allow create: if (isHubManager(hubId) &&
+          request.resource.data.role in ['member', 'moderator']
+        ) || isSuperAdmin();
 
+        // UPDATE: User can only update to leave. Manager can update roles/ratings.
+        allow update: if (
+          // User is leaving the hub
+          (isOwner(userId) && request.resource.data.status == 'left' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'managerRating'])) ||
+          // Manager is managing the member
+          (isHubManager(hubId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['veteranSince']))
+        ) || isSuperAdmin();
+
+        // DELETE: User can leave (delete their membership) or manager can remove them.
+        allow delete: if (isOwner(userId) || isHubManager(hubId)) || isSuperAdmin();
+      }
+      
       match /requests/{userId} {
         allow read: if (isAuthenticated() && canHandleRequests(hubId)) || isSuperAdmin();
         allow create: if (isAuthenticated() && isOwner(userId) &&
@@ -319,7 +327,7 @@ service cloud.firestore {
       }
 
       match /feed/posts/items/{postId} {
-        allow read: if isAuthenticated();
+        allow read: if isHubMember(hubId) || isSuperAdmin();
         allow create: if (isAuthenticated() && canCreatePosts(hubId) &&
           request.resource.data.keys().hasAll(['postId', 'hubId', 'authorId', 'type', 'createdAt']) &&
           request.resource.data.postId == postId &&
@@ -330,7 +338,7 @@ service cloud.firestore {
         allow delete: if (canModerateContent(hubId) || request.auth.uid == resource.data.authorId) || isSuperAdmin();
 
         match /comments/{commentId} {
-          allow read: if isAuthenticated();
+          allow read: if isHubMember(hubId) || isSuperAdmin();
           allow create: if (isAuthenticated() && isHubMember(hubId) &&
             request.resource.data.keys().hasAll(['commentId', 'postId', 'hubId', 'authorId', 'text', 'createdAt']) &&
             request.resource.data.commentId == commentId &&
@@ -365,7 +373,7 @@ service cloud.firestore {
       }
 
       match /events/{eventId} {
-        allow read: if isAuthenticated();
+        allow read: if isHubMember(hubId) || isSuperAdmin();
         allow create: if (canCreateEvents(hubId) &&
           isValidHubEvent(request.resource.data) &&
           request.resource.data.eventId == eventId &&
@@ -383,7 +391,7 @@ service cloud.firestore {
       }
 
       match /{collection}/{docId} {
-        allow read: if isAuthenticated();
+        allow read: if isHubMember(hubId) || isSuperAdmin();
         allow write, update, delete: if isHubAdmin(hubId) || isSuperAdmin();
       }
     }
@@ -392,7 +400,7 @@ service cloud.firestore {
     // Games Collection
     // ============================================
     match /games/{gameId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (resource.data.hubId == null || resource.data.hubId == '' || isHubMember(resource.data.hubId));
 
       allow create: if ((
         (request.resource.data.hubId == '' && isAuthenticated()) ||

@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:kattrick/services/media_service.dart';
+import 'dart:math' as math;
 
 /// Utility for compressing images before upload to reduce storage costs
 /// 
@@ -40,20 +42,29 @@ class ImageCompression {
       }
       
       // Try to use image package if available
+      // Compress off the UI thread using the shared MediaService
       try {
-        // Note: This requires adding 'image' package to pubspec.yaml
-        // For now, we'll use a simpler approach with Flutter's built-in methods
-        
-        // Use Flutter's image compression (available in newer versions)
-        // This is a placeholder - actual implementation would use image package
-        debugPrint('Compressing image from ${fileSizeKB.toStringAsFixed(1)}KB...');
-        
-        // For now, return original file
-        // TODO: Add image package and implement actual compression
-        return file;
+        final maxDimension = math.min(maxWidth, maxHeight);
+        final compressedBytes = await MediaService.compressBytes(
+          bytes,
+          maxDimension: maxDimension,
+          quality: quality,
+        );
+
+        // If compression made the file larger, keep the original
+        if (compressedBytes.length >= bytes.length) {
+          debugPrint(
+              'Compression skipped (compressed is larger: ${compressedBytes.length} >= ${bytes.length})');
+          return file;
+        }
+
+        debugPrint(
+            'Compressed image from ${fileSizeKB.toStringAsFixed(1)}KB to ${(compressedBytes.length / 1024).toStringAsFixed(1)}KB');
+
+        // Overwrite the original file with compressed bytes
+        return await file.writeAsBytes(compressedBytes, flush: true);
       } catch (e) {
-        debugPrint('Image compression not available: $e');
-        // Fallback: return original file (server-side compression will handle it)
+        debugPrint('Image compression failed, returning original: $e');
         return file;
       }
     } catch (e) {
@@ -88,4 +99,3 @@ class ImageCompression {
     }
   }
 }
-

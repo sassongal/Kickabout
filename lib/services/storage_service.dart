@@ -1,18 +1,29 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:image/image.dart' as img;
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/services/media_service.dart';
+import 'package:uuid/uuid.dart';
 
 /// Service for Firebase Storage operations
 class StorageService {
   final FirebaseStorage _storage;
+  final FirebaseFunctions? _functions;
+  final FirebaseAuth? _auth;
 
-  StorageService({FirebaseStorage? storage})
-      : _storage = storage ?? FirebaseStorage.instance;
+  StorageService({
+    FirebaseStorage? storage,
+    FirebaseFunctions? functions,
+    FirebaseAuth? auth,
+  })  : _storage = storage ?? FirebaseStorage.instance,
+        _functions = functions,
+        _auth = auth;
 
   /// Upload profile photo (works on mobile and web)
   Future<String> uploadProfilePhoto(String uid, XFile imageFile) async {
@@ -100,30 +111,52 @@ class StorageService {
     }
   }
 
-  /// Upload game photo
+  /// Upload game photo via signed URL (Cloud Function enforces permissions).
   Future<String> uploadGamePhoto(String gameId, XFile imageFile) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
+    if (_functions == null || _auth == null) {
+      throw Exception('StorageService not configured for signed uploads');
+    }
+    if (_auth!.currentUser == null) {
+      throw Exception('User not authenticated for upload.');
+    }
 
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final ref = _storage
-          .ref()
-          .child(AppConstants.gamePhotosPath)
-          .child(gameId)
-          .child('$timestamp.jpg');
+      final fileName = '$timestamp.jpg';
 
       final compressedBytes =
           await _compressImage(imageFile, maxDimension: 1600, quality: 80);
-      await ref.putData(
-        compressedBytes,
-        SettableMetadata(contentType: 'image/jpeg'),
+      final token = const Uuid().v4();
+
+      final callable = _functions!.httpsCallable('getGamePhotoUploadUrl');
+      final result =
+          await callable.call<Map<String, dynamic>>(<String, dynamic>{
+        'gameId': gameId,
+        'fileName': fileName,
+        'contentType': 'image/jpeg',
+      });
+
+      final uploadUrl = result.data['url'] as String;
+      final response = await http.put(
+        Uri.parse(uploadUrl),
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'x-goog-meta-firebaseStorageDownloadTokens': token,
+        },
+        body: compressedBytes,
       );
 
-      // Get download URL
-      final downloadUrl = await ref.getDownloadURL();
-      return downloadUrl;
+      if (response.statusCode != 200) {
+        throw Exception(
+            'File upload failed with status: ${response.statusCode}. Response: ${response.body}');
+      }
+
+      return 'https://firebasestorage.googleapis.com/v0/b/${_functions!.app.options.storageBucket}/o/game_photos%2F$gameId%2F$fileName?alt=media&token=$token';
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception('Upload failed: ${e.message} (Code: ${e.code})');
     } catch (e) {
       throw Exception('Failed to upload game photo: $e');
     }
@@ -216,9 +249,21 @@ class StorageService {
     int maxDimension = 1080,
     int quality = 80,
   }) async {
+    // Prefer file path when available (mobile); fallback to bytes (web).
+    if (imageFile.path.isNotEmpty) {
+      return MediaService.compressImage(
+        File(imageFile.path),
+        maxDimension: maxDimension,
+        quality: quality,
+      );
+    }
+
     final bytes = await imageFile.readAsBytes();
-    return _compressImageBytes(Uint8List.fromList(bytes),
-        maxDimension: maxDimension, quality: quality);
+    return MediaService.compressBytes(
+      Uint8List.fromList(bytes),
+      maxDimension: maxDimension,
+      quality: quality,
+    );
   }
 
   Future<Uint8List> _compressImageBytes(
@@ -226,34 +271,11 @@ class StorageService {
     int maxDimension = 1080,
     int quality = 80,
   }) async {
-    try {
-      final decoded = img.decodeImage(bytes);
-      if (decoded == null) {
-        return bytes;
-      }
-
-      int targetWidth = decoded.width;
-      int targetHeight = decoded.height;
-
-      if (decoded.width >= decoded.height && decoded.width > maxDimension) {
-        targetWidth = maxDimension;
-        targetHeight = (decoded.height * maxDimension / decoded.width).round();
-      } else if (decoded.height > decoded.width && decoded.height > maxDimension) {
-        targetHeight = maxDimension;
-        targetWidth = (decoded.width * maxDimension / decoded.height).round();
-      }
-
-      final resized = img.copyResize(
-        decoded,
-        width: targetWidth,
-        height: targetHeight,
-      );
-
-      final compressed = img.encodeJpg(resized, quality: quality);
-      return Uint8List.fromList(compressed);
-    } catch (_) {
-      return bytes;
-    }
+    return MediaService.compressBytes(
+      bytes,
+      maxDimension: maxDimension,
+      quality: quality,
+    );
   }
 
   /// Upload hub hero/cover image
@@ -263,20 +285,17 @@ class StorageService {
     }
 
     try {
-      final ref = _storage
-          .ref()
-          .child(AppConstants.hubPhotosPath)
-          .child(hubId)
-          .child('hero.jpg');
-
-      final compressedBytes =
-          await _compressImage(imageFile, maxDimension: 1600, quality: 80);
-      await ref.putData(
-        compressedBytes,
-        SettableMetadata(contentType: 'image/jpeg'),
+      final compressedBytes = await _compressImage(
+        imageFile,
+        maxDimension: 1600,
+        quality: 80,
       );
-
-      return await ref.getDownloadURL();
+      return uploadHubPhoto(
+        hubId: hubId,
+        fileName: 'hero.jpg',
+        fileBytes: compressedBytes,
+        contentType: 'image/jpeg',
+      );
     } catch (e) {
       throw Exception('Failed to upload hub hero image: $e');
     }
@@ -296,6 +315,60 @@ class StorageService {
       await ref.delete();
     } catch (e) {
       debugPrint('Failed to delete hub hero image: $e');
+    }
+  }
+
+  /// Upload hub logo/cover via signed URL (Cloud Function enforces permissions).
+  ///
+  /// Requires [FirebaseFunctions] and [FirebaseAuth] to be provided in constructor.
+  Future<String> uploadHubPhoto({
+    required String hubId,
+    required String fileName,
+    required Uint8List fileBytes,
+    required String contentType,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+    if (_functions == null || _auth == null) {
+      throw Exception('StorageService not configured for signed uploads');
+    }
+    if (_auth!.currentUser == null) {
+      throw Exception('User not authenticated for upload.');
+    }
+
+    try {
+      final token = const Uuid().v4();
+      final callable = _functions!.httpsCallable('getHubPhotoUploadUrl');
+      final result =
+          await callable.call<Map<String, dynamic>>(<String, dynamic>{
+        'hubId': hubId,
+        'fileName': fileName,
+        'contentType': contentType,
+      });
+
+      final String uploadUrl = result.data['url'];
+
+      final response = await http.put(
+        Uri.parse(uploadUrl),
+        headers: {
+          'Content-Type': contentType,
+          'x-goog-meta-firebaseStorageDownloadTokens': token,
+        },
+        body: fileBytes,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'File upload failed with status: ${response.statusCode}. Response: ${response.body}');
+      }
+
+      // Public download URL for the uploaded file
+      return 'https://firebasestorage.googleapis.com/v0/b/${_functions!.app.options.storageBucket}/o/hub_photos%2F$hubId%2F$fileName?alt=media&token=$token';
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception('Upload failed: ${e.message} (Code: ${e.code})');
+    } catch (e) {
+      throw Exception('An unexpected error occurred during upload: $e');
     }
   }
 }

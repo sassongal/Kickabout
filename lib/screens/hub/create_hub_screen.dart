@@ -9,6 +9,11 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
+import 'package:image_picker/image_picker.dart'; // For image picking
+import 'package:image/image.dart' as img; // For image processing
+import 'dart:io'; // For File
+import 'dart:typed_data';
+import 'package:kattrick/services/storage_service.dart'; // Import the new StorageService
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -24,6 +29,10 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
   final _descriptionController = TextEditingController();
   bool _isLoading = false;
   String? _selectedRegion;
+
+  final ImagePicker _imagePicker = ImagePicker();
+  File? _selectedImage;
+  String? _logoUrl; // To store the uploaded logo URL
 
   List<Venue> _selectedVenues = [];
   String? _mainVenueId;
@@ -58,7 +67,18 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
+
   Future<void> _createHub() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     final currentUserId = ref.read(currentUserIdProvider);
@@ -135,6 +155,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
             'ℹ️ No venue selected - hub will be created without location');
       }
 
+      // --- Image Upload Logic ---
       // Filter out any venues with empty IDs
       final validVenueIds = _selectedVenues
           .map((v) => v.venueId)
@@ -163,6 +184,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         mainVenueId: _mainVenueId,
         primaryVenueId: _mainVenueId,
         primaryVenueLocation: location,
+        logoUrl: null, // Will be updated after upload (if available)
       );
 
       debugPrint('📦 Hub object created:');
@@ -173,6 +195,39 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
       final hubId = await hubsRepo.createHub(hub);
       debugPrint('✅ Hub created with ID: $hubId');
       debugPrint('   Verifying hub data...');
+
+      // Upload logo after hub is created (Hub doc exists; user is manager)
+      if (_selectedImage != null) {
+        try {
+          final imageBytes = await _selectedImage!.readAsBytes();
+          final decodedImage = img.decodeImage(imageBytes);
+          if (decodedImage == null) {
+            throw Exception('Could not decode image.');
+          }
+
+          final resizedImage =
+              img.copyResize(decodedImage, width: 512, height: 512);
+          final compressedBytes =
+              img.encodeJpg(resizedImage, quality: 85); // Compress to JPEG
+
+          final storageService = ref.read(storageServiceProvider);
+          final fileName = 'logo.jpg';
+
+          _logoUrl = await storageService.uploadHubPhoto(
+            hubId: hubId,
+            fileName: fileName,
+            fileBytes: Uint8List.fromList(compressedBytes),
+            contentType: 'image/jpeg',
+          );
+
+          await hubsRepo.updateHub(hubId, {'logoUrl': _logoUrl});
+          debugPrint('✅ Hub logo uploaded and saved');
+        } catch (e) {
+          debugPrint('Error uploading hub logo: $e');
+          _logoUrl = null;
+        }
+      }
+      // --- End Image Upload Logic ---
 
       // Verify the hub was created correctly
       final createdHub = await hubsRepo.getHub(hubId);
@@ -207,8 +262,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(AppLocalizations.of(context)!.hubCreatedSuccess)),
+          SnackBar(content: Text(l10n.hubCreatedSuccess)),
         );
         // Navigate to the newly created hub's detail screen
         context.go('/hubs/$hubId');
@@ -254,6 +308,28 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Name field
+              // Hub Logo Picker
+              Center(
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: CircleAvatar(
+                    radius: 60,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.surfaceVariant,
+                    backgroundImage: _selectedImage != null
+                        ? FileImage(_selectedImage!)
+                        : null,
+                    child: _selectedImage == null
+                        ? Icon(Icons.camera_alt,
+                            size: 40,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant)
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(

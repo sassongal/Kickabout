@@ -27,19 +27,10 @@ class HubCommandCenter extends StatelessWidget {
       children: [
         // Row 1: Top Actions (Manager Mode Toggle + IconButtons)
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Manager Mode Toggle (left)
-            Switch(
-              value: false, // TODO: Implement manager mode state
-              onChanged: (value) {
-                // TODO: Implement manager mode toggle
-              },
-              activeThumbColor: Theme.of(context).colorScheme.primary,
-            ),
-            // Right: Compact IconButtons (with Flexible to prevent overflow)
             Flexible(
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Requests badge (Manager only)
