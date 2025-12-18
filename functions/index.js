@@ -41,7 +41,7 @@ exports.onRatingSnapshotCreated = gamification.onRatingSnapshotCreated;
 const hubs = require('./src/hubs');
 exports.addSuperAdminToHub = hubs.addSuperAdminToHub;
 exports.onHubDeleted = hubs.onHubDeleted;
-exports.onHubMemberChanged = hubs.onHubMemberChanged;
+exports.onHubMembershipChanged = hubs.onHubMembershipChanged;
 exports.createSuperAdmin = hubs.createSuperAdmin;
 
 // Venues

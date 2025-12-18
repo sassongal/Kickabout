@@ -133,190 +133,194 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                             ),
                           ),
                         // Game info card
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  dateFormat.format(game.gameDate),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
+                        Hero(
+                          tag: 'game_card_${game.gameId}',
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    dateFormat.format(game.gameDate),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                  // Load and display venue if venueId exists, otherwise show text location
+                                  if (game.venueId != null &&
+                                      game.venueId!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    StreamBuilder<Venue?>(
+                                      stream: ref
+                                          .read(venuesRepositoryProvider)
+                                          .watchVenue(game.venueId!),
+                                      builder: (context, venueSnapshot) {
+                                        final venue = venueSnapshot.data;
+                                        final locationText = venue?.name ??
+                                            game.location ??
+                                            'מיקום לא צוין';
+
+                                        if (locationText.isEmpty ||
+                                            locationText == 'מיקום לא צוין') {
+                                          return const SizedBox.shrink();
+                                        }
+
+                                        return Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_on,
+                                              size: 20,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.6),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    locationText,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium,
+                                                  ),
+                                                  if (venue?.address != null &&
+                                                      venue!.address !=
+                                                          locationText)
+                                                    Text(
+                                                      venue.address!,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withValues(
+                                                                    alpha: 0.6),
+                                                          ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ] else if (game.location?.isNotEmpty ??
+                                      false) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.location_on,
+                                          size: 20,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(game.location ?? ''),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Chip(
+                                        label:
+                                            Text(_getStatusText(game.status)),
+                                        backgroundColor: _getStatusColor(
+                                                game.status, context)
+                                            .withValues(alpha: 0.1),
                                       ),
-                                ),
-                                // Load and display venue if venueId exists, otherwise show text location
-                                if (game.venueId != null &&
-                                    game.venueId!.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Text('${game.teamCount} קבוצות'),
+                                    ],
+                                  ),
                                   const SizedBox(height: 8),
-                                  StreamBuilder<Venue?>(
-                                    stream: ref
-                                        .read(venuesRepositoryProvider)
-                                        .watchVenue(game.venueId!),
-                                    builder: (context, venueSnapshot) {
-                                      final venue = venueSnapshot.data;
-                                      final locationText = venue?.name ??
-                                          game.location ??
-                                          'מיקום לא צוין';
-
-                                      if (locationText.isEmpty ||
-                                          locationText == 'מיקום לא צוין') {
-                                        return const SizedBox.shrink();
-                                      }
-
-                                      return Row(
+                                  Text(
+                                    '${signups.length} נרשמו${isGameFull ? ' (מלא)' : ''}',
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  // Game rules (if defined)
+                                  if (game.durationInMinutes != null ||
+                                      game.gameEndCondition != null) ...[
+                                    const SizedBox(height: 16),
+                                    const Divider(),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'חוקי המשחק',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    if (game.durationInMinutes != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
                                         children: [
                                           Icon(
-                                            Icons.location_on,
-                                            size: 20,
+                                            Icons.timer,
+                                            size: 16,
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
                                                 .withValues(alpha: 0.6),
                                           ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  locationText,
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium,
-                                                ),
-                                                if (venue?.address != null &&
-                                                    venue!.address !=
-                                                        locationText)
-                                                  Text(
-                                                    venue.address!,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodySmall
-                                                        ?.copyWith(
-                                                          color:
-                                                              Theme.of(context)
-                                                                  .colorScheme
-                                                                  .onSurface
-                                                                  .withValues(
-                                                                      alpha:
-                                                                          0.6),
-                                                        ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ] else if (game.location?.isNotEmpty ??
-                                    false) ...[
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.location_on,
-                                        size: 20,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(game.location ?? ''),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Chip(
-                                      label: Text(_getStatusText(game.status)),
-                                      backgroundColor:
-                                          _getStatusColor(game.status, context)
-                                              .withValues(alpha: 0.1),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text('${game.teamCount} קבוצות'),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${signups.length} נרשמו${isGameFull ? ' (מלא)' : ''}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                                // Game rules (if defined)
-                                if (game.durationInMinutes != null ||
-                                    game.gameEndCondition != null) ...[
-                                  const SizedBox(height: 16),
-                                  const Divider(),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'חוקי המשחק',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                  if (game.durationInMinutes != null) ...[
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.timer,
-                                          size: 16,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'משך: ${game.durationInMinutes} דקות',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                  if (game.gameEndCondition != null) ...[
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(
-                                          Icons.flag,
-                                          size: 16,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            'תנאי סיום: ${game.gameEndCondition}',
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'משך: ${game.durationInMinutes} דקות',
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall,
                                           ),
-                                        ),
-                                      ],
-                                    ),
+                                        ],
+                                      ),
+                                    ],
+                                    if (game.gameEndCondition != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(
+                                            Icons.flag,
+                                            size: 16,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              'תנאי סיום: ${game.gameEndCondition}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         ),

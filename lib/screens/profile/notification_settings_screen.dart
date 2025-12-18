@@ -364,7 +364,7 @@ class _NotificationSettingsScreenState
           size: 24,
         ),
       ),
-      activeColor: FuturisticColors.primary,
+      activeThumbColor: FuturisticColors.primary,
     );
   }
 }

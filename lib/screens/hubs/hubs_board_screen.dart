@@ -280,95 +280,98 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
             final hub = hubsToShow[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
-              child: FuturisticCard(
-                onTap: () {
-                  if (hub.hubId.isNotEmpty) {
-                    context.push('/hubs/${hub.hubId}');
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              gradient: FuturisticColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(12),
+              child: Hero(
+                tag: 'hub_card_${hub.hubId}',
+                child: FuturisticCard(
+                  onTap: () {
+                    if (hub.hubId.isNotEmpty) {
+                      context.push('/hubs/${hub.hubId}');
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: FuturisticColors.primaryGradient,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.group,
+                                color: Colors.white,
+                                size: 24,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.group,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  hub.name,
-                                  style: FuturisticTypography.heading3,
-                                ),
-                                if (hub.description != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    hub.description!,
-                                    style: FuturisticTypography.bodySmall,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people,
-                            size: 16,
-                            color: FuturisticColors.textTertiary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${hub.memberCount} חברים',
-                            style: FuturisticTypography.bodySmall,
-                          ),
-                          if (hub.location != null &&
-                              _currentPosition != null) ...[
                             const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    hub.name,
+                                    style: FuturisticTypography.heading3,
+                                  ),
+                                  if (hub.description != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      hub.description!,
+                                      style: FuturisticTypography.bodySmall,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
                             Icon(
-                              Icons.location_on,
+                              Icons.people,
                               size: 16,
                               color: FuturisticColors.textTertiary,
                             ),
                             const SizedBox(width: 4),
-                            FutureBuilder<double>(
-                              future: _calculateDistance(
-                                  hub.location!, _currentPosition!),
-                              builder: (context, distanceSnapshot) {
-                                final distance = distanceSnapshot.data;
-                                if (distance == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Text(
-                                  '${distance.toStringAsFixed(1)} ק"מ',
-                                  style: FuturisticTypography.bodySmall,
-                                );
-                              },
+                            Text(
+                              '${hub.memberCount} חברים',
+                              style: FuturisticTypography.bodySmall,
                             ),
+                            if (hub.location != null &&
+                                _currentPosition != null) ...[
+                              const SizedBox(width: 16),
+                              Icon(
+                                Icons.location_on,
+                                size: 16,
+                                color: FuturisticColors.textTertiary,
+                              ),
+                              const SizedBox(width: 4),
+                              FutureBuilder<double>(
+                                future: _calculateDistance(
+                                    hub.location!, _currentPosition!),
+                                builder: (context, distanceSnapshot) {
+                                  final distance = distanceSnapshot.data;
+                                  if (distance == null) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Text(
+                                    '${distance.toStringAsFixed(1)} ק"מ',
+                                    style: FuturisticTypography.bodySmall,
+                                  );
+                                },
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

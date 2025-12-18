@@ -1,13 +1,14 @@
-const triggers = require('./triggers');
+const gameTriggers = require('./game_triggers');
+const statsTriggers = require('./stats_triggers');
 const scheduler = require('./scheduler');
 const callables = require('./callables');
 const signupSync = require('./signup-sync');
 
-exports.onGameCreated = triggers.onGameCreated;
-exports.onGameCompleted = triggers.onGameCompleted;
-exports.onGameSignupChanged = triggers.onGameSignupChanged;
-exports.onGameEventChanged = triggers.onGameEventChanged;
-exports.onSignupStatusChanged = triggers.onSignupStatusChanged;
+exports.onGameCreated = gameTriggers.onGameCreated;
+exports.onGameCompleted = statsTriggers.onGameCompleted;
+exports.onGameSignupChanged = gameTriggers.onGameSignupChanged;
+exports.onGameEventChanged = statsTriggers.onGameEventChanged;
+exports.onSignupStatusChanged = gameTriggers.onSignupStatusChanged;
 
 // Signup denormalization sync triggers (for N+1 query optimization)
 exports.onGameCreatedSyncSignups = signupSync.onGameCreatedSyncSignups;

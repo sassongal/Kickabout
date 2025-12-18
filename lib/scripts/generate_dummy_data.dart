@@ -1232,7 +1232,6 @@ class DummyDataGenerator {
       'שלמה',
     ];
 
-    final ageGroups = AgeGroup.values;
     final allUserIds = <String>[];
 
     // Generate 30 users

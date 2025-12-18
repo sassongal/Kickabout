@@ -210,7 +210,7 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color:
-                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -238,7 +238,7 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color:
-                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -266,7 +266,7 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color:
-                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -294,7 +294,7 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color:
-                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(

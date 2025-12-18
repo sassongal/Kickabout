@@ -13,7 +13,7 @@ import 'package:image_picker/image_picker.dart'; // For image picking
 import 'package:image/image.dart' as img; // For image processing
 import 'dart:io'; // For File
 import 'dart:typed_data';
-import 'package:kattrick/services/storage_service.dart'; // Import the new StorageService
+// Import the new StorageService
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -124,18 +124,18 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         } catch (e) {
           // If not found, use first venue if available
           debugPrint(
-              '⚠️ Main venue ${_mainVenueId} not found in selected venues, using first');
+              '⚠️ Main venue $_mainVenueId not found in selected venues, using first');
           if (_selectedVenues.isNotEmpty) {
             mainVenue = _selectedVenues.first;
             _mainVenueId = mainVenue.venueId;
-            debugPrint('✅ Setting main venue to first venue: ${_mainVenueId}');
+            debugPrint('✅ Setting main venue to first venue: $_mainVenueId');
           }
         }
       } else if (_selectedVenues.isNotEmpty) {
         // If no main venue selected but venues exist, use first one
         mainVenue = _selectedVenues.first;
         _mainVenueId = mainVenue.venueId;
-        debugPrint('✅ Setting main venue to first venue: ${_mainVenueId}');
+        debugPrint('✅ Setting main venue to first venue: $_mainVenueId');
       }
 
       // Generate geohash and location if venue is provided (optional)
@@ -315,7 +315,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                   child: CircleAvatar(
                     radius: 60,
                     backgroundColor:
-                        Theme.of(context).colorScheme.surfaceVariant,
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     backgroundImage: _selectedImage != null
                         ? FileImage(_selectedImage!)
                         : null,

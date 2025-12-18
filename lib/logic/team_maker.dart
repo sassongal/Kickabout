@@ -222,6 +222,11 @@ class TeamMaker {
     final suggestions = <(SwapSuggestion, double)>[];
     final initialStdDev = calculateBalanceMetrics(currentTeams).stddev;
 
+    // Calculate average rating to use as fallback for missing players
+    final averageRating = allPlayers.isEmpty
+        ? 4.0
+        : allPlayers.fold<double>(0.0, (sum, p) => sum + p.rating) / allPlayers.length;
+
     // Create a mutable copy of teams with player objects for simulation
     final simTeams = currentTeams.map((t) {
       return {
@@ -242,17 +247,29 @@ class TeamMaker {
 
         for (final playerAId in teamAPlayers) {
           for (final playerBId in teamBPlayers) {
-            // Simulate the swap
-            final playerARating = allPlayers
-                .firstWhere((p) => p.uid == playerAId,
-                    orElse: () => PlayerForTeam(
-                        uid: playerAId, rating: 0, role: PlayerRole.midfielder))
-                .rating;
-            final playerBRating = allPlayers
-                .firstWhere((p) => p.uid == playerBId,
-                    orElse: () => PlayerForTeam(
-                        uid: playerBId, rating: 0, role: PlayerRole.midfielder))
-                .rating;
+            // Get player ratings - use average rating as fallback for missing players
+            // to avoid skewing swap suggestions with zero ratings
+            final playerA = allPlayers.firstWhere(
+              (p) => p.uid == playerAId,
+              orElse: () {
+                // Log warning in debug mode - player should exist in allPlayers
+                assert(false, 'Player $playerAId not found in allPlayers list');
+                return PlayerForTeam(
+                    uid: playerAId, rating: averageRating, role: PlayerRole.midfielder);
+              }
+            );
+            final playerB = allPlayers.firstWhere(
+              (p) => p.uid == playerBId,
+              orElse: () {
+                // Log warning in debug mode - player should exist in allPlayers
+                assert(false, 'Player $playerBId not found in allPlayers list');
+                return PlayerForTeam(
+                    uid: playerBId, rating: averageRating, role: PlayerRole.midfielder);
+              }
+            );
+
+            final playerARating = playerA.rating;
+            final playerBRating = playerB.rating;
 
             final newTeamAScore =
                 (teamA['totalScore'] as double) - playerARating + playerBRating;

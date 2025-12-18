@@ -17,7 +17,7 @@
 /// - Validates all ratings are in valid range
 /// - Batched writes for performance
 /// - Detailed logging
-library migrate_ratings_to_7_scale;
+library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -173,7 +173,7 @@ Future<void> migrateRatingsTo7Scale({
   }
 
   // Print final statistics
-  print('\n' + '=' * 50);
+  print('\n${'=' * 50}');
   print('✅ Migration Complete!');
   print(stats.toString());
 

@@ -286,7 +286,7 @@ class _CreateRecruitingPostScreenState
                   hintText: 'לא חובה - ניתן להשאיר ריק',
                   border: OutlineInputBorder(),
                 ),
-                value: _linkedGameId != null
+                initialValue: _linkedGameId != null
                     ? 'game_$_linkedGameId'
                     : _linkedEventId != null
                         ? 'event_$_linkedEventId'

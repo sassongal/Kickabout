@@ -70,6 +70,11 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
 
+              if (snapshot.hasError) {
+                return Center(
+                    child: Text('שגיאה בטעינת נתונים: ${snapshot.error}'));
+              }
+
               final data = snapshot.data;
               final users = (data?['users'] as List<User>?) ?? [];
               final rolesMap = (data?['roles'] as Map<String, String>?) ?? {};

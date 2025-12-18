@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -119,7 +118,7 @@ class StorageService {
     if (_functions == null || _auth == null) {
       throw Exception('StorageService not configured for signed uploads');
     }
-    if (_auth!.currentUser == null) {
+    if (_auth.currentUser == null) {
       throw Exception('User not authenticated for upload.');
     }
 
@@ -131,7 +130,7 @@ class StorageService {
           await _compressImage(imageFile, maxDimension: 1600, quality: 80);
       final token = const Uuid().v4();
 
-      final callable = _functions!.httpsCallable('getGamePhotoUploadUrl');
+      final callable = _functions.httpsCallable('getGamePhotoUploadUrl');
       final result =
           await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'gameId': gameId,
@@ -154,7 +153,7 @@ class StorageService {
             'File upload failed with status: ${response.statusCode}. Response: ${response.body}');
       }
 
-      return 'https://firebasestorage.googleapis.com/v0/b/${_functions!.app.options.storageBucket}/o/game_photos%2F$gameId%2F$fileName?alt=media&token=$token';
+      return 'https://firebasestorage.googleapis.com/v0/b/${_functions.app.options.storageBucket}/o/game_photos%2F$gameId%2F$fileName?alt=media&token=$token';
     } on FirebaseFunctionsException catch (e) {
       throw Exception('Upload failed: ${e.message} (Code: ${e.code})');
     } catch (e) {
@@ -333,13 +332,13 @@ class StorageService {
     if (_functions == null || _auth == null) {
       throw Exception('StorageService not configured for signed uploads');
     }
-    if (_auth!.currentUser == null) {
+    if (_auth.currentUser == null) {
       throw Exception('User not authenticated for upload.');
     }
 
     try {
       final token = const Uuid().v4();
-      final callable = _functions!.httpsCallable('getHubPhotoUploadUrl');
+      final callable = _functions.httpsCallable('getHubPhotoUploadUrl');
       final result =
           await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'hubId': hubId,
@@ -364,7 +363,7 @@ class StorageService {
       }
 
       // Public download URL for the uploaded file
-      return 'https://firebasestorage.googleapis.com/v0/b/${_functions!.app.options.storageBucket}/o/hub_photos%2F$hubId%2F$fileName?alt=media&token=$token';
+      return 'https://firebasestorage.googleapis.com/v0/b/${_functions.app.options.storageBucket}/o/hub_photos%2F$hubId%2F$fileName?alt=media&token=$token';
     } on FirebaseFunctionsException catch (e) {
       throw Exception('Upload failed: ${e.message} (Code: ${e.code})');
     } catch (e) {

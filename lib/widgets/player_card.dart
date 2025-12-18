@@ -501,8 +501,9 @@ class PlayerCard extends StatelessWidget {
   }
 
   Color _getGradeColor(String grade) {
-    if (grade.startsWith('S') || grade.startsWith('A'))
+    if (grade.startsWith('S') || grade.startsWith('A')) {
       return FuturisticColors.success;
+    }
     if (grade.startsWith('B')) return FuturisticColors.primary;
     if (grade.startsWith('C')) return Colors.orange;
     return Colors.red;

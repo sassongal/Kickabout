@@ -30,16 +30,14 @@ import 'package:kattrick/widgets/home/hubs_carousel.dart';
 
 /// Futuristic Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly
-class HomeScreenFuturisticFigma extends ConsumerStatefulWidget {
-  const HomeScreenFuturisticFigma({super.key});
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreenFuturisticFigma> createState() =>
-      _HomeScreenFuturisticFigmaState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenFuturisticFigmaState
-    extends ConsumerState<HomeScreenFuturisticFigma> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _hasPreloaded = false;
 
   @override
@@ -277,8 +275,9 @@ class _HomeScreenFuturisticFigmaState
                         StreamBuilder<List<Hub>>(
                           stream: hubsRepo.watchAllMyHubs(currentUserId),
                           builder: (context, snapshot) {
-                            if (snapshot.hasError)
+                            if (snapshot.hasError) {
                               return const SizedBox.shrink();
+                            }
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
                               return const Center(
@@ -310,7 +309,8 @@ class _HomeScreenFuturisticFigmaState
                                     }
 
                                     return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'UPCOMING GAMES',
@@ -322,114 +322,116 @@ class _HomeScreenFuturisticFigmaState
                                           ),
                                         ),
                                         const SizedBox(height: 12),
-                                    ...games.take(2).map((game) => Padding(
-                                          padding:
-                                              const EdgeInsets.only(bottom: 12),
-                                          child: FuturisticCard(
-                                            onTap: () => context
-                                                .push('/games/${game.gameId}'),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.calendar_today,
-                                                  color:
-                                                      FuturisticColors.primary,
-                                                  size: 20,
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        DateFormat(
-                                                                'dd/MM HH:mm')
-                                                            .format(
-                                                                game.gameDate),
-                                                        style: GoogleFonts
-                                                            .montserrat(
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: const Color(
-                                                              0xFF212121),
-                                                        ),
-                                                      ),
-                                                      if (game.location != null)
-                                                        Text(
-                                                          game.location!,
-                                                          style:
-                                                              GoogleFonts.inter(
-                                                            fontSize: 14,
-                                                            color: const Color(
-                                                                0xFF757575),
+                                        ...games.take(2).map((game) => Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 12),
+                                              child: FuturisticCard(
+                                                onTap: () => context.push(
+                                                    '/games/${game.gameId}'),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.calendar_today,
+                                                      color: FuturisticColors
+                                                          .primary,
+                                                      size: 20,
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            DateFormat(
+                                                                    'dd/MM HH:mm')
+                                                                .format(game
+                                                                    .gameDate),
+                                                            style: GoogleFonts
+                                                                .montserrat(
+                                                              fontSize: 16,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color: const Color(
+                                                                  0xFF212121),
+                                                            ),
                                                           ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                // Signup count (simplified - just show status)
-                                                Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                    color: FuturisticColors
-                                                        .secondary,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            16),
-                                                  ),
-                                                  child: Builder(
-                                                    builder: (context) {
-                                                      final signupsRepo = ref.read(
-                                                          signupsRepositoryProvider);
-                                                      return StreamBuilder<
-                                                          List<GameSignup>>(
-                                                        stream: signupsRepo
-                                                            .watchSignups(
-                                                                game.gameId),
-                                                        builder: (context,
-                                                            signupsSnapshot) {
-                                                          final signups =
-                                                              signupsSnapshot
-                                                                      .data ??
-                                                                  [];
-                                                          final confirmedCount =
-                                                              signups
+                                                          if (game.location !=
+                                                              null)
+                                                            Text(
+                                                              game.location!,
+                                                              style: GoogleFonts
+                                                                  .inter(
+                                                                fontSize: 14,
+                                                                color: const Color(
+                                                                    0xFF757575),
+                                                              ),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    // Signup count (simplified - just show status)
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 6),
+                                                      decoration: BoxDecoration(
+                                                        color: FuturisticColors
+                                                            .secondary,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(16),
+                                                      ),
+                                                      child: Builder(
+                                                        builder: (context) {
+                                                          final signupsRepo =
+                                                              ref.read(
+                                                                  signupsRepositoryProvider);
+                                                          return StreamBuilder<
+                                                              List<GameSignup>>(
+                                                            stream: signupsRepo
+                                                                .watchSignups(
+                                                                    game.gameId),
+                                                            builder: (context,
+                                                                signupsSnapshot) {
+                                                              final signups =
+                                                                  signupsSnapshot
+                                                                          .data ??
+                                                                      [];
+                                                              final confirmedCount = signups
                                                                   .where((s) =>
                                                                       s.status ==
                                                                       SignupStatus
                                                                           .confirmed)
                                                                   .length;
-                                                          final minRequired = game
-                                                                  .teamCount *
-                                                              AppConstants
-                                                                  .minPlayersPerTeam;
-                                                          return Text(
-                                                            '$confirmedCount/$minRequired',
-                                                            style: GoogleFonts
-                                                                .montserrat(
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                              color:
-                                                                  Colors.white,
-                                                            ),
+                                                              final minRequired = game
+                                                                      .teamCount *
+                                                                  AppConstants
+                                                                      .minPlayersPerTeam;
+                                                              return Text(
+                                                                '$confirmedCount/$minRequired',
+                                                                style: GoogleFonts
+                                                                    .montserrat(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  color: Colors
+                                                                      .white,
+                                                                ),
+                                                              );
+                                                            },
                                                           );
                                                         },
-                                                      );
-                                                    },
-                                                  ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ],
-                                            ),
-                                          ),
-                                        )),
+                                              ),
+                                            )),
                                       ],
                                     );
                                   },

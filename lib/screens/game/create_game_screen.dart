@@ -9,7 +9,6 @@ import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/screens/location/map_picker_screen.dart';
 import 'package:kattrick/routing/app_paths.dart';
 
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
@@ -525,7 +524,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       final hubs = snapshot.data ?? [];
 
                       return DropdownButtonFormField<String?>(
-                        value: _selectedHubId,
+                        initialValue: _selectedHubId,
                         decoration: const InputDecoration(
                           labelText: 'בחר Hub',
                           border: OutlineInputBorder(),
@@ -832,7 +831,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int>(
-                        value: _durationMinutes,
+                        initialValue: _durationMinutes,
                         decoration: const InputDecoration(
                           labelText: 'משך המשחק (דקות)',
                           border: OutlineInputBorder(),

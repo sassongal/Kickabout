@@ -338,7 +338,7 @@ class TeamBalancingTestScript {
     }
 
     // סיכום
-    debugPrint('\n' + '=' * 60);
+    debugPrint('\n${'=' * 60}');
     debugPrint('🎉 תרחיש נוצר בהצלחה!');
     debugPrint('=' * 60);
     debugPrint('📊 סיכום:');

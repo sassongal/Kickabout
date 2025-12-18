@@ -37,123 +37,128 @@ class HubHeader extends ConsumerWidget {
     return Column(
       children: [
         // Hub info card (compact)
-        Card(
-          margin: const EdgeInsets.all(8),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // User role badge (compact, top left)
-                if (currentUserId != null) ...[
+        Hero(
+          tag: 'hub_card_$hubId',
+          child: Card(
+            margin: const EdgeInsets.all(8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // User role badge (compact, top left)
+                  if (currentUserId != null) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Builder(
+                          builder: (context) {
+                            // Use passed permissions or create new if null (shouldn't happen for logged in)
+                            final permissions = hubPermissions ??
+                                HubPermissions(hub: hub, userId: currentUserId);
+                            final role = permissions.userRole;
+                            final roleName = role.displayName;
+
+                            // Set icon based on actual role
+                            IconData roleIcon = Icons.person_outline;
+                            switch (role) {
+                              case HubRole.manager:
+                                roleIcon = Icons.admin_panel_settings;
+                                break;
+                              case HubRole.moderator:
+                                roleIcon = Icons.shield;
+                                break;
+                              case HubRole.veteran:
+                                roleIcon = Icons.star;
+                                break;
+                              case HubRole.member:
+                                roleIcon = Icons.person;
+                                break;
+                              case HubRole.guest:
+                                roleIcon = Icons.person_outline;
+                                break;
+                            }
+
+                            return Chip(
+                              label: Text(roleName),
+                              avatar: Icon(
+                                roleIcon,
+                                size: 16,
+                              ),
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
+                              labelStyle: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                              ),
+                            );
+                          },
+                        ),
+                        // Hub creation date (compact, top right)
+                        Text(
+                          'נוצר: ${DateFormat('dd/MM/yyyy', 'he').format(hub.createdAt)}',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                    fontSize: 11,
+                                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  // Compact member count
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Builder(
-                        builder: (context) {
-                          // Use passed permissions or create new if null (shouldn't happen for logged in)
-                          final permissions = hubPermissions ??
-                              HubPermissions(hub: hub, userId: currentUserId);
-                          final role = permissions.userRole;
-                          final roleName = role.displayName;
-
-                          // Set icon based on actual role
-                          IconData roleIcon = Icons.person_outline;
-                          switch (role) {
-                            case HubRole.manager:
-                              roleIcon = Icons.admin_panel_settings;
-                              break;
-                            case HubRole.moderator:
-                              roleIcon = Icons.shield;
-                              break;
-                            case HubRole.veteran:
-                              roleIcon = Icons.star;
-                              break;
-                            case HubRole.member:
-                              roleIcon = Icons.person;
-                              break;
-                            case HubRole.guest:
-                              roleIcon = Icons.person_outline;
-                              break;
-                          }
-
-                          return Chip(
-                            label: Text(roleName),
-                            avatar: Icon(
-                              roleIcon,
-                              size: 16,
-                            ),
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            labelStyle: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
-                            ),
-                          );
-                        },
+                      Icon(
+                        Icons.group,
+                        size: 16,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
-                      // Hub creation date (compact, top right)
+                      const SizedBox(width: 4),
                       Text(
-                        'נוצר: ${DateFormat('dd/MM/yyyy', 'he').format(hub.createdAt)}',
+                        '${hub.memberCount} משתתפים',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                              fontSize: 11,
+                              fontSize: 12,
                             ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                ],
-                // Compact member count
-                Row(
-                  children: [
-                    Icon(
-                      Icons.group,
-                      size: 16,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+
+                  // Command Center - Compact Header (for managers/moderators)
+                  if (hubPermissions != null)
+                    HubCommandCenter(
+                      hubId: hubId,
+                      hub: hub,
+                      hubPermissions: hubPermissions!,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${hub.memberCount} משתתפים',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                          ),
+
+                  if (hubPermissions != null &&
+                          (hubPermissions!.isManager ||
+                              hubPermissions!.isModerator) ||
+                      isAdminRole) ...[
+                    const SizedBox(height: 8),
+                    // Row 3: Home Venue (Only for authorized)
+                    // Actually in original code it was inside the if(manager/moderator) block
+                    HubHomeVenueSelector(
+                      hubId: hubId,
+                      venuesRepo: venuesRepo,
                     ),
+                    const SizedBox(height: 8),
                   ],
-                ),
-                const SizedBox(height: 8),
-
-                // Command Center - Compact Header (for managers/moderators)
-                if (hubPermissions != null)
-                  HubCommandCenter(
-                    hubId: hubId,
-                    hub: hub,
-                    hubPermissions: hubPermissions!,
-                  ),
-
-                if (hubPermissions != null &&
-                        (hubPermissions!.isManager ||
-                            hubPermissions!.isModerator) ||
-                    isAdminRole) ...[
-                  const SizedBox(height: 8),
-                  // Row 3: Home Venue (Only for authorized)
-                  // Actually in original code it was inside the if(manager/moderator) block
-                  HubHomeVenueSelector(
-                    hubId: hubId,
-                    venuesRepo: venuesRepo,
-                  ),
-                  const SizedBox(height: 8),
                 ],
-              ],
+              ),
             ),
           ),
         ),

@@ -673,8 +673,8 @@ class _SelectTeamsDialogState extends State<_SelectTeamsDialog> {
                     setState(() {
                       if (_selectedTeamA == null) {
                         _selectedTeamA = index;
-                      } else if (_selectedTeamB == null) {
-                        _selectedTeamB = index;
+                      } else {
+                        _selectedTeamB ??= index;
                       }
                     });
                   },

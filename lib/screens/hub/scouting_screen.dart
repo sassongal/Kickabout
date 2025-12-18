@@ -170,7 +170,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
 
             // ✅ Age Group Filter (alternative to age range)
             DropdownButtonFormField<AgeGroup>(
-              value: _selectedAgeGroup,
+              initialValue: _selectedAgeGroup,
               decoration: const InputDecoration(
                 labelText: 'קבוצת גיל (אופציונלי)',
                 border: OutlineInputBorder(),

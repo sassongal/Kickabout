@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 
-import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
+// Added import
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/utils/geohash_utils.dart';

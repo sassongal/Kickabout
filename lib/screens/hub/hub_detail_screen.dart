@@ -14,6 +14,7 @@ import 'package:kattrick/widgets/hub/hub_games_tab.dart';
 import 'package:kattrick/widgets/hub/hub_polls_tab.dart';
 import 'package:kattrick/widgets/hub/hub_admin_speed_dial.dart';
 import 'package:kattrick/widgets/hub/hub_non_member_view.dart';
+import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -67,10 +68,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
       stream: hubStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return AppScaffold(
-            title: 'פרטי Hub',
-            body: const FuturisticLoadingState(message: 'טוען פרטי Hub...'),
-          );
+          return const _HubDetailSkeleton();
         }
 
         if (snapshot.hasError) {
@@ -240,5 +238,72 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
     return tabBar != oldDelegate.tabBar;
+  }
+}
+
+class _HubDetailSkeleton extends StatelessWidget {
+  const _HubDetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppScaffold(
+      title: '...',
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Banner Skeleton
+            const SkeletonLoader(
+                width: double.infinity, height: 180, borderRadius: 0),
+            const SizedBox(height: 16),
+            // Avatar & Info Skeleton
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const SkeletonLoader(width: 80, height: 80, borderRadius: 40),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        SkeletonLoader(width: 150, height: 24),
+                        SizedBox(height: 8),
+                        SkeletonLoader(width: 100, height: 16),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Tabs Skeleton
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  SkeletonLoader(width: 60, height: 40),
+                  SkeletonLoader(width: 60, height: 40),
+                  SkeletonLoader(width: 60, height: 40),
+                  SkeletonLoader(width: 60, height: 40),
+                ],
+              ),
+            ),
+            const Divider(),
+            // Content Skeleton
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: const [
+                  SkeletonLoader(width: double.infinity, height: 100),
+                  SizedBox(height: 16),
+                  SkeletonLoader(width: double.infinity, height: 100),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

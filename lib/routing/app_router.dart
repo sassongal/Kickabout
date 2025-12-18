@@ -35,7 +35,7 @@ import 'package:kattrick/screens/game/team_maker_screen.dart'
     deferred as team_maker_screen;
 import 'package:kattrick/screens/game/log_game_screen.dart'
     deferred as log_game_screen;
-import 'package:kattrick/screens/profile/player_profile_screen_futuristic.dart'
+import 'package:kattrick/screens/profile/player_profile_screen.dart'
     deferred as player_profile_screen;
 import 'package:kattrick/screens/profile/edit_profile_screen.dart'
     deferred as edit_profile_screen;
@@ -62,7 +62,7 @@ import 'package:kattrick/screens/social/following_screen.dart'
     deferred as following_screen;
 import 'package:kattrick/screens/social/followers_screen.dart'
     deferred as followers_screen;
-import 'package:kattrick/screens/home_screen_futuristic_figma.dart';
+import 'package:kattrick/screens/home/home_screen.dart';
 import 'package:kattrick/screens/game/game_chat_screen.dart'
     deferred as game_chat_screen;
 import 'package:kattrick/screens/community/community_screen.dart';
@@ -297,7 +297,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         name: 'home',
-        builder: (context, state) => const HomeScreenFuturisticFigma(),
+        builder: (context, state) => const HomeScreen(),
       ),
 
       GoRoute(
@@ -957,7 +957,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             loader: player_profile_screen.loadLibrary(),
             builder: () {
               final playerId = state.pathParameters['uid']!;
-              return player_profile_screen.PlayerProfileScreenFuturistic(
+              return player_profile_screen.PlayerProfileScreen(
                   playerId: playerId);
             }),
         routes: [

@@ -634,7 +634,7 @@ class HubsRepository {
           .get();
       return snapshot.docs.map((doc) => doc.id).toList();
     } catch (e) {
-      return [];
+      throw Exception('Failed to load hub member IDs: $e');
     }
   }
 
@@ -654,11 +654,11 @@ class HubsRepository {
             if (data['status'] == null) data['status'] = 'active';
             return HubMember.fromJson(data);
           })
-          .where((member) => member.status == 'active')
+          .where((member) => member.status == HubMemberStatus.active)
           .toList();
     } catch (e) {
       debugPrint('Error in getHubMembers for hub $hubId: $e');
-      return [];
+      throw Exception('Failed to load hub members: $e');
     }
   }
 
@@ -698,12 +698,13 @@ class HubsRepository {
       return results;
     } catch (e) {
       debugPrint('Error in getHubMembersByIds for hub $hubId: $e');
-      return [];
+      throw Exception('Failed to load hub members: $e');
     }
   }
 
   /// Get all hubs (DEPRECATED - use getHubsPaginated instead)
-  @Deprecated('Use getHubsPaginated instead for better performance and pagination support')
+  @Deprecated(
+      'Use getHubsPaginated instead for better performance and pagination support')
   Future<List<Hub>> getAllHubs({int limit = 100}) async {
     if (!Env.isFirebaseAvailable) return [];
 
@@ -765,7 +766,8 @@ class HubsRepository {
       return PaginatedResult.fromSnapshot(
         snapshot: snapshot,
         limit: limit,
-        mapper: (doc) => Hub.fromJson({...doc.data() as Map<String, dynamic>, 'hubId': doc.id}),
+        mapper: (doc) => Hub.fromJson(
+            {...doc.data() as Map<String, dynamic>, 'hubId': doc.id}),
       );
     } catch (e) {
       debugPrint('Error in getHubsPaginated: $e');
@@ -784,16 +786,32 @@ class HubsRepository {
     if (!Env.isFirebaseAvailable) return [];
 
     try {
-      // Generate geohash (precision 7 = ~150m)
-      final centerHash = GeohashUtils.encode(latitude, longitude, precision: 7);
+      // Determine precision based on radius
+      int precision;
+      if (radiusKm <= 0.5) {
+        precision = 7; // ~150m cells
+      } else if (radiusKm <= 2.5) {
+        precision = 6; // ~1.2km cells
+      } else if (radiusKm <= 20) {
+        precision = 5; // ~5km cells
+      } else if (radiusKm <= 100) {
+        precision = 4; // ~40km cells
+      } else {
+        precision = 3; // ~150km cells
+      }
+
+      // Generate geohash
+      final centerHash =
+          GeohashUtils.encode(latitude, longitude, precision: precision);
       final neighbors = GeohashUtils.neighbors(centerHash);
 
-      // Query Firestore with geohash prefixes
+      // Query Firestore with geohash prefixes (limited to prevent massive loads)
       final allHashes = [centerHash, ...neighbors];
       final queries = allHashes.map((hash) => _firestore
           .collection(FirestorePaths.hubs())
           .where('geohash', isGreaterThanOrEqualTo: hash)
-          .where('geohash', isLessThan: '$hash~')
+          .where('geohash', isLessThanOrEqualTo: '$hash~')
+          .limit(50) // Limit per hash query to prevent massive loads
           .get());
 
       final results = await Future.wait(queries);
@@ -875,7 +893,7 @@ class HubsRepository {
           .snapshots()
           .map((snapshot) {
         // FIX: Only print in debug mode and reduce verbosity
-        if (kDebugMode && snapshot.docs.length > 0) {
+        if (kDebugMode && snapshot.docs.isNotEmpty) {
           // Only print if there are actual changes (not on every rebuild)
           debugPrint(
               'watchHubsByCreator: Found ${snapshot.docs.length} hubs for user $uid');
@@ -1298,7 +1316,7 @@ class HubsRepository {
 
       return bannedUsers;
     } catch (e) {
-      return [];
+      throw Exception('Failed to load banned users: $e');
     }
   }
 }

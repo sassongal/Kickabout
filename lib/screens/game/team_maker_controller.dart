@@ -210,6 +210,15 @@ class TeamMakerController extends StateNotifier<TeamMakerState> {
         teams: result.teams,
         balanceScore: result.balanceScore,
       );
+    } on ArgumentError catch (e) {
+      // User-friendly error for not enough players
+      String msg = 'שגיאה ביצירת קבוצות.';
+      if (e.message.toString().contains('Not enough players')) {
+        msg = 'אין מספיק שחקנים כדי למלא את מספר הקבוצות המבוקש.';
+      } else {
+        msg = e.message.toString();
+      }
+      state = state.copyWith(isGenerating: false, errorMessage: msg);
     } catch (e) {
       state = state.copyWith(isGenerating: false, errorMessage: e.toString());
     }

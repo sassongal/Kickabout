@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,7 +15,8 @@ class PlaceResult {
   final String? phoneNumber;
   final double? rating;
   final int? userRatingsTotal;
-  final List<String> types; // e.g., ["sports_complex", "stadium", "establishment"]
+  final List<String>
+      types; // e.g., ["sports_complex", "stadium", "establishment"]
   final String? website;
   final bool isPublic; // Public vs rental
   final Map<String, dynamic>? additionalData;
@@ -39,12 +39,12 @@ class PlaceResult {
   /// Check if this is a football/sports venue
   bool get isSportsVenue {
     return types.any((type) => [
-      'stadium',
-      'sports_complex',
-      'gym',
-      'park',
-      'establishment',
-    ].contains(type));
+          'stadium',
+          'sports_complex',
+          'gym',
+          'park',
+          'establishment',
+        ].contains(type));
   }
 
   /// Convert to Venue model
@@ -102,7 +102,7 @@ class GooglePlacesService {
         _httpClient = httpClient ?? http.Client();
 
   /// Search for venues near a location
-  /// 
+  ///
   /// [query] - Search query (e.g., "football field", "מגרש כדורגל")
   /// [latitude] - Center latitude
   /// [longitude] - Center longitude
@@ -163,8 +163,10 @@ class GooglePlacesService {
       // Sort by distance
       final sortedResults = uniqueResults.values.toList();
       sortedResults.sort((a, b) {
-        final distA = _calculateDistance(latitude, longitude, a.latitude, a.longitude);
-        final distB = _calculateDistance(latitude, longitude, b.latitude, b.longitude);
+        final distA =
+            _calculateDistance(latitude, longitude, a.latitude, a.longitude);
+        final distB =
+            _calculateDistance(latitude, longitude, b.latitude, b.longitude);
         return distA.compareTo(distB);
       });
 
@@ -325,10 +327,10 @@ class GooglePlacesService {
   }
 
   /// Search for football venues using Text Search API
-  /// 
+  ///
   /// This function performs a flexible text search focused on football fields in Israel.
   /// It searches for terms like "מגרש כדורגל", "מגרש קט רגל", "מגרשי ספורט", etc.
-  /// 
+  ///
   /// Returns a list of PlaceResult objects with place_id, name, formatted_address, and geometry.
   Future<List<PlaceResult>> searchForFootballVenues({
     double? latitude,
@@ -341,92 +343,40 @@ class GooglePlacesService {
 
     try {
       final results = <PlaceResult>[];
-      
-      // Broader search queries to improve coverage of football venues in Israel
+
+      // Optimized: Search for broad categories instead of micro-variations
+      // We run these in parallel to save time
       final queries = [
-        'מגרש כדורגל',
-        'מגרש קט רגל',
-        'מגרשי ספורט',
-        'אצטדיון כדורגל',
-        'מגרש דשא',
-        'מגרש סינטטי',
-        'אולם ספורט',
-        'חוג כדורגל',
-        'soccer field',
-        'football pitch',
-        'five a side football',
-        'indoor soccer',
-        'futsal court',
-        'community soccer field',
+        'מגרשי כדורגל וספורט', // Broad Hebrew query covering football, soccer, sports fields
+        'Soccer and Football fields', // Broad English query
       ];
 
-      // Perform text search for each query
-      for (final query in queries) {
-        try {
-          final regionParam = '&region=il';
-          final url = Uri.parse(
-            'https://maps.googleapis.com/maps/api/place/textsearch/json'
-            '?query=${Uri.encodeComponent(query)}'
-            '${latitude != null && longitude != null ? '&location=$latitude,$longitude&radius=$radius' : ''}'
-            '$regionParam'
-            '&key=$apiKey'
-            '&language=he',
-          );
+      // Run queries in parallel
+      final searchFutures = queries.map((query) => _textSearch(
+            query: query,
+            latitude: latitude ?? 31.7683, // Default to Jerusalem if null
+            longitude: longitude ?? 35.2137,
+            radius: radius,
+          ));
 
-          final response = await _httpClient.get(url);
-          if (response.statusCode != 200) {
-            debugPrint(
-                'Places textsearch failed for \"$query\" with status ${response.statusCode}');
-            continue; // Skip this query if it fails
-          }
+      final batchResults = await Future.wait(searchFutures);
 
-          final data = json.decode(response.body);
-          final status = data['status'];
-          if (status != 'OK' && status != 'ZERO_RESULTS') {
-            debugPrint(
-                'Places textsearch status=$status error=${data['error_message']} for query \"$query\"');
-            continue; // Skip if API returns error
+      for (final batch in batchResults) {
+        for (final place in batch) {
+          // Check if we already have this place (avoid duplicates)
+          if (!results.any((r) => r.placeId == place.placeId)) {
+            results.add(place);
           }
-
-          // Parse results
-          for (final place in data['results'] ?? []) {
-            final geometry = place['geometry'];
-            final location = geometry?['location'];
-            
-            if (location != null && 
-                location['lat'] != null && 
-                location['lng'] != null) {
-              final placeId = place['place_id'] as String?;
-              final name = place['name'] as String?;
-              final formattedAddress = place['formatted_address'] as String?;
-              
-              if (placeId != null && name != null) {
-                // Check if we already have this place (avoid duplicates)
-                if (!results.any((r) => r.placeId == placeId)) {
-                  results.add(PlaceResult(
-                    placeId: placeId,
-                    name: name,
-                    address: formattedAddress,
-                    latitude: (location['lat'] as num).toDouble(),
-                    longitude: (location['lng'] as num).toDouble(),
-                    types: List<String>.from(place['types'] ?? []),
-                    isPublic: true,
-                  ));
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // Continue with next query if one fails
-          continue;
         }
       }
 
       // If location is provided, sort by distance
       if (latitude != null && longitude != null) {
         results.sort((a, b) {
-          final distA = _calculateDistance(latitude, longitude, a.latitude, a.longitude);
-          final distB = _calculateDistance(latitude, longitude, b.latitude, b.longitude);
+          final distA =
+              _calculateDistance(latitude, longitude, a.latitude, a.longitude);
+          final distB =
+              _calculateDistance(latitude, longitude, b.latitude, b.longitude);
           return distA.compareTo(distB);
         });
       }
@@ -438,7 +388,8 @@ class GooglePlacesService {
   }
 
   /// Get autocomplete predictions from Google Places API
-  Future<List<AutocompletePrediction>> getAutocomplete(String query) async {
+  Future<List<AutocompletePrediction>> getAutocomplete(String query,
+      {String? sessionToken}) async {
     if (apiKey.isEmpty) {
       throw Exception('Google Maps API key not configured');
     }
@@ -453,7 +404,8 @@ class GooglePlacesService {
         '?input=${Uri.encodeComponent(query)}'
         '&key=$apiKey'
         '&language=he'
-        '&components=country:il', // Restrict to Israel
+        '&components=country:il' // Restrict to Israel
+        '${sessionToken != null ? '&sessiontoken=$sessionToken' : ''}',
       );
 
       final response = await _httpClient.get(url);

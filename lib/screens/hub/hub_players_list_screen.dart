@@ -51,7 +51,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
   // Manager Ratings Mode
   bool _isRatingMode = false;
-  Map<String, double> _tempRatings = {}; // userId -> rating (1.0-7.0)
+  final Map<String, double> _tempRatings = {}; // userId -> rating (1.0-7.0)
   bool _isSavingRatings = false;
 
   // Pagination state for subcollection

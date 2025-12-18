@@ -34,12 +34,12 @@ class TeamCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: DragTarget<String>(
-        onWillAccept: (playerId) {
+        onWillAcceptWithDetails: (details) {
           // Don't accept if player is already in this team
-          return playerId != null && !team.playerIds.contains(playerId);
+          return !team.playerIds.contains(details.data);
         },
-        onAccept: (playerId) {
-          onPlayerDropped(playerId, teamIndex);
+        onAcceptWithDetails: (details) {
+          onPlayerDropped(details.data, teamIndex);
         },
         builder: (context, candidateData, rejectedData) {
           final isHovering = candidateData.isNotEmpty;

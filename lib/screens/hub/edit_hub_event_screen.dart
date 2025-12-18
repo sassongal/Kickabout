@@ -319,8 +319,9 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
 
             await Future.wait(
               batch.map((playerId) {
-                if (playerId == currentUserId)
+                if (playerId == currentUserId) {
                   return Future.value(); // לא לשלוח לעצמך
+                }
 
                 return notificationsRepo.createNotification(
                   app_notification.Notification(

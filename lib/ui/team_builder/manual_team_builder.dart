@@ -39,7 +39,6 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
   List<User> _allPlayers = [];
   bool _isLoading = false;
   bool _isSaving = false;
-  Hub? _hub; // Cache hub for manager ratings
   Map<String, double> _managerRatings = {}; // Cache manager ratings
 
   // Team colors - predefined neon colors
@@ -70,7 +69,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       if (widget.game.hubId != null) {
-        final hub = await hubsRepo.getHub(widget.game.hubId!);
+        await hubsRepo.getHub(widget.game.hubId!);
 
         // Load manager ratings from HubMember subcollection
         final hubMembers = await hubsRepo.getHubMembers(widget.game.hubId!);
@@ -83,7 +82,6 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
 
         if (mounted) {
           setState(() {
-            _hub = hub;
             _managerRatings = ratings;
           });
         }
@@ -563,7 +561,7 @@ class _ManualTeamBuilderState extends ConsumerState<ManualTeamBuilder> {
             child: DragTarget<String>(
               onAcceptWithDetails: (details) =>
                   _onPlayerDropped(details.data, teamIndex),
-              builder: (context, candidateData, rejectedData) {
+              builder: (context, candidateData, _) {
                 return Container(
                   color: candidateData.isNotEmpty
                       ? Color(_teamColorMap[teamIndex]?['value'] as int? ??

@@ -16,7 +16,6 @@ void main() {
   });
 
   group('GameManagementService - rescheduleGame', () {
-    late GameManagementService service;
     late MockFirebaseFirestore mockFirestore;
     late MockGamesRepository mockGamesRepo;
     late MockHubsRepository mockHubsRepo;
@@ -32,7 +31,7 @@ void main() {
       mockNotificationsRepo = MockNotificationsRepository();
       mockTransaction = MockTransaction();
 
-      service = GameManagementService(
+      GameManagementService(
         firestore: mockFirestore,
         gamesRepo: mockGamesRepo,
         hubsRepo: mockHubsRepo,
@@ -49,7 +48,8 @@ void main() {
       });
     });
 
-    test('reads all signups INSIDE transaction to prevent race conditions', () async {
+    test('reads all signups INSIDE transaction to prevent race conditions',
+        () async {
       // This test documents the critical fix: signup reads must happen
       // inside the transaction, not before it.
       //
@@ -73,7 +73,8 @@ void main() {
       expect(true, true); // Placeholder - see comments above
     });
 
-    test('follows correct transaction pattern: all reads before all writes', () async {
+    test('follows correct transaction pattern: all reads before all writes',
+        () async {
       // Transaction best practice verification
       //
       // CORRECT PATTERN (implemented in fix):
@@ -92,7 +93,9 @@ void main() {
       expect(true, true); // Placeholder - see comments above
     });
 
-    test('updates only signups that are CURRENTLY confirmed (not from stale data)', () async {
+    test(
+        'updates only signups that are CURRENTLY confirmed (not from stale data)',
+        () async {
       // Edge case test
       //
       // Scenario:
@@ -113,6 +116,10 @@ void main() {
 
 // Mock classes
 class MockGamesRepository extends Mock implements GamesRepository {}
+
 class MockHubsRepository extends Mock implements HubsRepository {}
+
 class MockSignupsRepository extends Mock implements SignupsRepository {}
-class MockNotificationsRepository extends Mock implements NotificationsRepository {}
+
+class MockNotificationsRepository extends Mock
+    implements NotificationsRepository {}

@@ -165,7 +165,7 @@ class _CacheEntry<T> {
   final T data;
   final DateTime expiresAt;
 
-  _CacheEntry(T this.data, Duration ttl)
+  _CacheEntry(this.data, Duration ttl)
       : expiresAt = DateTime.now().add(ttl);
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);

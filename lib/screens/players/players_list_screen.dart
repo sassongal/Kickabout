@@ -720,7 +720,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                   const SizedBox(height: 16),
                   // ✅ Age Group Filter
                   DropdownButtonFormField<AgeGroup>(
-                    value: _selectedAgeGroup,
+                    initialValue: _selectedAgeGroup,
                     decoration: const InputDecoration(
                       labelText: 'קבוצת גיל',
                       border: OutlineInputBorder(),

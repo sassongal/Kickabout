@@ -164,7 +164,9 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
 
   Future<void> _calculateGameResult(Game game, gamesRepo, hubsRepo) async {
     if (game.session.legacyTeamAScore == null ||
-        game.session.legacyTeamBScore == null) return;
+        game.session.legacyTeamBScore == null) {
+      return;
+    }
 
     final scoreA = game.session.legacyTeamAScore!;
     final scoreB = game.session.legacyTeamBScore!;
@@ -575,9 +577,9 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
       // If user.preferredPosition is free text, this might be sparse.
       // Let's assume standard codes or map common ones.
       String key = 'MF';
-      if (position.contains('GK') || position.contains('שוער'))
+      if (position.contains('GK') || position.contains('שוער')) {
         key = 'GK';
-      else if (position.contains('DF') ||
+      } else if (position.contains('DF') ||
           position.contains('מגן') ||
           position.contains('בלם'))
         key = 'DF';

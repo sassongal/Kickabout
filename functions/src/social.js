@@ -289,32 +289,45 @@ exports.onContactMessageCreated = onDocumentCreated(
       const hubData = hubDoc.data();
       const creatorId = hubData.createdBy;
 
-      // Get all hub admins/managers
-      const managerIds = [creatorId];
-      if (hubData.roles) {
-        Object.entries(hubData.roles).forEach(([userId, role]) => {
-          if (role === 'admin' || role === 'manager') {
-            managerIds.push(userId);
-          }
-        });
+      // Get all hub admins/managers from subcollection
+      const managersSnap = await db.collection('hubs').doc(hubId).collection('members')
+        .where('role', 'in', ['admin', 'manager'])
+        .get();
+
+      const managerIds = managersSnap.docs.map(doc => doc.id);
+
+      // Add creator if not already in list (creator should be admin, but safe to ensure)
+      if (creatorId && !managerIds.includes(creatorId)) {
+        managerIds.push(creatorId);
       }
 
       // ✅ PERFORMANCE FIX: Send notifications in PARALLEL
       const uniqueManagerIds = [...new Set(managerIds)];
       const notificationPromises = uniqueManagerIds.map(async (managerId) => {
         try {
-          const tokenDoc = await db
-            .collection('users')
-            .doc(managerId)
-            .collection('fcm_tokens')
-            .doc('tokens')
-            .get();
+          // Use helper if possible, but here we query tokens directly? 
+          // Previous code queried tokens doc directly. Let's stick to that pattern or use getUserFCMTokens?
+          // getUserFCMTokens is better if available (imported from utils).
+          // Checking utils import in this file... yes, getUserFCMTokens is imported?
+          // Let's check imports at top of file. 
+          // Line 4: const { db, messaging, FieldValue, getHubMemberIds, getUserFCMTokens } = require('./utils');
+          // Yes, it is imported. AND previous code in `onHubMessageCreated` uses it.
+          // BUT previous code in `onContactMessageCreated` did NOT use it (lines 306-311).
+          // I should verify if I can use getUserFCMTokens here for consistency.
 
-          if (!tokenDoc.exists) return;
+          let userTokens = [];
 
-          const tokenData = tokenDoc.data();
-          const userTokens = tokenData?.tokens || [];
-          if (!Array.isArray(userTokens) || userTokens.length === 0) return;
+          // Try helper first (handles subcollection)
+          try {
+            userTokens = await getUserFCMTokens(managerId);
+          } catch (e) {
+            console.log(`Failed to get tokens via helper for ${managerId}, trying legacy if needed`, e);
+          }
+
+          if (!userTokens || userTokens.length === 0) {
+            // Fallback or just return
+            return;
+          }
 
           const notification = {
             notification: {

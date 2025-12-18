@@ -154,7 +154,7 @@ class MigrateSignupDenormalizedData {
 
   /// Print migration summary
   void _printSummary(MigrationResult result) {
-    debugPrint('\n' + '=' * 60);
+    debugPrint('\n${'=' * 60}');
     debugPrint('📊 MIGRATION SUMMARY');
     debugPrint('=' * 60);
     debugPrint('Mode: ${dryRun ? "DRY RUN (no changes made)" : "LIVE"}');

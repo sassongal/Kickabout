@@ -13,11 +13,11 @@ class MockVenuesRepository extends Mock implements VenuesRepository {}
 
 void main() {
   late MockVenuesRepository mockVenuesRepository;
-  
+
   setUp(() {
     mockVenuesRepository = MockVenuesRepository();
   });
-  
+
   final testVenue1 = Venue(
     venueId: 'venue1',
     hubId: 'hub1',
@@ -27,7 +27,7 @@ void main() {
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   );
-  
+
   final testVenue2 = Venue(
     venueId: 'venue2',
     hubId: 'hub1',
@@ -37,7 +37,7 @@ void main() {
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   );
-  
+
   Widget createWidgetUnderTest({
     List<Venue> initialVenues = const [],
     String? initialMainVenueId,
@@ -58,30 +58,34 @@ void main() {
       ),
     );
   }
-  
+
   group('HubVenuesManager Widget Tests', () {
-    testWidgets('should display title and empty state', (WidgetTester tester) async {
+    testWidgets('should display title and empty state',
+        (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(createWidgetUnderTest(
         onChanged: (venues, mainId) {},
       ));
-      
+
       // Assert
       expect(find.text('מגרשי הבית (עד 3)'), findsOneWidget);
-      expect(find.text('לא נבחרו מגרשים. הוסף מגרש כדי להתחיל.'), findsOneWidget);
+      expect(
+          find.text('לא נבחרו מגרשים. הוסף מגרש כדי להתחיל.'), findsOneWidget);
     });
-    
-    testWidgets('should show search field when less than 3 venues', (WidgetTester tester) async {
+
+    testWidgets('should show search field when less than 3 venues',
+        (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(createWidgetUnderTest(
         onChanged: (venues, mainId) {},
       ));
-      
+
       // Assert
       expect(find.text('הוסף מגרש'), findsOneWidget);
     });
-    
-    testWidgets('should hide search field when 3 venues', (WidgetTester tester) async {
+
+    testWidgets('should hide search field when 3 venues',
+        (WidgetTester tester) async {
       // Arrange
       final venue3 = Venue(
         venueId: 'venue3',
@@ -91,46 +95,48 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       // Act
       await tester.pumpWidget(createWidgetUnderTest(
         initialVenues: [testVenue1, testVenue2, venue3],
         onChanged: (venues, mainId) {},
       ));
-      
+
       // Assert
       expect(find.text('הוסף מגרש'), findsNothing);
     });
-    
+
     testWidgets('should display initial venues', (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(createWidgetUnderTest(
         initialVenues: [testVenue1, testVenue2],
         onChanged: (venues, mainId) {},
       ));
-      
+
       // Assert
       expect(find.text('מגרש 1'), findsOneWidget);
       expect(find.text('מגרש 2'), findsOneWidget);
     });
-    
-    testWidgets('should mark first venue as main by default', (WidgetTester tester) async {
+
+    testWidgets('should mark first venue as main by default',
+        (WidgetTester tester) async {
       // Act
       await tester.pumpWidget(createWidgetUnderTest(
         initialVenues: [testVenue1],
         onChanged: (_, __) {},
       ));
-      
+
       // Assert - main venue should be set to first venue
       // Note: This happens in initState, so we check via UI
       expect(find.byType(Radio<String>), findsOneWidget);
     });
-    
-    testWidgets('should call onChanged with removed venue', (WidgetTester tester) async {
+
+    testWidgets('should call onChanged with removed venue',
+        (WidgetTester tester) async {
       // Arrange
       List<Venue>? changedVenues;
       String? changedMainId;
-      
+
       await tester.pumpWidget(createWidgetUnderTest(
         initialVenues: [testVenue1, testVenue2],
         initialMainVenueId: testVenue1.venueId,
@@ -139,28 +145,31 @@ void main() {
           changedMainId = mainId;
         },
       ));
-      
+
       // Act - find and tap delete button for venue1
       final deleteButtons = find.byIcon(Icons.delete);
       expect(deleteButtons, findsNWidgets(2));
       await tester.tap(deleteButtons.first);
       await tester.pumpAndSettle();
-      
+
       // Assert
       expect(changedVenues, isNotNull);
       expect(changedVenues!.length, equals(1));
       expect(changedVenues!.first.venueId, equals('venue2'));
+      expect(changedMainId, equals('venue2'));
     });
-    
-    testWidgets('should show helper text about main venue', (WidgetTester tester) async {
+
+    testWidgets('should show helper text about main venue',
+        (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(createWidgetUnderTest(
         initialVenues: [testVenue1],
         onChanged: (venues, mainId) {},
       ));
-      
+
       // Assert
-      expect(find.text('* המגרש המסומן הוא המגרש הראשי של ה-Hub'), findsOneWidget);
+      expect(
+          find.text('* המגרש המסומן הוא המגרש הראשי של ה-Hub'), findsOneWidget);
     });
   });
 }

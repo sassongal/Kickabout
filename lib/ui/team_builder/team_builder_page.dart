@@ -68,10 +68,8 @@ class _TeamBuilderPageState extends ConsumerState<TeamBuilderPage> {
         setState(() {
           _managerRatings.clear();
           for (final member in members) {
-            if (member.managerRating != null) {
-              _managerRatings[member.userId] = member.managerRating!;
-            }
-          }
+            _managerRatings[member.userId] = member.managerRating;
+                    }
         });
       }
     } catch (e) {

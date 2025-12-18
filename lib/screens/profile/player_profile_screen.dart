@@ -16,21 +16,20 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Enhanced Player Profile Screen with Futuristic Design
 /// Features: Hero Section, Tabbed Interface, Full Statistics, Privacy Settings
-class PlayerProfileScreenFuturistic extends ConsumerStatefulWidget {
+class PlayerProfileScreen extends ConsumerStatefulWidget {
   final String playerId;
 
-  const PlayerProfileScreenFuturistic({
+  const PlayerProfileScreen({
     super.key,
     required this.playerId,
   });
 
   @override
-  ConsumerState<PlayerProfileScreenFuturistic> createState() =>
-      _PlayerProfileScreenFuturisticState();
+  ConsumerState<PlayerProfileScreen> createState() =>
+      _PlayerProfileScreenState();
 }
 
-class _PlayerProfileScreenFuturisticState
-    extends ConsumerState<PlayerProfileScreenFuturistic>
+class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 

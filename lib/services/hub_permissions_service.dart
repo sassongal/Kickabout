@@ -9,7 +9,7 @@
 /// - NO client-side DateTime.now() checks
 /// - Hub creator is ALWAYS manager
 /// - Custom permissions via Hub.permissions are rare overrides only
-library hub_permissions;
+library;
 
 import 'package:kattrick/models/hub_member.dart';
 import 'package:kattrick/models/hub.dart';
