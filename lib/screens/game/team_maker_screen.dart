@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/dialogs/unrated_players_warning_dialog.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
@@ -15,6 +15,7 @@ import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/team_card.dart';
 import 'package:kattrick/screens/game/team_maker_controller.dart';
 import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Premium team maker screen with advanced UI
 class TeamMakerScreen extends ConsumerStatefulWidget {
@@ -49,7 +50,7 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
   Widget _buildForEvent(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     if (widget.hubId == null) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: l10n.teamFormation,
         body: Center(child: Text(l10n.errorMissingHubId)),
       );
@@ -58,7 +59,7 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
     final hubEventsRepo = ref.watch(hubEventsRepositoryProvider);
 
     // Use a key to ensure this builder is identified
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'יוצר כוחות',
       body: FutureBuilder<HubEvent?>(
         // Create a memoized future or rely on repo caching.
@@ -68,7 +69,7 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
           // 1. Handle Loading (only if we have no data at all)
           if (eventSnapshot.connectionState == ConnectionState.waiting &&
               !eventSnapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: KineticLoadingAnimation(size: 48));
           }
 
           // 2. Handle Error
@@ -93,7 +94,7 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
               return Center(child: Text(l10n.eventNotFound));
             }
             // Should verify if we are just waiting with no data
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: KineticLoadingAnimation(size: 48));
           }
 
           // Check admin permissions
@@ -156,24 +157,24 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
                       Icon(
                         Icons.warning_amber_rounded,
                         size: 64,
-                        color: FuturisticColors.warning,
+                        color: PremiumColors.warning,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         l10n.notEnoughRegisteredPlayers,
-                        style: FuturisticTypography.heading2,
+                        style: PremiumTypography.heading2,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         l10n.requiredPlayersCount(
                             event.teamCount * AppConstants.minPlayersPerTeam),
-                        style: FuturisticTypography.bodyMedium,
+                        style: PremiumTypography.bodyMedium,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         l10n.registeredPlayerCount(registeredPlayerIds.length),
-                        style: FuturisticTypography.bodySmall,
+                        style: PremiumTypography.bodySmall,
                       ),
                     ],
                   ),
@@ -190,7 +191,8 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () =>
+                const Center(child: KineticLoadingAnimation(size: 48)),
             error: (error, stack) => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -210,7 +212,7 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
   Widget _buildForGame(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     // Game mode implementation (kept simple for now)
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'יוצר כוחות',
       body: Center(child: Text('Game mode coming soon')),
     );
@@ -297,7 +299,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
     });
 
     if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: KineticLoadingAnimation(size: 64));
     }
 
     return Column(
@@ -306,7 +308,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
         if (state.hasGenerated) ...[
           Padding(
             padding: const EdgeInsets.all(16),
-            child: FuturisticCard(
+            child: PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -314,11 +316,11 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                     Row(
                       children: [
                         Icon(Icons.analytics_outlined,
-                            color: FuturisticColors.primary),
+                            color: PremiumColors.primary),
                         const SizedBox(width: 8),
                         Text(
                           'ניקוד איזון',
-                          style: FuturisticTypography.heading3,
+                          style: PremiumTypography.heading3,
                         ),
                       ],
                     ),
@@ -328,7 +330,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                       children: [
                         Text(
                           state.balanceScore.toStringAsFixed(1),
-                          style: FuturisticTypography.heading1.copyWith(
+                          style: PremiumTypography.heading1.copyWith(
                             fontSize: 56,
                             color: _getBalanceColor(state.balanceScore),
                             fontWeight: FontWeight.bold,
@@ -336,8 +338,8 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                         ),
                         Text(
                           '/100',
-                          style: FuturisticTypography.heading2.copyWith(
-                            color: FuturisticColors.textSecondary,
+                          style: PremiumTypography.heading2.copyWith(
+                            color: PremiumColors.textSecondary,
                           ),
                         ),
                       ],
@@ -348,7 +350,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                       child: LinearProgressIndicator(
                         value: state.balanceScore / 100,
                         minHeight: 12,
-                        backgroundColor: FuturisticColors.surfaceVariant,
+                        backgroundColor: PremiumColors.surfaceVariant,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           _getBalanceColor(state.balanceScore),
                         ),
@@ -357,11 +359,38 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                     const SizedBox(height: 8),
                     Text(
                       _getBalanceMessage(state.balanceScore),
-                      style: FuturisticTypography.bodyMedium.copyWith(
+                      style: PremiumTypography.bodyMedium.copyWith(
                         color: _getBalanceColor(state.balanceScore),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    // Warning if balance is below 80%
+                    if (state.balanceScore < 80) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange, width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber, color: Colors.orange),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'הכוחות לא שווים, כדאי לאזן או לנסות שוב',
+                                style: PremiumTypography.bodySmall.copyWith(
+                                  color: Colors.orange.shade900,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -380,7 +409,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: FuturisticColors.surface,
+            color: PremiumColors.surface,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -414,11 +443,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
+                          child: KineticLoadingAnimation(size: 20),
                         )
                       : Icon(
                           state.hasGenerated ? Icons.save : Icons.auto_awesome),
@@ -431,7 +456,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                               : 'צור כוחות'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: FuturisticColors.primary,
+                    backgroundColor: PremiumColors.primary,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -453,33 +478,59 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: FuturisticColors.primary.withOpacity(0.1),
+                color: PremiumColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.groups,
                 size: 100,
-                color: FuturisticColors.primary,
+                color: PremiumColors.primary,
               ),
             ),
             const SizedBox(height: 32),
             Text(
               '${state.players.length} שחקנים רשומים',
-              style: FuturisticTypography.heading1,
+              style: PremiumTypography.heading1,
             ),
             const SizedBox(height: 8),
             Text(
               '${widget.args.teamCount} קבוצות',
-              style: FuturisticTypography.heading3.copyWith(
-                color: FuturisticColors.textSecondary,
+              style: PremiumTypography.heading3.copyWith(
+                color: PremiumColors.textSecondary,
               ),
             ),
             const SizedBox(height: 32),
             Text(
               'לחץ על "צור כוחות" כדי ליצור קבוצות מאוזנות\nעל בסיס דירוגי השחקנים ותפקידיהם',
-              style: FuturisticTypography.bodyLarge,
+              style: PremiumTypography.bodyLarge,
               textAlign: TextAlign.center,
             ),
+            // Info for odd player count
+            if (state.players.length % widget.args.teamCount != 0) ...[
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue, width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'מספר השחקנים אינו מתחלק שווה בשווה.\nהמערכת תאזן את הקבוצות לפי רייטינג ממוצע',
+                        style: PremiumTypography.bodySmall.copyWith(
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -509,7 +560,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
               controller.movePlayer(playerId, fromTeamIndex, toTeamIndex);
             }
           },
-          onPlayerTap: (user, player, teamIndex) {
+          onPlayerTap: (User user, PlayerForTeam player, int teamIndex) {
             _showPlayerDialog(user, player, teamIndex, state, controller);
           },
         );
@@ -524,7 +575,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: FuturisticColors.surface,
+        backgroundColor: PremiumColors.surface,
         title: Row(
           children: [
             PlayerAvatar(user: user, size: AvatarSize.sm),
@@ -532,7 +583,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
             Expanded(
               child: Text(
                 user.displayName ?? user.name,
-                style: FuturisticTypography.heading3,
+                style: PremiumTypography.heading3,
               ),
             ),
           ],
@@ -546,7 +597,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
             const SizedBox(height: 16),
             Text(
               'העבר לקבוצה:',
-              style: FuturisticTypography.heading3.copyWith(fontSize: 16),
+              style: PremiumTypography.heading3.copyWith(fontSize: 16),
             ),
             const SizedBox(height: 12),
             ...state.teams.asMap().entries.map((entry) {
@@ -568,13 +619,13 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: isCurrent
-                          ? FuturisticColors.primary.withOpacity(0.2)
-                          : FuturisticColors.background,
+                          ? PremiumColors.primary.withOpacity(0.2)
+                          : PremiumColors.background,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isCurrent
-                            ? FuturisticColors.primary
-                            : FuturisticColors.surfaceVariant,
+                            ? PremiumColors.primary
+                            : PremiumColors.surfaceVariant,
                       ),
                     ),
                     child: Row(
@@ -585,7 +636,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                           decoration: BoxDecoration(
                             color: team.colorValue != null
                                 ? Color(team.colorValue!)
-                                : FuturisticColors.primary,
+                                : PremiumColors.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -593,7 +644,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                         Expanded(
                           child: Text(
                             team.name,
-                            style: FuturisticTypography.bodyMedium,
+                            style: PremiumTypography.bodyMedium,
                           ),
                         ),
                         if (isCurrent)
@@ -631,13 +682,13 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
         children: [
           Text(
             label,
-            style: FuturisticTypography.bodySmall.copyWith(
-              color: FuturisticColors.textSecondary,
+            style: PremiumTypography.bodySmall.copyWith(
+              color: PremiumColors.textSecondary,
             ),
           ),
           Text(
             value,
-            style: FuturisticTypography.bodyMedium.copyWith(
+            style: PremiumTypography.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -656,7 +707,7 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
   }
 
   Color _getBalanceColor(double score) {
-    if (score >= 85) return FuturisticColors.success;
+    if (score >= 85) return PremiumColors.success;
     if (score >= 70) return Colors.green;
     if (score >= 55) return Colors.orange;
     return Colors.red;
