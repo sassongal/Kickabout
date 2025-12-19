@@ -14,6 +14,9 @@ import 'package:image/image.dart' as img; // For image processing
 import 'dart:io'; // For File
 import 'dart:typed_data';
 // Import the new StorageService
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/widgets/input/city_autocomplete_field.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -27,6 +30,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _cityController = TextEditingController();
   bool _isLoading = false;
   String? _selectedRegion;
 
@@ -51,7 +55,13 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         final user = await usersRepo.getUser(currentUserId);
         if (user != null && mounted) {
           setState(() {
-            _selectedRegion = user.region;
+            // Load city if available, otherwise just region
+            if (user.city != null && user.city!.isNotEmpty) {
+              _cityController.text = user.city!;
+              _selectedRegion = CityUtils.getRegionForCity(user.city!);
+            } else {
+              _selectedRegion = user.region;
+            }
           });
         }
       }
@@ -64,6 +74,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _cityController.dispose();
     super.dispose();
   }
 
@@ -168,6 +179,16 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
       debugPrint('   venueIds: $validVenueIds');
       debugPrint('   location: $location');
 
+      // Auto-calculate region from city if city is provided
+      String? finalRegion = _selectedRegion;
+      String? finalCity = _cityController.text.trim().isEmpty
+          ? null
+          : _cityController.text.trim();
+
+      if (finalCity != null && finalCity.isNotEmpty) {
+        finalRegion = CityUtils.getRegionForCity(finalCity);
+      }
+
       final hub = Hub(
         hubId: '', // Will be generated
         name: _nameController.text.trim(),
@@ -179,7 +200,8 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         // memberIds removed - creator added via transaction in repository
         location: location,
         geohash: geohash,
-        region: _selectedRegion,
+        region: finalRegion,
+        city: finalCity,
         venueIds: validVenueIds,
         mainVenueId: _mainVenueId,
         primaryVenueId: _mainVenueId,
@@ -362,37 +384,32 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Region field
-              Builder(builder: (context) {
-                final l10n = AppLocalizations.of(context)!;
-                final regions = {
-                  'צפון': l10n.regionNorth,
-                  'מרכז': l10n.regionCenter,
-                  'דרום': l10n.regionSouth,
-                  'ירושלים': l10n.regionJerusalem,
-                };
-                return DropdownButtonFormField<String>(
-                  initialValue: _selectedRegion,
-                  decoration: InputDecoration(
-                    labelText: l10n.regionLabel,
-                    hintText: l10n.regionHint,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.map),
-                    helperText: l10n.regionHelperText,
+              // City field (replaces region dropdown - region is auto-calculated)
+              CityAutocompleteField(
+                controller: _cityController,
+                labelText: 'עיר ראשית של ההאב',
+                hintText: 'בחר עיר...',
+                helperText: 'האזור יחושב אוטומטית לפי העיר',
+                onCitySelected: (city) {
+                  setState(() {
+                    _selectedRegion = CityUtils.getRegionForCity(city);
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+
+              // Display calculated region
+              if (_selectedRegion != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(
+                    'אזור: $_selectedRegion',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-                  items: regions.entries
-                      .map((entry) => DropdownMenuItem(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedRegion = value;
-                    });
-                  },
-                );
-              }),
+                ),
               const SizedBox(height: 24),
 
               // Hub Venues Manager (optional)
@@ -457,7 +474,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: KineticLoadingAnimation(size: 20),
                       )
                     : const Icon(Icons.add),
                 label: Text(_isLoading ? l10n.creating : l10n.createHub),

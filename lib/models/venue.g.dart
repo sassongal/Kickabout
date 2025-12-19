@@ -14,6 +14,8 @@ _$VenueImpl _$$VenueImplFromJson(Map<String, dynamic> json) => _$VenueImpl(
       description: json['description'] as String?,
       location: const GeoPointConverter().fromJson(json['location']),
       address: json['address'] as String?,
+      city: json['city'] as String?,
+      region: json['region'] as String?,
       googlePlaceId: json['googlePlaceId'] as String?,
       amenities: (json['amenities'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -43,6 +45,8 @@ Map<String, dynamic> _$$VenueImplToJson(_$VenueImpl instance) =>
       'description': instance.description,
       'location': const GeoPointConverter().toJson(instance.location),
       'address': instance.address,
+      'city': instance.city,
+      'region': instance.region,
       'googlePlaceId': instance.googlePlaceId,
       'amenities': instance.amenities,
       'surfaceType': instance.surfaceType,

@@ -64,7 +64,9 @@ mixin _$FeedPost {
       throw _privateConstructorUsedError; // Denormalized from users/{authorId}.photoUrl
   String? get entityId =>
       throw _privateConstructorUsedError; // ID of related entity (gameId, etc.)
-  String? get region => throw _privateConstructorUsedError;
+  String? get region =>
+      throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים (לסינון פיד אזורי)
+  String? get city => throw _privateConstructorUsedError;
 
   /// Serializes this FeedPost to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -106,7 +108,8 @@ abstract class $FeedPostCopyWith<$Res> {
       String? authorName,
       String? authorPhotoUrl,
       String? entityId,
-      String? region});
+      String? region,
+      String? city});
 }
 
 /// @nodoc
@@ -149,6 +152,7 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
     Object? authorPhotoUrl = freezed,
     Object? entityId = freezed,
     Object? region = freezed,
+    Object? city = freezed,
   }) {
     return _then(_value.copyWith(
       postId: null == postId
@@ -251,6 +255,10 @@ class _$FeedPostCopyWithImpl<$Res, $Val extends FeedPost>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -288,7 +296,8 @@ abstract class _$$FeedPostImplCopyWith<$Res>
       String? authorName,
       String? authorPhotoUrl,
       String? entityId,
-      String? region});
+      String? region,
+      String? city});
 }
 
 /// @nodoc
@@ -329,6 +338,7 @@ class __$$FeedPostImplCopyWithImpl<$Res>
     Object? authorPhotoUrl = freezed,
     Object? entityId = freezed,
     Object? region = freezed,
+    Object? city = freezed,
   }) {
     return _then(_$FeedPostImpl(
       postId: null == postId
@@ -431,6 +441,10 @@ class __$$FeedPostImplCopyWithImpl<$Res>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -463,7 +477,8 @@ class _$FeedPostImpl implements _FeedPost {
       this.authorName,
       this.authorPhotoUrl,
       this.entityId,
-      this.region})
+      this.region,
+      this.city})
       : _likes = likes,
         _comments = comments,
         _photoUrls = photoUrls;
@@ -571,10 +586,13 @@ class _$FeedPostImpl implements _FeedPost {
 // ID of related entity (gameId, etc.)
   @override
   final String? region;
+// אזור: צפון, מרכז, דרום, ירושלים (לסינון פיד אזורי)
+  @override
+  final String? city;
 
   @override
   String toString() {
-    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, text: $text, gameId: $gameId, eventId: $eventId, achievementId: $achievementId, isUrgent: $isUrgent, recruitingUntil: $recruitingUntil, neededPlayers: $neededPlayers, likes: $likes, likeCount: $likeCount, commentCount: $commentCount, commentsCount: $commentsCount, comments: $comments, photoUrls: $photoUrls, createdAt: $createdAt, hubName: $hubName, hubLogoUrl: $hubLogoUrl, authorName: $authorName, authorPhotoUrl: $authorPhotoUrl, entityId: $entityId, region: $region)';
+    return 'FeedPost(postId: $postId, hubId: $hubId, authorId: $authorId, type: $type, content: $content, text: $text, gameId: $gameId, eventId: $eventId, achievementId: $achievementId, isUrgent: $isUrgent, recruitingUntil: $recruitingUntil, neededPlayers: $neededPlayers, likes: $likes, likeCount: $likeCount, commentCount: $commentCount, commentsCount: $commentsCount, comments: $comments, photoUrls: $photoUrls, createdAt: $createdAt, hubName: $hubName, hubLogoUrl: $hubLogoUrl, authorName: $authorName, authorPhotoUrl: $authorPhotoUrl, entityId: $entityId, region: $region, city: $city)';
   }
 
   @override
@@ -620,7 +638,8 @@ class _$FeedPostImpl implements _FeedPost {
                 other.authorPhotoUrl == authorPhotoUrl) &&
             (identical(other.entityId, entityId) ||
                 other.entityId == entityId) &&
-            (identical(other.region, region) || other.region == region));
+            (identical(other.region, region) || other.region == region) &&
+            (identical(other.city, city) || other.city == city));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -651,7 +670,8 @@ class _$FeedPostImpl implements _FeedPost {
         authorName,
         authorPhotoUrl,
         entityId,
-        region
+        region,
+        city
       ]);
 
   /// Create a copy of FeedPost
@@ -696,7 +716,8 @@ abstract class _FeedPost implements FeedPost {
       final String? authorName,
       final String? authorPhotoUrl,
       final String? entityId,
-      final String? region}) = _$FeedPostImpl;
+      final String? region,
+      final String? city}) = _$FeedPostImpl;
 
   factory _FeedPost.fromJson(Map<String, dynamic> json) =
       _$FeedPostImpl.fromJson;
@@ -756,7 +777,9 @@ abstract class _FeedPost implements FeedPost {
   @override
   String? get entityId; // ID of related entity (gameId, etc.)
   @override
-  String? get region;
+  String? get region; // אזור: צפון, מרכז, דרום, ירושלים (לסינון פיד אזורי)
+  @override
+  String? get city;
 
   /// Create a copy of FeedPost
   /// with the given fields replaced by the non-null parameter values.

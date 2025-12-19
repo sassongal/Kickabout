@@ -43,6 +43,7 @@ _$FeedPostImpl _$$FeedPostImplFromJson(Map<String, dynamic> json) =>
       authorPhotoUrl: json['authorPhotoUrl'] as String?,
       entityId: json['entityId'] as String?,
       region: json['region'] as String?,
+      city: json['city'] as String?,
     );
 
 Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
@@ -73,4 +74,5 @@ Map<String, dynamic> _$$FeedPostImplToJson(_$FeedPostImpl instance) =>
       'authorPhotoUrl': instance.authorPhotoUrl,
       'entityId': instance.entityId,
       'region': instance.region,
+      'city': instance.city,
     };

@@ -43,6 +43,7 @@ class FeedPost with _$FeedPost {
     String? authorPhotoUrl, // Denormalized from users/{authorId}.photoUrl
     String? entityId, // ID of related entity (gameId, etc.)
     String? region, // אזור: צפון, מרכז, דרום, ירושלים (לסינון פיד אזורי)
+    String? city, // עיר (לתצוגה בפוסטים)
   }) = _FeedPost;
 
   factory FeedPost.fromJson(Map<String, dynamic> json) =>

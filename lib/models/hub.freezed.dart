@@ -54,11 +54,15 @@ mixin _$Hub {
       throw _privateConstructorUsedError; // Profile picture chosen by hub manager
   String? get logoUrl =>
       throw _privateConstructorUsedError; // Hub logo URL (used for feed posts)
+  String? get bannerUrl =>
+      throw _privateConstructorUsedError; // Hero banner for hub profile
 // Rules & region
   String? get hubRules =>
       throw _privateConstructorUsedError; // Rules and guidelines for the hub
   String? get region =>
       throw _privateConstructorUsedError; // אזור: צפון, מרכז, דרום, ירושלים
+  String? get city =>
+      throw _privateConstructorUsedError; // עיר ראשית של ההאב (auto-calculates region)
 // Privacy
   bool get isPrivate =>
       throw _privateConstructorUsedError; // If true, requires "Request to Join"
@@ -105,8 +109,10 @@ abstract class $HubCopyWith<$Res> {
       @NullableGeoPointConverter() GeoPoint? primaryVenueLocation,
       String? profileImageUrl,
       String? logoUrl,
+      String? bannerUrl,
       String? hubRules,
       String? region,
+      String? city,
       bool isPrivate,
       String? paymentLink,
       int? gameCount,
@@ -145,8 +151,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? primaryVenueLocation = freezed,
     Object? profileImageUrl = freezed,
     Object? logoUrl = freezed,
+    Object? bannerUrl = freezed,
     Object? hubRules = freezed,
     Object? region = freezed,
+    Object? city = freezed,
     Object? isPrivate = null,
     Object? paymentLink = freezed,
     Object? gameCount = freezed,
@@ -222,6 +230,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.logoUrl
           : logoUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      bannerUrl: freezed == bannerUrl
+          ? _value.bannerUrl
+          : bannerUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       hubRules: freezed == hubRules
           ? _value.hubRules
           : hubRules // ignore: cast_nullable_to_non_nullable
@@ -229,6 +241,10 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
       region: freezed == region
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
               as String?,
       isPrivate: null == isPrivate
           ? _value.isPrivate
@@ -278,8 +294,10 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       @NullableGeoPointConverter() GeoPoint? primaryVenueLocation,
       String? profileImageUrl,
       String? logoUrl,
+      String? bannerUrl,
       String? hubRules,
       String? region,
+      String? city,
       bool isPrivate,
       String? paymentLink,
       int? gameCount,
@@ -315,8 +333,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? primaryVenueLocation = freezed,
     Object? profileImageUrl = freezed,
     Object? logoUrl = freezed,
+    Object? bannerUrl = freezed,
     Object? hubRules = freezed,
     Object? region = freezed,
+    Object? city = freezed,
     Object? isPrivate = null,
     Object? paymentLink = freezed,
     Object? gameCount = freezed,
@@ -392,6 +412,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.logoUrl
           : logoUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      bannerUrl: freezed == bannerUrl
+          ? _value.bannerUrl
+          : bannerUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       hubRules: freezed == hubRules
           ? _value.hubRules
           : hubRules // ignore: cast_nullable_to_non_nullable
@@ -399,6 +423,10 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
       region: freezed == region
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
               as String?,
       isPrivate: null == isPrivate
           ? _value.isPrivate
@@ -449,8 +477,10 @@ class _$HubImpl implements _Hub {
       @NullableGeoPointConverter() this.primaryVenueLocation,
       this.profileImageUrl,
       this.logoUrl,
+      this.bannerUrl,
       this.hubRules,
       this.region,
+      this.city,
       this.isPrivate = false,
       this.paymentLink,
       this.gameCount,
@@ -543,6 +573,9 @@ class _$HubImpl implements _Hub {
   @override
   final String? logoUrl;
 // Hub logo URL (used for feed posts)
+  @override
+  final String? bannerUrl;
+// Hero banner for hub profile
 // Rules & region
   @override
   final String? hubRules;
@@ -550,6 +583,9 @@ class _$HubImpl implements _Hub {
   @override
   final String? region;
 // אזור: צפון, מרכז, דרום, ירושלים
+  @override
+  final String? city;
+// עיר ראשית של ההאב (auto-calculates region)
 // Privacy
   @override
   @JsonKey()
@@ -573,7 +609,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, settings: $settings, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, profileImageUrl: $profileImageUrl, logoUrl: $logoUrl, hubRules: $hubRules, region: $region, isPrivate: $isPrivate, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, activityScore: $activityScore)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, settings: $settings, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, profileImageUrl: $profileImageUrl, logoUrl: $logoUrl, bannerUrl: $bannerUrl, hubRules: $hubRules, region: $region, city: $city, isPrivate: $isPrivate, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, activityScore: $activityScore)';
   }
 
   @override
@@ -608,9 +644,12 @@ class _$HubImpl implements _Hub {
             (identical(other.profileImageUrl, profileImageUrl) ||
                 other.profileImageUrl == profileImageUrl) &&
             (identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl) &&
+            (identical(other.bannerUrl, bannerUrl) ||
+                other.bannerUrl == bannerUrl) &&
             (identical(other.hubRules, hubRules) ||
                 other.hubRules == hubRules) &&
             (identical(other.region, region) || other.region == region) &&
+            (identical(other.city, city) || other.city == city) &&
             (identical(other.isPrivate, isPrivate) ||
                 other.isPrivate == isPrivate) &&
             (identical(other.paymentLink, paymentLink) ||
@@ -644,8 +683,10 @@ class _$HubImpl implements _Hub {
         primaryVenueLocation,
         profileImageUrl,
         logoUrl,
+        bannerUrl,
         hubRules,
         region,
+        city,
         isPrivate,
         paymentLink,
         gameCount,
@@ -688,8 +729,10 @@ abstract class _Hub implements Hub {
       @NullableGeoPointConverter() final GeoPoint? primaryVenueLocation,
       final String? profileImageUrl,
       final String? logoUrl,
+      final String? bannerUrl,
       final String? hubRules,
       final String? region,
+      final String? city,
       final bool isPrivate,
       final String? paymentLink,
       final int? gameCount,
@@ -742,11 +785,15 @@ abstract class _Hub implements Hub {
   String? get profileImageUrl; // Profile picture chosen by hub manager
   @override
   String? get logoUrl; // Hub logo URL (used for feed posts)
+  @override
+  String? get bannerUrl; // Hero banner for hub profile
 // Rules & region
   @override
   String? get hubRules; // Rules and guidelines for the hub
   @override
   String? get region; // אזור: צפון, מרכז, דרום, ירושלים
+  @override
+  String? get city; // עיר ראשית של ההאב (auto-calculates region)
 // Privacy
   @override
   bool get isPrivate; // If true, requires "Request to Join"

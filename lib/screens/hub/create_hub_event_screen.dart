@@ -51,6 +51,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   bool _isLoading = false;
   Hub? _hub;
   Venue? _selectedVenue;
+  String? _hubCity; // Hub city for venue filtering
 
   final List<String> _gameTypes = [
     '3v3',
@@ -77,7 +78,9 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
       if (mounted) {
         setState(() {
           _hub = hub;
+          _hubCity = hub?.city; // Load hub city for venue filtering
         });
+        debugPrint('✅ Loaded hub city for filtering: ${hub?.city}');
 
         // Pre-fill location with hub main venue if available
         // Priority: mainVenueId > primaryVenueId > venueIds[0]
@@ -431,6 +434,8 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
                 initialValue: _locationController.text,
                 hubId: widget
                     .hubId, // Pass hubId so new venues get associated with this hub
+                filterCity:
+                    _hubCity, // Filter venues by hub city if available
                 onVenueSelected: (venue) {
                   setState(() {
                     _selectedVenue = venue;

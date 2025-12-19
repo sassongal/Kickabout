@@ -20,6 +20,8 @@ class Venue with _$Venue {
     @GeoPointConverter()
     required GeoPoint location, // Exact location from Google Maps
     String? address, // Human-readable address
+    String? city, // עיר בה נמצא המגרש
+    String? region, // אזור (מחושב אוטומטית מהעיר)
     String? googlePlaceId, // Google Places API ID for real venues
     @Default([])
     List<String> amenities, // e.g., ["parking", "showers", "lights"]

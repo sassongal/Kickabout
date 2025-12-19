@@ -54,6 +54,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   // Attendance reminder setting
   bool _enableAttendanceReminder = true;
 
+  // Hub city for venue filtering
+  String? _hubCity;
+
   @override
   void initState() {
     super.initState();
@@ -140,10 +143,18 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   }
 
   /// Load default venue from hub's mainVenueId (or first venue from venueIds)
+  /// Also loads hub's city for venue filtering
   Future<void> _loadDefaultVenue(String hubId) async {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final hub = await hubsRepo.getHub(hubId);
+
+      if (hub != null && mounted) {
+        setState(() {
+          _hubCity = hub.city; // Load hub city for filtering
+        });
+        debugPrint('✅ Loaded hub city for filtering: ${hub.city}');
+      }
 
       // Priority: mainVenueId > primaryVenueId > venueIds[0]
       String? venueIdToLoad = hub?.mainVenueId ?? hub?.primaryVenueId;
@@ -497,10 +508,20 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                   setState(() {
                     _isPublicGame = newSelection.first;
                     if (_isPublicGame) {
+                      // Switching to Public Game - clear hub-specific data
                       _selectedHubId = null;
+                      _hubCity = null;
+                      // Clear venue selection when switching to public game
+                      _selectedLocation = null;
+                      _locationAddress = null;
+                      _locationController.clear();
+                      _selectedVenueId = null;
                     } else {
-                      // Optionally restore last selected hub or leave null to force selection
+                      // Switching to Hub Game - restore hub if provided
                       _selectedHubId = widget.hubId;
+                      if (_selectedHubId != null) {
+                        _loadDefaultVenue(_selectedHubId!);
+                      }
                     }
                   });
                 },
@@ -539,9 +560,19 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                         onChanged: (value) {
                           setState(() {
                             _selectedHubId = value;
+                            // Clear existing venue when switching hubs
+                            _selectedLocation = null;
+                            _locationAddress = null;
+                            _locationController.clear();
+                            _selectedVenueId = null;
                           });
                           if (value != null) {
                             _loadDefaultVenue(value);
+                          } else {
+                            // Clear hub city when no hub selected
+                            setState(() {
+                              _hubCity = null;
+                            });
                           }
                         },
                         validator: (value) => !_isPublicGame && value == null
@@ -919,6 +950,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                         initialValue: _locationController.text,
                         hubId:
                             _selectedHubId, // Pass selected hub ID if available
+                        filterCity:
+                            _hubCity, // Filter venues by hub city if available
                         validator: (value) {
                           if (_isPublicGame &&
                               (value == null || value.isEmpty)) {

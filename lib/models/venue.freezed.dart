@@ -33,6 +33,9 @@ mixin _$Venue {
       throw _privateConstructorUsedError; // Exact location from Google Maps
   String? get address =>
       throw _privateConstructorUsedError; // Human-readable address
+  String? get city => throw _privateConstructorUsedError; // עיר בה נמצא המגרש
+  String? get region =>
+      throw _privateConstructorUsedError; // אזור (מחושב אוטומטית מהעיר)
   String? get googlePlaceId =>
       throw _privateConstructorUsedError; // Google Places API ID for real venues
   List<String> get amenities =>
@@ -80,6 +83,8 @@ abstract class $VenueCopyWith<$Res> {
       String? description,
       @GeoPointConverter() GeoPoint location,
       String? address,
+      String? city,
+      String? region,
       String? googlePlaceId,
       List<String> amenities,
       String surfaceType,
@@ -117,6 +122,8 @@ class _$VenueCopyWithImpl<$Res, $Val extends Venue>
     Object? description = freezed,
     Object? location = null,
     Object? address = freezed,
+    Object? city = freezed,
+    Object? region = freezed,
     Object? googlePlaceId = freezed,
     Object? amenities = null,
     Object? surfaceType = null,
@@ -159,6 +166,14 @@ class _$VenueCopyWithImpl<$Res, $Val extends Venue>
       address: freezed == address
           ? _value.address
           : address // ignore: cast_nullable_to_non_nullable
+              as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
               as String?,
       googlePlaceId: freezed == googlePlaceId
           ? _value.googlePlaceId
@@ -231,6 +246,8 @@ abstract class _$$VenueImplCopyWith<$Res> implements $VenueCopyWith<$Res> {
       String? description,
       @GeoPointConverter() GeoPoint location,
       String? address,
+      String? city,
+      String? region,
       String? googlePlaceId,
       List<String> amenities,
       String surfaceType,
@@ -266,6 +283,8 @@ class __$$VenueImplCopyWithImpl<$Res>
     Object? description = freezed,
     Object? location = null,
     Object? address = freezed,
+    Object? city = freezed,
+    Object? region = freezed,
     Object? googlePlaceId = freezed,
     Object? amenities = null,
     Object? surfaceType = null,
@@ -308,6 +327,14 @@ class __$$VenueImplCopyWithImpl<$Res>
       address: freezed == address
           ? _value.address
           : address // ignore: cast_nullable_to_non_nullable
+              as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
               as String?,
       googlePlaceId: freezed == googlePlaceId
           ? _value.googlePlaceId
@@ -376,6 +403,8 @@ class _$VenueImpl implements _Venue {
       this.description,
       @GeoPointConverter() required this.location,
       this.address,
+      this.city,
+      this.region,
       this.googlePlaceId,
       final List<String> amenities = const [],
       this.surfaceType = 'grass',
@@ -415,6 +444,12 @@ class _$VenueImpl implements _Venue {
   @override
   final String? address;
 // Human-readable address
+  @override
+  final String? city;
+// עיר בה נמצא המגרש
+  @override
+  final String? region;
+// אזור (מחושב אוטומטית מהעיר)
   @override
   final String? googlePlaceId;
 // Google Places API ID for real venues
@@ -471,7 +506,7 @@ class _$VenueImpl implements _Venue {
 
   @override
   String toString() {
-    return 'Venue(venueId: $venueId, venueNumber: $venueNumber, hubId: $hubId, name: $name, description: $description, location: $location, address: $address, googlePlaceId: $googlePlaceId, amenities: $amenities, surfaceType: $surfaceType, maxPlayers: $maxPlayers, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, isActive: $isActive, isMain: $isMain, hubCount: $hubCount, isPublic: $isPublic, source: $source, externalId: $externalId)';
+    return 'Venue(venueId: $venueId, venueNumber: $venueNumber, hubId: $hubId, name: $name, description: $description, location: $location, address: $address, city: $city, region: $region, googlePlaceId: $googlePlaceId, amenities: $amenities, surfaceType: $surfaceType, maxPlayers: $maxPlayers, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, isActive: $isActive, isMain: $isMain, hubCount: $hubCount, isPublic: $isPublic, source: $source, externalId: $externalId)';
   }
 
   @override
@@ -489,6 +524,8 @@ class _$VenueImpl implements _Venue {
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.address, address) || other.address == address) &&
+            (identical(other.city, city) || other.city == city) &&
+            (identical(other.region, region) || other.region == region) &&
             (identical(other.googlePlaceId, googlePlaceId) ||
                 other.googlePlaceId == googlePlaceId) &&
             const DeepCollectionEquality()
@@ -526,6 +563,8 @@ class _$VenueImpl implements _Venue {
         description,
         location,
         address,
+        city,
+        region,
         googlePlaceId,
         const DeepCollectionEquality().hash(_amenities),
         surfaceType,
@@ -566,6 +605,8 @@ abstract class _Venue implements Venue {
       final String? description,
       @GeoPointConverter() required final GeoPoint location,
       final String? address,
+      final String? city,
+      final String? region,
       final String? googlePlaceId,
       final List<String> amenities,
       final String surfaceType,
@@ -597,6 +638,10 @@ abstract class _Venue implements Venue {
   GeoPoint get location; // Exact location from Google Maps
   @override
   String? get address; // Human-readable address
+  @override
+  String? get city; // עיר בה נמצא המגרש
+  @override
+  String? get region; // אזור (מחושב אוטומטית מהעיר)
   @override
   String? get googlePlaceId; // Google Places API ID for real venues
   @override

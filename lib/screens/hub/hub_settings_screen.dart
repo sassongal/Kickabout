@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/screens/hub/hub_invitations_screen.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
+import 'package:kattrick/widgets/hub/hub_banner_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:kattrick/services/storage_service.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/widgets/input/city_autocomplete_field.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
@@ -84,7 +88,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
     return roleAsync.when(
       data: (role) {
         if (role != UserRole.admin) {
-          return FuturisticScaffold(
+          return PremiumScaffold(
             title: l10n.hubSettingsTitle,
             body: Center(
               child: Column(
@@ -112,16 +116,16 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
           stream: hubStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return FuturisticScaffold(
+              return PremiumScaffold(
                 title: l10n.hubSettingsTitle,
-                body: FuturisticLoadingState(message: l10n.loadingSettings),
+                body: PremiumLoadingState(message: l10n.loadingSettings),
               );
             }
 
             if (snapshot.hasError || snapshot.data == null) {
-              return FuturisticScaffold(
+              return PremiumScaffold(
                 title: l10n.hubSettingsTitle,
-                body: FuturisticEmptyState(
+                body: PremiumEmptyState(
                   icon: Icons.error_outline,
                   title: l10n.error,
                   message: snapshot.error?.toString() ?? l10n.hubNotFound,
@@ -140,7 +144,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
             final hub = snapshot.data!;
             final settings = hub.settings;
 
-            return FuturisticScaffold(
+            return PremiumScaffold(
               title: l10n.hubSettingsTitle,
               body: ListView(
                 padding: const EdgeInsets.all(16),
@@ -154,7 +158,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('תמונת Hero של ההאב',
+                              Text('תמונת אייקון של ההאב',
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium
@@ -163,8 +167,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                                 const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  child: KineticLoadingAnimation(size: 20),
                                 ),
                             ],
                           ),
@@ -172,7 +175,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: AspectRatio(
-                              aspectRatio: 16 / 9,
+                              aspectRatio: 1,
                               child: hub.profileImageUrl != null &&
                                       hub.profileImageUrl!.isNotEmpty
                                   ? Image.network(
@@ -201,6 +204,35 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                             label: const Text('העלה תמונה'),
                           ),
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Hub Banner Selection
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: HubBannerPicker(
+                        initialUrl: hub.bannerUrl,
+                        onBannerSelected: (url) {
+                          ref
+                              .read(hubsRepositoryProvider)
+                              .updateHub(hub.hubId, {'bannerUrl': url});
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // City & Region
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: _HubCityEditor(
+                        hubId: widget.hubId,
+                        initialCity: hub.city,
+                        initialRegion: hub.region,
                       ),
                     ),
                   ),
@@ -392,6 +424,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: _HubVenuesEditor(
                             hubId: widget.hubId,
+                            hubCity: hub.city,
                             initialVenueIds: hub.venueIds,
                             initialMainVenueId:
                                 hub.mainVenueId ?? hub.primaryVenueId,
@@ -462,26 +495,30 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                   // Custom Permissions Management
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.admin_panel_settings, color: Colors.blue),
+                      leading: const Icon(Icons.admin_panel_settings,
+                          color: Colors.blue),
                       title: const Text('הרשאות מותאמות אישית'),
                       subtitle: const Text(
                         'ניהול הרשאות ספציפיות לשחקנים בודדים',
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () => context.push('/hubs/${widget.hubId}/custom-permissions'),
+                      onTap: () => context
+                          .push('/hubs/${widget.hubId}/custom-permissions'),
                     ),
                   ),
                   const SizedBox(height: 8),
                   // Hub Insights Dashboard
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.analytics, color: Colors.purple),
+                      leading:
+                          const Icon(Icons.analytics, color: Colors.purple),
                       title: const Text('ניתוח נתונים ותובנות'),
                       subtitle: const Text(
                         'סטטיסטיקות מתקדמות ומעקב אחר ביצועי ההאב',
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () => context.push('/hubs/${widget.hubId}/insights'),
+                      onTap: () =>
+                          context.push('/hubs/${widget.hubId}/insights'),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -513,13 +550,13 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
           },
         );
       },
-      loading: () => FuturisticScaffold(
+      loading: () => PremiumScaffold(
         title: l10n.hubSettingsTitle,
-        body: FuturisticLoadingState(message: l10n.checkingPermissions),
+        body: PremiumLoadingState(message: l10n.checkingPermissions),
       ),
-      error: (error, stack) => FuturisticScaffold(
+      error: (error, stack) => PremiumScaffold(
         title: l10n.hubSettingsTitle,
-        body: FuturisticEmptyState(
+        body: PremiumEmptyState(
           icon: Icons.error_outline,
           title: l10n.permissionCheckError,
           message: error.toString(),
@@ -661,7 +698,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CircularProgressIndicator(),
+        child: KineticLoadingAnimation(size: 40),
       ),
     );
 
@@ -696,11 +733,13 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
 /// Widget for editing hub venues
 class _HubVenuesEditor extends ConsumerStatefulWidget {
   final String hubId;
+  final String? hubCity;
   final List<String> initialVenueIds;
   final String? initialMainVenueId;
 
   const _HubVenuesEditor({
     required this.hubId,
+    this.hubCity,
     required this.initialVenueIds,
     this.initialMainVenueId,
   });
@@ -839,7 +878,7 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: KineticLoadingAnimation(size: 40));
     }
 
     return Column(
@@ -849,6 +888,7 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
           initialVenues: _venues,
           initialMainVenueId: _mainVenueId,
           hubId: widget.hubId, // Pass hubId so venues get it when created
+          hubCity: widget.hubCity, // Filter venues by hub city
           onChanged: (venues, mainVenueId) {
             setState(() {
               _venues = venues;
@@ -865,7 +905,7 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: KineticLoadingAnimation(size: 20),
                   )
                 : const Icon(Icons.save),
             label: Text(_isSaving ? 'שומר...' : 'שמור שינויים'),
@@ -955,7 +995,7 @@ class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
               ? const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: KineticLoadingAnimation(size: 20),
                 )
               : const Icon(Icons.save),
           label: Text(_isSaving ? l10n.saving : l10n.saveRules),
@@ -1047,10 +1087,134 @@ class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
               ? const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: KineticLoadingAnimation(size: 20),
                 )
               : const Icon(Icons.save),
           label: Text(_isSaving ? l10n.saving : l10n.saveLink),
+        ),
+      ],
+    );
+  }
+}
+
+/// Widget for editing hub city
+class _HubCityEditor extends ConsumerStatefulWidget {
+  final String hubId;
+  final String? initialCity;
+  final String? initialRegion;
+
+  const _HubCityEditor({
+    required this.hubId,
+    this.initialCity,
+    this.initialRegion,
+  });
+
+  @override
+  ConsumerState<_HubCityEditor> createState() => _HubCityEditorState();
+}
+
+class _HubCityEditorState extends ConsumerState<_HubCityEditor> {
+  late TextEditingController _cityController;
+  String? _calculatedRegion;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cityController = TextEditingController(text: widget.initialCity ?? '');
+    _calculatedRegion = widget.initialRegion;
+
+    // Calculate region from city if city exists
+    if (widget.initialCity != null && widget.initialCity!.isNotEmpty) {
+      _calculatedRegion = CityUtils.getRegionForCity(widget.initialCity!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _cityController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveCity() async {
+    setState(() => _isSaving = true);
+
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final city = _cityController.text.trim();
+      final region = city.isNotEmpty ? CityUtils.getRegionForCity(city) : null;
+
+      await hubsRepo.updateHub(widget.hubId, {
+        'city': city.isNotEmpty ? city : null,
+        'region': region,
+      });
+
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, 'העיר והאזור עודכנו בהצלחה');
+    } catch (e) {
+      if (!mounted) return;
+      SnackbarHelper.showError(context, 'שגיאה בעדכון העיר: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'עיר ואזור',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            if (_calculatedRegion != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'אזור: $_calculatedRegion',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        CityAutocompleteField(
+          controller: _cityController,
+          labelText: 'עיר ראשית',
+          hintText: 'בחר עיר...',
+          helperText: 'האזור מחושב אוטומטית לפי העיר',
+          onCitySelected: (city) {
+            setState(() {
+              _calculatedRegion = CityUtils.getRegionForCity(city);
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: _isSaving ? null : _saveCity,
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: KineticLoadingAnimation(size: 20),
+                )
+              : const Icon(Icons.save),
+          label: Text(_isSaving ? 'שומר...' : 'שמור שינויים'),
         ),
       ],
     );

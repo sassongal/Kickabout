@@ -6,8 +6,8 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 
 /// Community screen showing hub recruiting posts and public games
 class CommunityScreen extends ConsumerWidget {
@@ -84,7 +84,7 @@ class CommunityScreen extends ConsumerWidget {
                         }
 
                         if (recruitSnap.hasError || gameSnap.hasError) {
-                          return FuturisticEmptyState(
+                          return PremiumEmptyState(
                             icon: Icons.error_outline,
                             title: 'שגיאה בטעינה',
                             message: ErrorHandlerService().handleException(
@@ -107,7 +107,7 @@ class CommunityScreen extends ConsumerWidget {
                         ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
                         if (items.isEmpty) {
-                          return FuturisticEmptyState(
+                          return PremiumEmptyState(
                             icon: Icons.group,
                             title: 'אין כרגע פעילות קהילתית',
                             message:
@@ -186,6 +186,12 @@ class _RecruitingCard extends StatelessWidget {
                   const Icon(Icons.group, size: 16, color: Colors.orange),
                   const SizedBox(width: 4),
                   Text('מחפשים ${post.neededPlayers} שחקנים'),
+                ],
+                if (post.city != null && post.city!.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  const Icon(Icons.location_city, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(post.city!, style: const TextStyle(color: Colors.grey)),
                 ],
                 const Spacer(),
                 TextButton.icon(

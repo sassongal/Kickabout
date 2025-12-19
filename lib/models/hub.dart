@@ -59,10 +59,12 @@ class Hub with _$Hub {
     // Branding
     String? profileImageUrl, // Profile picture chosen by hub manager
     String? logoUrl, // Hub logo URL (used for feed posts)
+    String? bannerUrl, // Hero banner for hub profile
 
     // Rules & region
     String? hubRules, // Rules and guidelines for the hub
     String? region, // אזור: צפון, מרכז, דרום, ירושלים
+    String? city, // עיר ראשית של ההאב (auto-calculates region)
 
     // Privacy
     @Default(false) bool isPrivate, // If true, requires "Request to Join"

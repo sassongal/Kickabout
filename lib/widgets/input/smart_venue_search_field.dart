@@ -20,6 +20,7 @@ class SmartVenueSearchField extends ConsumerStatefulWidget {
   final String label;
   final String hint;
   final String? hubId;
+  final String? filterCity; // Filter venues by city
   final String? Function(String?)? validator;
 
   const SmartVenueSearchField({
@@ -29,6 +30,7 @@ class SmartVenueSearchField extends ConsumerStatefulWidget {
     this.label = 'כתובת או שם מגרש',
     this.hint = 'חפש מגרש קהילתי/פרטי/ציבורי...',
     this.hubId,
+    this.filterCity,
     this.validator,
   });
 
@@ -200,13 +202,26 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
   }
 
   List<Venue> _applyFilter(List<Venue> venues) {
+    var filtered = venues;
+
+    // Filter by city if specified
+    if (widget.filterCity != null && widget.filterCity!.isNotEmpty) {
+      filtered = filtered.where((v) {
+        // Show venues without city (legacy data) or matching city
+        return v.city == null ||
+            v.city!.isEmpty ||
+            v.city == widget.filterCity;
+      }).toList();
+    }
+
+    // Apply public/private filter
     switch (_selectedFilter) {
       case VenueFilterType.public:
-        return venues.where((v) => v.isPublic).toList();
+        return filtered.where((v) => v.isPublic).toList();
       case VenueFilterType.private:
-        return venues.where((v) => !v.isPublic).toList();
+        return filtered.where((v) => !v.isPublic).toList();
       case VenueFilterType.all:
-        return venues;
+        return filtered;
     }
   }
 

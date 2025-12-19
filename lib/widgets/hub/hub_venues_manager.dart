@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/venue.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Widget to manage Hub venues (add, remove, set primary)
 class HubVenuesManager extends ConsumerStatefulWidget {
@@ -10,6 +10,7 @@ class HubVenuesManager extends ConsumerStatefulWidget {
   final String? initialMainVenueId;
   final Function(List<Venue> venues, String? mainVenueId) onChanged;
   final String? hubId; // Optional hubId to set on venues when created
+  final String? hubCity; // Optional hub city to filter venues
 
   const HubVenuesManager({
     super.key,
@@ -17,6 +18,7 @@ class HubVenuesManager extends ConsumerStatefulWidget {
     this.initialMainVenueId,
     required this.onChanged,
     this.hubId,
+    this.hubCity,
   });
 
   @override
@@ -86,6 +88,21 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
       return;
     }
 
+    // Warn if venue is from a different city (but still allow it)
+    if (widget.hubCity != null &&
+        widget.hubCity!.isNotEmpty &&
+        venue.city != null &&
+        venue.city!.isNotEmpty &&
+        venue.city != widget.hubCity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('⚠️ המגרש נמצא ב${venue.city}, לא ב${widget.hubCity}'),
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+
     setState(() {
       _selectedVenues.add(venue);
       // If this is the first venue, make it main
@@ -152,6 +169,7 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
             label: 'הוסף מגרש',
             hint: 'חפש מגרש להוספה...',
             hubId: widget.hubId, // Pass hubId so venue gets it when created
+            filterCity: widget.hubCity, // Filter venues by hub city
           ),
 
         const SizedBox(height: 16),
@@ -176,7 +194,7 @@ class _HubVenuesManagerState extends ConsumerState<HubVenuesManager> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: isMain
-                      ? BorderSide(color: FuturisticColors.primary, width: 2)
+                      ? BorderSide(color: PremiumColors.primary, width: 2)
                       : BorderSide.none,
                 ),
                 child: ListTile(
