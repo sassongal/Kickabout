@@ -15,7 +15,7 @@ const {
 exports.searchVenues = onCall(
   {
     secrets: [googleApisKey],
-    invoker: 'authenticated', // ✅ Requires login
+    invoker: 'public', // ✅ Changed from 'authenticated' to allow Firebase Auth users
     region: 'us-central1', // ✅ Add region explicitly
     memory: '256MiB', // ✅ Optimized: Reduced from 512MB
   },
@@ -58,12 +58,12 @@ exports.searchVenues = onCall(
 
     try {
       const response = await axios.get(url);
-      
+
       // Check for Google Places API errors
       if (response.data && response.data.error_message) {
         const errorMsg = response.data.error_message;
         info(`Google Places API error: ${errorMsg}`);
-        
+
         // Check for REQUEST_DENIED error
         if (response.data.status === 'REQUEST_DENIED') {
           throw new HttpsError(
@@ -71,10 +71,10 @@ exports.searchVenues = onCall(
             'Google Places API error: REQUEST_DENIED. Please check API key configuration.',
           );
         }
-        
+
         throw new HttpsError('internal', `Google Places API error: ${errorMsg}`);
       }
-      
+
       const data = response.data;
 
       // Add venueType to each result
@@ -118,7 +118,7 @@ exports.searchVenues = onCall(
 exports.getPlaceDetails = onCall(
   {
     secrets: [googleApisKey],
-    invoker: 'authenticated', // ✅ Requires login
+    invoker: 'public', // ✅ Changed from 'authenticated' to allow Firebase Auth users
     memory: '256MiB', // ✅ Optimized: Reduced from 512MB
   },
   async (request) => {
@@ -155,10 +155,10 @@ exports.getPlaceDetails = onCall(
     try {
       const response = await axios.get(url);
       const data = response.data;
-      
+
       // ✅ Cache the result
       cacheDetails(placeId, data);
-      
+
       return data;
     } catch (error) {
       throw new HttpsError('internal', 'Failed to call Google Places API.', error);
@@ -175,7 +175,7 @@ exports.getPlaceDetails = onCall(
 exports.getHubsForPlace = onCall(
   {
     secrets: [googleApisKey],
-    invoker: 'authenticated', // ✅ Requires login
+    invoker: 'public', // ✅ Changed from 'authenticated' to allow Firebase Auth users
     memory: '256MiB', // ✅ Optimized: Reduced from 512MB
   },
   async (request) => {
@@ -192,7 +192,7 @@ exports.getHubsForPlace = onCall(
       throw new HttpsError('invalid-argument', 'Missing \'placeId\' parameter.');
     }
 
-    try{
+    try {
       // 1. Find our internal venue doc using the Google placeId
       const venuesSnapshot = await db.collection('venues')
         .where('googlePlaceId', '==', placeId) // Venue model uses googlePlaceId, not placeId
@@ -236,7 +236,7 @@ exports.getHubsForPlace = onCall(
 exports.getHomeDashboardData = onCall(
   {
     secrets: [googleApisKey],
-    invoker: 'authenticated', // ✅ Requires login
+    invoker: 'public', // ✅ Changed from 'authenticated' to allow Firebase Auth users
     memory: '256MiB', // ✅ Optimized: Reduced from 512MB
   },
   async (request) => {

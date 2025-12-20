@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -291,7 +292,9 @@ class _HubNonMemberViewState extends ConsumerState<HubNonMemberView> {
                     stream: venuesStream,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(
+                          child: KineticLoadingAnimation(size: 32),
+                        );
                       }
 
                       final venues = snapshot.data ?? [];
@@ -372,7 +375,7 @@ class _HubNonMemberViewState extends ConsumerState<HubNonMemberView> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: KineticLoadingAnimation(size: 20),
                         )
                       : const Icon(Icons.person_add),
                   label: Text(_isSubmitting ? 'שולח...' : 'בקש להצטרף'),
@@ -411,8 +414,7 @@ class _HubNonMemberViewState extends ConsumerState<HubNonMemberView> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  child: KineticLoadingAnimation(size: 20),
                                 )
                               : const Icon(Icons.send),
                           label: Text(

@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/empty_state_illustrations.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/notifications_repository.dart';
 import 'package:kattrick/models/notification.dart' as app_notification;
@@ -15,7 +16,8 @@ class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
@@ -33,7 +35,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       );
     }
 
-    final notificationsStream = notificationsRepo.watchNotifications(currentUserId);
+    final notificationsStream =
+        notificationsRepo.watchNotifications(currentUserId);
     final unreadCountStream = notificationsRepo.watchUnreadCount(currentUserId);
 
     return AppScaffold(
@@ -80,7 +83,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           }
 
           if (snapshot.hasError) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת התראות',
               message: ErrorHandlerService().handleException(
@@ -89,8 +92,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ),
               action: ElevatedButton.icon(
                 onPressed: () {
-                // Retry by rebuilding - trigger rebuild via key change
-                // For ConsumerWidget, we can't use setState, so we'll just show the error
+                  // Retry by rebuilding - trigger rebuild via key change
+                  // For ConsumerWidget, we can't use setState, so we'll just show the error
                 },
                 icon: const Icon(Icons.refresh),
                 label: const Text('נסה שוב'),
@@ -101,10 +104,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           final notifications = snapshot.data ?? [];
 
           if (notifications.isEmpty) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.notifications_none,
               title: 'אין התראות',
               message: 'כשיהיו התראות חדשות, הן יופיעו כאן',
+              illustration: const EmptyNotificationsIllustration(),
             );
           }
 
@@ -175,14 +179,16 @@ class _NotificationCard extends ConsumerWidget {
 
   void _handleTap(BuildContext context) {
     if (!notification.read) {
-      notificationsRepo.markAsRead(notification.userId, notification.notificationId);
+      notificationsRepo.markAsRead(
+          notification.userId, notification.notificationId);
     }
 
     // Navigate based on notification type
     if (notification.data != null) {
       if (notification.type == 'game' && notification.data!['gameId'] != null) {
         context.push('/games/${notification.data!['gameId']}');
-      } else if (notification.type == 'message' && notification.data!['hubId'] != null) {
+      } else if (notification.type == 'message' &&
+          notification.data!['hubId'] != null) {
         context.push('/hubs/${notification.data!['hubId']}');
       }
     }
@@ -192,7 +198,12 @@ class _NotificationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      color: notification.read ? null : Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+      color: notification.read
+          ? null
+          : Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.3),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: _getColor(notification.type).withValues(alpha: 0.2),
@@ -253,4 +264,3 @@ class _NotificationCard extends ConsumerWidget {
     }
   }
 }
-

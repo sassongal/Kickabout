@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/feed_repository.dart';
 import 'package:kattrick/data/users_repository.dart';
@@ -77,7 +77,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         if (snapshot.hasError) {
           return AppScaffold(
             title: 'פיד פעילות',
-            body: FuturisticEmptyState(
+            body: PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת המשתמש',
               message: ErrorHandlerService().handleException(
@@ -187,7 +187,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                       child: SkeletonLoader(height: 120),
                     ),
                   ),
-                  error: (error, stackTrace) => FuturisticEmptyState(
+                  error: (error, stackTrace) => PremiumEmptyState(
                     icon: Icons.error_outline,
                     title: 'שגיאה בטעינת הפיד',
                     message: ErrorHandlerService().handleException(
@@ -203,7 +203,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                   ),
                   data: (posts) {
                     if (posts.isEmpty) {
-                      return FuturisticEmptyState(
+                      return PremiumEmptyState(
                         icon: Icons.feed,
                         title: 'אין פעילות עדיין',
                         message: userRegion != null

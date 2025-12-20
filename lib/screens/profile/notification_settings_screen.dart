@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Notification Settings Screen - Manage notification preferences
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
@@ -209,16 +209,16 @@ class _NotificationSettingsScreenState
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _currentUser == null) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: 'ניהול התראות',
-        body: const FuturisticLoadingState(message: 'טוען העדפות...'),
+        body: const PremiumLoadingState(message: 'טוען העדפות...'),
       );
     }
 
     final allEnabled = _areAllNotificationsEnabled();
     final allDisabled = _areAllNotificationsDisabled();
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'ניהול התראות',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -226,7 +226,7 @@ class _NotificationSettingsScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Quick Actions
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -238,7 +238,7 @@ class _NotificationSettingsScreenState
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('הפעל הכל'),
                     style: TextButton.styleFrom(
-                      foregroundColor: FuturisticColors.primary,
+                      foregroundColor: PremiumColors.primary,
                     ),
                   ),
                   TextButton.icon(
@@ -248,7 +248,7 @@ class _NotificationSettingsScreenState
                     icon: const Icon(Icons.cancel_outlined),
                     label: const Text('כבה הכל'),
                     style: TextButton.styleFrom(
-                      foregroundColor: FuturisticColors.error,
+                      foregroundColor: PremiumColors.error,
                     ),
                   ),
                 ],
@@ -265,7 +265,7 @@ class _NotificationSettingsScreenState
                 children: [
                   _buildSectionHeader(categoryName),
                   const SizedBox(height: 8),
-                  FuturisticCard(
+                  PremiumCard(
                     margin: const EdgeInsets.only(bottom: 16),
                     child: Column(
                       children: [
@@ -280,7 +280,7 @@ class _NotificationSettingsScreenState
                               if (!isLast)
                                 const Divider(
                                   height: 1,
-                                  color: FuturisticColors.surfaceVariant,
+                                  color: PremiumColors.surfaceVariant,
                                 ),
                             ],
                           );
@@ -293,21 +293,21 @@ class _NotificationSettingsScreenState
             }),
 
             // Info Card
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: Row(
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: FuturisticColors.primary,
+                    color: PremiumColors.primary,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'ההעדפות נשמרות אוטומטית. תוכל לשנות אותן בכל עת.',
-                      style: FuturisticTypography.bodySmall.copyWith(
-                        color: FuturisticColors.textSecondary,
+                      style: PremiumTypography.bodySmall.copyWith(
+                        color: PremiumColors.textSecondary,
                       ),
                     ),
                   ),
@@ -325,8 +325,8 @@ class _NotificationSettingsScreenState
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Text(
         title,
-        style: FuturisticTypography.labelLarge.copyWith(
-          color: FuturisticColors.textSecondary,
+        style: PremiumTypography.labelLarge.copyWith(
+          color: PremiumColors.textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -341,30 +341,30 @@ class _NotificationSettingsScreenState
       onChanged: (value) => _updateNotificationPreference(item.key, value),
       title: Text(
         item.title,
-        style: FuturisticTypography.labelLarge.copyWith(
-          color: FuturisticColors.textPrimary,
+        style: PremiumTypography.labelLarge.copyWith(
+          color: PremiumColors.textPrimary,
           fontWeight: FontWeight.w600,
         ),
       ),
       subtitle: Text(
         item.description,
-        style: FuturisticTypography.bodySmall.copyWith(
-          color: FuturisticColors.textSecondary,
+        style: PremiumTypography.bodySmall.copyWith(
+          color: PremiumColors.textSecondary,
         ),
       ),
       secondary: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: FuturisticColors.primary.withValues(alpha: 0.1),
+          color: PremiumColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           item.icon,
-          color: FuturisticColors.primary,
+          color: PremiumColors.primary,
           size: 24,
         ),
       ),
-      activeThumbColor: FuturisticColors.primary,
+      activeThumbColor: PremiumColors.primary,
     );
   }
 }

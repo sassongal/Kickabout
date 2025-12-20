@@ -198,58 +198,70 @@ exports.onGameCompleted = onDocumentUpdated(
                     .collection('gamification')
                     .doc('stats');
 
-                // Get current gamification data from map
+                // Get current gamification data from map (for badge checks only)
                 const currentData = gamificationMap.get(playerId);
 
                 // Determine if player won (check if their team is the winning team)
                 const playerWon = winningTeamId !== null && stats.teamId === winningTeamId;
 
-                // Calculate new stats
-                const newStats = {
-                    gamesPlayed: (currentData.stats?.gamesPlayed || 0) + 1,
-                    gamesWon: (currentData.stats?.gamesWon || 0) + (playerWon ? 1 : 0),
-                    goals: (currentData.stats?.goals || 0) + stats.goals,
-                    assists: (currentData.stats?.assists || 0) + stats.assists,
-                    saves: (currentData.stats?.saves || 0) + stats.saves,
+                // 🔒 ATOMIC INCREMENTS - No more race conditions!
+                // Use FieldValue.increment for all stats to prevent concurrent write issues
+                const statsUpdate = {
+                    'stats.gamesPlayed': FieldValue.increment(1),
+                    'stats.goals': FieldValue.increment(stats.goals),
+                    'stats.assists': FieldValue.increment(stats.assists),
+                    'stats.saves': FieldValue.increment(stats.saves),
                 };
 
-                // SIMPLIFIED: No points, no levels - just participation tracking
-                // Only increment stats and check for milestone badges
+                if (playerWon) {
+                    statsUpdate['stats.gamesWon'] = FieldValue.increment(1);
+                }
 
-                // Check for milestone badges (based on gamesPlayed count only)
+                // Check for milestone badges (based on current data - best effort)
+                // Note: Exact milestone detection requires reading fresh data, but for UX
+                // it's acceptable to award badges based on pre-read data
                 const badgesToAward = [];
-                if (newStats.gamesPlayed === 1 && !(currentData.badges || []).includes('firstGame')) {
+                const currentGamesPlayed = currentData.stats?.gamesPlayed || 0;
+                const currentGoals = currentData.stats?.goals || 0;
+                const currentBadges = currentData.badges || [];
+
+                // Award badges at milestones (approximate - may be +/- 1 game due to concurrency)
+                if (currentGamesPlayed + 1 === 1 && !currentBadges.includes('firstGame')) {
                     badgesToAward.push('firstGame');
                 }
-                if (newStats.gamesPlayed === 10 && !(currentData.badges || []).includes('tenGames')) {
+                if (currentGamesPlayed + 1 === 10 && !currentBadges.includes('tenGames')) {
                     badgesToAward.push('tenGames');
                 }
-                if (newStats.gamesPlayed === 50 && !(currentData.badges || []).includes('fiftyGames')) {
+                if (currentGamesPlayed + 1 === 50 && !currentBadges.includes('fiftyGames')) {
                     badgesToAward.push('fiftyGames');
                 }
-                if (newStats.gamesPlayed === 100 && !(currentData.badges || []).includes('hundredGames')) {
+                if (currentGamesPlayed + 1 === 100 && !currentBadges.includes('hundredGames')) {
                     badgesToAward.push('hundredGames');
                 }
 
-                // Goal badges (optional - for display only, no points)
-                if (newStats.goals >= 1 && !(currentData.badges || []).includes('firstGoal')) {
+                // Goal badges
+                if (currentGoals + stats.goals >= 1 && !currentBadges.includes('firstGoal')) {
                     badgesToAward.push('firstGoal');
                 }
-                if (newStats.goals >= 3 && !(currentData.badges || []).includes('hatTrick')) {
+                if (currentGoals + stats.goals >= 3 && !currentBadges.includes('hatTrick')) {
                     badgesToAward.push('hatTrick');
                 }
 
-                // Update gamification document (keep existing points/level for backward compatibility)
-                const updatedBadges = [...(currentData.badges || []), ...badgesToAward];
-                batch.set(gamificationRef, {
+                // Build update object
+                const updateData = {
+                    ...statsUpdate,
                     userId: playerId,
-                    points: currentData.points || 0,
-                    level: currentData.level || 1,
-                    badges: updatedBadges,
-                    achievements: currentData.achievements || {},
-                    stats: newStats,
                     updatedAt: FieldValue.serverTimestamp(),
-                }, { merge: true });
+                };
+
+                // Add badges if any were earned
+                if (badgesToAward.length > 0) {
+                    updateData.badges = FieldValue.arrayUnion(...badgesToAward);
+                }
+
+                // Use set() with merge to handle both existing and new documents
+                // This allows atomic increments to work even if document doesn't exist yet
+                batch.set(gamificationRef, updateData, { merge: true });
 
                 // Log badge awards
                 if (badgesToAward.length > 0) {
@@ -365,24 +377,10 @@ exports.onGameCompleted = onDocumentUpdated(
 
                 // ✅ BATCH: Update game and hub together
                 const hubRef = db.collection('hubs').doc(gameData.hubId);
-                const hubDoc = await hubRef.get();
 
-                // Calculate hub-level aggregations
-                let totalHubGames = 0;
-                let totalHubGoals = 0;
-                if (hubDoc.exists) {
-                    const hubGamesSnapshot = await db
-                        .collection('games')
-                        .where('hubId', '==', gameData.hubId)
-                        .where('status', '==', 'completed')
-                        .get();
-
-                    totalHubGames = hubGamesSnapshot.size;
-                    totalHubGoals = hubGamesSnapshot.docs.reduce((sum, doc) => {
-                        const g = doc.data();
-                        return sum + (g.teamAScore || 0) + (g.teamBScore || 0);
-                    }, 0);
-                }
+                // 🔒 ATOMIC INCREMENT for hub stats - no more expensive recounts!
+                // Calculate total goals for this game
+                const totalGoalsThisGame = (gameData.teamAScore || 0) + (gameData.teamBScore || 0);
 
                 // ✅ Use batch for all denormalization updates
                 const denormBatch = db.batch();
@@ -396,14 +394,12 @@ exports.onGameCompleted = onDocumentUpdated(
                     venueName: venueName,
                 });
 
-                // Update hub
-                if (hubDoc.exists) {
-                    denormBatch.update(hubRef, {
-                        totalGames: totalHubGames,
-                        totalGoals: totalHubGoals,
-                        lastGameCompleted: FieldValue.serverTimestamp(),
-                    });
-                }
+                // Update hub with atomic increments
+                denormBatch.update(hubRef, {
+                    totalGames: FieldValue.increment(1),
+                    totalGoals: FieldValue.increment(totalGoalsThisGame),
+                    lastGameCompleted: FieldValue.serverTimestamp(),
+                });
 
                 // Commit all denormalization updates at once
                 await denormBatch.commit();
@@ -456,37 +452,60 @@ exports.onGameCompleted = onDocumentUpdated(
                 info(`Failed to send game summary notifications:`, notificationError);
             }
 
-            // Create regional feed post in feedPosts collection (root level)
+            // ✅ SOCIAL LOOP FIX: Create feed posts in BOTH hub feed AND regional feed
             const gameRegion = gameData.region;
-            if (gameRegion) {
-                try {
-                    const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
-                    const hubData = hubDoc.exists ? hubDoc.data() : null;
+            try {
+                const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
+                const hubData = hubDoc.exists ? hubDoc.data() : null;
 
-                    const feedPostRef = db.collection('feedPosts').doc();
-                    await feedPostRef.set({
-                        postId: feedPostRef.id,
-                        hubId: gameData.hubId,
-                        hubName: hubData?.name || 'האב',
-                        hubLogoUrl: hubData?.logoUrl || null,
-                        type: 'game_completed',
-                        text: `משחק הושלם ב-${hubData?.name || 'האב'}! תוצאה: ${teamAScore}-${teamBScore}`,
-                        createdAt: FieldValue.serverTimestamp(),
-                        authorId: gameData.createdBy,
-                        authorName: null,
-                        authorPhotoUrl: null,
-                        entityId: gameId,
-                        gameId: gameId,
-                        region: gameRegion,
-                        likeCount: 0,
-                        commentCount: 0,
-                        likes: [],
-                        comments: [],
+                // Prepare feed post data (shared between hub and regional feed)
+                const feedPostData = {
+                    hubId: gameData.hubId,
+                    hubName: hubData?.name || 'האב',
+                    hubLogoUrl: hubData?.logoUrl || null,
+                    type: 'game_completed',
+                    text: `משחק הושלם ב-${hubData?.name || 'האב'}! תוצאה: ${teamAScore}-${teamBScore}`,
+                    createdAt: FieldValue.serverTimestamp(),
+                    authorId: gameData.createdBy,
+                    authorName: null,
+                    authorPhotoUrl: null,
+                    entityId: gameId,
+                    gameId: gameId,
+                    region: gameRegion,
+                    likeCount: 0,
+                    commentCount: 0,
+                    likes: [],
+                    comments: [],
+                };
+
+                const feedBatch = db.batch();
+
+                // 1️⃣ Create post in HUB feed (for hub members) - THIS WAS MISSING!
+                const hubFeedPostRef = db
+                    .collection('hubs')
+                    .doc(gameData.hubId)
+                    .collection('feed')
+                    .doc('posts')
+                    .collection('items')
+                    .doc();
+                feedBatch.set(hubFeedPostRef, {
+                    ...feedPostData,
+                    postId: hubFeedPostRef.id,
+                });
+
+                // 2️⃣ Create post in REGIONAL feed (for discovery)
+                if (gameRegion) {
+                    const regionalFeedPostRef = db.collection('feedPosts').doc();
+                    feedBatch.set(regionalFeedPostRef, {
+                        ...feedPostData,
+                        postId: regionalFeedPostRef.id,
                     });
-                    info(`Created regional feed post for game ${gameId} in region ${gameRegion}.`);
-                } catch (feedError) {
-                    info(`Failed to create regional feed post for game ${gameId}:`, feedError);
                 }
+
+                await feedBatch.commit();
+                info(`✅ Created feed posts for game ${gameId} in hub feed and regional feed (${gameRegion || 'no region'}).`);
+            } catch (feedError) {
+                info(`⚠️ Failed to create feed posts for game ${gameId}:`, feedError);
             }
         } catch (error) {
             info(`Error in onGameCompleted for game ${gameId}:`, error);

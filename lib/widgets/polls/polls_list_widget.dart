@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/data/polls_repository.dart';
 import 'package:kattrick/models/poll.dart';
@@ -27,7 +28,7 @@ class PollsListWidget extends ConsumerWidget {
       stream: pollsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: KineticLoadingAnimation(size: 40));
         }
 
         if (snapshot.hasError) {

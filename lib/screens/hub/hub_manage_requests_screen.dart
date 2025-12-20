@@ -6,11 +6,11 @@ import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart' as app_models;
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 
 /// Manager Inbox - Approve/Deny Join Requests + Contact Messages
@@ -79,11 +79,11 @@ class _HubManageRequestsScreenState
       stream: requestsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(message: 'טוען בקשות...');
+          return const PremiumLoadingState(message: 'טוען בקשות...');
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה',
             message: 'שגיאה בטעינת בקשות: ${snapshot.error}',
@@ -93,7 +93,7 @@ class _HubManageRequestsScreenState
         final requests = snapshot.data?.docs ?? [];
 
         if (requests.isEmpty) {
-          return const FuturisticEmptyState(
+          return const PremiumEmptyState(
             icon: Icons.inbox,
             title: 'אין בקשות ממתינות',
             message: 'כל הבקשות טופלו',
@@ -141,7 +141,7 @@ class _HubManageRequestsScreenState
 
         // Error state
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת הודעות',
             message: ErrorHandlerService().handleException(
@@ -160,7 +160,7 @@ class _HubManageRequestsScreenState
 
         // Empty state
         if (messages.isEmpty) {
-          return const FuturisticEmptyState(
+          return const PremiumEmptyState(
             icon: Icons.chat_bubble_outline,
             title: 'אין הודעות עדיין',
             message: 'כשמישהו יתעניין להצטרף דרך פוסט גיוס, ההודעות יופיעו כאן',

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/scouting_service.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/models/notification.dart' as app_notification;
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Scouting Screen - AI-powered player discovery for Hub managers
 class ScoutingScreen extends ConsumerStatefulWidget {
@@ -44,7 +45,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'גיוס שחקנים',
       body: Column(
         children: [
@@ -60,7 +61,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: KineticLoadingAnimation(size: 20),
                     )
                   : const Icon(Icons.search),
               label: Text(_isLoading ? 'מחפש...' : 'חפש שחקנים'),
@@ -73,10 +74,10 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
           // Results
           Expanded(
             child: _isLoading
-                ? const FuturisticLoadingState(
+                ? const PremiumLoadingState(
                     message: 'מחפש שחקנים מתאימים...')
                 : _results.isEmpty
-                    ? FuturisticEmptyState(
+                    ? PremiumEmptyState(
                         icon: Icons.people_outline,
                         title: 'לא נמצאו שחקנים מתאימים',
                         message: 'נסה לשנות את הפילטרים',
@@ -231,7 +232,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
   Widget _buildPlayerCard(ScoutingResult result) {
     final player = result.player;
 
-    return FuturisticCard(
+    return PremiumCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: PlayerAvatar(user: player, radius: 28),
@@ -731,7 +732,7 @@ class _PlayerCardSheet extends ConsumerWidget {
                     ).then((hubs) => hubs.whereType<Hub>().toList()),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
+                        return const KineticLoadingAnimation(size: 24);
                       }
                       final hubs = snapshot.data ?? [];
                       if (hubs.isEmpty) {

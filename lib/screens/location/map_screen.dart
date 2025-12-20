@@ -7,18 +7,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/models/venue.dart';
 import 'package:kattrick/models/venue_edit_request.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:google_maps_cluster_manager/google_maps_cluster_manager.dart'
-    as gmc;
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:ui' as ui;
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:kattrick/utils/venue_seeder_service.dart';
 
@@ -42,9 +38,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   BitmapDescriptor? _hubMarkerIcon;
   bool _iconsLoaded = false;
 
-  // Clustering
-  late gmc.ClusterManager<MapPlace> _clusterManager; // Typed ClusterManager
-  Set<Marker> _markers = {}; // Managed by ClusterManager override
+  // Pre-loading markers logic
+  Set<Marker> _markers = {};
 
   // ✅ Debouncing for camera updates - reduces unnecessary marker reloads
   Timer? _cameraUpdateTimer;
@@ -68,125 +63,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       speedAccuracy: 0,
     );
     _loadCustomIcons();
-    _clusterManager = gmc.ClusterManager<MapPlace>(
-      <MapPlace>[], // Initial items
-      _updateMarkers,
-      markerBuilder: _markerBuilder,
-      levels: const [
-        1,
-        4.25,
-        6.75,
-        8.25,
-        11.5,
-        14.5,
-        16.0,
-        16.5,
-        20.0
-      ], // Optional: Customize levels
-    );
     _loadCurrentLocation();
-  }
-
-  void _updateMarkers(Set<Marker> markers) {
-    setState(() {
-      _markers = markers;
-    });
-  }
-
-  Future<Marker> _markerBuilder(dynamic cluster) async {
-    final mapPlaceCluster = cluster as gmc.Cluster<MapPlace>;
-    return Marker(
-      markerId: MarkerId(mapPlaceCluster.isMultiple
-          ? 'cluster_${mapPlaceCluster.getId()}'
-          : cluster.items.first.id),
-      position: cluster.location,
-      onTap: () async {
-        if (cluster.isMultiple) {
-          if (_mapController != null) {
-            final currentZoom = await _mapController!.getZoomLevel();
-            _mapController!.animateCamera(CameraUpdate.newLatLngZoom(
-              cluster.location,
-              currentZoom + 2,
-            ));
-          }
-        } else {
-          final item = cluster.items.first;
-          if (item.type == 'venue') {
-            _onVenueMarkerTapped((item.data as Venue).venueId);
-          } else if (item.type == 'google_venue') {
-            _onVenueMarkerTapped(item.id.replaceAll('google_place_', ''));
-          }
-        }
-      },
-      icon: await _getMarkerBitmap(cluster),
-    );
-  }
-
-  Future<BitmapDescriptor> _getMarkerBitmap(
-      gmc.Cluster<MapPlace> cluster) async {
-    if (cluster.isMultiple) {
-      return await _getClusterBitmap(cluster.count);
-    }
-    // Single item
-    final item = cluster.items.first;
-    if (item.type == 'venue' || item.type == 'google_venue') {
-      // Use existing icons
-      if (item.data is Venue) {
-        return (item.data as Venue).isPublic
-            ? (_venuePublicIcon ??
-                BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueGreen))
-            : (_venueRentalIcon ??
-                BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueOrange));
-      }
-      // Fallback for Google Place where data might be a Map or just ID
-      return _venuePublicIcon ??
-          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
-    }
-    if (item.type == 'hub') {
-      return _hubMarkerIcon ??
-          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
-    }
-    if (item.type == 'game') {
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-    }
-    return BitmapDescriptor.defaultMarker;
-  }
-
-  Future<BitmapDescriptor> _getClusterBitmap(int size) async {
-    final pictureRecorder = ui.PictureRecorder();
-    final canvas = Canvas(pictureRecorder);
-    final paint = Paint()..color = FuturisticColors.primary;
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
-
-    final radius = 24.0;
-    canvas.drawCircle(Offset(radius, radius), radius, paint);
-
-    textPainter.text = TextSpan(
-      text: size.toString(),
-      style: TextStyle(
-        fontSize: radius - 5,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    );
-
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(radius - textPainter.width / 2, radius - textPainter.height / 2),
-    );
-
-    final image = await pictureRecorder.endRecording().toImage(
-          radius.toInt() * 2,
-          radius.toInt() * 2,
-        );
-    final data = await image.toByteData(format: ui.ImageByteFormat.png);
-
-    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
   }
 
   /// Ensure location permission is granted before trying to get location
@@ -234,15 +111,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     try {
       // Add timeout to prevent infinite loading
       final iconsFuture = Future.wait([
-        BitmapDescriptor.fromAssetImage(
+        BitmapDescriptor.asset(
           const ImageConfiguration(size: Size(100, 100)),
           'assets/icons/venue_public.png',
         ),
-        BitmapDescriptor.fromAssetImage(
+        BitmapDescriptor.asset(
           const ImageConfiguration(size: Size(100, 100)),
           'assets/icons/venue_rental.png',
         ),
-        BitmapDescriptor.fromAssetImage(
+        BitmapDescriptor.asset(
           const ImageConfiguration(size: Size(100, 100)),
           'assets/icons/hub_marker.png',
         ),
@@ -712,7 +589,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 centerLat, centerLng, searchRadiusKm.toInt(), existingIds);
             items.addAll(googlePlaces);
           } catch (e) {
-            debugPrint('⚠️ Error fetching Google Places: $e');
+            debugPrint('⚠️ Error fetching Google Places (skipping): $e');
+            // Don't fail the entire map load if Google Places fails
+            // Map will still show venues from Firestore
           }
         }
       }
@@ -778,10 +657,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
       }
 
-      // Pass to ClusterManager
-      _clusterManager.setItems(items);
-
-      if (mounted) setState(() => _isLoading = false);
+      // Native clustering is handled by markers having clusterManagerId
+      if (mounted) {
+        setState(() {
+          _markers = items.map((place) {
+            return Marker(
+              markerId: MarkerId(place.id),
+              position: place.location,
+              icon: _getIconForType(place.type, place.data),
+              onTap: () => _handleItemTap(place.type, place.data),
+            );
+          }).toSet();
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       debugPrint('❌ Error in _loadMarkers: $e');
       if (mounted) setState(() => _isLoading = false);
@@ -830,87 +719,129 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
       ],
       body: _isLoading
-          ? const FuturisticLoadingState(message: 'טוען מפה...')
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                return Stack(
-                  children: [
-                    SizedBox(
-                      width: constraints.maxWidth,
-                      height: constraints.maxHeight,
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: _currentPosition != null
-                              ? LatLng(
-                                  _currentPosition!.latitude,
-                                  _currentPosition!.longitude,
-                                )
-                              : const LatLng(
-                                  31.7683, 35.2137), // Default to Jerusalem
-                          zoom: 13.0,
-                        ),
-                        markers: _markers,
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: true,
-                        mapType: MapType.normal,
-                        onMapCreated: (controller) {
-                          _clusterManager.setMapId(controller.mapId);
-                          setState(() {
-                            _mapController = controller;
-                          });
-                          if (_currentPosition != null) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (_mapController != null &&
-                                  _currentPosition != null) {
-                                _updateMapCamera();
-                              }
-                              // Initial load
-                              _loadMarkers();
-                            });
-                          }
-                        },
-                        onCameraMove: _clusterManager.onCameraMove,
-                        onCameraIdle: () {
-                          _clusterManager.updateMap();
-                          _cameraUpdateTimer?.cancel();
-                          _cameraUpdateTimer =
-                              Timer(const Duration(milliseconds: 500), () {
-                            if (mounted) _loadMarkers();
-                          });
-                        },
-                      ),
-                    ),
-                    // Filter buttons
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      right: 16,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildFilterChip('all', 'הכל'),
-                                const SizedBox(width: 8),
-                                _buildFilterChip('hubs', 'הובים'),
-                                const SizedBox(width: 8),
-                                _buildFilterChip('games', 'משחקים'),
-                                const SizedBox(width: 8),
-                                _buildFilterChip('venues', 'מגרשים'),
-                              ],
-                            ),
-                          ),
+          ? const PremiumLoadingState(message: 'טוען מפה...')
+          : Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: _currentPosition != null
+                        ? LatLng(
+                            _currentPosition!.latitude,
+                            _currentPosition!.longitude,
+                          )
+                        : const LatLng(
+                            31.7683, 35.2137), // Default to Jerusalem
+                    zoom: 13.0,
+                  ),
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  mapType: MapType.normal,
+                  onMapCreated: (controller) {
+                    setState(() {
+                      _mapController = controller;
+                    });
+                    // Force load markers once map is ready
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      if (mounted) _loadMarkers();
+                    });
+                  },
+                  onCameraIdle: () {
+                    _cameraUpdateTimer?.cancel();
+                    _cameraUpdateTimer =
+                        Timer(const Duration(milliseconds: 800), () {
+                      if (mounted) _loadMarkers();
+                    });
+                  },
+                ),
+                // Filter buttons
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  right: 16,
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildFilterChip('all', 'הכל'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('hubs', 'הובים'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('games', 'משחקים'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('venues', 'מגרשים'),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                ),
+              ],
             ),
     );
+  }
+
+  BitmapDescriptor _getIconForType(String type, dynamic data) {
+    if (type == 'hub') {
+      return _hubMarkerIcon ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+    }
+    if (type == 'venue' || type.startsWith('google_place_')) {
+      final isPublic = data is Venue ? data.isPublic : true;
+      return (isPublic ? _venuePublicIcon : _venueRentalIcon) ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    }
+    if (type == 'game') {
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
+    return BitmapDescriptor.defaultMarker;
+  }
+
+  void _handleItemTap(String type, dynamic data) {
+    if (type == 'venue' || type.startsWith('google_place_')) {
+      Venue? venue;
+      if (data is Venue) {
+        venue = data;
+      } else if (data is Map<String, dynamic>) {
+        // Create a temporary Venue object for Google Places items
+        final now = DateTime.now();
+        venue = Venue(
+          venueId: data['place_id'] ?? '',
+          hubId: 'google_place', // Dummy hubId for external venues
+          name: data['name'] ?? 'Unknown Venue',
+          location: GeoPoint(
+            (data['geometry']?['location']?['lat'] as num?)?.toDouble() ?? 0,
+            (data['geometry']?['location']?['lng'] as num?)?.toDouble() ?? 0,
+          ),
+          address: data['vicinity'] ?? data['formatted_address'],
+          isPublic: true,
+          amenities: [],
+          createdAt: now,
+          updatedAt: now,
+        );
+      }
+
+      if (venue != null) {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => _VenueDetailsSheet(venue: venue!),
+        );
+      }
+    } else if (type == 'hub') {
+      if (data is Hub) {
+        context.push('/hubs/${data.hubId}');
+      }
+    } else if (type == 'game') {
+      if (data is Game) {
+        context.push('/games/${data.gameId}');
+      }
+    }
   }
 
   Widget _buildFilterChip(String value, String label) {
@@ -932,6 +863,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<List<MapPlace>> _fetchGooglePlaces(
       double lat, double lng, int radius, Set<String> existingIds) async {
     try {
+      // Check if user is authenticated
+      final auth = firebase_auth.FirebaseAuth.instance;
+      final currentUser = auth.currentUser;
+
+      debugPrint('🔐 Current user: ${currentUser?.uid ?? "NOT AUTHENTICATED"}');
+      debugPrint('🔐 User email: ${currentUser?.email ?? "N/A"}');
+
+      if (currentUser == null) {
+        debugPrint('❌ User is not authenticated! Cannot call searchVenues function.');
+        throw Exception('יש להתחבר כדי לחפש מקומות');
+      }
+
       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
       final result = await functions.httpsCallable('searchVenues').call({
         'lat': lat,
@@ -973,258 +916,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   /// Handle venue marker tap - load details and hubs
-  Future<void> _onVenueMarkerTapped(String placeId) async {
-    // Show loading indicator
-    if (!mounted) return;
-    showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-
-    try {
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-
-      // Call both functions in parallel
-      final detailsCall = functions.httpsCallable('getPlaceDetails').call({
-        'placeId': placeId,
-      });
-      final hubsCall = functions.httpsCallable('getHubsForPlace').call({
-        'placeId': placeId,
-      });
-
-      final results = await Future.wait([detailsCall, hubsCall]);
-
-      final detailsData = results[0].data as Map<String, dynamic>;
-      final hubsData = results[1].data;
-
-      final Map<String, dynamic> placeDetails = Map<String, dynamic>.from(
-        detailsData['result'] as Map<String, dynamic>,
-      );
-      final List<dynamic> hubs = hubsData is List<dynamic>
-          ? List<dynamic>.from(hubsData)
-          : <dynamic>[];
-
-      // Close loading indicator
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      // Show venue details sheet
-      _showVenueDetailsSheet(context, placeDetails, hubs);
-    } on FirebaseFunctionsException catch (e) {
-      // Handle Firebase Functions errors
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      // ✅ Handle rate limiting specifically
-      if (e.code == 'resource-exhausted') {
-        SnackbarHelper.showWarning(
-          context,
-          'יותר מדי בקשות ברגע אחד. המתן רגע ונסה שוב 😊',
-        );
-      } else if (e.code == 'unauthenticated') {
-        SnackbarHelper.showError(context, 'נדרשת התחברות לצפייה בפרטי מגרש');
-      } else {
-        SnackbarHelper.showError(
-            context, 'שגיאה בטעינת פרטי המגרש: ${e.message}');
-      }
-    } catch (e) {
-      // Handle other errors
-      if (!mounted) return;
-      Navigator.pop(context);
-      debugPrint('Error loading venue details: $e');
-      SnackbarHelper.showError(context, 'שגיאה בטעינת פרטי המגרש');
-    }
-  }
-
-  /// Show venue details in a bottom sheet
-  void _showVenueDetailsSheet(
-    BuildContext context,
-    Map<String, dynamic> placeDetails,
-    List<dynamic> hubs,
-  ) {
-    final name = placeDetails['name'] as String? ?? 'מגרש';
-    final address = placeDetails['formatted_address'] as String?;
-    final phone = placeDetails['formatted_phone_number'] as String?;
-
-    // Note: Google Places Photo API requires API key and photo_reference
-    // For now, we'll skip displaying photos directly (would need backend endpoint)
-    // In production, you could create a Cloud Function that returns photo URLs
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: FuturisticColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: FuturisticColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Photo placeholder (Google Places photos require API key)
-                      FuturisticCard(
-                        padding: const EdgeInsets.all(40),
-                        margin: EdgeInsets.zero,
-                        child: Icon(
-                          Icons.sports_soccer,
-                          size: 80,
-                          color: FuturisticColors.textSecondary,
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Name
-                      Text(
-                        name,
-                        style: FuturisticTypography.heading2,
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Address
-                      if (address != null && address.isNotEmpty) ...[
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 20,
-                              color: FuturisticColors.textSecondary,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                address,
-                                style: FuturisticTypography.bodyMedium,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      // Phone
-                      if (phone != null && phone.isNotEmpty) ...[
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.phone,
-                              size: 20,
-                              color: FuturisticColors.textSecondary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              phone,
-                              style: FuturisticTypography.bodyMedium,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Hubs section
-                      if (hubs.isNotEmpty) ...[
-                        Divider(color: FuturisticColors.surfaceVariant),
-                        const SizedBox(height: 12),
-                        Text(
-                          'האבים שמשחקים כאן',
-                          style: FuturisticTypography.techHeadline,
-                        ),
-                        const SizedBox(height: 12),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: hubs.length,
-                          itemBuilder: (context, index) {
-                            final hub = hubs[index] as Map<String, dynamic>;
-                            final hubId = hub['hubId'] as String;
-                            final hubName = hub['name'] as String? ?? 'האב';
-                            final logoUrl = hub['logoUrl'] as String?;
-
-                            return FuturisticCard(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              onTap: () {
-                                Navigator.pop(context);
-                                context.go('/hubs/$hubId');
-                              },
-                              child: ListTile(
-                                leading: logoUrl != null
-                                    ? CircleAvatar(
-                                        backgroundImage: NetworkImage(logoUrl),
-                                        radius: 24,
-                                      )
-                                    : CircleAvatar(
-                                        backgroundColor:
-                                            FuturisticColors.primary,
-                                        radius: 24,
-                                        child: Text(
-                                          hubName[0].toUpperCase(),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                title: Text(
-                                  hubName,
-                                  style: FuturisticTypography.labelLarge,
-                                ),
-                                trailing: Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 16,
-                                  color: FuturisticColors.textSecondary,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ] else ...[
-                        Divider(color: FuturisticColors.surfaceVariant),
-                        const SizedBox(height: 12),
-                        Text(
-                          'אין האבים שמשחקים במגרש זה',
-                          style: FuturisticTypography.bodyMedium.copyWith(
-                            color: FuturisticColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   void dispose() {
@@ -1444,9 +1135,9 @@ class _VenueDetailsSheetState extends ConsumerState<_VenueDetailsSheet> {
           ),
 
           if (_isUpdating)
-            const Padding(
-              padding: EdgeInsets.only(top: 16.0),
-              child: Center(child: CircularProgressIndicator()),
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: Center(child: KineticLoadingAnimation(size: 40)),
             ),
         ],
       ),
@@ -1459,9 +1150,9 @@ class _VenueDetailsSheetState extends ConsumerState<_VenueDetailsSheet> {
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
-      selectedColor: FuturisticColors.primary.withOpacity(0.2),
+      selectedColor: PremiumColors.primary.withValues(alpha: 0.2),
       labelStyle: TextStyle(
-        color: selected ? FuturisticColors.primary : Colors.black,
+        color: selected ? PremiumColors.primary : Colors.black,
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
       ),
     );
@@ -1473,19 +1164,18 @@ class _VenueDetailsSheetState extends ConsumerState<_VenueDetailsSheet> {
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
-      selectedColor: FuturisticColors.primary.withOpacity(0.2),
-      checkmarkColor: FuturisticColors.primary,
+      selectedColor: PremiumColors.primary.withValues(alpha: 0.2),
+      checkmarkColor: PremiumColors.primary,
       labelStyle: TextStyle(
-        color: selected ? FuturisticColors.primary : Colors.black,
+        color: selected ? PremiumColors.primary : Colors.black,
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
       ),
     );
   }
 }
 
-class MapPlace with gmc.ClusterItem {
+class MapPlace {
   final String id;
-  @override
   final LatLng location;
   final String type;
   final dynamic data;

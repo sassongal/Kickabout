@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/gradient_button.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/premium/gradient_button.dart';
 import 'package:kattrick/scripts/generate_dummy_data.dart';
 import 'package:kattrick/scripts/team_balancing_test_script.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -482,7 +482,7 @@ class _GenerateDummyDataScreenState
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'יצירת נתוני דמה',
       body: Padding(
         padding: const EdgeInsets.all(24.0),

@@ -3,19 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/empty_state_illustrations.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/services/location_service.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:kattrick/widgets/animations/scan_in_animation.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Hubs Board Screen - לוח הובים עם מפה
 class HubsBoardScreen extends ConsumerStatefulWidget {
@@ -132,7 +135,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
 
     final currentUserId = ref.watch(currentUserIdProvider);
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'לוח הובים',
       showBottomNav: true,
       floatingActionButton: currentUserId != null
@@ -140,7 +143,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
               onPressed: () => context.push('/hubs/create'),
               icon: const Icon(Icons.add),
               label: const Text('צור הוב'),
-              backgroundColor: FuturisticColors.primary,
+              backgroundColor: PremiumColors.primary,
               foregroundColor: Colors.white,
             )
           : null,
@@ -169,11 +172,11 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
                       )
                     : null,
                 filled: true,
-                fillColor: FuturisticColors.surface,
+                fillColor: PremiumColors.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: FuturisticColors.primary.withValues(alpha: 0.3),
+                    color: PremiumColors.primary.withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -218,7 +221,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת הובים',
             message: ErrorHandlerService().handleException(
@@ -253,10 +256,11 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
             _displayedHubs.isNotEmpty ? _hasMore : allHubs.length > _pageSize;
 
         if (hubsToShow.isEmpty && allHubs.isEmpty) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.group_outlined,
             title: 'אין הובים',
             message: 'לא נמצאו הובים התואמים לחיפוש',
+            illustration: const EmptyHubsIllustration(),
             action: ElevatedButton.icon(
               onPressed: () => context.push('/hubs/create'),
               icon: const Icon(Icons.add),
@@ -274,101 +278,158 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
             if (index == hubsToShow.length) {
               return const Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: KineticLoadingAnimation(size: 32)),
               );
             }
             final hub = hubsToShow[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Hero(
-                tag: 'hub_card_${hub.hubId}',
-                child: FuturisticCard(
-                  onTap: () {
-                    if (hub.hubId.isNotEmpty) {
-                      context.push('/hubs/${hub.hubId}');
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            return ScanInAnimation(
+              delay: Duration(milliseconds: index * 100),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Hero(
+                  tag: 'hub_card_${hub.hubId}',
+                  child: PremiumCard(
+                    onTap: () {
+                      if (hub.hubId.isNotEmpty) {
+                        context.push('/hubs/${hub.hubId}');
+                      }
+                    },
+                    child: Stack(
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                gradient: FuturisticColors.primaryGradient,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.group,
-                                color: Colors.white,
-                                size: 24,
+                        if (hub.bannerUrl != null)
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.network(
+                                hub.bannerUrl!,
+                                fit: BoxFit.cover,
+                                color: Colors.black.withValues(alpha: 0.6),
+                                colorBlendMode: BlendMode.darken,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    hub.name,
-                                    style: FuturisticTypography.heading3,
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      gradient:
+                                          PremiumColors.primaryGradient,
+                                      borderRadius: BorderRadius.circular(12),
+                                      image: hub.profileImageUrl != null
+                                          ? DecorationImage(
+                                              image: NetworkImage(
+                                                  hub.profileImageUrl!),
+                                              fit: BoxFit.cover,
+                                            )
+                                          : null,
+                                    ),
+                                    child: hub.profileImageUrl == null
+                                        ? const Icon(
+                                            Icons.group,
+                                            color: Colors.white,
+                                            size: 24,
+                                          )
+                                        : null,
                                   ),
-                                  if (hub.description != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      hub.description!,
-                                      style: FuturisticTypography.bodySmall,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          hub.name,
+                                          style: PremiumTypography.heading3
+                                              .copyWith(
+                                            color: hub.bannerUrl != null
+                                                ? Colors.white
+                                                : null,
+                                          ),
+                                        ),
+                                        if (hub.description != null) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            hub.description!,
+                                            style: PremiumTypography
+                                                .bodySmall
+                                                .copyWith(
+                                              color: hub.bannerUrl != null
+                                                  ? Colors.white
+                                                      .withValues(alpha: 0.8)
+                                                  : PremiumColors
+                                                      .textSecondary,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.people,
+                                    size: 16,
+                                    color: hub.bannerUrl != null
+                                        ? Colors.white70
+                                        : PremiumColors.textTertiary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${hub.memberCount} חברים',
+                                    style:
+                                        PremiumTypography.bodySmall.copyWith(
+                                      color: hub.bannerUrl != null
+                                          ? Colors.white70
+                                          : null,
+                                    ),
+                                  ),
+                                  if (hub.location != null &&
+                                      _currentPosition != null) ...[
+                                    const SizedBox(width: 16),
+                                    Icon(
+                                      Icons.location_on,
+                                      size: 16,
+                                      color: hub.bannerUrl != null
+                                          ? Colors.white70
+                                          : PremiumColors.textTertiary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    FutureBuilder<double>(
+                                      future: _calculateDistance(
+                                          hub.location!, _currentPosition!),
+                                      builder: (context, distanceSnapshot) {
+                                        final distance = distanceSnapshot.data;
+                                        if (distance == null) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Text(
+                                          '${distance.toStringAsFixed(1)} ק"מ',
+                                          style: PremiumTypography.bodySmall
+                                              .copyWith(
+                                            color: hub.bannerUrl != null
+                                                ? Colors.white70
+                                                : null,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.people,
-                              size: 16,
-                              color: FuturisticColors.textTertiary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${hub.memberCount} חברים',
-                              style: FuturisticTypography.bodySmall,
-                            ),
-                            if (hub.location != null &&
-                                _currentPosition != null) ...[
-                              const SizedBox(width: 16),
-                              Icon(
-                                Icons.location_on,
-                                size: 16,
-                                color: FuturisticColors.textTertiary,
-                              ),
-                              const SizedBox(width: 4),
-                              FutureBuilder<double>(
-                                future: _calculateDistance(
-                                    hub.location!, _currentPosition!),
-                                builder: (context, distanceSnapshot) {
-                                  final distance = distanceSnapshot.data;
-                                  if (distance == null) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Text(
-                                    '${distance.toStringAsFixed(1)} ק"מ',
-                                    style: FuturisticTypography.bodySmall,
-                                  );
-                                },
-                              ),
                             ],
-                          ],
+                          ),
                         ),
                       ],
                     ),
@@ -396,7 +457,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
         // Handle error state
         if (snapshot.hasError) {
           debugPrint('❌ Error loading hubs for map: ${snapshot.error}');
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת המפה',
             message: 'לא ניתן לטעון את הנתונים. נסה שוב מאוחר יותר.',
@@ -412,7 +473,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(
+          return const PremiumLoadingState(
             message: 'טוען מפה...',
           );
         }

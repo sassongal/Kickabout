@@ -2,19 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/gamification/gamification_visuals.dart';
 import 'package:url_launcher/url_launcher.dart';
 // ignore_for_file: unused_element
 
-/// Enhanced Player Profile Screen with Futuristic Design
+/// Enhanced Player Profile Screen with Premium Design
 /// Features: Hero Section, Tabbed Interface, Full Statistics, Privacy Settings
 class PlayerProfileScreen extends ConsumerStatefulWidget {
   final String playerId;
@@ -84,7 +85,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
         followRepo.watchFollowersCount(widget.playerId);
     final isOwnProfile = currentUserId == widget.playerId;
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'פרופיל שחקן',
       actions: [
         if (isOwnProfile && !isAnonymous)
@@ -148,11 +149,11 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
         stream: userStream,
         builder: (context, userSnapshot) {
           if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return const FuturisticLoadingState(message: 'טוען פרופיל...');
+            return const PremiumLoadingState(message: 'טוען פרופיל...');
           }
 
           if (userSnapshot.hasError) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת פרופיל',
               message: userSnapshot.error.toString(),
@@ -166,7 +167,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
 
           final user = userSnapshot.data;
           if (user == null) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.person_off,
               title: 'שחקן לא נמצא',
               message: 'השחקן המבוקש לא נמצא במערכת',
@@ -194,12 +195,12 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
 
               // Tab Bar (Simplified: Only Overview and Games)
               Container(
-                color: FuturisticColors.surface,
+                color: PremiumColors.surface,
                 child: TabBar(
                   controller: _tabController,
-                  labelColor: FuturisticColors.primary,
-                  unselectedLabelColor: FuturisticColors.textSecondary,
-                  indicatorColor: FuturisticColors.primary,
+                  labelColor: PremiumColors.primary,
+                  unselectedLabelColor: PremiumColors.textSecondary,
+                  indicatorColor: PremiumColors.primary,
                   tabs: const [
                     Tab(text: 'סקירה', icon: Icon(Icons.dashboard)),
                     Tab(text: 'משחקים', icon: Icon(Icons.sports_soccer)),
@@ -239,7 +240,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
   }
 
   Widget _buildAnonymousBanner(BuildContext context) {
-    return FuturisticCard(
+    return PremiumCard(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -249,14 +250,14 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
             children: [
               Icon(
                 Icons.info_outline,
-                color: FuturisticColors.primary,
+                color: PremiumColors.primary,
                 size: 28,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'אתה משתמש כאורח',
-                  style: FuturisticTypography.techHeadline.copyWith(
+                  style: PremiumTypography.techHeadline.copyWith(
                     fontSize: 18,
                   ),
                 ),
@@ -266,8 +267,8 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           const SizedBox(height: 12),
           Text(
             'כאורח, אתה יכול לצפות בתוכן אבל לא לבצע פעולות. כדי להתחיל להשתמש באפליקציה במלואה - צור חשבון או התחבר!',
-            style: FuturisticTypography.bodyMedium.copyWith(
-              color: FuturisticColors.textSecondary,
+            style: PremiumTypography.bodyMedium.copyWith(
+              color: PremiumColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -279,7 +280,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                   icon: const Icon(Icons.login),
                   label: const Text('התחבר'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: FuturisticColors.primary,
+                    backgroundColor: PremiumColors.primary,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -291,8 +292,8 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                   icon: const Icon(Icons.person_add),
                   label: const Text('הירשם'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: FuturisticColors.primary,
-                    side: BorderSide(color: FuturisticColors.primary),
+                    foregroundColor: PremiumColors.primary,
+                    side: BorderSide(color: PremiumColors.primary),
                   ),
                 ),
               ),
@@ -319,7 +320,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
 
     return Container(
       decoration: BoxDecoration(
-        gradient: FuturisticColors.primaryGradient,
+        gradient: PremiumColors.primaryGradient,
       ),
       child: SafeArea(
         bottom: false,
@@ -333,10 +334,27 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                   // Profile Photo
                   Hero(
                     tag: 'profile_${user.uid}',
-                    child: PlayerAvatar(
-                      user: user,
-                      radius: 50,
-                      clickable: false,
+                    child: Stack(
+                      children: [
+                        PlayerAvatar(
+                          user: user,
+                          radius: 50,
+                          clickable: false,
+                        ),
+                        Positioned(
+                          right: -5,
+                          bottom: -5,
+                          child: StreamBuilder<Gamification?>(
+                            stream: ref
+                                .read(gamificationRepositoryProvider)
+                                .watchGamification(user.uid),
+                            builder: (context, snapshot) {
+                              final level = snapshot.data?.level ?? 1;
+                              return LevelIcon(level: level, size: 45);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -348,7 +366,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                       children: [
                         Text(
                           _displayName(user),
-                          style: FuturisticTypography.heading2.copyWith(
+                          style: PremiumTypography.heading2.copyWith(
                             color: Colors.white,
                           ),
                         ),
@@ -371,7 +389,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                               child: Text(
                                 user.preferredPosition,
                                 style:
-                                    FuturisticTypography.labelMedium.copyWith(
+                                    PremiumTypography.labelMedium.copyWith(
                                   color: Colors.white,
                                 ),
                               ),
@@ -398,7 +416,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                                     const SizedBox(width: 4),
                                     Text(
                                       user.ageGroup!.displayNameHe,
-                                      style: FuturisticTypography.labelMedium
+                                      style: PremiumTypography.labelMedium
                                           .copyWith(
                                         color: Colors.white,
                                       ),
@@ -468,7 +486,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('שגיאה בפתיחת שיחה: $e'),
-                                      backgroundColor: FuturisticColors.error,
+                                      backgroundColor: PremiumColors.error,
                                     ),
                                   );
                                 }
@@ -478,7 +496,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                             label: const Text('שלח הודעה'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
-                              foregroundColor: FuturisticColors.primary,
+                              foregroundColor: PremiumColors.primary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
@@ -543,7 +561,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('שגיאה: $e'),
-                                      backgroundColor: FuturisticColors.error,
+                                      backgroundColor: PremiumColors.error,
                                     ),
                                   );
                                 }
@@ -557,11 +575,11 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                             label: Text(isFollowing ? 'ביטול עקיבה' : 'עקוב'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: isFollowing
-                                  ? FuturisticColors.error
+                                  ? PremiumColors.error
                                   : Colors.white,
                               foregroundColor: isFollowing
                                   ? Colors.white
-                                  : FuturisticColors.primary,
+                                  : PremiumColors.primary,
                             ),
                           );
                         },
@@ -607,13 +625,13 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                             children: [
                               Text(
                                 '$count',
-                                style: FuturisticTypography.heading3.copyWith(
+                                style: PremiumTypography.heading3.copyWith(
                                   color: Colors.white,
                                 ),
                               ),
                               Text(
                                 'עוקבים',
-                                style: FuturisticTypography.labelSmall.copyWith(
+                                style: PremiumTypography.labelSmall.copyWith(
                                   color: Colors.white,
                                 ),
                               ),
@@ -648,13 +666,13 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                             children: [
                               Text(
                                 '$count',
-                                style: FuturisticTypography.heading3.copyWith(
+                                style: PremiumTypography.heading3.copyWith(
                                   color: Colors.white,
                                 ),
                               ),
                               Text(
                                 'עוקב',
-                                style: FuturisticTypography.labelSmall.copyWith(
+                                style: PremiumTypography.labelSmall.copyWith(
                                   color: Colors.white,
                                 ),
                               ),
@@ -724,7 +742,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           const SizedBox(width: 4),
           Text(
             label,
-            style: FuturisticTypography.labelSmall.copyWith(color: color),
+            style: PremiumTypography.labelSmall.copyWith(color: color),
           ),
         ],
       ),
@@ -768,7 +786,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
             const SizedBox(width: 8),
             Text(
               label,
-              style: FuturisticTypography.labelMedium.copyWith(
+              style: PremiumTypography.labelMedium.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
               ),
@@ -820,14 +838,14 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                           'משחקים',
                           gamesPlayed.toString(),
                           Icons.sports_soccer,
-                          FuturisticColors.primary,
+                          PremiumColors.primary,
                         ),
                         _buildBigCounter(
                           context,
                           'שערים',
                           goals.toString(),
                           Icons.sports_soccer,
-                          FuturisticColors.secondary,
+                          PremiumColors.secondary,
                         ),
                         _buildBigCounter(
                           context,
@@ -864,14 +882,14 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                       user.facebookProfileUrl!.isNotEmpty) ||
                   (user.instagramProfileUrl != null &&
                       user.instagramProfileUrl!.isNotEmpty)))
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'רשתות חברתיות',
-                    style: FuturisticTypography.labelLarge.copyWith(
+                    style: PremiumTypography.labelLarge.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -905,13 +923,13 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
             ),
 
           // Player meta info card (no rating)
-          FuturisticCard(
+          PremiumCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'פרטי שחקן',
-                  style: FuturisticTypography.labelLarge.copyWith(
+                  style: PremiumTypography.labelLarge.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -925,26 +943,26 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                       user.city != null && user.city!.isNotEmpty
                           ? user.city!
                           : 'עיר לא עודכנה',
-                      FuturisticColors.textSecondary,
+                      PremiumColors.textSecondary,
                     ),
                     _buildInfoChip(
                       Icons.map_outlined,
                       user.region != null && user.region!.isNotEmpty
                           ? user.region!
                           : 'אזור לא עודכן',
-                      FuturisticColors.textSecondary,
+                      PremiumColors.textSecondary,
                     ),
                     _buildInfoChip(
                       Icons.sports,
                       user.preferredPosition,
-                      FuturisticColors.textSecondary,
+                      PremiumColors.textSecondary,
                     ),
                     _buildInfoChip(
                       Icons.wifi_tethering,
                       user.availabilityStatus == 'available'
                           ? 'זמין למשחקים'
                           : 'לא זמין למשחקים',
-                      FuturisticColors.textSecondary,
+                      PremiumColors.textSecondary,
                     ),
                   ],
                 ),
@@ -955,21 +973,21 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           const SizedBox(height: 12),
 
           // Placeholder for future insights (removed rating charts)
-          FuturisticCard(
+          PremiumCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'ביצועים אחרונים',
-                  style: FuturisticTypography.labelLarge.copyWith(
+                  style: PremiumTypography.labelLarge.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'מידע אנליטי מפורט יתווסף בהמשך. בינתיים תוכל לראות סיכום כללי ומידע בסיסי.',
-                  style: FuturisticTypography.bodySmall.copyWith(
-                    color: FuturisticColors.textSecondary,
+                  style: PremiumTypography.bodySmall.copyWith(
+                    color: PremiumColors.textSecondary,
                   ),
                 ),
               ],
@@ -991,11 +1009,11 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
       stream: gamesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(message: 'טוען משחקים...');
+          return const PremiumLoadingState(message: 'טוען משחקים...');
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת משחקים',
             message: snapshot.error.toString(),
@@ -1009,7 +1027,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
 
         final games = snapshot.data ?? [];
         if (games.isEmpty) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.sports_soccer,
             title: 'אין משחקים',
             message: 'עדיין לא יצרת או שיחקת משחקים',
@@ -1022,7 +1040,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           itemBuilder: (context, index) {
             final game = games[index];
             final statusText = game.status.toString().split('.').last;
-            return FuturisticCard(
+            return PremiumCard(
               margin: const EdgeInsets.only(bottom: 12),
               onTap: () => context.push('/games/${game.gameId}'),
               child: Row(
@@ -1031,7 +1049,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      gradient: FuturisticColors.primaryGradient,
+                      gradient: PremiumColors.primaryGradient,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.sports_soccer, color: Colors.white),
@@ -1043,7 +1061,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                       children: [
                         Text(
                           DateFormat('dd/MM/yyyy').format(game.gameDate),
-                          style: FuturisticTypography.labelLarge.copyWith(
+                          style: PremiumTypography.labelLarge.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1052,8 +1070,8 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                           game.denormalized.venueName ??
                               game.location ??
                               'מיקום לא ידוע',
-                          style: FuturisticTypography.bodySmall.copyWith(
-                            color: FuturisticColors.textSecondary,
+                          style: PremiumTypography.bodySmall.copyWith(
+                            color: PremiumColors.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1066,13 +1084,13 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                     children: [
                       Text(
                         statusText,
-                        style: FuturisticTypography.bodySmall.copyWith(
-                          color: FuturisticColors.textSecondary,
+                        style: PremiumTypography.bodySmall.copyWith(
+                          color: PremiumColors.textSecondary,
                         ),
                       ),
                       Text(
                         game.denormalized.hubName ?? 'משחק פרטי',
-                        style: FuturisticTypography.labelSmall,
+                        style: PremiumTypography.labelSmall,
                       ),
                     ],
                   ),
@@ -1092,7 +1110,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     IconData icon,
     Color color,
   ) {
-    return FuturisticCard(
+    return PremiumCard(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -1101,7 +1119,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
             const SizedBox(height: 12),
             Text(
               value,
-              style: FuturisticTypography.heading1.copyWith(
+              style: PremiumTypography.heading1.copyWith(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
                 color: color,
@@ -1110,7 +1128,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
             const SizedBox(height: 4),
             Text(
               label,
-              style: FuturisticTypography.labelLarge,
+              style: PremiumTypography.labelLarge,
               textAlign: TextAlign.center,
             ),
           ],
@@ -1124,13 +1142,13 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     Gamification gamification,
   ) {
     if (gamification.badges.isEmpty) {
-      return FuturisticCard(
+      return PremiumCard(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
             'אין תגים עדיין',
-            style: FuturisticTypography.bodyMedium.copyWith(
-              color: FuturisticColors.textSecondary,
+            style: PremiumTypography.bodyMedium.copyWith(
+              color: PremiumColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1138,7 +1156,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
       );
     }
 
-    return FuturisticCard(
+    return PremiumCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1146,25 +1164,16 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           children: [
             Text(
               'תגים',
-              style: FuturisticTypography.techHeadline,
+              style: PremiumTypography.techHeadline,
             ),
             const SizedBox(height: 12),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: gamification.badges.map((badgeName) {
-                return Chip(
-                  label: Text(
-                    _getBadgeDisplayName(badgeName),
-                    style: FuturisticTypography.labelSmall,
-                  ),
-                  avatar: Icon(
-                    _getBadgeIcon(badgeName),
-                    size: 18,
-                    color: FuturisticColors.primary,
-                  ),
-                  backgroundColor:
-                      FuturisticColors.primary.withValues(alpha: 0.1),
+                return AchievementBadge(
+                  badgeId: badgeName,
+                  label: _getBadgeDisplayName(badgeName),
                 );
               }).toList(),
             ),
@@ -1218,7 +1227,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     IconData icon,
     Color color,
   ) {
-    return FuturisticCard(
+    return PremiumCard(
       padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1227,7 +1236,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           const SizedBox(height: 8),
           Text(
             value,
-            style: FuturisticTypography.heading3.copyWith(
+            style: PremiumTypography.heading3.copyWith(
               color: color,
               fontWeight: FontWeight.bold,
             ),
@@ -1235,7 +1244,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           const SizedBox(height: 4),
           Text(
             label,
-            style: FuturisticTypography.bodySmall,
+            style: PremiumTypography.bodySmall,
             textAlign: TextAlign.center,
           ),
         ],
@@ -1250,19 +1259,19 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
   ) {
     return Column(
       children: [
-        Icon(icon, color: FuturisticColors.primary, size: 32),
+        Icon(icon, color: PremiumColors.primary, size: 32),
         const SizedBox(height: 8),
         Text(
           value,
-          style: FuturisticTypography.heading3.copyWith(
-            color: FuturisticColors.primary,
+          style: PremiumTypography.heading3.copyWith(
+            color: PremiumColors.primary,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: FuturisticTypography.bodySmall,
+          style: PremiumTypography.bodySmall,
           textAlign: TextAlign.center,
         ),
       ],
@@ -1280,11 +1289,11 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
       stream: hubsRepo.watchHubsByMember(user.uid),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const FuturisticLoadingState(message: 'טוען האבים...');
+          return const PremiumLoadingState(message: 'טוען האבים...');
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת האבים',
             message: snapshot.error.toString(),
@@ -1294,7 +1303,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
         final hubs = snapshot.data ?? [];
 
         if (hubs.isEmpty) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.group_off,
             title: 'אין האבים',
             message: 'השחקן לא חבר באף האב',
@@ -1306,7 +1315,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           itemCount: hubs.length,
           itemBuilder: (context, index) {
             final hub = hubs[index];
-            return FuturisticCard(
+            return PremiumCard(
               margin: const EdgeInsets.only(bottom: 12),
               onTap: () => context.push(
                 '/profile/${user.uid}/hub-stats/${hub.hubId}',
@@ -1320,10 +1329,10 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                       child: CircleAvatar(
                         radius: 24,
                         backgroundColor:
-                            FuturisticColors.primary.withValues(alpha: 0.2),
+                            PremiumColors.primary.withValues(alpha: 0.2),
                         child: Icon(
                           Icons.group,
-                          color: FuturisticColors.primary,
+                          color: PremiumColors.primary,
                         ),
                       ),
                     ),
@@ -1334,14 +1343,14 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                         children: [
                           Text(
                             hub.name,
-                            style: FuturisticTypography.heading3,
+                            style: PremiumTypography.heading3,
                           ),
                           if (hub.description != null &&
                               hub.description!.isNotEmpty)
                             Text(
                               hub.description!,
-                              style: FuturisticTypography.bodySmall.copyWith(
-                                color: FuturisticColors.textSecondary,
+                              style: PremiumTypography.bodySmall.copyWith(
+                                color: PremiumColors.textSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1351,7 +1360,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                     ),
                     Icon(
                       Icons.chevron_left,
-                      color: FuturisticColors.textSecondary,
+                      color: PremiumColors.textSecondary,
                     ),
                   ],
                 ),

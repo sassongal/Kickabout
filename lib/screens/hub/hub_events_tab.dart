@@ -5,13 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/widgets/futuristic/spotlight_card.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/premium/spotlight_card.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Hub Events Tab - shows events and allows registration
 class HubEventsTab extends ConsumerStatefulWidget {
@@ -71,7 +72,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
               }
 
               if (snapshot.hasError) {
-                return FuturisticEmptyState(
+                return PremiumEmptyState(
                   icon: Icons.error_outline,
                   title: 'שגיאה בטעינת אירועים',
                   message: ErrorHandlerService().handleException(
@@ -91,7 +92,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
 
               final events = snapshot.data ?? [];
               if (events.isEmpty) {
-                return FuturisticEmptyState(
+                return PremiumEmptyState(
                   icon: Icons.event_note,
                   title: 'אין אירועים',
                   message: widget.isManager
@@ -144,7 +145,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 children: [
                                   Text(
                                     event.title,
-                                    style: FuturisticTypography.techHeadline
+                                    style: PremiumTypography.techHeadline
                                         .copyWith(
                                       fontSize: 18,
                                     ),
@@ -168,16 +169,16 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                         ),
                                         decoration: BoxDecoration(
                                           color:
-                                              FuturisticColors.surfaceVariant,
+                                              PremiumColors.surfaceVariant,
                                           borderRadius:
                                               BorderRadius.circular(12),
                                         ),
                                         child: Text(
                                           'עבר',
-                                          style: FuturisticTypography.labelSmall
+                                          style: PremiumTypography.labelSmall
                                               .copyWith(
                                             color:
-                                                FuturisticColors.textSecondary,
+                                                PremiumColors.textSecondary,
                                           ),
                                         ),
                                       ),
@@ -189,7 +190,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                             if (widget.isManager && !isPast && !event.isStarted)
                               IconButton(
                                 icon: const Icon(Icons.edit, size: 20),
-                                color: FuturisticColors.primary,
+                                color: PremiumColors.primary,
                                 tooltip: 'ערוך פרטי אירוע',
                                 onPressed: () => context.push(
                                     '/hubs/${widget.hubId}/events/${event.eventId}/edit'),
@@ -202,7 +203,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                             event.description!.isNotEmpty) ...[
                           Text(
                             event.description!,
-                            style: FuturisticTypography.bodyMedium,
+                            style: PremiumTypography.bodyMedium,
                           ),
                           const SizedBox(height: 12),
                         ],
@@ -212,12 +213,12 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                             Icon(
                               Icons.calendar_today,
                               size: 18,
-                              color: FuturisticColors.primary,
+                              color: PremiumColors.primary,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               dateFormat.format(event.eventDate),
-                              style: FuturisticTypography.bodyMedium,
+                              style: PremiumTypography.bodyMedium,
                             ),
                           ],
                         ),
@@ -247,7 +248,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                   Icon(
                                     Icons.location_on,
                                     size: 18,
-                                    color: FuturisticColors.primary,
+                                    color: PremiumColors.primary,
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
@@ -258,16 +259,16 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                         Text(
                                           locationText,
                                           style:
-                                              FuturisticTypography.bodyMedium,
+                                              PremiumTypography.bodyMedium,
                                         ),
                                         if (venue?.address != null &&
                                             venue!.address != locationText)
                                           Text(
                                             venue.address!,
-                                            style: FuturisticTypography
+                                            style: PremiumTypography
                                                 .bodySmall
                                                 .copyWith(
-                                              color: FuturisticColors
+                                              color: PremiumColors
                                                   .textSecondary,
                                             ),
                                           ),
@@ -279,7 +280,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                     IconButton(
                                       icon: const Icon(Icons.navigation,
                                           size: 20),
-                                      color: FuturisticColors.primary,
+                                      color: PremiumColors.primary,
                                       tooltip: 'נווט למגרש',
                                       onPressed: () => _navigateToLocation(
                                         locationPoint.latitude,
@@ -298,20 +299,20 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                               Icon(
                                 Icons.location_on,
                                 size: 18,
-                                color: FuturisticColors.primary,
+                                color: PremiumColors.primary,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   event.location!,
-                                  style: FuturisticTypography.bodyMedium,
+                                  style: PremiumTypography.bodyMedium,
                                 ),
                               ),
                               // Navigation button
                               if (event.locationPoint != null)
                                 IconButton(
                                   icon: const Icon(Icons.navigation, size: 20),
-                                  color: FuturisticColors.primary,
+                                  color: PremiumColors.primary,
                                   tooltip: 'נווט למגרש',
                                   onPressed: () => _navigateToLocation(
                                     event.locationPoint!.latitude,
@@ -329,13 +330,13 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                             Icon(
                               Icons.people,
                               size: 18,
-                              color: FuturisticColors.textSecondary,
+                              color: PremiumColors.textSecondary,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '${event.registeredPlayerIds.length}/${event.maxParticipants} נרשמו',
-                              style: FuturisticTypography.bodySmall.copyWith(
-                                color: FuturisticColors.textSecondary,
+                              style: PremiumTypography.bodySmall.copyWith(
+                                color: PremiumColors.textSecondary,
                               ),
                             ),
                             if (event.registeredPlayerIds.length >=
@@ -351,7 +352,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 child: Text(
                                   'הרשמה סגורה',
                                   style:
-                                      FuturisticTypography.labelSmall.copyWith(
+                                      PremiumTypography.labelSmall.copyWith(
                                     color: Colors.red,
                                   ),
                                 ),
@@ -472,7 +473,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 icon: const Icon(Icons.groups),
                                 label: const Text('יוצר כוחות'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: FuturisticColors.accent,
+                                  backgroundColor: PremiumColors.accent,
                                   foregroundColor: Colors.white,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
@@ -493,21 +494,29 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                         !isRegistered)
                                     ? null
                                     : (isRegistered
-                                        ? () => _unregisterFromEvent(event)
+                                        // 🔒 LOCK: Cannot unregister if event is started
+                                        ? (event.isStarted
+                                            ? null
+                                            : () => _unregisterFromEvent(event))
                                         : () => _registerToEvent(event)),
                                 icon: Icon(
                                   isRegistered
                                       ? Icons.cancel
                                       : Icons.check_circle,
                                 ),
-                                label:
-                                    Text(isRegistered ? 'ביטל הרשמה' : 'הירשם'),
+                                label: Text(
+                                  isRegistered
+                                      ? (event.isStarted
+                                          ? 'משחק בתהליך'
+                                          : 'ביטל הרשמה')
+                                      : 'הירשם',
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: isRegistered
-                                      ? FuturisticColors.surfaceVariant
-                                      : FuturisticColors.primary,
+                                      ? PremiumColors.surfaceVariant
+                                      : PremiumColors.primary,
                                   foregroundColor: isRegistered
-                                      ? FuturisticColors.textSecondary
+                                      ? PremiumColors.textSecondary
                                       : Colors.white,
                                 ),
                               ),
@@ -522,7 +531,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                     icon: const Icon(Icons.group, size: 18),
                                     label: const Text('צור קבוצות'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: FuturisticColors.primary,
+                                      backgroundColor: PremiumColors.primary,
                                       foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 12, vertical: 8),
@@ -542,7 +551,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                         size: 18),
                                     label: const Text('רשום משחק'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: FuturisticColors.primary,
+                                      backgroundColor: PremiumColors.primary,
                                       foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 12, vertical: 8),
@@ -556,7 +565,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 icon: const Icon(Icons.edit, size: 18),
                                 label: const Text('ניהול'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: FuturisticColors.primary,
+                                  backgroundColor: PremiumColors.primary,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 8),
@@ -566,7 +575,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                               IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () => _deleteEvent(event),
-                                color: FuturisticColors.error,
+                                color: PremiumColors.error,
                                 tooltip: 'מחק',
                               ),
                             ],
@@ -834,7 +843,7 @@ class _StatusPillState extends State<_StatusPill>
       ),
       child: Text(
         widget.label,
-        style: FuturisticTypography.labelSmall.copyWith(
+        style: PremiumTypography.labelSmall.copyWith(
           color: widget.color,
           fontWeight: FontWeight.bold,
         ),
@@ -884,13 +893,13 @@ class _RegisteredParticipantsListState
               Icon(
                 _isExpanded ? Icons.expand_less : Icons.expand_more,
                 size: 18,
-                color: FuturisticColors.textSecondary,
+                color: PremiumColors.textSecondary,
               ),
               const SizedBox(width: 8),
               Text(
                 'משתתפים שנרשמו (${widget.event.registeredPlayerIds.length})',
-                style: FuturisticTypography.bodySmall.copyWith(
-                  color: FuturisticColors.textSecondary,
+                style: PremiumTypography.bodySmall.copyWith(
+                  color: PremiumColors.textSecondary,
                 ),
               ),
             ],
@@ -906,7 +915,7 @@ class _RegisteredParticipantsListState
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: CircularProgressIndicator(),
+                  child: KineticLoadingAnimation(size: 40),
                 );
               }
 
@@ -940,8 +949,8 @@ class _RegisteredParticipantsListState
                     title: Text(user.name),
                     trailing: Text(
                       '#$index',
-                      style: FuturisticTypography.bodySmall.copyWith(
-                        color: FuturisticColors.textSecondary,
+                      style: PremiumTypography.bodySmall.copyWith(
+                        color: PremiumColors.textSecondary,
                       ),
                     ),
                   );

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -103,7 +103,7 @@ class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
     final firstDayOfWeek = _getFirstDayOfWeek(firstDay);
     final monthName = DateFormat('MMMM yyyy', 'he').format(_selectedMonth);
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'לוח שנה למשחקים',
       body: _isLoading
           ? ListView.builder(

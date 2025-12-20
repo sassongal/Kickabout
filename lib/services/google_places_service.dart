@@ -20,6 +20,7 @@ class PlaceResult {
   final String? website;
   final bool isPublic; // Public vs rental
   final Map<String, dynamic>? additionalData;
+  final String? city; // Extracted city name from address components
 
   PlaceResult({
     required this.placeId,
@@ -34,6 +35,7 @@ class PlaceResult {
     this.website,
     this.isPublic = true,
     this.additionalData,
+    this.city,
   });
 
   /// Check if this is a football/sports venue
@@ -449,7 +451,7 @@ class GooglePlacesService {
       final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/details/json'
         '?place_id=$placeId'
-        '&fields=name,formatted_address,geometry,formatted_phone_number,rating,user_ratings_total,types,website,opening_hours'
+        '&fields=name,formatted_address,address_components,geometry,formatted_phone_number,rating,user_ratings_total,types,website,opening_hours'
         '&key=$apiKey'
         '&language=he',
       );
@@ -468,6 +470,11 @@ class GooglePlacesService {
       final location = place['geometry']?['location'];
       if (location == null) return null;
 
+      // Extract city from address_components
+      String? city = _extractCityFromAddressComponents(
+        place['address_components'] as List<dynamic>?,
+      );
+
       return PlaceResult(
         placeId: place['place_id'],
         name: place['name'],
@@ -480,6 +487,7 @@ class GooglePlacesService {
         types: List<String>.from(place['types'] ?? []),
         website: place['website'],
         isPublic: true,
+        city: city,
         additionalData: {
           'opening_hours': place['opening_hours'],
         },
@@ -487,6 +495,32 @@ class GooglePlacesService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Extract city name from Google Places address components
+  ///
+  /// Looks for 'locality' type which represents the city
+  String? _extractCityFromAddressComponents(List<dynamic>? addressComponents) {
+    if (addressComponents == null) return null;
+
+    for (final component in addressComponents) {
+      final types = List<String>.from(component['types'] ?? []);
+
+      // First try to find 'locality' (city)
+      if (types.contains('locality')) {
+        return component['long_name'] as String?;
+      }
+    }
+
+    // If no locality found, try 'administrative_area_level_2' (sub-province/district)
+    for (final component in addressComponents) {
+      final types = List<String>.from(component['types'] ?? []);
+      if (types.contains('administrative_area_level_2')) {
+        return component['long_name'] as String?;
+      }
+    }
+
+    return null;
   }
 
   /// Calculate distance between two points (Haversine formula)

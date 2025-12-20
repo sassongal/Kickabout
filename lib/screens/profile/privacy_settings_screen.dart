@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Privacy Settings Screen - Control what data is visible in search and profile
 class PrivacySettingsScreen extends ConsumerStatefulWidget {
@@ -94,13 +94,13 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_currentUser == null) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: 'הגדרות פרטיות',
-        body: const FuturisticLoadingState(message: 'טוען הגדרות...'),
+        body: const PremiumLoadingState(message: 'טוען הגדרות...'),
       );
     }
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'הגדרות פרטיות',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -108,7 +108,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Info Card
-            FuturisticCard(
+            PremiumCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -116,19 +116,19 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                     children: [
                       Icon(
                         Icons.info_outline,
-                        color: FuturisticColors.info,
+                        color: PremiumColors.info,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'מידע',
-                        style: FuturisticTypography.techHeadline,
+                        style: PremiumTypography.techHeadline,
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'בחר אילו נתונים להציג בפרופיל שלך ובחיפוש. נתונים מוסתרים לא יופיעו למשתמשים אחרים.',
-                    style: FuturisticTypography.bodyMedium,
+                    style: PremiumTypography.bodyMedium,
                   ),
                 ],
               ),
@@ -137,13 +137,13 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
             const SizedBox(height: 24),
             
             // Privacy Settings
-            FuturisticCard(
+            PremiumCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'הגדרות פרטיות',
-                    style: FuturisticTypography.techHeadline,
+                    style: PremiumTypography.techHeadline,
                   ),
                   const SizedBox(height: 16),
                   
@@ -223,7 +223,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
               label: Text(_isLoading ? 'שומר...' : 'שמור שינויים'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: FuturisticColors.primary,
+                backgroundColor: PremiumColors.primary,
                 foregroundColor: Colors.white,
               ),
             ),
@@ -246,11 +246,11 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       onChanged: (newValue) => _updatePrivacySetting(key, newValue),
       title: Row(
         children: [
-          Icon(icon, size: 20, color: FuturisticColors.textSecondary),
+          Icon(icon, size: 20, color: PremiumColors.textSecondary),
           const SizedBox(width: 8),
           Text(
             title,
-            style: FuturisticTypography.labelLarge,
+            style: PremiumTypography.labelLarge,
           ),
         ],
       ),
@@ -258,11 +258,11 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
         padding: const EdgeInsets.only(left: 28, top: 4),
         child: Text(
           description,
-          style: FuturisticTypography.bodySmall,
+          style: PremiumTypography.bodySmall,
         ),
       ),
-      activeTrackColor: FuturisticColors.primary.withValues(alpha: 0.5),
-      activeThumbColor: FuturisticColors.primary,
+      activeTrackColor: PremiumColors.primary.withValues(alpha: 0.5),
+      activeThumbColor: PremiumColors.primary,
     );
   }
 }

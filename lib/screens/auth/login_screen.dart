@@ -3,11 +3,11 @@ import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/gradient_button.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/premium/gradient_button.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/kicka_ball_logo.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/config/env.dart';
@@ -15,7 +15,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart' as model;
 import 'package:kattrick/services/cache_service.dart';
 
-/// Futuristic login screen with seamless one-tap sign-in
+/// Premium login screen with seamless one-tap sign-in
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -274,12 +274,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'KICKABOUT',
       showBackButton: false,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: FuturisticColors.backgroundGradient,
+          gradient: PremiumColors.backgroundGradient,
         ),
         child: SafeArea(
           child: LayoutBuilder(
@@ -320,19 +320,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                         Text(
                           'ברוכים הבאים',
-                          style: FuturisticTypography.techHeadline.copyWith(
+                          style: PremiumTypography.techHeadline.copyWith(
                             fontSize: 24,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'עתיד הכדורגל',
-                          style: FuturisticTypography.bodyMedium,
+                          style: PremiumTypography.bodyMedium,
                         ),
                         const SizedBox(height: 48),
 
                         // Email/Password form
-                        FuturisticCard(
+                        PremiumCard(
                           child: Form(
                             key: _formKey,
                             child: Column(
@@ -340,7 +340,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               children: [
                                 Text(
                                   'אימייל וסיסמה',
-                                  style: FuturisticTypography.techHeadline
+                                  style: PremiumTypography.techHeadline
                                       .copyWith(
                                     fontSize: 14,
                                   ),
@@ -408,7 +408,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       : () => _showPasswordResetDialog(context),
                                   child: Text(
                                     'שכחת סיסמה?',
-                                    style: FuturisticTypography.labelMedium,
+                                    style: PremiumTypography.labelMedium,
                                   ),
                                 ),
                               ],
@@ -423,14 +423,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           children: [
                             Text(
                               'NEW USER? ',
-                              style: FuturisticTypography.bodyMedium,
+                              style: PremiumTypography.bodyMedium,
                             ),
                             TextButton(
                               onPressed: () => context.push('/register'),
                               child: Text(
                                 'SIGN UP',
-                                style: FuturisticTypography.labelLarge.copyWith(
-                                  color: FuturisticColors.secondary,
+                                style: PremiumTypography.labelLarge.copyWith(
+                                  color: PremiumColors.secondary,
                                 ),
                               ),
                             ),

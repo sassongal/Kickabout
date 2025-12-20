@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Hub Invitations Screen - ניהול הזמנות ל-Hub
 class HubInvitationsScreen extends ConsumerStatefulWidget {
@@ -17,11 +18,11 @@ class HubInvitationsScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<HubInvitationsScreen> createState() => _HubInvitationsScreenState();
+  ConsumerState<HubInvitationsScreen> createState() =>
+      _HubInvitationsScreenState();
 }
 
 class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
-
   @override
   Widget build(BuildContext context) {
     final hubsRepo = ref.watch(hubsRepositoryProvider);
@@ -31,14 +32,14 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
       stream: hubStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return FuturisticScaffold(
+          return PremiumScaffold(
             title: 'הזמנות ל-Hub',
-            body: const Center(child: CircularProgressIndicator()),
+            body: const Center(child: KineticLoadingAnimation(size: 60)),
           );
         }
 
         if (snapshot.hasError || snapshot.data == null) {
-          return FuturisticScaffold(
+          return PremiumScaffold(
             title: 'הזמנות ל-Hub',
             body: Center(
               child: Text('שגיאה: ${snapshot.error ?? 'Hub לא נמצא'}'),
@@ -47,12 +48,13 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
         }
 
         final hub = snapshot.data!;
-        final invitationCode = hub.settings['invitationCode'] as String? ?? widget.hubId.substring(0, 8).toUpperCase();
+        final invitationCode = hub.settings['invitationCode'] as String? ??
+            widget.hubId.substring(0, 8).toUpperCase();
 
         // Generate invitation link
         final invitationLink = 'https://kattrick.app/invite/$invitationCode';
 
-        return FuturisticScaffold(
+        return PremiumScaffold(
           title: 'הזמנות ל-Hub',
           body: ListView(
             padding: const EdgeInsets.all(16),
@@ -65,12 +67,14 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
                     children: [
                       const Text(
                         'קישור הזמנה',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         invitationLink,
-                        style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                        style: const TextStyle(
+                            fontSize: 14, fontFamily: 'monospace'),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -85,7 +89,8 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () => _shareInvitation(invitationLink, hub.name),
+                              onPressed: () =>
+                                  _shareInvitation(invitationLink, hub.name),
                               icon: const Icon(Icons.share),
                               label: const Text('שתף'),
                             ),
@@ -105,7 +110,8 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
                     children: [
                       const Text(
                         'קוד הזמנה',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -139,7 +145,8 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
                     children: [
                       const Text(
                         'איך זה עובד?',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       const Text('1. שתף את הקישור או הקוד עם חברים'),
@@ -155,7 +162,8 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
                   title: const Text('הזמנות פעילות'),
                   subtitle: const Text('אפשר להצטרף דרך קישור הזמנה'),
                   value: hub.settings['invitationsEnabled'] as bool? ?? true,
-                  onChanged: (value) => _updateSetting('invitationsEnabled', value),
+                  onChanged: (value) =>
+                      _updateSetting('invitationsEnabled', value),
                 ),
               ),
             ],
@@ -210,4 +218,3 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
     }
   }
 }
-

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Reusable loading widget
 class AppLoadingWidget extends StatelessWidget {
@@ -16,14 +17,14 @@ class AppLoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          const KineticLoadingAnimation(size: 60),
           if (message != null) ...[
             const SizedBox(height: 16),
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
             ),
           ],
         ],
@@ -60,7 +61,7 @@ class AppLoadingOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(),
+                      const KineticLoadingAnimation(size: 60),
                       if (message != null) ...[
                         const SizedBox(height: 16),
                         Text(
@@ -78,4 +79,3 @@ class AppLoadingOverlay extends StatelessWidget {
     );
   }
 }
-

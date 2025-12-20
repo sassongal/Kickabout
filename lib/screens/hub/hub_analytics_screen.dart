@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fl_chart/fl_chart.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 class HubAnalyticsScreen extends ConsumerStatefulWidget {
   final String hubId;
@@ -234,16 +234,16 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const FuturisticScaffold(
+      return const PremiumScaffold(
         title: 'ניתוח נתונים',
-        body: FuturisticLoadingState(message: 'מנתח נתונים...'),
+        body: PremiumLoadingState(message: 'מנתח נתונים...'),
       );
     }
 
     if (_error != null || _hub == null) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: 'שגיאה',
-        body: FuturisticEmptyState(
+        body: PremiumEmptyState(
           icon: Icons.error_outline,
           title: 'שגיאה בטעינת נתונים',
           message: _error ?? 'האב לא נמצא',
@@ -255,7 +255,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
       );
     }
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'ניתוח נתונים - ${_hub!.name}',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -267,19 +267,19 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
             const SizedBox(height: 24),
 
             // Section 2: Top Players
-            Text('מצטיינים', style: FuturisticTypography.heading3),
+            Text('מצטיינים', style: PremiumTypography.heading3),
             const SizedBox(height: 12),
             _buildTopPlayers(),
             const SizedBox(height: 24),
 
             // Section 3: Charts
-            Text('מגמות', style: FuturisticTypography.heading3),
+            Text('מגמות', style: PremiumTypography.heading3),
             const SizedBox(height: 12),
             _buildCharts(),
             const SizedBox(height: 24),
 
             // Section 4: Activity
-            Text('פעילות', style: FuturisticTypography.heading3),
+            Text('פעילות', style: PremiumTypography.heading3),
             const SizedBox(height: 12),
             _buildActivityStats(),
           ],
@@ -289,7 +289,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
   }
 
   Widget _buildGeneralStats() {
-    return FuturisticCard(
+    return PremiumCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
@@ -310,11 +310,11 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: FuturisticTypography.bodyLarge),
+        Text(label, style: PremiumTypography.bodyLarge),
         Text(
           value,
-          style: FuturisticTypography.heading3
-              .copyWith(color: FuturisticColors.primary),
+          style: PremiumTypography.heading3
+              .copyWith(color: PremiumColors.primary),
         ),
       ],
     );
@@ -345,7 +345,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
     final topEntry = stats.entries.reduce((a, b) => a.value > b.value ? a : b);
     final user = _hubMembers[topEntry.key];
 
-    return FuturisticCard(
+    return PremiumCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: ListTile(
         contentPadding: EdgeInsets.zero,
@@ -358,12 +358,12 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
           child: Icon(icon, color: color),
         ),
         title: Text(title,
-            style: FuturisticTypography.bodyLarge
+            style: PremiumTypography.bodyLarge
                 .copyWith(fontWeight: FontWeight.bold)),
         subtitle: Text(
           '${user?.name ?? 'לא ידוע'} - ${topEntry.value}',
-          style: FuturisticTypography.bodyMedium
-              .copyWith(color: FuturisticColors.textSecondary),
+          style: PremiumTypography.bodyMedium
+              .copyWith(color: PremiumColors.textSecondary),
         ),
         trailing: user != null ? PlayerAvatar(user: user, radius: 20) : null,
       ),
@@ -374,12 +374,12 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
     return Column(
       children: [
         // Line Chart: Games over time
-        FuturisticCard(
+        PremiumCard(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('משחקים לפי חודש', style: FuturisticTypography.labelLarge),
+              Text('משחקים לפי חודש', style: PremiumTypography.labelLarge),
               const SizedBox(height: 24),
               SizedBox(
                 height: 200,
@@ -413,12 +413,12 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
                       LineChartBarData(
                         spots: _getGamesPerMonth(),
                         isCurved: true,
-                        color: FuturisticColors.primary,
+                        color: PremiumColors.primary,
                         barWidth: 3,
                         dotData: FlDotData(show: true),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: FuturisticColors.primary.withOpacity(0.1),
+                          color: PremiumColors.primary.withOpacity(0.1),
                         ),
                       ),
                     ],
@@ -431,12 +431,12 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
         const SizedBox(height: 16),
 
         // Bar Chart: Players by Position
-        FuturisticCard(
+        PremiumCard(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('שחקנים לפי עמדה', style: FuturisticTypography.labelLarge),
+              Text('שחקנים לפי עמדה', style: PremiumTypography.labelLarge),
               const SizedBox(height: 24),
               SizedBox(
                 height: 200,
@@ -475,12 +475,12 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
 
         // Pie Chart: Win/Loss/Draw
         if (_totalGames > 0)
-          FuturisticCard(
+          PremiumCard(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('התפלגות תוצאות', style: FuturisticTypography.labelLarge),
+                Text('התפלגות תוצאות', style: PremiumTypography.labelLarge),
                 const SizedBox(height: 24),
                 SizedBox(
                   height: 200,
@@ -549,7 +549,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
       children: [
         Container(width: 12, height: 12, color: color),
         const SizedBox(width: 4),
-        Text(label, style: FuturisticTypography.bodySmall),
+        Text(label, style: PremiumTypography.bodySmall),
       ],
     );
   }
@@ -594,7 +594,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
         barRods: [
           BarChartRodData(
               toY: e.value.toDouble(),
-              color: FuturisticColors.secondary,
+              color: PremiumColors.secondary,
               width: 20)
         ],
       );
@@ -621,7 +621,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
 
     final avgGamesPerWeek = (thisYearGames / 52).toStringAsFixed(1);
 
-    return FuturisticCard(
+    return PremiumCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [

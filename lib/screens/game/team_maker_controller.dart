@@ -3,6 +3,7 @@ import 'package:kattrick/logic/team_maker.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 class TeamMakerState {
@@ -199,9 +200,13 @@ class TeamMakerController extends StateNotifier<TeamMakerState> {
       // Simulate delay for UX
       await Future.delayed(const Duration(milliseconds: 500));
 
+      // Use a random seed if force == true to ensure different results
+      final seed = force ? DateTime.now().millisecondsSinceEpoch : null;
+
       final result = TeamMaker.createBalancedTeams(
         state.players,
         teamCount: args.teamCount,
+        seed: seed,
       );
 
       state = state.copyWith(
@@ -210,6 +215,9 @@ class TeamMakerController extends StateNotifier<TeamMakerState> {
         teams: result.teams,
         balanceScore: result.balanceScore,
       );
+
+      // Success Haptic
+      HapticFeedback.vibrate();
     } on ArgumentError catch (e) {
       // User-friendly error for not enough players
       String msg = 'שגיאה ביצירת קבוצות.';
@@ -257,6 +265,9 @@ class TeamMakerController extends StateNotifier<TeamMakerState> {
       teams: currentTeams,
       balanceScore: newBalanceScore,
     );
+
+    // Light feedback for manual move
+    HapticFeedback.lightImpact();
   }
 
   Future<bool> saveTeams() async {

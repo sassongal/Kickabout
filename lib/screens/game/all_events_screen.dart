@@ -5,10 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/spotlight_card.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/premium/spotlight_card.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 
 class AllEventsScreen extends ConsumerStatefulWidget {
   const AllEventsScreen({super.key});
@@ -37,7 +37,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
         stream: hubsRepo.watchHubsByMember(currentUserId),
         builder: (context, hubsSnapshot) {
           if (hubsSnapshot.connectionState == ConnectionState.waiting) {
-            return const FuturisticLoadingState(message: 'טוען אירועים...');
+            return const PremiumLoadingState(message: 'טוען אירועים...');
           }
 
           final hubs = hubsSnapshot.data ?? [];
@@ -58,11 +58,11 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
             ),
             builder: (context, gamesSnapshot) {
               if (gamesSnapshot.connectionState == ConnectionState.waiting) {
-                return const FuturisticLoadingState(message: 'טוען אירועים...');
+                return const PremiumLoadingState(message: 'טוען אירועים...');
               }
 
               if (gamesSnapshot.hasError) {
-                return FuturisticEmptyState(
+                return PremiumEmptyState(
                   icon: Icons.error_outline,
                   title: 'שגיאה',
                   message: 'לא ניתן לטעון אירועים',
@@ -80,7 +80,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
               upcomingGames.sort((a, b) => a.gameDate.compareTo(b.gameDate));
 
               if (upcomingGames.isEmpty) {
-                return const FuturisticEmptyState(
+                return const PremiumEmptyState(
                   icon: Icons.event_busy,
                   title: 'אין אירועים מתוכננים',
                   message: 'כרגע אין משחקים עתידיים ברשימה שלך.',
@@ -143,7 +143,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
                 if (isCreator)
                   IconButton(
                     icon:
-                        const Icon(Icons.edit, color: FuturisticColors.primary),
+                        const Icon(Icons.edit, color: PremiumColors.primary),
                     onPressed: () {
                       // Navigate to edit game or hub event depending on type
                       // For now, assuming generic edit or game details handles it

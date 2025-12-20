@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/services/location_service.dart';
 import 'package:kattrick/services/error_handler_service.dart';
@@ -91,7 +91,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
     final currentUserId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
     final usersRepo = ref.watch(usersRepositoryProvider);
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'לוח שחקנים',
       actions: [
         IconButton(
@@ -132,11 +132,11 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: FuturisticColors.surface,
+                    fillColor: PremiumColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: FuturisticColors.primary.withValues(alpha: 0.3),
+                        color: PremiumColors.primary.withValues(alpha: 0.3),
                       ),
                     ),
                   ),
@@ -196,7 +196,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                     }
 
                     if (snapshot.hasError) {
-                      return FuturisticEmptyState(
+                      return PremiumEmptyState(
                         icon: Icons.error_outline,
                         title: 'שגיאה בטעינת שחקנים',
                         message: ErrorHandlerService().handleException(
@@ -231,7 +231,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                         : allPlayers.length > _pageSize;
 
                     if (playersToShow.isEmpty && allPlayers.isEmpty) {
-                      return const FuturisticEmptyState(
+                      return const PremiumEmptyState(
                         icon: Icons.people_outline,
                         title: 'אין שחקנים',
                         message: 'לא נמצאו שחקנים התואמים לחיפוש',
@@ -257,7 +257,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                             .toList();
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
-                          child: FuturisticCard(
+                          child: PremiumCard(
                             onTap: () => context.push('/profile/${player.uid}'),
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
@@ -281,7 +281,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                             shape: BoxShape.circle,
                                             border: Border.all(
                                               color:
-                                                  FuturisticColors.background,
+                                                  PremiumColors.background,
                                               width: 2,
                                             ),
                                           ),
@@ -300,7 +300,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                             Expanded(
                                               child: Text(
                                                 player.name,
-                                                style: FuturisticTypography
+                                                style: PremiumTypography
                                                     .heading3,
                                               ),
                                             ),
@@ -352,13 +352,13 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   Icon(
                                                     Icons.location_city,
                                                     size: 14,
-                                                    color: FuturisticColors
+                                                    color: PremiumColors
                                                         .textTertiary,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     player.city!,
-                                                    style: FuturisticTypography
+                                                    style: PremiumTypography
                                                         .bodySmall,
                                                   ),
                                                 ],
@@ -371,14 +371,14 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   Icon(
                                                     Icons.cake_outlined,
                                                     size: 14,
-                                                    color: FuturisticColors
+                                                    color: PremiumColors
                                                         .textTertiary,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     player.ageGroup!
                                                         .displayNameHe,
-                                                    style: FuturisticTypography
+                                                    style: PremiumTypography
                                                         .bodySmall,
                                                   ),
                                                 ],
@@ -391,13 +391,13 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   Icon(
                                                     Icons.sports_soccer,
                                                     size: 14,
-                                                    color: FuturisticColors
+                                                    color: PremiumColors
                                                         .textTertiary,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     player.preferredPosition,
-                                                    style: FuturisticTypography
+                                                    style: PremiumTypography
                                                         .bodySmall,
                                                   ),
                                                 ],
@@ -410,12 +410,12 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                     Icons.favorite,
                                                     size: 14,
                                                     color:
-                                                        FuturisticColors.error,
+                                                        PremiumColors.error,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     'קבוצה אהודה',
-                                                    style: FuturisticTypography
+                                                    style: PremiumTypography
                                                         .bodySmall,
                                                   ),
                                                 ],
@@ -426,13 +426,13 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                 Icon(
                                                   Icons.group,
                                                   size: 14,
-                                                  color: FuturisticColors
+                                                  color: PremiumColors
                                                       .textTertiary,
                                                 ),
                                                 const SizedBox(width: 4),
                                                 Text(
                                                   '${player.hubIds.length} הובים',
-                                                  style: FuturisticTypography
+                                                  style: PremiumTypography
                                                       .bodySmall,
                                                 ),
                                               ],
@@ -446,12 +446,12 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                               Icons.event,
                                               size: 14,
                                               color:
-                                                  FuturisticColors.textTertiary,
+                                                  PremiumColors.textTertiary,
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
                                               '${player.totalParticipations} משחקים',
-                                              style: FuturisticTypography
+                                              style: PremiumTypography
                                                   .bodySmall,
                                             ),
                                           ],
@@ -464,17 +464,17 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                               Icon(
                                                 Icons.handshake,
                                                 size: 14,
-                                                color: FuturisticColors.primary,
+                                                color: PremiumColors.primary,
                                               ),
                                               const SizedBox(width: 6),
                                               Expanded(
                                                 child: Text(
                                                   'אתם יחד ב${sharedHubs.first.name}',
-                                                  style: FuturisticTypography
+                                                  style: PremiumTypography
                                                       .bodySmall
                                                       .copyWith(
                                                     fontWeight: FontWeight.w600,
-                                                    color: FuturisticColors
+                                                    color: PremiumColors
                                                         .primary,
                                                   ),
                                                   overflow:
@@ -491,18 +491,18 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                               Icon(
                                                 Icons.location_on,
                                                 size: 14,
-                                                color: FuturisticColors.primary,
+                                                color: PremiumColors.primary,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 distance < 1000
                                                     ? 'מרחק: ${distance.toStringAsFixed(0)} מ\''
                                                     : 'מרחק: ${(distance / 1000).toStringAsFixed(1)} ק"מ',
-                                                style: FuturisticTypography
+                                                style: PremiumTypography
                                                     .bodySmall
                                                     .copyWith(
                                                   color:
-                                                      FuturisticColors.primary,
+                                                      PremiumColors.primary,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),

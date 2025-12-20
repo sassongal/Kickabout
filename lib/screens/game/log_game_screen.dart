@@ -5,10 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Log Game Screen - "The Session Dashboard" (Manager only)
@@ -346,7 +346,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Event info
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -358,7 +358,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         Expanded(
                           child: Text(
                             _event!.title,
-                            style: FuturisticTypography.techHeadline.copyWith(
+                            style: PremiumTypography.techHeadline.copyWith(
                               fontSize: 20,
                             ),
                           ),
@@ -385,12 +385,12 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         Icon(
                           Icons.calendar_today,
                           size: 16,
-                          color: FuturisticColors.textSecondary,
+                          color: PremiumColors.textSecondary,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           dateFormat.format(_event!.eventDate),
-                          style: FuturisticTypography.bodyMedium,
+                          style: PremiumTypography.bodyMedium,
                         ),
                       ],
                     ),
@@ -401,7 +401,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             const SizedBox(height: 24),
 
             // Aggregate Wins Scoreboard
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -409,7 +409,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                   children: [
                     Text(
                       'תוצאות מצטברות',
-                      style: FuturisticTypography.techHeadline.copyWith(
+                      style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 18,
                       ),
                     ),
@@ -457,7 +457,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                       Flexible(
                                         child: Text(
                                           team.color ?? team.name,
-                                          style: FuturisticTypography.bodyLarge
+                                          style: PremiumTypography.bodyLarge
                                               .copyWith(
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -469,7 +469,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     '$wins ניצחונות',
-                                    style: FuturisticTypography.heading2,
+                                    style: PremiumTypography.heading2,
                                   ),
                                 ],
                               ),
@@ -509,7 +509,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                 label: Text(_isSubmitting ? 'שומר...' : 'רישום תוצאה'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: FuturisticColors.primary,
+                  backgroundColor: PremiumColors.primary,
                   foregroundColor: Colors.white,
                 ),
               ),
@@ -518,7 +518,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
 
             // Recent Matches
             if (_event!.matches.isNotEmpty) ...[
-              FuturisticCard(
+              PremiumCard(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -526,7 +526,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                     children: [
                       Text(
                         'משחקים אחרונים',
-                        style: FuturisticTypography.techHeadline.copyWith(
+                        style: PremiumTypography.techHeadline.copyWith(
                           fontSize: 18,
                         ),
                       ),
@@ -551,34 +551,34 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                   Flexible(
                                     child: Text(
                                       match.teamAColor,
-                                      style: FuturisticTypography.bodyMedium,
+                                      style: PremiumTypography.bodyMedium,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
                                     '${match.scoreA}',
-                                    style: FuturisticTypography.heading2,
+                                    style: PremiumTypography.heading2,
                                   ),
                                 ],
                               ),
                               Text(
                                 'VS',
-                                style: FuturisticTypography.bodyMedium.copyWith(
-                                  color: FuturisticColors.textSecondary,
+                                style: PremiumTypography.bodyMedium.copyWith(
+                                  color: PremiumColors.textSecondary,
                                 ),
                               ),
                               Row(
                                 children: [
                                   Text(
                                     '${match.scoreB}',
-                                    style: FuturisticTypography.heading2,
+                                    style: PremiumTypography.heading2,
                                   ),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
                                       match.teamBColor,
-                                      style: FuturisticTypography.bodyMedium,
+                                      style: PremiumTypography.bodyMedium,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -605,7 +605,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             ],
 
             // Attendance
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -613,7 +613,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                   children: [
                     Text(
                       'נוכחות',
-                      style: FuturisticTypography.techHeadline.copyWith(
+                      style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 18,
                       ),
                     ),
@@ -634,7 +634,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             Expanded(
                               child: Text(
                                 player.displayName ?? '',
-                                style: FuturisticTypography.bodyLarge,
+                                style: PremiumTypography.bodyLarge,
                               ),
                             ),
                             // Payment toggle (only if hub has payment link)
@@ -664,7 +664,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               ),
                           ],
                         ),
-                        activeColor: FuturisticColors.primary,
+                        activeColor: PremiumColors.primary,
                       );
                     }),
                   ],
@@ -721,7 +721,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Event info card
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -729,7 +729,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                   children: [
                     Text(
                       _event!.title,
-                      style: FuturisticTypography.techHeadline.copyWith(
+                      style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 20,
                       ),
                     ),
@@ -739,12 +739,12 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         Icon(
                           Icons.calendar_today,
                           size: 16,
-                          color: FuturisticColors.textSecondary,
+                          color: PremiumColors.textSecondary,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           dateFormat.format(_event!.eventDate),
-                          style: FuturisticTypography.bodyMedium,
+                          style: PremiumTypography.bodyMedium,
                         ),
                       ],
                     ),
@@ -755,13 +755,13 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                           Icon(
                             Icons.location_on,
                             size: 16,
-                            color: FuturisticColors.textSecondary,
+                            color: PremiumColors.textSecondary,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               _event!.location!,
-                              style: FuturisticTypography.bodyMedium,
+                              style: PremiumTypography.bodyMedium,
                             ),
                           ),
                         ],
@@ -774,7 +774,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             const SizedBox(height: 24),
 
             // Score input
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -782,7 +782,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                   children: [
                     Text(
                       'תוצאה',
-                      style: FuturisticTypography.techHeadline.copyWith(
+                      style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 18,
                       ),
                     ),
@@ -795,7 +795,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                           children: [
                             Text(
                               'קבוצה א',
-                              style: FuturisticTypography.labelLarge,
+                              style: PremiumTypography.labelLarge,
                             ),
                             const SizedBox(height: 8),
                             Row(
@@ -805,27 +805,27 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                   onPressed: _teamAScore > 0
                                       ? () => setState(() => _teamAScore--)
                                       : null,
-                                  color: FuturisticColors.primary,
+                                  color: PremiumColors.primary,
                                 ),
                                 Container(
                                   width: 60,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
                                   decoration: BoxDecoration(
-                                    color: FuturisticColors.surfaceVariant,
+                                    color: PremiumColors.surfaceVariant,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     '$_teamAScore',
                                     textAlign: TextAlign.center,
-                                    style: FuturisticTypography.heading2,
+                                    style: PremiumTypography.heading2,
                                   ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline),
                                   onPressed: () =>
                                       setState(() => _teamAScore++),
-                                  color: FuturisticColors.primary,
+                                  color: PremiumColors.primary,
                                 ),
                               ],
                             ),
@@ -834,8 +834,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         // VS
                         Text(
                           'VS',
-                          style: FuturisticTypography.heading2.copyWith(
-                            color: FuturisticColors.textSecondary,
+                          style: PremiumTypography.heading2.copyWith(
+                            color: PremiumColors.textSecondary,
                           ),
                         ),
                         // Team B
@@ -843,7 +843,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                           children: [
                             Text(
                               'קבוצה ב',
-                              style: FuturisticTypography.labelLarge,
+                              style: PremiumTypography.labelLarge,
                             ),
                             const SizedBox(height: 8),
                             Row(
@@ -853,27 +853,27 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                   onPressed: _teamBScore > 0
                                       ? () => setState(() => _teamBScore--)
                                       : null,
-                                  color: FuturisticColors.primary,
+                                  color: PremiumColors.primary,
                                 ),
                                 Container(
                                   width: 60,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
                                   decoration: BoxDecoration(
-                                    color: FuturisticColors.surfaceVariant,
+                                    color: PremiumColors.surfaceVariant,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     '$_teamBScore',
                                     textAlign: TextAlign.center,
-                                    style: FuturisticTypography.heading2,
+                                    style: PremiumTypography.heading2,
                                   ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline),
                                   onPressed: () =>
                                       setState(() => _teamBScore++),
-                                  color: FuturisticColors.primary,
+                                  color: PremiumColors.primary,
                                 ),
                               ],
                             ),
@@ -888,7 +888,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             const SizedBox(height: 24),
 
             // Attendance
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -896,7 +896,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                   children: [
                     Text(
                       'נוכחות',
-                      style: FuturisticTypography.techHeadline.copyWith(
+                      style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 18,
                       ),
                     ),
@@ -917,7 +917,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             Expanded(
                               child: Text(
                                 player.displayName ?? '',
-                                style: FuturisticTypography.bodyLarge,
+                                style: PremiumTypography.bodyLarge,
                               ),
                             ),
                             // Payment toggle (only if hub has payment link)
@@ -947,7 +947,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               ),
                           ],
                         ),
-                        activeColor: FuturisticColors.primary,
+                        activeColor: PremiumColors.primary,
                       );
                     }),
                   ],
@@ -957,7 +957,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             const SizedBox(height: 24),
 
             // Highlights (optional)
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -965,7 +965,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                   children: [
                     Text(
                       'הישגים (אופציונלי)',
-                      style: FuturisticTypography.techHeadline.copyWith(
+                      style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 18,
                       ),
                     ),
@@ -985,7 +985,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                             Expanded(
                               child: Text(
                                 player.displayName ?? '',
-                                style: FuturisticTypography.bodyMedium,
+                                style: PremiumTypography.bodyMedium,
                               ),
                             ),
                             // Goal tag
@@ -994,7 +994,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               selected: _hasHighlight(player.uid, 'goal'),
                               onSelected: (selected) =>
                                   _toggleHighlight(player.uid, 'goal'),
-                              selectedColor: FuturisticColors.primary
+                              selectedColor: PremiumColors.primary
                                   .withValues(alpha: 0.2),
                             ),
                             const SizedBox(width: 8),
@@ -1004,7 +1004,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               selected: _hasHighlight(player.uid, 'assist'),
                               onSelected: (selected) =>
                                   _toggleHighlight(player.uid, 'assist'),
-                              selectedColor: FuturisticColors.primary
+                              selectedColor: PremiumColors.primary
                                   .withValues(alpha: 0.2),
                             ),
                             const SizedBox(width: 8),
@@ -1042,7 +1042,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                 label: Text(_isSubmitting ? 'שומר...' : 'סיים ורשום משחק'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: FuturisticColors.primary,
+                  backgroundColor: PremiumColors.primary,
                   foregroundColor: Colors.white,
                 ),
               ),

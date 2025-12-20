@@ -5,7 +5,7 @@ import 'package:kattrick/data/polls_repository.dart';
 import 'package:kattrick/models/poll.dart';
 import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/widgets/futuristic/gradient_button.dart';
+import 'package:kattrick/widgets/premium/gradient_button.dart';
 
 /// Screen for viewing and voting on a poll
 class PollDetailScreen extends ConsumerStatefulWidget {

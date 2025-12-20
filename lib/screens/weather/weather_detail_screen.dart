@@ -4,8 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/services/weather_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -114,7 +114,7 @@ class _WeatherDetailScreenState extends ConsumerState<WeatherDetailScreen> {
         ),
       ],
       body: _isLoading
-          ? const FuturisticLoadingState(message: 'טוען נתוני מזג אוויר...')
+          ? const PremiumLoadingState(message: 'טוען נתוני מזג אוויר...')
           : _error != null
               ? Center(
                   child: Column(
@@ -146,7 +146,7 @@ class _WeatherDetailScreenState extends ConsumerState<WeatherDetailScreen> {
                     children: [
                       // Header Card with Main Info
                       if (_currentWeather != null)
-                        FuturisticCard(
+                        PremiumCard(
                           padding: const EdgeInsets.all(24),
                           child: Column(
                             children: [
@@ -207,7 +207,7 @@ class _WeatherDetailScreenState extends ConsumerState<WeatherDetailScreen> {
 
                       // 7-Day Forecast
                       if (_forecast.isNotEmpty) ...[
-                        FuturisticCard(
+                        PremiumCard(
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +238,7 @@ class _WeatherDetailScreenState extends ConsumerState<WeatherDetailScreen> {
                       const SizedBox(height: 16),
 
                       // Weather Details Card
-                      FuturisticCard(
+                      PremiumCard(
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +282,7 @@ class _WeatherDetailScreenState extends ConsumerState<WeatherDetailScreen> {
 
                       // Recommendations Card
                       if (_currentWeather != null)
-                        FuturisticCard(
+                        PremiumCard(
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 class MyNextMatchCard extends StatefulWidget {
   final Game game;
@@ -82,7 +82,7 @@ class _MyNextMatchCardState extends State<MyNextMatchCard> {
                   BoxShadow(
                     color: isUrgent
                         ? Colors.orange.withValues(alpha: 0.3)
-                        : FuturisticColors.primary.withValues(alpha: 0.2),
+                        : PremiumColors.primary.withValues(alpha: 0.2),
                     blurRadius: 20,
                     spreadRadius: 2,
                     offset: const Offset(0, 8),

@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/core/app_assets.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
-/// Futuristic splash screen with animated football trajectory
+/// Premium splash screen with animated football trajectory
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -22,32 +23,32 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Ball trajectory animation
     _ballController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    
+
     // Logo scale animation
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    
+
     _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoController,
         curve: Curves.elasticOut,
       ),
     );
-    
+
     // Glow pulse animation
     _glowController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    
+
     _startAnimations();
   }
 
@@ -56,13 +57,13 @@ class _SplashScreenState extends State<SplashScreen>
     if (mounted) {
       _ballController.forward();
     }
-    
+
     // Wait for ball to reach center, then show logo
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
       _logoController.forward();
     }
-    
+
     // Navigate after animations complete (shorter delay for better UX)
     await Future.delayed(const Duration(milliseconds: 800));
     if (mounted && context.mounted) {
@@ -82,14 +83,14 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: FuturisticColors.background,
+      backgroundColor: PremiumColors.background,
       body: Stack(
         fit: StackFit.expand,
         children: [
           // Background gradient (always visible)
           Container(
             decoration: const BoxDecoration(
-              gradient: FuturisticColors.backgroundGradient,
+              gradient: PremiumColors.backgroundGradient,
             ),
           ),
           // Loading screen image - full screen (with fallback)
@@ -97,7 +98,8 @@ class _SplashScreenState extends State<SplashScreen>
             animation: _logoScale,
             builder: (context, child) {
               return Opacity(
-                opacity: _logoScale.value.clamp(0.0, 1.0), // Clamp to valid range
+                opacity:
+                    _logoScale.value.clamp(0.0, 1.0), // Clamp to valid range
                 child: Image.asset(
                   AppAssets.splashLoading,
                   fit: BoxFit.cover,
@@ -105,7 +107,8 @@ class _SplashScreenState extends State<SplashScreen>
                   height: double.infinity,
                   errorBuilder: (context, error, stackTrace) {
                     // Fallback to gradient if image fails to load
-                    return const SizedBox.shrink(); // Already have gradient background
+                    return const SizedBox
+                        .shrink(); // Already have gradient background
                   },
                 ),
               );
@@ -113,11 +116,11 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           // Loading indicator (always visible)
           const Center(
-            child: CircularProgressIndicator(
-              color: Colors.white,
+            child: KineticLoadingAnimation(
+              size: 50,
             ),
           ),
-          
+
           // Optional: Add a subtle overlay for better text visibility if needed
           // Container(
           //   decoration: BoxDecoration(
@@ -126,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen>
           //       end: Alignment.bottomCenter,
           //       colors: [
           //         Colors.transparent,
-          //         FuturisticColors.background.withValues(alpha: 0.3),
+          //         PremiumColors.background.withValues(alpha: 0.3),
           //       ],
           //     ),
           //   ),

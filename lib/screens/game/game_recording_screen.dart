@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/utils/game_stopwatch.dart';
@@ -89,7 +89,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: _gameStarted ? 'תיעוד משחק - פעיל' : 'תיעוד משחקים',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -106,7 +106,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
         Container(
           height: 100,
           padding: const EdgeInsets.all(8),
-          color: FuturisticColors.surfaceVariant.withAlpha(127),
+          color: PremiumColors.surfaceVariant.withAlpha(127),
           child: _buildPlayerList(_unassignedPlayers, 'שחקנים לא משובצים',
               isHorizontal: true),
         ),
@@ -120,7 +120,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
                   'קבוצה כתומה',
                   _teamA,
                   Colors.orange,
-                  FuturisticColors.surface,
+                  PremiumColors.surface,
                 ),
               ),
 
@@ -130,7 +130,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
                   'קבוצה כחולה',
                   _teamB,
                   Colors.blue,
-                  FuturisticColors.surface,
+                  PremiumColors.surface,
                 ),
               ),
             ],
@@ -157,7 +157,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
               icon: const Icon(Icons.play_arrow),
               label: const Text('התחל משחק'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: FuturisticColors.success,
+                backgroundColor: PremiumColors.success,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 50),
               ),
@@ -202,7 +202,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
                 icon: const Icon(Icons.stop),
                 label: const Text('סיום משחק'),
                 style: TextButton.styleFrom(
-                  foregroundColor: FuturisticColors.error,
+                  foregroundColor: PremiumColors.error,
                 ),
               ),
             ],
@@ -281,7 +281,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
         if (title.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(title, style: FuturisticTypography.bodySmall),
+            child: Text(title, style: PremiumTypography.bodySmall),
           ),
         Expanded(
           child: isHorizontal
@@ -339,7 +339,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
                 child: Text(
                   '$title (${players.length})',
                   style:
-                      FuturisticTypography.heading3.copyWith(color: teamColor),
+                      PremiumTypography.heading3.copyWith(color: teamColor),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -385,7 +385,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
           const SizedBox(height: 4),
           Text(
             player.displayName ?? player.firstName ?? player.name,
-            style: FuturisticTypography.labelSmall,
+            style: PremiumTypography.labelSmall,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,

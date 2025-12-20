@@ -7,8 +7,8 @@ import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/services/error_handler_service.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 
 /// Game chat screen - real-time chat for a game
 class GameChatScreen extends ConsumerStatefulWidget {
@@ -58,7 +58,7 @@ class _GameChatScreenState extends ConsumerState<GameChatScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return FuturisticEmptyState(
+                  return PremiumEmptyState(
                     icon: Icons.error_outline,
                     title: 'שגיאה בטעינת הודעות',
                     message: ErrorHandlerService().handleException(

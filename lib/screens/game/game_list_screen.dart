@@ -6,8 +6,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/empty_state_illustrations.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 
@@ -175,7 +176,7 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
 
                     if (snapshot.hasError) {
                       return SliverToBoxAdapter(
-                        child: FuturisticEmptyState(
+                        child: PremiumEmptyState(
                           icon: Icons.error_outline,
                           title: 'שגיאה בטעינת משחקים',
                           message: 'אנא נסה שוב מאוחר יותר',
@@ -187,10 +188,11 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
 
                     if (games.isEmpty) {
                       return SliverToBoxAdapter(
-                        child: FuturisticEmptyState(
+                        child: PremiumEmptyState(
                           icon: Icons.sports_soccer_outlined,
                           title: 'אין משחקים בסביבה',
                           message: 'היה הראשון ליצור משחק!',
+                          illustration: const EmptyGamesIllustration(),
                           action: ElevatedButton.icon(
                             onPressed: () => context.push('/games/create'),
                             icon: const Icon(Icons.add),

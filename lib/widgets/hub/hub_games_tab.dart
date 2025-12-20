@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/error_handler_service.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 
 /// Games tab widget
 class HubGamesTab extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _HubGamesTabState extends ConsumerState<HubGamesTab> {
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת משחקים',
             message: ErrorHandlerService().handleException(
@@ -96,7 +96,7 @@ class _HubGamesTabState extends ConsumerState<HubGamesTab> {
             // Games list
             Expanded(
               child: groupedGames.isEmpty
-                  ? FuturisticEmptyState(
+                  ? PremiumEmptyState(
                       icon: Icons.sports_soccer,
                       title: 'אין משחקים שהושלמו',
                       message: canCreateGames

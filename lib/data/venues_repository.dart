@@ -811,6 +811,7 @@ class VenuesRepository {
   /// [hubId] - Hub ID to associate with (optional)
   /// [createdBy] - User ID who created this venue (optional)
   /// [isPublic] - Whether this is a public venue (default: true)
+  /// [city] - City where the venue is located (optional)
   ///
   /// Returns the created Venue with its Firestore ID
   Future<Venue> createManualVenue({
@@ -820,6 +821,7 @@ class VenuesRepository {
     String? hubId,
     String? createdBy,
     bool isPublic = true,
+    String? city,
   }) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
@@ -834,6 +836,7 @@ class VenuesRepository {
         description: address,
         location: location,
         address: address,
+        city: city, // City where venue is located
         googlePlaceId: null, // Manual venue - no Google Place ID
         amenities: [],
         surfaceType: 'grass', // Default

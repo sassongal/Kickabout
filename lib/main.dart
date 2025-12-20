@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/firebase_options.dart';
 import 'package:kattrick/config/env.dart';
@@ -18,6 +18,7 @@ import 'package:kattrick/services/remote_config_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 // Conditional import for Crashlytics (not available on Web)
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'
     if (dart.library.html) 'package:kattrick/services/crashlytics_stub.dart';
@@ -78,11 +79,22 @@ Future<bool> _initializeAppServices() async {
     debugPrint('✅ Firebase initialized successfully');
 
     // Enable Firebase App Check (debug providers for dev)
+    // In debug mode: Uses debug provider which generates a debug token
+    // In production: Uses Play Integrity (Android) or App Attest (iOS)
     await FirebaseAppCheck.instance.activate(
       androidProvider:
           kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
       appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
     );
+
+    if (kDebugMode) {
+      debugPrint('🔐 Firebase App Check enabled in DEBUG mode');
+      debugPrint('📋 IMPORTANT: Look for "DebugAppCheckProvider" in logcat to get the debug token');
+      debugPrint('📝 Then add it to Firebase Console > App Check > Apps > Manage debug tokens');
+      debugPrint('⚠️ Debug token changes when you reinstall the app!');
+    } else {
+      debugPrint('✅ Firebase App Check enabled (production mode)');
+    }
 
     // Set up global error handling and Crashlytics.
     _initializeErrorHandling();
@@ -256,7 +268,7 @@ class _LimitedModeScreenState extends State<LimitedModeScreen> {
               ),
               const SizedBox(height: 32),
               if (_isRetrying)
-                const CircularProgressIndicator()
+                const KineticLoadingAnimation(size: 40)
               else
                 ElevatedButton.icon(
                   onPressed: _retryInitialization,
@@ -291,10 +303,10 @@ class MyApp extends ConsumerWidget {
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
 
-      // Theme - Futuristic Football Design
-      theme: futuristicDarkTheme,
-      darkTheme: futuristicDarkTheme,
-      themeMode: ThemeMode.dark, // Force dark mode for futuristic theme
+      // Theme - Premium Football Design
+      theme: premiumTheme,
+      darkTheme: premiumTheme,
+      themeMode: ThemeMode.dark, // Force dark mode for premium theme
 
       // Localization & RTL
       localizationsDelegates: AppLocalizations.localizationsDelegates,

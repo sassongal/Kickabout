@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/stopwatch_widget.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/utils/stopwatch_utility.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Game Session Screen - Winner Stays Format
@@ -312,7 +312,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Aggregate Wins Scoreboard
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -320,7 +320,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                   children: [
                     Text(
                       'תוצאות מצטברות',
-                      style: FuturisticTypography.techHeadline.copyWith(
+                      style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 18,
                       ),
                     ),
@@ -362,7 +362,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                                     const SizedBox(width: 8),
                                     Text(
                                       team.color ?? team.name,
-                                      style: FuturisticTypography.bodyLarge
+                                      style: PremiumTypography.bodyLarge
                                           .copyWith(
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -371,7 +371,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                                 ),
                                 Text(
                                   '$wins ניצחונות',
-                                  style: FuturisticTypography.heading2,
+                                  style: PremiumTypography.heading2,
                                 ),
                               ],
                             ),
@@ -398,12 +398,12 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
             const SizedBox(height: 24),
 
             // Stopwatch
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: StopwatchWidget(
                   stopwatch: _stopwatch,
-                  accentColor: FuturisticColors.primary,
+                  accentColor: PremiumColors.primary,
                 ),
               ),
             ),
@@ -411,14 +411,14 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
 
             // Current Match or Team Selection
             if (_teamAIndex != null && _teamBIndex != null) ...[
-              FuturisticCard(
+              PremiumCard(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
                       Text(
                         'משחק נוכחי',
-                        style: FuturisticTypography.techHeadline.copyWith(
+                        style: PremiumTypography.techHeadline.copyWith(
                           fontSize: 18,
                         ),
                       ),
@@ -431,8 +431,8 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                               _teamAScore, _teamAIndex!),
                           Text(
                             'VS',
-                            style: FuturisticTypography.heading1.copyWith(
-                              color: FuturisticColors.textSecondary,
+                            style: PremiumTypography.heading1.copyWith(
+                              color: PremiumColors.textSecondary,
                             ),
                           ),
                           // Team B
@@ -456,7 +456,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                           label: Text(_isSubmitting ? 'שומר...' : 'סיום משחק'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: FuturisticColors.primary,
+                            backgroundColor: PremiumColors.primary,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -467,20 +467,20 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
               ),
               const SizedBox(height: 16),
               // Waiting team indicator
-              FuturisticCard(
+              PremiumCard(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
                       Icon(
                         Icons.hourglass_empty,
-                        color: FuturisticColors.textSecondary,
+                        color: PremiumColors.textSecondary,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'ממתין: ${_game!.teams[_waitingTeamIndex].name}',
-                        style: FuturisticTypography.bodyMedium.copyWith(
-                          color: FuturisticColors.textSecondary,
+                        style: PremiumTypography.bodyMedium.copyWith(
+                          color: PremiumColors.textSecondary,
                         ),
                       ),
                     ],
@@ -496,7 +496,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                   label: const Text('בחר קבוצות למשחק'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: FuturisticColors.primary,
+                    backgroundColor: PremiumColors.primary,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -506,7 +506,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
 
             // Recent matches
             if (_game!.session.matches.isNotEmpty) ...[
-              FuturisticCard(
+              PremiumCard(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -514,7 +514,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                     children: [
                       Text(
                         'משחקים אחרונים (${_game!.session.matches.length})',
-                        style: FuturisticTypography.techHeadline.copyWith(
+                        style: PremiumTypography.techHeadline.copyWith(
                           fontSize: 18,
                         ),
                       ),
@@ -553,21 +553,21 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     '${match.scoreA}',
-                                    style: FuturisticTypography.heading2,
+                                    style: PremiumTypography.heading2,
                                   ),
                                 ],
                               ),
                               Text(
                                 'VS',
-                                style: FuturisticTypography.bodyMedium.copyWith(
-                                  color: FuturisticColors.textSecondary,
+                                style: PremiumTypography.bodyMedium.copyWith(
+                                  color: PremiumColors.textSecondary,
                                 ),
                               ),
                               Row(
                                 children: [
                                   Text(
                                     '${match.scoreB}',
-                                    style: FuturisticTypography.heading2,
+                                    style: PremiumTypography.heading2,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(match.teamBColor),
@@ -612,14 +612,14 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
         const SizedBox(height: 8),
         Text(
           team.name,
-          style: FuturisticTypography.bodyLarge.copyWith(
+          style: PremiumTypography.bodyLarge.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           '$score',
-          style: FuturisticTypography.heading1.copyWith(fontSize: 48),
+          style: PremiumTypography.heading1.copyWith(fontSize: 48),
         ),
         const SizedBox(height: 8),
         ElevatedButton.icon(

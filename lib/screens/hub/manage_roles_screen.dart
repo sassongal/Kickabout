@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
@@ -28,7 +28,7 @@ class _ManageRolesScreenState extends ConsumerState<ManageRolesScreen> {
     final usersRepo = ref.watch(usersRepositoryProvider);
     final hubStream = hubsRepo.watchHub(widget.hubId);
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'ניהול תפקידים',
       body: StreamBuilder<Hub?>(
         stream: hubStream,

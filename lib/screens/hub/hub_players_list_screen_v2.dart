@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_member.dart' as models;
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// View model combining HubMember with User for display
 class HubMemberWithUser {
@@ -286,14 +287,14 @@ class _HubPlayersListScreenV2State
     final currentUserId = ref.watch(currentUserIdProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'שחקני ההוב',
       showBackButton: true,
       body: StreamBuilder<Hub?>(
         stream: hubsRepo.watchHub(widget.hubId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: KineticLoadingAnimation(size: 40));
           }
 
           final hub = snapshot.data;
@@ -307,8 +308,7 @@ class _HubPlayersListScreenV2State
                   (hubId: widget.hubId, userId: currentUserId)))
               : null;
           final hubPermissions = hubPermissionsAsync?.valueOrNull;
-          final canManageRatings =
-              (hubPermissions?.isManager ?? false) ||
+          final canManageRatings = (hubPermissions?.isManager ?? false) ||
               (hubPermissions?.isModerator ?? false);
 
           // Load ratings when entering rating mode
@@ -317,9 +317,11 @@ class _HubPlayersListScreenV2State
               if (mounted) {
                 setState(() {
                   for (final member in _members) {
-                    if (member.managerRating != null && member.managerRating! > 0) {
+                    if (member.managerRating != null &&
+                        member.managerRating! > 0) {
                       // Round existing ratings to nearest 0.5
-                      _tempRatings[member.user.uid] = _roundToNearestHalf(member.managerRating!);
+                      _tempRatings[member.user.uid] =
+                          _roundToNearestHalf(member.managerRating!);
                     }
                   }
                 });
@@ -363,7 +365,8 @@ class _HubPlayersListScreenV2State
                     // Sort buttons
                     Row(
                       children: [
-                        Text('מיין לפי:', style: FuturisticTypography.labelMedium),
+                        Text('מיין לפי:',
+                            style: PremiumTypography.labelMedium),
                         const SizedBox(width: 12),
                         Expanded(
                           child: SegmentedButton<String>(
@@ -412,12 +415,12 @@ class _HubPlayersListScreenV2State
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: KineticLoadingAnimation(size: 16),
                                 )
                               : const Icon(Icons.save),
                           label: const Text('שמור דירוגים'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: FuturisticColors.primary,
+                            backgroundColor: PremiumColors.primary,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(double.infinity, 48),
                           ),
@@ -436,10 +439,11 @@ class _HubPlayersListScreenV2State
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.search_off,
-                                size: 64, color: FuturisticColors.textSecondary),
+                                size: 64,
+                                color: PremiumColors.textSecondary),
                             const SizedBox(height: 16),
                             Text('לא נמצאו שחקנים',
-                                style: FuturisticTypography.heading3),
+                                style: PremiumTypography.heading3),
                           ],
                         ),
                       )
@@ -451,7 +455,8 @@ class _HubPlayersListScreenV2State
                           if (index == filteredMembers.length) {
                             return const Padding(
                               padding: EdgeInsets.all(16),
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Center(
+                                  child: KineticLoadingAnimation(size: 40)),
                             );
                           }
 
@@ -463,13 +468,14 @@ class _HubPlayersListScreenV2State
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: FuturisticCard(
+                            child: PremiumCard(
                               onTap: _isRatingMode
                                   ? null
                                   : () => context.push('/profile/${user.uid}'),
                               child: _isRatingMode
                                   ? _buildRatingTile(user, currentRating)
-                                  : _buildNormalTile(member, isHubManager, canManageRatings),
+                                  : _buildNormalTile(
+                                      member, isHubManager, canManageRatings),
                             ),
                           );
                         },
@@ -493,28 +499,28 @@ class _HubPlayersListScreenV2State
       contentPadding: const EdgeInsets.all(12),
       leading: CircleAvatar(
         radius: 30,
-        backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
+        backgroundColor: PremiumColors.primary.withValues(alpha: 0.1),
         backgroundImage: user.photoUrl != null
             ? CachedNetworkImageProvider(user.photoUrl!)
             : null,
         child: user.photoUrl == null
-            ? Icon(Icons.person, size: 30, color: FuturisticColors.primary)
+            ? Icon(Icons.person, size: 30, color: PremiumColors.primary)
             : null,
       ),
       title: Row(
         children: [
           Expanded(
-            child: Text(user.name, style: FuturisticTypography.labelLarge),
+            child: Text(user.name, style: PremiumTypography.labelLarge),
           ),
           if (isManagerRole)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: FuturisticColors.primary,
+                color: PremiumColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text('מנהל',
-                  style: FuturisticTypography.labelSmall
+                  style: PremiumTypography.labelSmall
                       .copyWith(color: Colors.white)),
             ),
         ],
@@ -527,10 +533,10 @@ class _HubPlayersListScreenV2State
             Row(
               children: [
                 Icon(Icons.sports_soccer,
-                    size: 14, color: FuturisticColors.textSecondary),
+                    size: 14, color: PremiumColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(user.preferredPosition,
-                    style: FuturisticTypography.bodySmall),
+                    style: PremiumTypography.bodySmall),
               ],
             ),
           const SizedBox(height: 4),
@@ -540,15 +546,15 @@ class _HubPlayersListScreenV2State
                   size: 16,
                   color: managerRating != null
                       ? Colors.orange
-                      : FuturisticColors.warning),
+                      : PremiumColors.warning),
               const SizedBox(width: 4),
               Text(
                 displayRating.toStringAsFixed(1),
-                style: FuturisticTypography.labelMedium.copyWith(
+                style: PremiumTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,
                   color: managerRating != null
                       ? Colors.orange
-                      : FuturisticColors.warning,
+                      : PremiumColors.warning,
                 ),
               ),
               if (canManageRatings && managerRating != null) ...[
@@ -575,12 +581,14 @@ class _HubPlayersListScreenV2State
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
+                backgroundColor:
+                    PremiumColors.primary.withValues(alpha: 0.1),
                 backgroundImage: user.photoUrl != null
                     ? CachedNetworkImageProvider(user.photoUrl!)
                     : null,
                 child: user.photoUrl == null
-                    ? Icon(Icons.person, size: 24, color: FuturisticColors.primary)
+                    ? Icon(Icons.person,
+                        size: 24, color: PremiumColors.primary)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -588,17 +596,17 @@ class _HubPlayersListScreenV2State
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user.name, style: FuturisticTypography.labelLarge),
+                    Text(user.name, style: PremiumTypography.labelLarge),
                     if (user.preferredPosition.isNotEmpty)
                       Text(user.preferredPosition,
-                          style: FuturisticTypography.bodySmall),
+                          style: PremiumTypography.bodySmall),
                   ],
                 ),
               ),
               Text(
                 roundedRating.toStringAsFixed(1),
-                style: FuturisticTypography.heading3
-                    .copyWith(color: FuturisticColors.primary),
+                style: PremiumTypography.heading3
+                    .copyWith(color: PremiumColors.primary),
               ),
             ],
           ),

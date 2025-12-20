@@ -354,6 +354,26 @@ class HubEventsRepository {
     }
 
     try {
+      // 🔒 LIVE EVENT LOCK: Check if event is already started
+      final eventDoc = await _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId)
+          .get();
+
+      if (!eventDoc.exists) {
+        throw Exception('Event not found');
+      }
+
+      final eventData = eventDoc.data();
+      final isStarted = eventData?['isStarted'] as bool? ?? false;
+
+      if (isStarted) {
+        throw Exception(
+            'לא ניתן לבטל הרשמה למשחק שכבר התחיל. הקבוצות נקבעו והמשחק בתהליך.');
+      }
+
       await _firestore
           .collection(FirestorePaths.hubs())
           .doc(hubId)

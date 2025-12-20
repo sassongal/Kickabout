@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
 
 class HubsCarousel extends StatefulWidget {
@@ -99,7 +99,7 @@ class _HubsCarouselState extends State<HubsCarousel> {
                 offset: const Offset(0, 5))
           ],
           gradient: isManager
-              ? FuturisticColors.primaryGradient
+              ? PremiumColors.primaryGradient
               : const LinearGradient(
                   colors: [Color(0xFF2C3E50), Color(0xFF4CA1AF)],
                   begin: Alignment.topLeft,

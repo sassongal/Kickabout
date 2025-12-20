@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/futuristic/bottom_navigation_bar.dart';
-import 'package:kattrick/widgets/futuristic/offline_indicator.dart';
+import 'package:kattrick/widgets/premium/bottom_navigation_bar.dart';
+import 'package:kattrick/widgets/premium/offline_indicator.dart';
+
+import 'package:kattrick/widgets/premium/kinetic_background.dart';
 
 /// App scaffold with AppBar and Hebrew titles
 class AppScaffold extends StatelessWidget {
@@ -34,16 +36,18 @@ class AppScaffold extends StatelessWidget {
         actions: actions,
         automaticallyImplyLeading: showBackButton,
       ),
-      body: Column(
-        children: [
-          const OfflineIndicator(),
-          Expanded(child: body),
-        ],
+      body: KineticBackground(
+        child: Column(
+          children: [
+            const OfflineIndicator(),
+            Expanded(child: body),
+          ],
+        ),
       ),
-      floatingActionButton: floatingActionButton,
       bottomNavigationBar: showBottomNav || forceBottomNav
-          ? FuturisticBottomNavBar(currentRoute: currentRoute)
+          ? PremiumBottomNavBar(currentRoute: currentRoute)
           : null,
+      floatingActionButton: floatingActionButton,
     );
   }
 }

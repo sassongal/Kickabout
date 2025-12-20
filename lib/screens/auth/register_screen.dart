@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
@@ -538,7 +539,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: KineticLoadingAnimation(size: 20),
                           )
                         : const Icon(Icons.person_add),
                     label: Text(_isLoading ? 'יוצר חשבון...' : 'צור חשבון'),

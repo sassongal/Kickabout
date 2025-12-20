@@ -5,9 +5,10 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/hub_events_repository.dart';
 import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/weather_service.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -103,7 +104,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     final usersRepo = UsersRepository();
     final hubsRepo = HubsRepository();
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'ניהול אירוע',
       body: StreamBuilder<HubEvent?>(
         stream: eventsRepo.watchHubEvent(widget.hubId, widget.eventId),
@@ -172,12 +173,12 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.event, color: FuturisticColors.primary),
+                Icon(Icons.event, color: PremiumColors.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     event.title,
-                    style: FuturisticTypography.heading2,
+                    style: PremiumTypography.heading2,
                   ),
                 ),
                 IconButton(
@@ -202,7 +203,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                   // Wrap with Expanded to prevent overflow
                   child: Text(
                     dateFormat.format(event.eventDate),
-                    style: FuturisticTypography.bodyLarge,
+                    style: PremiumTypography.bodyLarge,
                   ),
                 ),
               ],
@@ -218,7 +219,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                   Expanded(
                     child: Text(
                       event.location!,
-                      style: FuturisticTypography.bodyLarge,
+                      style: PremiumTypography.bodyLarge,
                     ),
                   ),
                   if (event.locationPoint != null)
@@ -229,7 +230,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         event.locationPoint!.longitude,
                       ),
                       tooltip: 'ניווט למיקום',
-                      color: FuturisticColors.primary,
+                      color: PremiumColors.primary,
                     ),
                 ],
               ),
@@ -241,7 +242,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
               const Divider(),
               Text(
                 event.description!,
-                style: FuturisticTypography.bodyMedium,
+                style: PremiumTypography.bodyMedium,
               ),
             ],
 
@@ -255,7 +256,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
               ),
               child: Text(
                 _getStatusText(event.status),
-                style: FuturisticTypography.labelSmall.copyWith(
+                style: PremiumTypography.labelSmall.copyWith(
                   color: _getStatusColor(event.status),
                 ),
               ),
@@ -275,13 +276,13 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.wb_sunny, color: FuturisticColors.warning),
+                Icon(Icons.wb_sunny, color: PremiumColors.warning),
                 const SizedBox(width: 12),
                 Expanded(
                   // Wrap with Expanded to prevent overflow
                   child: Text(
                     'תחזית מזג אוויר',
-                    style: FuturisticTypography.labelLarge,
+                    style: PremiumTypography.labelLarge,
                   ),
                 ),
               ],
@@ -297,11 +298,11 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                     children: [
                       Text(
                         '${_weatherData!.temperature}°',
-                        style: FuturisticTypography.heading1,
+                        style: PremiumTypography.heading1,
                       ),
                       Text(
                         _weatherData!.condition,
-                        style: FuturisticTypography.bodyMedium,
+                        style: PremiumTypography.bodyMedium,
                       ),
                     ],
                   ),
@@ -312,11 +313,11 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                       children: [
                         Text(
                           'מקסימום: ${_weatherData!.maxTemperature}°',
-                          style: FuturisticTypography.bodyMedium,
+                          style: PremiumTypography.bodyMedium,
                         ),
                         Text(
                           'מינימום: ${_weatherData!.minTemperature}°',
-                          style: FuturisticTypography.bodyMedium,
+                          style: PremiumTypography.bodyMedium,
                         ),
                       ],
                     ),
@@ -340,7 +341,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                     Expanded(
                       child: Text(
                         _weatherData!.summary,
-                        style: FuturisticTypography.bodyMedium,
+                        style: PremiumTypography.bodyMedium,
                       ),
                     ),
                   ],
@@ -364,13 +365,13 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.people, color: FuturisticColors.primary),
+                Icon(Icons.people, color: PremiumColors.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   // Wrap with Expanded to prevent overflow
                   child: Text(
                     'שחקנים רשומים (${players.length}/${event.maxParticipants})',
-                    style: FuturisticTypography.labelLarge,
+                    style: PremiumTypography.labelLarge,
                   ),
                 ),
               ],
@@ -411,13 +412,13 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         Icon(
                           Icons.star,
                           size: 16,
-                          color: FuturisticColors.warning,
+                          color: PremiumColors.warning,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           displayRating.toStringAsFixed(1),
-                          style: FuturisticTypography.labelMedium.copyWith(
-                            color: FuturisticColors.warning,
+                          style: PremiumTypography.labelMedium.copyWith(
+                            color: PremiumColors.warning,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -426,9 +427,53 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                   );
                 },
               ),
+
+            // Add recruiting post button if user has permission and event has spots
+            const SizedBox(height: 16),
+            _buildRecruitingPostButton(event, players),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRecruitingPostButton(HubEvent event, List<User> players) {
+    final currentUserId = ref.watch(currentUserIdProvider);
+    if (currentUserId == null) return const SizedBox.shrink();
+
+    final availableSpots = event.maxParticipants - players.length;
+    final isUpcoming = event.status == 'upcoming';
+
+    // Check permissions
+    final hubPermissionsAsync = ref.watch(
+      hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId))
+    );
+
+    return hubPermissionsAsync.when(
+      data: (permissions) {
+        // Only show if user can create posts, event is upcoming, and has spots
+        if (!permissions.canCreatePosts || !isUpcoming || availableSpots <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              context.push('/hubs/${widget.hubId}/create-recruiting-post');
+            },
+            icon: const Icon(Icons.group_add),
+            label: Text('מחפש $availableSpots שחקנים'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PremiumColors.secondary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -444,14 +489,14 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 Icon(
                   event.teams.isNotEmpty ? Icons.groups : Icons.group_work,
                   color: event.teams.isNotEmpty
-                      ? FuturisticColors.success
-                      : FuturisticColors.primary,
+                      ? PremiumColors.success
+                      : PremiumColors.primary,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'כוחות',
-                    style: FuturisticTypography.labelLarge,
+                    style: PremiumTypography.labelLarge,
                   ),
                 ),
               ],
@@ -480,7 +525,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                           Flexible(
                             child: Text(
                               team.name,
-                              style: FuturisticTypography.labelMedium.copyWith(
+                              style: PremiumTypography.labelMedium.copyWith(
                                 color: _getTeamColor(team.name),
                                 fontWeight: FontWeight.bold,
                               ),
@@ -490,7 +535,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                           const SizedBox(width: 8),
                           Text(
                             '(${team.playerIds.length} שחקנים)',
-                            style: FuturisticTypography.bodySmall,
+                            style: PremiumTypography.bodySmall,
                           ),
                         ],
                       ),
@@ -503,7 +548,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         return Chip(
                           label: Text(
                             playerId, // In real implementation, fetch player name
-                            style: FuturisticTypography.bodySmall,
+                            style: PremiumTypography.bodySmall,
                           ),
                           backgroundColor:
                               _getTeamColor(team.name).withValues(alpha: 0.1),
@@ -525,13 +570,13 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                       Icon(
                         Icons.groups_outlined,
                         size: 48,
-                        color: FuturisticColors.textSecondary,
+                        color: PremiumColors.textSecondary,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'לא נבחרו עוד כוחות',
-                        style: FuturisticTypography.bodyLarge.copyWith(
-                          color: FuturisticColors.textSecondary,
+                        style: PremiumTypography.bodyLarge.copyWith(
+                          color: PremiumColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -546,15 +591,15 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                               vertical: 16,
                               horizontal: 24,
                             ),
-                            backgroundColor: FuturisticColors.primary,
+                            backgroundColor: PremiumColors.primary,
                             foregroundColor: Colors.white,
                           ),
                         )
                       else if (players.length < 6)
                         Text(
                           'נדרשים לפחות 6 שחקנים ליצירת כוחות',
-                          style: FuturisticTypography.bodySmall.copyWith(
-                            color: FuturisticColors.textSecondary,
+                          style: PremiumTypography.bodySmall.copyWith(
+                            color: PremiumColors.textSecondary,
                           ),
                         ),
                     ],
@@ -585,15 +630,15 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'upcoming':
-        return FuturisticColors.primary;
+        return PremiumColors.primary;
       case 'ongoing':
-        return FuturisticColors.success;
+        return PremiumColors.success;
       case 'completed':
-        return FuturisticColors.textSecondary;
+        return PremiumColors.textSecondary;
       case 'cancelled':
-        return FuturisticColors.error;
+        return PremiumColors.error;
       default:
-        return FuturisticColors.textSecondary;
+        return PremiumColors.textSecondary;
     }
   }
 
@@ -614,13 +659,13 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
 
   Color _getWeatherRecommendationColor(WeatherData weather) {
     if (weather.temperature > 30 || weather.temperature < 5) {
-      return FuturisticColors.error;
+      return PremiumColors.error;
     } else if (weather.weatherCode >= 61 && weather.weatherCode <= 67) {
-      return FuturisticColors.warning;
+      return PremiumColors.warning;
     } else if (weather.weatherCode >= 95) {
-      return FuturisticColors.error;
+      return PremiumColors.error;
     } else {
-      return FuturisticColors.success;
+      return PremiumColors.success;
     }
   }
 
@@ -649,6 +694,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
       'Pink': Colors.pink,
       'Cyan': Colors.cyan,
     };
-    return colors[teamName] ?? FuturisticColors.primary;
+    return colors[teamName] ?? PremiumColors.primary;
   }
 }

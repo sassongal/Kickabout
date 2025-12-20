@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 
@@ -40,7 +40,7 @@ class HubRulesScreen extends ConsumerWidget {
         if (hub.hubRules == null || hub.hubRules!.isEmpty) {
           return AppScaffold(
             title: 'חוקי ההאב',
-            body: FuturisticEmptyState(
+            body: PremiumEmptyState(
               icon: Icons.rule,
               title: 'אין חוקים מוגדרים',
               message: 'מנהל ה-Hub עדיין לא הגדיר חוקים',

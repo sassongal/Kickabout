@@ -48,12 +48,16 @@ class EventsRepository {
     try {
       final data = event.toJson();
       data.remove('eventId'); // Remove eventId from data (it's the document ID)
-      data['timestamp'] = FieldValue.serverTimestamp();
-      
+
+      // 🔒 FIX: DO NOT overwrite timestamp - it contains accurate game time from stopwatch!
+      // The client timestamp is correct and should be preserved for timeline replay
+      // Only add recordedAt server timestamp for audit purposes
+      data['recordedAt'] = FieldValue.serverTimestamp();
+
       final docRef = event.eventId.isNotEmpty
           ? _firestore.doc(FirestorePaths.gameEvent(gameId, event.eventId))
           : _firestore.collection(FirestorePaths.gameEvents(gameId)).doc();
-      
+
       await docRef.set(data);
       return docRef.id;
     } catch (e) {

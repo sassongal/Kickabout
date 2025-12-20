@@ -1000,6 +1000,14 @@ class HubsRepository {
           'primaryVenueId': venueId,
           'primaryVenueLocation': venueLocation,
           'mainVenueId': venueId, // Also update mainVenueId
+          'location': venueLocation, // Synchronize deprecated location field
+          'geohash': venueData['geohash'] ??
+              GeohashUtils.encode(
+                venueLocation.latitude,
+                venueLocation.longitude,
+                precision: 8,
+              ),
+          'updatedAt': FieldValue.serverTimestamp(),
         };
 
         // Add venueId to venueIds array if not already present

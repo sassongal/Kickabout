@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -262,7 +262,7 @@ class _PlayersMapScreenState extends ConsumerState<PlayersMapScreen> {
         ),
       ],
       body: _isLoading || !_iconsLoaded
-          ? const FuturisticLoadingState(message: 'טוען מפה...')
+          ? const PremiumLoadingState(message: 'טוען מפה...')
           : LayoutBuilder(
               builder: (context, constraints) {
                 return Stack(

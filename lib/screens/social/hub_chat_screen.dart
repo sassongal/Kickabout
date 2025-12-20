@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/models/models.dart';
@@ -117,7 +117,7 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return FuturisticEmptyState(
+                  return PremiumEmptyState(
                     icon: Icons.error_outline,
                     title: 'שגיאה בטעינת הודעות',
                     message: ErrorHandlerService().handleException(
@@ -138,7 +138,7 @@ class _HubChatScreenState extends ConsumerState<HubChatScreen> {
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
-                  return FuturisticEmptyState(
+                  return PremiumEmptyState(
                     icon: Icons.chat_bubble_outline,
                     title: 'אין הודעות עדיין',
                     message: 'היה הראשון לשלוח הודעה!',

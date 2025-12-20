@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Notification badge button widget
 /// Shows notification icon with unread count badge
@@ -47,7 +47,7 @@ class NotificationsBadgeButton extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: FuturisticColors.error,
+                  color: PremiumColors.error,
                   shape: BoxShape.circle,
                 ),
                 constraints: const BoxConstraints(

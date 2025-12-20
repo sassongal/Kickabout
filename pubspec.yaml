@@ -14,6 +14,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.1.0
   shared_preferences: ^2.0.0
+  sqflite: ^2.3.0
+  path_provider: ^2.1.0
+  path: ^1.9.0
   flutter_rating_bar: ^4.0.0
   fl_chart: ^0.68.0
   # Firebase
@@ -49,7 +52,7 @@ dependencies:
   # Location & Maps
   geolocator: ^11.0.0
   geocoding: ^3.0.0
-  google_maps_flutter: ^2.5.0
+  # google_maps_flutter version set below with cluster_manager
   # HTTP requests
   http: ^1.2.0
   # Image processing (compression/resizing)
@@ -68,7 +71,9 @@ dependencies:
   sliver_tools: ^0.2.12
   # Reactive Programming
   rxdart: ^0.28.0
-  google_maps_cluster_manager: ^3.1.0
+  google_maps_flutter: ^2.5.0
+  # google_maps_cluster_manager: disabled due to name conflicts with google_maps_flutter_platform_interface
+  # TODO: Re-enable when fixed - see https://github.com/google/flutter-google-maps-clustering/issues
 
 dev_dependencies:
   flutter_test:
@@ -108,3 +113,5 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   image_path: assets/logo/KattruckLOGOFULL.png
+
+# Remove overrides - let version resolution work naturally

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 class GameFeedCard extends StatelessWidget {
   final Game game;
@@ -44,8 +44,8 @@ class GameFeedCard extends StatelessWidget {
       label = 'משחק ציבורי';
     } else {
       // My Hub
-      primaryColor = FuturisticColors.primary;
-      secondaryColor = FuturisticColors.secondary;
+      primaryColor = PremiumColors.primary;
+      secondaryColor = PremiumColors.secondary;
       icon = Icons.group;
       label = game.denormalized.hubName ?? 'ה-Hub שלי';
     }

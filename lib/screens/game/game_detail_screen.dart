@@ -16,11 +16,12 @@ import 'package:kattrick/models/targeting_criteria.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
 import 'package:kattrick/services/weather_service.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/logic/session_logic.dart';
 import 'package:kattrick/widgets/loading_widget.dart';
 import 'package:kattrick/services/game_management_service.dart';
 import 'package:kattrick/widgets/dialogs/edit_game_result_dialog.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Game detail screen
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -378,7 +379,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             leading: SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: KineticLoadingAnimation(size: 20),
             ),
             title: Text('טוען...'),
           );
@@ -1377,14 +1378,14 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             future: weatherFuture,
             builder: (context, weatherSnapshot) {
               if (weatherSnapshot.connectionState == ConnectionState.waiting) {
-                return FuturisticCard(
+                return PremiumCard(
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
                       const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: KineticLoadingAnimation(size: 20),
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -1399,7 +1400,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               final weather = weatherSnapshot.data;
               if (weather == null) return const SizedBox.shrink();
 
-              return FuturisticCard(
+              return PremiumCard(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
@@ -1457,14 +1458,14 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       future: weatherFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return FuturisticCard(
+          return PremiumCard(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: KineticLoadingAnimation(size: 20),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -1479,7 +1480,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         final weather = snapshot.data;
         if (weather == null) return const SizedBox.shrink();
 
-        return FuturisticCard(
+        return PremiumCard(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
@@ -1693,7 +1694,7 @@ class _TeamsDisplayWidget extends StatelessWidget {
               future: usersRepo.getUsers(team.playerIds),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: KineticLoadingAnimation(size: 40));
                 }
 
                 final users = snapshot.data ?? [];

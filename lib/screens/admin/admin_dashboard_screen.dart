@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/utils/venue_seeder_service.dart';
 
@@ -49,7 +49,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'Admin Console',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -59,15 +59,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             // Header
             Text(
               'ניהול מערכת',
-              style: FuturisticTypography.heading1.copyWith(
-                color: FuturisticColors.primary,
+              style: PremiumTypography.heading1.copyWith(
+                color: PremiumColors.primary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'כלים לניהול ותחזוקת המערכת',
-              style: FuturisticTypography.bodyMedium.copyWith(
-                color: FuturisticColors.textSecondary,
+              style: PremiumTypography.bodyMedium.copyWith(
+                color: PremiumColors.textSecondary,
               ),
             ),
             const SizedBox(height: 32),
@@ -174,22 +174,22 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   children: [
                     Text(
                       title,
-                      style: FuturisticTypography.heading3.copyWith(
+                      style: PremiumTypography.heading3.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: FuturisticTypography.bodySmall.copyWith(
-                        color: FuturisticColors.textSecondary,
+                      style: PremiumTypography.bodySmall.copyWith(
+                        color: PremiumColors.textSecondary,
                       ),
                     ),
                     if (statusText != null && statusText.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
                         statusText,
-                        style: FuturisticTypography.bodySmall.copyWith(
+                        style: PremiumTypography.bodySmall.copyWith(
                           color: isLoading ? Colors.orange : Colors.green,
                           fontWeight: FontWeight.bold,
                         ),

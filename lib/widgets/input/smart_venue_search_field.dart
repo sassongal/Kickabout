@@ -237,6 +237,8 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
         final location = result['location'];
         final name = result['name'] as String? ?? 'מגרש';
         final address = result['address'] as String?;
+        // Use city from Google Places if available, otherwise use filterCity
+        final city = result['city'] as String? ?? widget.filterCity;
 
         try {
           final venue = await venuesRepo.createManualVenue(
@@ -246,6 +248,7 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
             hubId: '',
             createdBy: ref.read(currentUserIdProvider),
             isPublic: false,
+            city: city, // Use city from Google Places or filterCity
           );
           _controller.text = venue.name;
           widget.onVenueSelected(venue);

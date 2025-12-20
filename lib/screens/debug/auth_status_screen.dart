@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/routing/app_router.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Debug screen to display authentication status
 class AuthStatusScreen extends ConsumerWidget {
@@ -21,7 +21,7 @@ class AuthStatusScreen extends ConsumerWidget {
     // Watch auth state changes
     final authState = ref.watch(authStateProvider);
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'סטטוס אימות',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -29,7 +29,7 @@ class AuthStatusScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Authentication Status Card
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,8 +44,8 @@ class AuthStatusScreen extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Text(
                         'סטטוס אימות',
-                        style: FuturisticTypography.heading3.copyWith(
-                          color: FuturisticColors.textPrimary,
+                        style: PremiumTypography.heading3.copyWith(
+                          color: PremiumColors.textPrimary,
                         ),
                       ),
                     ],
@@ -72,15 +72,15 @@ class AuthStatusScreen extends ConsumerWidget {
 
             // Firebase User Details
             if (firebaseUser != null)
-              FuturisticCard(
+              PremiumCard(
                 margin: const EdgeInsets.only(bottom: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'פרטי משתמש Firebase',
-                      style: FuturisticTypography.heading3.copyWith(
-                        color: FuturisticColors.textPrimary,
+                      style: PremiumTypography.heading3.copyWith(
+                        color: PremiumColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -118,8 +118,8 @@ class AuthStatusScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Providers:',
-                        style: FuturisticTypography.labelLarge.copyWith(
-                          color: FuturisticColors.textSecondary,
+                        style: PremiumTypography.labelLarge.copyWith(
+                          color: PremiumColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -127,8 +127,8 @@ class AuthStatusScreen extends ConsumerWidget {
                             padding: const EdgeInsets.only(left: 16, top: 4),
                             child: Text(
                               '• ${info.providerId}${info.email != null ? " (${info.email})" : ""}',
-                              style: FuturisticTypography.bodySmall.copyWith(
-                                color: FuturisticColors.textSecondary,
+                              style: PremiumTypography.bodySmall.copyWith(
+                                color: PremiumColors.textSecondary,
                               ),
                             ),
                           )),
@@ -138,15 +138,15 @@ class AuthStatusScreen extends ConsumerWidget {
               ),
 
             // Auth State Stream Status
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Auth State Stream',
-                    style: FuturisticTypography.heading3.copyWith(
-                      color: FuturisticColors.textPrimary,
+                    style: PremiumTypography.heading3.copyWith(
+                      color: PremiumColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -172,14 +172,14 @@ class AuthStatusScreen extends ConsumerWidget {
             ),
 
             // Actions
-            FuturisticCard(
+            PremiumCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'פעולות',
-                    style: FuturisticTypography.heading3.copyWith(
-                      color: FuturisticColors.textPrimary,
+                    style: PremiumTypography.heading3.copyWith(
+                      color: PremiumColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -210,7 +210,7 @@ class AuthStatusScreen extends ConsumerWidget {
                       icon: const Icon(Icons.logout),
                       label: const Text('התנתק'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: FuturisticColors.error,
+                        backgroundColor: PremiumColors.error,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -223,7 +223,7 @@ class AuthStatusScreen extends ConsumerWidget {
                       icon: const Icon(Icons.login),
                       label: const Text('התחבר'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: FuturisticColors.primary,
+                        backgroundColor: PremiumColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -245,13 +245,13 @@ class AuthStatusScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: FuturisticTypography.bodyMedium.copyWith(
-              color: FuturisticColors.textSecondary,
+            style: PremiumTypography.bodyMedium.copyWith(
+              color: PremiumColors.textSecondary,
             ),
           ),
           Text(
             value,
-            style: FuturisticTypography.bodyMedium.copyWith(
+            style: PremiumTypography.bodyMedium.copyWith(
               color: valueColor,
               fontWeight: FontWeight.bold,
             ),
@@ -269,15 +269,15 @@ class AuthStatusScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: FuturisticTypography.labelSmall.copyWith(
-              color: FuturisticColors.textSecondary,
+            style: PremiumTypography.labelSmall.copyWith(
+              color: PremiumColors.textSecondary,
             ),
           ),
           const SizedBox(height: 4),
           SelectableText(
             value,
-            style: FuturisticTypography.bodyMedium.copyWith(
-              color: FuturisticColors.textPrimary,
+            style: PremiumTypography.bodyMedium.copyWith(
+              color: PremiumColors.textPrimary,
               fontFamily: 'monospace',
             ),
           ),

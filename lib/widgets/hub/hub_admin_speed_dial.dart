@@ -39,6 +39,20 @@ class HubAdminSpeedDial extends StatelessWidget {
             labelBackgroundColor: Colors.black87,
             onTap: () => context.push('/games/create?hubId=$hubId'),
           ),
+        if (permissions.canCreatePosts)
+          SpeedDialChild(
+            child: const Icon(Icons.group_add, color: Colors.black),
+            backgroundColor: const Color(0xFF00D9FF), // Bright cyan
+            foregroundColor: Colors.black,
+            label: 'מחפש שחקנים',
+            labelStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            labelBackgroundColor: Colors.black87,
+            onTap: () => context.push('/hubs/$hubId/create-recruiting-post'),
+          ),
         if (permissions.canInvitePlayers)
           SpeedDialChild(
             child: const Icon(Icons.person_search, color: Colors.black),

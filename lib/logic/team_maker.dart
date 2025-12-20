@@ -134,6 +134,7 @@ class TeamMaker {
     List<PlayerForTeam> players, {
     required int teamCount,
     int? playersPerSide,
+    int? seed,
   }) {
     if (players.length < teamCount) {
       throw ArgumentError('Not enough players for $teamCount teams');
@@ -144,14 +145,23 @@ class TeamMaker {
       );
     }
 
+    // Create a random instance if seed provided
+    final random = seed != null ? Random(seed) : null;
+
     // Separate goalkeepers and field players
     final goalkeepers = players.where((p) => p.isGoalkeeper).toList();
     final fieldPlayers = players.where((p) => !p.isGoalkeeper).toList();
 
+    // Shuffle players to ensure variety between generations with same seed/state
+    if (random != null) {
+      goalkeepers.shuffle(random);
+      fieldPlayers.shuffle(random);
+    }
+
     // Distribute goalkeepers evenly
     final teams = _distributeGoalkeepers(goalkeepers, teamCount);
     // Distribute field players
-    _distributeFieldPlayers(fieldPlayers, teams, teamCount);
+    _distributeFieldPlayers(fieldPlayers, teams, teamCount, random);
     // Optimize via local swaps
     final optimizedTeams = _localSwap(teams, teamCount);
 
@@ -186,11 +196,10 @@ class TeamMaker {
     // (1-7 scale has tighter range, so adjusted thresholds)
     final ratingScore = (1.0 - (metrics.stddev / 1.5)).clamp(0.0, 1.0);
 
-    final score = (
-      ratingScore * 0.5 +
-      metrics.positionBalance * 0.3 +
-      metrics.goalkeeperBalance * 0.2
-    ) * 100;
+    final score = (ratingScore * 0.5 +
+            metrics.positionBalance * 0.3 +
+            metrics.goalkeeperBalance * 0.2) *
+        100;
 
     lastBalanceScore = score;
 
@@ -225,7 +234,8 @@ class TeamMaker {
     // Calculate average rating to use as fallback for missing players
     final averageRating = allPlayers.isEmpty
         ? 4.0
-        : allPlayers.fold<double>(0.0, (sum, p) => sum + p.rating) / allPlayers.length;
+        : allPlayers.fold<double>(0.0, (sum, p) => sum + p.rating) /
+            allPlayers.length;
 
     // Create a mutable copy of teams with player objects for simulation
     final simTeams = currentTeams.map((t) {
@@ -249,24 +259,24 @@ class TeamMaker {
           for (final playerBId in teamBPlayers) {
             // Get player ratings - use average rating as fallback for missing players
             // to avoid skewing swap suggestions with zero ratings
-            final playerA = allPlayers.firstWhere(
-              (p) => p.uid == playerAId,
-              orElse: () {
-                // Log warning in debug mode - player should exist in allPlayers
-                assert(false, 'Player $playerAId not found in allPlayers list');
-                return PlayerForTeam(
-                    uid: playerAId, rating: averageRating, role: PlayerRole.midfielder);
-              }
-            );
-            final playerB = allPlayers.firstWhere(
-              (p) => p.uid == playerBId,
-              orElse: () {
-                // Log warning in debug mode - player should exist in allPlayers
-                assert(false, 'Player $playerBId not found in allPlayers list');
-                return PlayerForTeam(
-                    uid: playerBId, rating: averageRating, role: PlayerRole.midfielder);
-              }
-            );
+            final playerA =
+                allPlayers.firstWhere((p) => p.uid == playerAId, orElse: () {
+              // Log warning in debug mode - player should exist in allPlayers
+              assert(false, 'Player $playerAId not found in allPlayers list');
+              return PlayerForTeam(
+                  uid: playerAId,
+                  rating: averageRating,
+                  role: PlayerRole.midfielder);
+            });
+            final playerB =
+                allPlayers.firstWhere((p) => p.uid == playerBId, orElse: () {
+              // Log warning in debug mode - player should exist in allPlayers
+              assert(false, 'Player $playerBId not found in allPlayers list');
+              return PlayerForTeam(
+                  uid: playerBId,
+                  rating: averageRating,
+                  role: PlayerRole.midfielder);
+            });
 
             final playerARating = playerA.rating;
             final playerBRating = playerB.rating;
@@ -357,8 +367,9 @@ class TeamMaker {
   static void _distributeFieldPlayers(
     List<PlayerForTeam> fieldPlayers,
     List<List<PlayerForTeam>> teams,
-    int teamCount,
-  ) {
+    int teamCount, [
+    Random? random,
+  ]) {
     if (fieldPlayers.isEmpty) {
       return; // Edge case: no field players
     }
@@ -385,34 +396,79 @@ class TeamMaker {
   }
 
   /// Helper method for snake draft distribution
+  /// Improved to always fill the smallest teams first to ensure strict count balance
   static void _snakeDraft(
     List<PlayerForTeam> players,
     List<List<PlayerForTeam>> teams,
     int teamCount, {
     required bool startReverse,
   }) {
-    for (int i = 0; i < players.length; i++) {
-      final roundNumber = i ~/ teamCount;
-      final positionInRound = i % teamCount;
+    if (players.isEmpty) return;
 
-      int teamIndex;
-      if (startReverse) {
-        // Start from the end for balance
-        if (roundNumber % 2 == 0) {
-          teamIndex = teamCount - 1 - positionInRound;
-        } else {
-          teamIndex = positionInRound;
-        }
-      } else {
-        // Standard snake draft
-        if (roundNumber % 2 == 0) {
-          teamIndex = positionInRound;
-        } else {
-          teamIndex = teamCount - 1 - positionInRound;
+    for (int i = 0; i < players.length; i++) {
+      // Find the indices of teams with the minimum number of players
+      int minSize = teams.map((t) => t.length).reduce(min);
+      List<int> candidateIndices = [];
+      for (int tIdx = 0; tIdx < teamCount; tIdx++) {
+        if (teams[tIdx].length == minSize) {
+          candidateIndices.add(tIdx);
         }
       }
 
-      teams[teamIndex].add(players[i]);
+      // If all teams are equal size, use snake logic
+      if (candidateIndices.length == teamCount) {
+        final roundNumber = i ~/ teamCount;
+        final positionInRound = i % teamCount;
+
+        int teamIndex;
+        if (startReverse) {
+          if (roundNumber % 2 == 0) {
+            teamIndex = teamCount - 1 - positionInRound;
+          } else {
+            teamIndex = positionInRound;
+          }
+        } else {
+          if (roundNumber % 2 == 0) {
+            teamIndex = positionInRound;
+          } else {
+            teamIndex = teamCount - 1 - positionInRound;
+          }
+        }
+        teams[teamIndex].add(players[i]);
+      } else {
+        // Find the "best" team among candidates based on snake order
+        final roundNumber = i ~/ teamCount;
+        final positionInRound = i % teamCount;
+
+        int targetIndex;
+        if (startReverse) {
+          if (roundNumber % 2 == 0) {
+            targetIndex = teamCount - 1 - positionInRound;
+          } else {
+            targetIndex = positionInRound;
+          }
+        } else {
+          if (roundNumber % 2 == 0) {
+            targetIndex = positionInRound;
+          } else {
+            targetIndex = teamCount - 1 - positionInRound;
+          }
+        }
+
+        // Find the candidate closest to targetIndex
+        int bestCandidate = candidateIndices.first;
+        int minDistance = (bestCandidate - targetIndex).abs();
+
+        for (final cand in candidateIndices) {
+          final dist = (cand - targetIndex).abs();
+          if (dist < minDistance) {
+            minDistance = dist;
+            bestCandidate = cand;
+          }
+        }
+
+        teams[bestCandidate].add(players[i]);
+      }
     }
   }
 
@@ -499,16 +555,23 @@ class TeamMaker {
     final ratingScore = (1.0 / (1.0 + stddev)).clamp(0.0, 1.0);
 
     // Goalkeeper balance
-    final gkCounts = teams.map((t) => t.where((p) => p.isGoalkeeper).length.toDouble()).toList();
+    final gkCounts = teams
+        .map((t) => t.where((p) => p.isGoalkeeper).length.toDouble())
+        .toList();
     final gkVariance = _calculateVariance(gkCounts);
     final gkScore = (1.0 / (1.0 + gkVariance * 2)).clamp(0.0, 1.0);
 
     // Position balance (defenders vs attackers)
-    final defCounts = teams.map((t) => t.where((p) => p.isDefensive).length.toDouble()).toList();
-    final attCounts = teams.map((t) => t.where((p) => p.isOffensive).length.toDouble()).toList();
+    final defCounts = teams
+        .map((t) => t.where((p) => p.isDefensive).length.toDouble())
+        .toList();
+    final attCounts = teams
+        .map((t) => t.where((p) => p.isOffensive).length.toDouble())
+        .toList();
     final defVariance = _calculateVariance(defCounts);
     final attVariance = _calculateVariance(attCounts);
-    final posScore = (1.0 / (1.0 + (defVariance + attVariance))).clamp(0.0, 1.0);
+    final posScore =
+        (1.0 / (1.0 + (defVariance + attVariance))).clamp(0.0, 1.0);
 
     // Weighted combination: rating (50%), goalkeeper (25%), position (25%)
     return ratingScore * 0.5 + gkScore * 0.25 + posScore * 0.25;
@@ -590,7 +653,8 @@ class TeamMaker {
       }).toList();
 
       // Perfect: all teams have same number of GKs
-      final gkVariance = _calculateVariance(gkCounts.map((c) => c.toDouble()).toList());
+      final gkVariance =
+          _calculateVariance(gkCounts.map((c) => c.toDouble()).toList());
       goalkeeperBalance = (1.0 / (1.0 + gkVariance)).clamp(0.0, 1.0);
 
       // Calculate position distribution balance
@@ -623,7 +687,9 @@ class TeamMaker {
   /// Calculate variance for a list of values
   static double _calculateVariance(List<double> values) {
     if (values.isEmpty) return 0.0;
-    final mean = values.fold<double>(0.0, (sum, val) => sum + val) / values.length;
-    return values.fold<double>(0.0, (sum, val) => sum + pow(val - mean, 2)) / values.length;
+    final mean =
+        values.fold<double>(0.0, (sum, val) => sum + val) / values.length;
+    return values.fold<double>(0.0, (sum, val) => sum + pow(val - mean, 2)) /
+        values.length;
   }
 }

@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/services/cache_service.dart';
 
@@ -201,7 +201,7 @@ class _CommunityActivityFeedScreenState
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת משחקים',
             message: ErrorHandlerService().handleException(
@@ -214,7 +214,7 @@ class _CommunityActivityFeedScreenState
         final games = snapshot.data ?? [];
 
         if (games.isEmpty) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.sports_soccer_outlined,
             title: 'אין משחקים',
             message: 'לא נמצאו משחקים ציבוריים',
@@ -277,7 +277,7 @@ class _CommunityActivityFeedScreenState
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת אירועים',
             message: ErrorHandlerService().handleException(
@@ -290,7 +290,7 @@ class _CommunityActivityFeedScreenState
         final events = snapshot.data ?? [];
 
         if (events.isEmpty) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.event_outlined,
             title: 'אין אירועים',
             message: 'לא נמצאו אירועים ציבוריים',
@@ -342,7 +342,7 @@ class _CommunityActivityFeedScreenState
             });
 
             if (items.isEmpty) {
-              return FuturisticEmptyState(
+              return PremiumEmptyState(
                 icon: Icons.timeline_outlined,
                 title: 'אין פעילות',
                 message: 'לא נמצאה פעילות ציבורית',

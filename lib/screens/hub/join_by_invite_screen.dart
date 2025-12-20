@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -134,14 +134,14 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     if (_isLoading) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: l10n.joinHubTitle,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null || _hub == null) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: l10n.joinHubTitle,
         body: Center(
           child: Column(
@@ -168,7 +168,7 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
     final joinMode = hub.settings['joinMode'] as String? ?? 'auto';
     final requiresApproval = joinMode == 'approval';
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: l10n.joinHubTitle,
       body: Padding(
         padding: const EdgeInsets.all(16),

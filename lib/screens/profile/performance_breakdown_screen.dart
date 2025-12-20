@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:intl/intl.dart';
 
 /// Performance breakdown by hub for a player
@@ -106,17 +106,17 @@ class _PerformanceBreakdownScreenState
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'ביצועים לפי הוב',
       body: FutureBuilder<List<_HubPerformance>>(
         future: _data,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const FuturisticLoadingState(message: 'טוען נתונים...');
+            return const PremiumLoadingState(message: 'טוען נתונים...');
           }
 
           if (snapshot.hasError) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת נתונים',
               message: snapshot.error.toString(),
@@ -132,7 +132,7 @@ class _PerformanceBreakdownScreenState
 
           final hubs = snapshot.data ?? [];
           if (hubs.isEmpty) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.sports_soccer,
               title: 'אין נתונים',
               message: 'לא נמצאו משחקים עבור הובים שלך',
@@ -179,7 +179,7 @@ class _PerformanceBreakdownScreenState
                 );
               }
               final item = hubs[index - 1];
-              return FuturisticCard(
+              return PremiumCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 onTap: () => context.push('/hubs/${item.hub.hubId}'),
                 child: Row(
@@ -188,7 +188,7 @@ class _PerformanceBreakdownScreenState
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        gradient: FuturisticColors.primaryGradient,
+                        gradient: PremiumColors.primaryGradient,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.group, color: Colors.white),
@@ -200,7 +200,7 @@ class _PerformanceBreakdownScreenState
                         children: [
                           Text(
                             item.hub.name,
-                            style: FuturisticTypography.labelLarge.copyWith(
+                            style: PremiumTypography.labelLarge.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -266,14 +266,14 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticCard(
+    return PremiumCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'סיכום ביצועים',
-            style: FuturisticTypography.labelLarge.copyWith(
+            style: PremiumTypography.labelLarge.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),

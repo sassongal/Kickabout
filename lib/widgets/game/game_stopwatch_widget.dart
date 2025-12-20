@@ -4,7 +4,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/game_stopwatch.dart';
 import 'package:kattrick/utils/stopwatch_utility.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Widget for displaying and controlling game stopwatch
 /// 
@@ -105,7 +105,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: FuturisticColors.surface,
+            color: PremiumColors.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -120,10 +120,10 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
               // Time Display
               Text(
                 StopwatchUtility.formatMMSS(stopwatch.elapsed),
-                style: FuturisticTypography.heading1.copyWith(
+                style: PremiumTypography.heading1.copyWith(
                   fontSize: 64,
                   fontWeight: FontWeight.bold,
-                  color: FuturisticColors.primary,
+                  color: PremiumColors.primary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -153,7 +153,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('התחל'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: FuturisticColors.success,
+                        backgroundColor: PremiumColors.success,
                         foregroundColor: Colors.white,
                       ),
                     )
@@ -163,7 +163,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
                       icon: const Icon(Icons.pause),
                       label: const Text('השהה'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: FuturisticColors.warning,
+                        backgroundColor: PremiumColors.warning,
                         foregroundColor: Colors.white,
                       ),
                     )
@@ -173,7 +173,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('המשך'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: FuturisticColors.success,
+                        backgroundColor: PremiumColors.success,
                         foregroundColor: Colors.white,
                       ),
                     ),
@@ -204,7 +204,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
                     icon: const Icon(Icons.refresh),
                     label: const Text('איפוס'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: FuturisticColors.error,
+                      backgroundColor: PremiumColors.error,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -244,11 +244,11 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
         children: [
           Text(
             'קבוצה $team',
-            style: FuturisticTypography.labelSmall,
+            style: PremiumTypography.labelSmall,
           ),
           Text(
             score.toString(),
-            style: FuturisticTypography.heading2.copyWith(
+            style: PremiumTypography.heading2.copyWith(
               color: color,
               fontWeight: FontWeight.bold,
             ),
@@ -271,7 +271,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
         children: [
           Text(
             'קבוצה $team - הקלטת שער',
-            style: FuturisticTypography.labelMedium.copyWith(
+            style: PremiumTypography.labelMedium.copyWith(
               color: color,
               fontWeight: FontWeight.bold,
             ),
@@ -291,7 +291,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
                     width: 70,
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: FuturisticColors.surface,
+                      color: PremiumColors.surface,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -301,7 +301,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
                         const SizedBox(height: 4),
                         Text(
                           player.displayName ?? player.name,
-                          style: FuturisticTypography.labelSmall,
+                          style: PremiumTypography.labelSmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
@@ -325,7 +325,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
       return Center(
         child: Text(
           'אין אירועים עדיין',
-          style: FuturisticTypography.bodyMedium,
+          style: PremiumTypography.bodyMedium,
         ),
       );
     }
@@ -346,7 +346,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: FuturisticColors.surface,
+        color: PremiumColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: teamColor.withAlpha(100), width: 1),
       ),
@@ -361,7 +361,7 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
             ),
             child: Text(
               event.formattedTime,
-              style: FuturisticTypography.labelSmall.copyWith(
+              style: PremiumTypography.labelSmall.copyWith(
                 color: teamColor,
                 fontWeight: FontWeight.bold,
               ),
@@ -383,13 +383,13 @@ class _GameStopwatchWidgetState extends ConsumerState<GameStopwatchWidget> {
           Expanded(
             child: Text(
               '${event.playerName} - ${event.typeDisplayName}',
-              style: FuturisticTypography.bodyMedium,
+              style: PremiumTypography.bodyMedium,
             ),
           ),
           // Delete Button
           IconButton(
             icon: const Icon(Icons.delete_outline, size: 20),
-            color: FuturisticColors.error,
+            color: PremiumColors.error,
             onPressed: () {
               widget.stopwatch.removeEvent(event);
               _notifyEventsRecorded();

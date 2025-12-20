@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 import 'package:kattrick/routing/app_paths.dart';
 import 'package:kattrick/routing/go_router_refresh_stream.dart';
@@ -182,7 +183,11 @@ class _LazyRouteLoaderState extends State<LazyRouteLoader> {
         if (snapshot.connectionState == ConnectionState.done) {
           return widget.builder();
         }
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        return const Scaffold(
+          body: Center(
+            child: KineticLoadingAnimation(size: 64),
+          ),
+        );
       },
     );
   }
@@ -293,7 +298,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProfileSetupWizard(),
       ),
 
-      // Home route - Futuristic Dashboard
+      // Home route - Premium Dashboard
       GoRoute(
         path: '/',
         name: 'home',
@@ -427,9 +432,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/venues/discover',
         name: 'discoverVenues',
-        builder: (context, state) => LazyRouteLoader(
+        builder: (context, state) {
+          final filterCity = state.uri.queryParameters['filterCity'];
+          return LazyRouteLoader(
             loader: discover_venues_screen.loadLibrary(),
-            builder: () => discover_venues_screen.DiscoverVenuesScreen()),
+            builder: () => discover_venues_screen.DiscoverVenuesScreen(
+              filterCity: filterCity,
+            ),
+          );
+        },
       ),
 
       // Venue Search

@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
@@ -91,7 +91,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
           }
 
           if (snapshot.hasError) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.error_outline,
               title: l10n.errorLoadingHubs,
               message: ErrorHandlerService().handleException(
@@ -112,7 +112,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
           final hubs = snapshot.data ?? [];
 
           if (hubs.isEmpty) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.group_outlined,
               title: l10n.noHubs,
               message: l10n.createHubToStart,

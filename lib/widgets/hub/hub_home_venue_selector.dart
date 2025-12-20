@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/data/venues_repository.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/utils/geohash_utils.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Home Venue Selector - allows managers to select the hub's home field
 class HubHomeVenueSelector extends ConsumerWidget {
@@ -68,92 +67,22 @@ class _HubHomeVenueSelectorContentState
     _lastMainVenueId = widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
   }
 
-  @override
-  void didUpdateWidget(_HubHomeVenueSelectorContent oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // If mainVenueId changed, update the last known ID to trigger FutureBuilder refresh
-    final newMainVenueId = widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
-    if (newMainVenueId != _lastMainVenueId) {
-      _lastMainVenueId = newMainVenueId;
-      // Force rebuild to reload venue
-      setState(() {});
-    }
-  }
-
   Future<void> _selectHomeVenue() async {
     setState(() => _isLoading = true);
 
     try {
-      // Navigate to discover venues screen
-      final result = await context.push<dynamic>('/venues/discover');
+      // Show venue selection dialog
+      final result = await showDialog<Venue>(
+        context: context,
+        builder: (context) => _VenueSelectionDialog(
+          city: widget.hub.city ?? '',
+          venues: [],
+          venuesRepo: widget.venuesRepo,
+        ),
+      );
 
       if (result != null && mounted) {
-        final hubsRepo = ref.read(hubsRepositoryProvider);
-        final currentUserId = ref.read(currentUserIdProvider);
-
-        if (result is Venue) {
-          // Existing venue selected - use setHubPrimaryVenue for transaction and hubCount update
-          // This function already updates primaryVenueId, mainVenueId, and primaryVenueLocation
-          await hubsRepo.setHubPrimaryVenue(widget.hubId, result.venueId);
-
-          // Also update location and geohash for consistency (mainVenueId is already updated by setHubPrimaryVenue)
-          final geohash = GeohashUtils.encode(
-            result.location.latitude,
-            result.location.longitude,
-            precision: 8,
-          );
-
-          await hubsRepo.updateHub(widget.hubId, {
-            'location': result.location,
-            'geohash': geohash,
-          });
-        } else if (result is Map<String, dynamic>) {
-          // Manual location selected
-          final location = result['location'] as GeoPoint;
-          final name = result['name'] as String? ?? 'מגרש הבית';
-
-          // Create venue first
-          final venuesRepo = widget.venuesRepo;
-          final newVenue = await venuesRepo.createManualVenue(
-            name: name,
-            address: result['address'] as String?,
-            location: location,
-            hubId: widget.hubId,
-            createdBy: currentUserId,
-            isPublic: false, // Hub's private venue
-          );
-
-          // Update hub with new venue - use setHubPrimaryVenue for transaction and hubCount update
-          await hubsRepo.setHubPrimaryVenue(widget.hubId, newVenue.venueId);
-
-          // Also update mainVenueId, location, and geohash for consistency
-          final geohash = GeohashUtils.encode(
-            location.latitude,
-            location.longitude,
-            precision: 8,
-          );
-
-          await hubsRepo.updateHub(widget.hubId, {
-            'mainVenueId': newVenue.venueId,
-            'location': location,
-            'geohash': geohash,
-          });
-        }
-
-        if (mounted) {
-          // Force rebuild to reload venue after save
-          setState(() {
-            _lastMainVenueId =
-                widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('מגרש הבית עודכן בהצלחה!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        await _handleVenueSelection(result);
       }
     } catch (e) {
       if (mounted) {
@@ -171,12 +100,47 @@ class _HubHomeVenueSelectorContentState
     }
   }
 
+  Future<void> _handleVenueSelection(Venue result) async {
+    final hubsRepo = ref.read(hubsRepositoryProvider);
+
+    debugPrint('🏟️ Setting home venue: ${result.name} (${result.venueId})');
+
+    await hubsRepo.setHubPrimaryVenue(widget.hubId, result.venueId);
+
+    debugPrint('✅ Home venue saved successfully');
+
+    if (mounted) {
+      setState(() {
+        _lastMainVenueId = result.venueId;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('מגרש הבית עודכן בהצלחה!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(_HubHomeVenueSelectorContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newMainVenueId = widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
+    if (newMainVenueId != _lastMainVenueId) {
+      _lastMainVenueId = newMainVenueId;
+      setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Use primaryVenueId if mainVenueId is not set (for backward compatibility)
     final venueIdToLoad = widget.hub.mainVenueId ?? widget.hub.primaryVenueId;
 
-    // Update last known ID to track changes and force rebuild if changed
+    if (venueIdToLoad != _lastMainVenueId) {
+      debugPrint('🔄 Venue ID changed: $_lastMainVenueId → $venueIdToLoad');
+    }
+
     if (venueIdToLoad != _lastMainVenueId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -188,8 +152,7 @@ class _HubHomeVenueSelectorContentState
     }
 
     return FutureBuilder<Venue?>(
-      key: ValueKey(
-          'home_venue_${venueIdToLoad ?? 'none'}'), // Force rebuild when venueId changes
+      key: ValueKey('home_venue_${venueIdToLoad ?? 'none'}'),
       future: venueIdToLoad != null && venueIdToLoad.isNotEmpty
           ? widget.venuesRepo.getVenue(venueIdToLoad)
           : Future.value(null),
@@ -198,15 +161,15 @@ class _HubHomeVenueSelectorContentState
 
         return Card(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Icon(
                   Icons.sports_soccer,
-                  size: 20,
+                  size: 24,
                   color: Theme.of(context).colorScheme.primary,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,13 +177,16 @@ class _HubHomeVenueSelectorContentState
                     children: [
                       Text(
                         'מגרש בית',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         homeVenue != null ? homeVenue.name : 'לא נבחר',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -241,17 +207,17 @@ class _HubHomeVenueSelectorContentState
                 ),
                 if (_isLoading)
                   const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    width: 20,
+                    height: 20,
+                    child: KineticLoadingAnimation(size: 20),
                   )
                 else
                   IconButton(
-                    icon: const Icon(Icons.edit, size: 18),
+                    icon: const Icon(Icons.edit, size: 20),
                     onPressed: _selectHomeVenue,
                     tooltip:
                         homeVenue != null ? 'ערוך מגרש בית' : 'בחר מגרש בית',
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.all(8),
                     constraints: const BoxConstraints(),
                   ),
               ],
@@ -259,6 +225,235 @@ class _HubHomeVenueSelectorContentState
           ),
         );
       },
+    );
+  }
+}
+
+/// Dialog for selecting a venue with sorting capabilities
+class _VenueSelectionDialog extends StatefulWidget {
+  final String city;
+  final List<Venue> venues;
+  final VenuesRepository venuesRepo;
+
+  const _VenueSelectionDialog({
+    required this.city,
+    required this.venues,
+    required this.venuesRepo,
+  });
+
+  @override
+  State<_VenueSelectionDialog> createState() => _VenueSelectionDialogState();
+}
+
+enum _SortType { name, distance }
+
+class _VenueSelectionDialogState extends State<_VenueSelectionDialog> {
+  List<Venue> _sortedVenues = [];
+  _SortType _sortType = _SortType.distance;
+  bool _isLoading = true;
+  Position? _userPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Get user location
+      try {
+        _userPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+      } catch (e) {
+        debugPrint('Could not get user location: $e');
+      }
+
+      // Load venues for the city
+      final venues = await widget.venuesRepo.getVenuesForMap();
+      final cityVenues = venues.where((v) {
+        return v.isActive &&
+            v.city?.trim().toLowerCase() == widget.city.trim().toLowerCase();
+      }).toList();
+
+      setState(() {
+        _sortedVenues = cityVenues;
+        _isLoading = false;
+      });
+
+      _sortVenues();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בטעינת מגרשים: $e')),
+        );
+      }
+    }
+  }
+
+  void _sortVenues() {
+    setState(() {
+      if (_sortType == _SortType.name) {
+        _sortedVenues.sort((a, b) => a.name.compareTo(b.name));
+      } else if (_sortType == _SortType.distance && _userPosition != null) {
+        _sortedVenues.sort((a, b) {
+          final distA = Geolocator.distanceBetween(
+            _userPosition!.latitude,
+            _userPosition!.longitude,
+            a.location.latitude,
+            a.location.longitude,
+          );
+          final distB = Geolocator.distanceBetween(
+            _userPosition!.latitude,
+            _userPosition!.longitude,
+            b.location.latitude,
+            b.location.longitude,
+          );
+          return distA.compareTo(distB);
+        });
+      }
+    });
+  }
+
+  String _getDistance(Venue venue) {
+    if (_userPosition == null) return '';
+    final distance = Geolocator.distanceBetween(
+      _userPosition!.latitude,
+      _userPosition!.longitude,
+      venue.location.latitude,
+      venue.location.longitude,
+    );
+    if (distance < 1000) {
+      return '${distance.round()} מ\'';
+    } else {
+      return '${(distance / 1000).toStringAsFixed(1)} ק"מ';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('בחר מגרש בית מ${widget.city}'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 500,
+        child: Column(
+          children: [
+            // Sort buttons
+            Row(
+              children: [
+                const Text('מיון לפי:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('שם'),
+                  selected: _sortType == _SortType.name,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _sortType = _SortType.name);
+                      _sortVenues();
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('מרחק'),
+                  selected: _sortType == _SortType.distance,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _sortType = _SortType.distance);
+                      _sortVenues();
+                    }
+                  },
+                ),
+              ],
+            ),
+            const Divider(),
+            // Venue list
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _sortedVenues.isEmpty
+                      ? Center(
+                          child: Text('לא נמצאו מגרשים ב${widget.city}'),
+                        )
+                      : ListView.builder(
+                          itemCount: _sortedVenues.length,
+                          itemBuilder: (context, index) {
+                            final venue = _sortedVenues[index];
+                            final distance = _getDistance(venue);
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: venue.isPublic
+                                      ? Colors.green
+                                      : Colors.orange,
+                                  child: Icon(
+                                    venue.isPublic
+                                        ? Icons.public
+                                        : Icons.lock,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                title: Text(
+                                  venue.name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (venue.address != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.location_on,
+                                              size: 14),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              venue.address!,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                    if (distance.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.directions_walk,
+                                              size: 14),
+                                          const SizedBox(width: 4),
+                                          Text(distance),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                trailing: const Icon(Icons.chevron_left),
+                                onTap: () => Navigator.pop(context, venue),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('ביטול'),
+        ),
+      ],
     );
   }
 }

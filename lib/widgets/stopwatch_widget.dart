@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kattrick/utils/stopwatch_utility.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Reusable Stopwatch Widget with controls
 ///
@@ -69,7 +69,7 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = widget.accentColor ?? FuturisticColors.primary;
+    final accentColor = widget.accentColor ?? PremiumColors.primary;
 
     if (widget.compact) {
       return _buildCompactView(accentColor);
@@ -84,12 +84,12 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
       decoration: BoxDecoration(
         color: widget.stopwatch.isRunning
             ? accentColor.withValues(alpha: 0.1)
-            : FuturisticColors.surface,
+            : PremiumColors.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: widget.stopwatch.isRunning
               ? accentColor
-              : FuturisticColors.border,
+              : PremiumColors.border,
           width: 1.5,
         ),
       ),
@@ -99,14 +99,14 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
           Icon(
             widget.stopwatch.isRunning ? Icons.timer : Icons.timer_outlined,
             size: 18,
-            color: widget.stopwatch.isRunning ? accentColor : FuturisticColors.textSecondary,
+            color: widget.stopwatch.isRunning ? accentColor : PremiumColors.textSecondary,
           ),
           const SizedBox(width: 8),
           Text(
             StopwatchUtility.formatMMSS(widget.stopwatch.elapsed),
-            style: FuturisticTypography.techHeadline.copyWith(
+            style: PremiumTypography.techHeadline.copyWith(
               fontSize: 16,
-              color: widget.stopwatch.isRunning ? accentColor : FuturisticColors.textPrimary,
+              color: widget.stopwatch.isRunning ? accentColor : PremiumColors.textPrimary,
               fontFeatures: [const FontFeature.tabularFigures()],
             ),
           ),
@@ -125,12 +125,12 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
           decoration: BoxDecoration(
             color: widget.stopwatch.isRunning
                 ? accentColor.withValues(alpha: 0.1)
-                : FuturisticColors.surface,
+                : PremiumColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: widget.stopwatch.isRunning
                   ? accentColor
-                  : FuturisticColors.border,
+                  : PremiumColors.border,
               width: 2,
             ),
             boxShadow: widget.stopwatch.isRunning ? [
@@ -147,15 +147,15 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
               Icon(
                 widget.stopwatch.isRunning ? Icons.timer : Icons.timer_outlined,
                 size: 32,
-                color: widget.stopwatch.isRunning ? accentColor : FuturisticColors.textSecondary,
+                color: widget.stopwatch.isRunning ? accentColor : PremiumColors.textSecondary,
               ),
               const SizedBox(width: 16),
               Text(
                 StopwatchUtility.formatMMSS(widget.stopwatch.elapsed),
-                style: FuturisticTypography.heading1.copyWith(
+                style: PremiumTypography.heading1.copyWith(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
-                  color: widget.stopwatch.isRunning ? accentColor : FuturisticColors.textPrimary,
+                  color: widget.stopwatch.isRunning ? accentColor : PremiumColors.textPrimary,
                   fontFeatures: [const FontFeature.tabularFigures()],
                   letterSpacing: 4,
                 ),
@@ -179,7 +179,7 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
                 ),
                 label: Text(
                   widget.stopwatch.isRunning ? 'עצור' : 'התחל',
-                  style: FuturisticTypography.labelLarge,
+                  style: PremiumTypography.labelLarge,
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: widget.stopwatch.isRunning
@@ -206,14 +206,14 @@ class _StopwatchWidgetState extends State<StopwatchWidget> {
                 icon: const Icon(Icons.restart_alt, size: 24),
                 label: Text(
                   'אפס',
-                  style: FuturisticTypography.labelLarge,
+                  style: PremiumTypography.labelLarge,
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: FuturisticColors.textSecondary,
+                  foregroundColor: PremiumColors.textSecondary,
                   side: BorderSide(
                     color: widget.stopwatch.elapsed.inSeconds > 0
-                        ? FuturisticColors.border
-                        : FuturisticColors.border.withValues(alpha: 0.3),
+                        ? PremiumColors.border
+                        : PremiumColors.border.withValues(alpha: 0.3),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,

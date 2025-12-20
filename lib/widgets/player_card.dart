@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:kattrick/models/player.dart';
 import 'package:kattrick/models/player_stats.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
 
 class PlayerCard extends StatelessWidget {
@@ -34,9 +34,9 @@ class PlayerCard extends StatelessWidget {
     // Otherwise, we display the compact row layout for lists.
     final bool isEnhanced = showRadarChart && latestStats != null;
 
-    return FuturisticCard(
+    return PremiumCard(
       onTap: onTap,
-      borderColor: isSelected ? FuturisticColors.primary : null,
+      borderColor: isSelected ? PremiumColors.primary : null,
       showGlow: isSelected,
       padding: EdgeInsets.zero, // We handle padding internally for full control
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -66,7 +66,7 @@ class PlayerCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         player.name,
-                        style: FuturisticTypography.heading3
+                        style: PremiumTypography.heading3
                             .copyWith(fontSize: 16),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -76,7 +76,7 @@ class PlayerCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 4),
                         child: Icon(Icons.local_fire_department,
-                            size: 16, color: FuturisticColors.accent),
+                            size: 16, color: PremiumColors.accent),
                       ),
                   ],
                 ),
@@ -85,8 +85,8 @@ class PlayerCard extends StatelessWidget {
                   children: [
                     Text(
                       player.attributes.preferredPosition,
-                      style: FuturisticTypography.bodySmall.copyWith(
-                        color: FuturisticColors.textSecondary,
+                      style: PremiumTypography.bodySmall.copyWith(
+                        color: PremiumColors.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -104,7 +104,7 @@ class PlayerCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '${player.gamesPlayed} משחקים',
-                style: FuturisticTypography.labelSmall.copyWith(fontSize: 10),
+                style: PremiumTypography.labelSmall.copyWith(fontSize: 10),
               ),
             ],
           ),
@@ -154,7 +154,7 @@ class PlayerCard extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: FuturisticColors.surface, width: 4),
+                  border: Border.all(color: PremiumColors.surface, width: 4),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.3),
@@ -170,7 +170,7 @@ class PlayerCard extends StatelessWidget {
               // 3. Name & Key Info
               Text(
                 player.name,
-                style: FuturisticTypography.heading2,
+                style: PremiumTypography.heading2,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
@@ -178,23 +178,23 @@ class PlayerCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.sports_soccer,
-                      size: 14, color: FuturisticColors.textSecondary),
+                      size: 14, color: PremiumColors.textSecondary),
                   const SizedBox(width: 4),
                   Text(
                     player.attributes.preferredPosition.toUpperCase(),
-                    style: FuturisticTypography.bodySmall.copyWith(
-                      color: FuturisticColors.primary,
+                    style: PremiumTypography.bodySmall.copyWith(
+                      color: PremiumColors.primary,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.0,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Container(
-                      width: 1, height: 12, color: FuturisticColors.divider),
+                      width: 1, height: 12, color: PremiumColors.divider),
                   const SizedBox(width: 12),
                   Text(
                     'דירוג ${player.currentRankScore.toStringAsFixed(1)}',
-                    style: FuturisticTypography.bodySmall.copyWith(
+                    style: PremiumTypography.bodySmall.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -322,14 +322,14 @@ class PlayerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: FuturisticColors.accent.withOpacity(0.2),
+        color: PremiumColors.accent.withOpacity(0.2),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         'IN FORM',
         style: TextStyle(
             fontSize: 8,
-            color: FuturisticColors.accent,
+            color: PremiumColors.accent,
             fontWeight: FontWeight.bold),
       ),
     );
@@ -357,14 +357,14 @@ class PlayerCard extends StatelessWidget {
       children: [
         Text(
           label,
-          style: FuturisticTypography.labelSmall
-              .copyWith(color: FuturisticColors.textSecondary, fontSize: 10),
+          style: PremiumTypography.labelSmall
+              .copyWith(color: PremiumColors.textSecondary, fontSize: 10),
         ),
         const SizedBox(height: 2),
         Text(
           value,
-          style: FuturisticTypography.heading3.copyWith(
-              fontSize: 16, color: color ?? FuturisticColors.textPrimary),
+          style: PremiumTypography.heading3.copyWith(
+              fontSize: 16, color: color ?? PremiumColors.textPrimary),
         ),
       ],
     );
@@ -376,8 +376,8 @@ class PlayerCard extends StatelessWidget {
         radarTouchData: RadarTouchData(enabled: false),
         dataSets: [
           RadarDataSet(
-            fillColor: FuturisticColors.primary.withOpacity(0.2),
-            borderColor: FuturisticColors.primary,
+            fillColor: PremiumColors.primary.withOpacity(0.2),
+            borderColor: PremiumColors.primary,
             borderWidth: 2,
             entryRadius: 3,
             dataEntries: latestStats!.attributesList
@@ -386,9 +386,9 @@ class PlayerCard extends StatelessWidget {
           ),
         ],
         radarBorderData: BorderSide(
-          color: FuturisticColors.surfaceVariant,
+          color: PremiumColors.surfaceVariant,
         ),
-        titleTextStyle: FuturisticTypography.labelSmall.copyWith(fontSize: 9),
+        titleTextStyle: PremiumTypography.labelSmall.copyWith(fontSize: 9),
         getTitle: (index, angle) {
           final titles = PlayerStats.attributeNames
               .map((e) => e.substring(0, 3).toUpperCase())
@@ -404,7 +404,7 @@ class PlayerCard extends StatelessWidget {
         tickBorderData:
             const BorderSide(color: Colors.transparent), // Cleaner look
         gridBorderData: BorderSide(
-          color: FuturisticColors.divider.withOpacity(0.1),
+          color: PremiumColors.divider.withOpacity(0.1),
         ),
       ),
     );
@@ -428,7 +428,7 @@ class PlayerCard extends StatelessWidget {
                   child: Text(
                     names[i],
                     style:
-                        FuturisticTypography.labelSmall.copyWith(fontSize: 10),
+                        PremiumTypography.labelSmall.copyWith(fontSize: 10),
                   ),
                 ),
                 Expanded(
@@ -455,7 +455,7 @@ class PlayerCard extends StatelessWidget {
                   width: 24,
                   child: Text(
                     attributes[i].toStringAsFixed(1),
-                    style: FuturisticTypography.labelSmall.copyWith(
+                    style: PremiumTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.bold,
                       color: _getAttributeColor(attributes[i]),
                       fontSize: 10,
@@ -496,21 +496,21 @@ class PlayerCard extends StatelessWidget {
       case 3:
         return const Color(0xFFCD7F32); // Bronze
       default:
-        return FuturisticColors.primary;
+        return PremiumColors.primary;
     }
   }
 
   Color _getGradeColor(String grade) {
     if (grade.startsWith('S') || grade.startsWith('A')) {
-      return FuturisticColors.success;
+      return PremiumColors.success;
     }
-    if (grade.startsWith('B')) return FuturisticColors.primary;
+    if (grade.startsWith('B')) return PremiumColors.primary;
     if (grade.startsWith('C')) return Colors.orange;
     return Colors.red;
   }
 
   Color _getAttributeColor(double value) {
-    if (value >= 8.5) return FuturisticColors.success;
+    if (value >= 8.5) return PremiumColors.success;
     if (value >= 7.0) return Colors.lightGreen;
     if (value >= 5.5) return Colors.orange;
     if (value >= 4.0) return Colors.redAccent;

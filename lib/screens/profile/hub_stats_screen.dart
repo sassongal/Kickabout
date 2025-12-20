@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 
 class HubStatsScreen extends ConsumerStatefulWidget {
   final String hubId;
@@ -140,16 +140,16 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const FuturisticScaffold(
+      return const PremiumScaffold(
         title: 'סטטיסטיקות האב',
-        body: FuturisticLoadingState(message: 'מחשב נתונים...'),
+        body: PremiumLoadingState(message: 'מחשב נתונים...'),
       );
     }
 
     if (_error != null || _hub == null) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: 'שגיאה',
-        body: FuturisticEmptyState(
+        body: PremiumEmptyState(
           icon: Icons.error_outline,
           title: 'שגיאה בטעינת נתונים',
           message: _error ?? 'האב לא נמצא',
@@ -163,7 +163,7 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
 
     final stats = _calculateStats();
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: _hub!.name,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -178,23 +178,23 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
                     child: CircleAvatar(
                       radius: 40,
                       backgroundColor:
-                          FuturisticColors.primary.withOpacity(0.2),
+                          PremiumColors.primary.withOpacity(0.2),
                       child: Icon(
                         Icons.group,
                         size: 40,
-                        color: FuturisticColors.primary,
+                        color: PremiumColors.primary,
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'סטטיסטיקות אישיות',
-                    style: FuturisticTypography.heading3,
+                    style: PremiumTypography.heading3,
                   ),
                   Text(
                     _hub!.name,
-                    style: FuturisticTypography.bodyMedium.copyWith(
-                      color: FuturisticColors.textSecondary,
+                    style: PremiumTypography.bodyMedium.copyWith(
+                      color: PremiumColors.textSecondary,
                     ),
                   ),
                 ],
@@ -215,13 +215,13 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
                   'משחקים',
                   stats['gamesPlayed'].toString(),
                   Icons.sports_soccer,
-                  FuturisticColors.primary,
+                  PremiumColors.primary,
                 ),
                 _buildStatCard(
                   'שערים',
                   stats['goals'].toString(),
                   Icons.sports_soccer, // different icon?
-                  FuturisticColors.secondary,
+                  PremiumColors.secondary,
                 ),
                 _buildStatCard(
                   'ניצחונות',
@@ -241,7 +241,7 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
             const SizedBox(height: 16),
 
             // Win Rate Card
-            FuturisticCard(
+            PremiumCard(
               padding: const EdgeInsets.all(20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -251,13 +251,13 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
                     children: [
                       Text(
                         'אחוזי הצלחה',
-                        style: FuturisticTypography.labelLarge,
+                        style: PremiumTypography.labelLarge,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${stats['winRate']}%',
-                        style: FuturisticTypography.heading2.copyWith(
-                          color: FuturisticColors.accent,
+                        style: PremiumTypography.heading2.copyWith(
+                          color: PremiumColors.accent,
                         ),
                       ),
                     ],
@@ -268,7 +268,7 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
                     child: CircularProgressIndicator(
                       value: double.parse(stats['winRate']) / 100,
                       backgroundColor: Colors.white.withOpacity(0.1),
-                      color: FuturisticColors.accent,
+                      color: PremiumColors.accent,
                       strokeWidth: 8,
                     ),
                   ),
@@ -279,7 +279,7 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
             const SizedBox(height: 16),
 
             // Detailed Record
-            FuturisticCard(
+            PremiumCard(
               padding: const EdgeInsets.all(20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -298,7 +298,7 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    return FuturisticCard(
+    return PremiumCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -307,13 +307,13 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: FuturisticTypography.heading2.copyWith(
+            style: PremiumTypography.heading2.copyWith(
               color: color,
             ),
           ),
           Text(
             label,
-            style: FuturisticTypography.labelMedium,
+            style: PremiumTypography.labelMedium,
           ),
         ],
       ),
@@ -325,11 +325,11 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
       children: [
         Text(
           value.toString(),
-          style: FuturisticTypography.heading3.copyWith(color: color),
+          style: PremiumTypography.heading3.copyWith(color: color),
         ),
         Text(
           label,
-          style: FuturisticTypography.labelSmall,
+          style: PremiumTypography.labelSmall,
         ),
       ],
     );

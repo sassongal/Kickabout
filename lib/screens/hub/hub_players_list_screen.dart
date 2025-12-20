@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_member.dart' as models;
@@ -12,8 +12,8 @@ import 'package:kattrick/screens/hub/add_manual_player_dialog.dart';
 import 'package:kattrick/screens/hub/edit_manual_player_dialog.dart';
 import 'package:kattrick/widgets/dialogs/merge_player_dialog.dart';
 import 'package:kattrick/widgets/dialogs/set_player_rating_dialog.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 
@@ -214,21 +214,21 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
     final hubsRepo = ref.watch(hubsRepositoryProvider);
     final usersRepo = ref.watch(usersRepositoryProvider);
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'שחקני ההוב',
       showBackButton: true,
       body: StreamBuilder<Hub?>(
         stream: hubsRepo.watchHub(widget.hubId),
         builder: (context, hubSnapshot) {
           if (hubSnapshot.connectionState == ConnectionState.waiting) {
-            return const FuturisticLoadingState(message: 'טוען שחקנים...');
+            return const PremiumLoadingState(message: 'טוען שחקנים...');
           }
 
           if (!hubSnapshot.hasData || hubSnapshot.data == null) {
             return Center(
               child: Text(
                 'Hub לא נמצא',
-                style: FuturisticTypography.bodyLarge,
+                style: PremiumTypography.bodyLarge,
               ),
             );
           }
@@ -270,17 +270,17 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                   Icon(
                     Icons.people_outline,
                     size: 64,
-                    color: FuturisticColors.textSecondary,
+                    color: PremiumColors.textSecondary,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'אין שחקנים בהוב',
-                    style: FuturisticTypography.heading3,
+                    style: PremiumTypography.heading3,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'הוסף שחקנים כדי להתחיל',
-                    style: FuturisticTypography.bodyMedium,
+                    style: PremiumTypography.bodyMedium,
                   ),
                   if (isHubManager) ...[
                     const SizedBox(height: 24),
@@ -329,12 +329,12 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                       Icon(
                         Icons.error_outline,
                         size: 48,
-                        color: FuturisticColors.error,
+                        color: PremiumColors.error,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'שגיאה בטעינת שחקנים',
-                        style: FuturisticTypography.heading3,
+                        style: PremiumTypography.heading3,
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -342,7 +342,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                           snapshot.error,
                           context: 'Hub players list screen',
                         ),
-                        style: FuturisticTypography.bodySmall,
+                        style: PremiumTypography.bodySmall,
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -395,7 +395,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                           children: [
                             Text(
                               'מיין לפי:',
-                              style: FuturisticTypography.labelMedium,
+                              style: PremiumTypography.labelMedium,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -474,7 +474,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                   : const Icon(Icons.save),
                               label: const Text('שמור דירוגים'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: FuturisticColors.primary,
+                                backgroundColor: PremiumColors.primary,
                                 foregroundColor: Colors.white,
                                 minimumSize: const Size(double.infinity, 48),
                               ),
@@ -498,7 +498,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                             icon: const Icon(Icons.person_add),
                             label: const Text('הוסף שחקן ידנית'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: FuturisticColors.secondary,
+                              backgroundColor: PremiumColors.secondary,
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -561,17 +561,17 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                                 Icon(
                                   Icons.search_off,
                                   size: 64,
-                                  color: FuturisticColors.textSecondary,
+                                  color: PremiumColors.textSecondary,
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
                                   'לא נמצאו שחקנים',
-                                  style: FuturisticTypography.heading3,
+                                  style: PremiumTypography.heading3,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'נסה לשנות את החיפוש',
-                                  style: FuturisticTypography.bodyMedium,
+                                  style: PremiumTypography.bodyMedium,
                                 ),
                               ],
                             ),
@@ -601,7 +601,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
-                                child: FuturisticCard(
+                                child: PremiumCard(
                                   onTap: _isRatingMode
                                       ? null // Disable tap in rating mode
                                       : (isManualPlayer
@@ -680,7 +680,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
           : null,
       leading: CircleAvatar(
         radius: 30,
-        backgroundColor: FuturisticColors.primary.withValues(alpha: 0.1),
+        backgroundColor: PremiumColors.primary.withValues(alpha: 0.1),
         backgroundImage: user.photoUrl != null
             ? CachedNetworkImageProvider(user.photoUrl!)
             : null,
@@ -688,7 +688,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
             ? Icon(
                 Icons.person,
                 size: 30,
-                color: FuturisticColors.primary,
+                color: PremiumColors.primary,
               )
             : null,
       ),
@@ -697,7 +697,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
           Expanded(
             child: Text(
               user.name,
-              style: FuturisticTypography.labelLarge,
+              style: PremiumTypography.labelLarge,
             ),
           ),
           // Social media icons (if enabled and links exist)
@@ -730,12 +730,12 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: FuturisticColors.primary,
+                color: PremiumColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 'מנהל',
-                style: FuturisticTypography.labelSmall.copyWith(
+                style: PremiumTypography.labelSmall.copyWith(
                   color: Colors.white,
                 ),
               ),
@@ -748,12 +748,12 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: FuturisticColors.secondary,
+                color: PremiumColors.secondary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 'יוצר',
-                style: FuturisticTypography.labelSmall.copyWith(
+                style: PremiumTypography.labelSmall.copyWith(
                   color: Colors.white,
                 ),
               ),
@@ -764,7 +764,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
             Icon(
               Icons.edit_note,
               size: 16,
-              color: FuturisticColors.secondary,
+              color: PremiumColors.secondary,
             ),
           ],
         ],
@@ -776,13 +776,13 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
           if (!isManualPlayer)
             Text(
               user.email,
-              style: FuturisticTypography.bodySmall,
+              style: PremiumTypography.bodySmall,
             ),
           if (isManualPlayer)
             Text(
               'שחקן ידני - ללא אפליקציה',
-              style: FuturisticTypography.bodySmall.copyWith(
-                color: FuturisticColors.secondary,
+              style: PremiumTypography.bodySmall.copyWith(
+                color: PremiumColors.secondary,
               ),
             ),
           if (user.city != null) ...[
@@ -792,12 +792,12 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 Icon(
                   Icons.location_on,
                   size: 14,
-                  color: FuturisticColors.textSecondary,
+                  color: PremiumColors.textSecondary,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   user.city!,
-                  style: FuturisticTypography.bodySmall,
+                  style: PremiumTypography.bodySmall,
                 ),
               ],
             ),
@@ -809,12 +809,12 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 Icon(
                   Icons.sports_soccer,
                   size: 14,
-                  color: FuturisticColors.textSecondary,
+                  color: PremiumColors.textSecondary,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   user.preferredPosition,
-                  style: FuturisticTypography.bodySmall,
+                  style: PremiumTypography.bodySmall,
                 ),
               ],
             ),
@@ -827,16 +827,16 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 size: 16,
                 color: (isHubManager && hasManagerRating)
                     ? Colors.orange
-                    : FuturisticColors.warning,
+                    : PremiumColors.warning,
               ),
               const SizedBox(width: 4),
               Text(
                 displayRating.toStringAsFixed(1),
-                style: FuturisticTypography.labelMedium.copyWith(
+                style: PremiumTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,
                   color: (isHubManager && hasManagerRating)
                       ? Colors.orange
-                      : FuturisticColors.warning,
+                      : PremiumColors.warning,
                 ),
               ),
               if (isHubManager && hasManagerRating) ...[
@@ -851,8 +851,8 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 const SizedBox(width: 4),
                 Text(
                   '(גלובלי)',
-                  style: FuturisticTypography.bodySmall.copyWith(
-                    color: FuturisticColors.textSecondary,
+                  style: PremiumTypography.bodySmall.copyWith(
+                    color: PremiumColors.textSecondary,
                   ),
                 ),
               ],
@@ -880,7 +880,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
           : isHubManager
               ? Icon(
                   Icons.chevron_left,
-                  color: FuturisticColors.primary,
+                  color: PremiumColors.primary,
                 )
               : const Icon(Icons.chevron_left),
     );
@@ -897,7 +897,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
               CircleAvatar(
                 radius: 24,
                 backgroundColor:
-                    FuturisticColors.primary.withValues(alpha: 0.1),
+                    PremiumColors.primary.withValues(alpha: 0.1),
                 backgroundImage: user.photoUrl != null
                     ? CachedNetworkImageProvider(user.photoUrl!)
                     : null,
@@ -905,7 +905,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                     ? Icon(
                         Icons.person,
                         size: 24,
-                        color: FuturisticColors.primary,
+                        color: PremiumColors.primary,
                       )
                     : null,
               ),
@@ -916,20 +916,20 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                   children: [
                     Text(
                       user.name,
-                      style: FuturisticTypography.labelLarge,
+                      style: PremiumTypography.labelLarge,
                     ),
                     if (user.preferredPosition.isNotEmpty)
                       Text(
                         user.preferredPosition,
-                        style: FuturisticTypography.bodySmall,
+                        style: PremiumTypography.bodySmall,
                       ),
                   ],
                 ),
               ),
               Text(
                 currentRating.toStringAsFixed(1),
-                style: FuturisticTypography.heading3.copyWith(
-                  color: FuturisticColors.primary,
+                style: PremiumTypography.heading3.copyWith(
+                  color: PremiumColors.primary,
                 ),
               ),
             ],

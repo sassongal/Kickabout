@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/utils/dummy_players_creator.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 
 /// Debug screen to generate dummy players for testing
@@ -99,14 +99,14 @@ class _CreateDummyPlayersScreenState
     final authService = ref.watch(authServiceProvider);
     final currentUser = authService.currentUser;
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'יצירת שחקני דמה',
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FuturisticCard(
+            PremiumCard(
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -115,8 +115,8 @@ class _CreateDummyPlayersScreenState
                     if (currentUser != null) ...[
                       Text(
                         'מחובר כ: ${currentUser.email ?? currentUser.uid}',
-                        style: FuturisticTypography.bodySmall.copyWith(
-                          color: FuturisticColors.accent,
+                        style: PremiumTypography.bodySmall.copyWith(
+                          color: PremiumColors.accent,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -162,7 +162,7 @@ class _CreateDummyPlayersScreenState
                             : const Icon(Icons.add),
                         label: Text(_isRunning ? 'יוצר...' : 'צור שחקני דמה'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: FuturisticColors.primary,
+                          backgroundColor: PremiumColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -172,7 +172,7 @@ class _CreateDummyPlayersScreenState
                       const SizedBox(height: 16),
                       Text(
                         _statusMessage!,
-                        style: FuturisticTypography.bodyMedium,
+                        style: PremiumTypography.bodyMedium,
                       ),
                     ],
                   ],

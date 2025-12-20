@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/models/models.dart';
@@ -6,8 +7,8 @@ import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/services/hub_permissions_service.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/screens/hub/add_manual_player_dialog.dart';
 import 'package:kattrick/screens/hub/edit_manual_player_dialog.dart';
 
@@ -116,7 +117,7 @@ class _HubMembersTabState extends ConsumerState<HubMembersTab> {
         }
 
         if (snapshot.hasError) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת חברים',
             message: ErrorHandlerService().handleException(
@@ -168,7 +169,7 @@ class _HubMembersTabState extends ConsumerState<HubMembersTab> {
           // If member count exists but no users found, show error with more info
           debugPrint(
               '⚠️ Members Tab - memberCount > 0 but no users found. memberCount: ${widget.hub.memberCount}');
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.error_outline,
             title: 'שגיאה בטעינת החברים',
             message:
@@ -185,7 +186,7 @@ class _HubMembersTabState extends ConsumerState<HubMembersTab> {
         }
 
         if (usersToShow.isEmpty && allUsers.isEmpty) {
-          return FuturisticEmptyState(
+          return PremiumEmptyState(
             icon: Icons.people_outline,
             title: 'אין חברים',
             message: 'עדיין אין חברים ב-Hub זה',
@@ -237,7 +238,7 @@ class _HubMembersTabState extends ConsumerState<HubMembersTab> {
                   if (hasMoreToShow && index == usersToShow.length) {
                     return const Padding(
                       padding: EdgeInsets.all(16.0),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(child: KineticLoadingAnimation(size: 24)),
                     );
                   }
 

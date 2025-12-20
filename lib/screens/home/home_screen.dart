@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kattrick/widgets/futuristic/bottom_navigation_bar.dart';
+import 'package:kattrick/widgets/premium/bottom_navigation_bar.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/routing/app_paths.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
 
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,7 +29,7 @@ import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
 import 'package:kattrick/widgets/home/bubble_menu.dart';
 import 'package:kattrick/widgets/home/hubs_carousel.dart';
 
-/// Futuristic Home Dashboard - Figma Design Implementation
+/// Premium Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -83,22 +84,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     if (currentUserId == null) {
       return Scaffold(
-        backgroundColor: FuturisticColors.background,
+        backgroundColor: PremiumColors.background,
         appBar: AppBar(
           title: Image.asset(
             'assets/logo/KattrickLOGO.png',
             height: 40,
             fit: BoxFit.contain,
           ),
-          backgroundColor: FuturisticColors.surface,
-          foregroundColor: FuturisticColors.textPrimary,
+          backgroundColor: PremiumColors.surface,
+          foregroundColor: PremiumColors.textPrimary,
           elevation: 0,
           automaticallyImplyLeading: false,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
             child: Container(
               height: 1,
-              color: FuturisticColors.surfaceVariant,
+              color: PremiumColors.surfaceVariant,
             ),
           ),
         ),
@@ -108,12 +109,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Text(
                 'ברוכים הבאים',
-                style: FuturisticTypography.techHeadline,
+                style: PremiumTypography.techHeadline,
               ),
               const SizedBox(height: 8),
               Text(
                 'התחבר כדי להמשיך',
-                style: FuturisticTypography.bodyMedium,
+                style: PremiumTypography.bodyMedium,
               ),
             ],
           ),
@@ -131,19 +132,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       builder: (context, userSnapshot) {
         if (userSnapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
-            backgroundColor: FuturisticColors.background,
+            backgroundColor: PremiumColors.background,
             appBar:
                 _buildAppBar(context, null, unreadCountStream, currentUserId),
-            body: const FuturisticLoadingState(message: 'טוען...'),
+            body: const PremiumLoadingState(message: 'טוען...'),
           );
         }
 
         if (userSnapshot.hasError) {
           return Scaffold(
-            backgroundColor: FuturisticColors.background,
+            backgroundColor: PremiumColors.background,
             appBar:
                 _buildAppBar(context, null, unreadCountStream, currentUserId),
-            body: FuturisticEmptyState(
+            body: PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת הנתונים',
               message: userSnapshot.error.toString(),
@@ -155,16 +156,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         // Figma design: Custom AppBar with DASHBOARD title, Bell icon, and Avatar
         return Scaffold(
-          backgroundColor: FuturisticColors.background,
+          backgroundColor: PremiumColors.background,
           appBar: _buildAppBar(context, user, unreadCountStream, currentUserId),
-          bottomNavigationBar: FuturisticBottomNavBar(
+          bottomNavigationBar: PremiumBottomNavBar(
             currentRoute: GoRouterState.of(context).uri.toString(),
           ),
           body: Stack(
             children: [
               Container(
                 decoration: const BoxDecoration(
-                  gradient: FuturisticColors.backgroundGradient,
+                  gradient: PremiumColors.backgroundGradient,
                 ),
                 child: RefreshIndicator(
                   onRefresh: () async {
@@ -191,7 +192,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: FuturisticColors.primary,
+                                color: PremiumColors.primary,
                                 decoration: TextDecoration.underline,
                               ),
                             ),
@@ -211,18 +212,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             gamificationStream: gamificationStream,
                             onPerformanceTap: () => context
                                 .push('/profile/$currentUserId/performance'),
-                            performanceSnippet: Row(
-                              children: [
-                                const Icon(Icons.analytics_outlined,
-                                    size: 16, color: Colors.orange),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'משחקים: ${user.gamesPlayed} | השתתפויות: ${user.totalParticipations}',
-                                  style: GoogleFonts.inter(
-                                      fontSize: 12, color: Colors.orange[800]),
-                                ),
-                              ],
-                            ),
                             onAvailabilityChanged: (value) async {
                               // currentUserId is guaranteed to be non-null here (checked at line 48)
                               if (!context.mounted) return;
@@ -281,7 +270,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
                               return const Center(
-                                  child: CircularProgressIndicator());
+                                  child: KineticLoadingAnimation(size: 40));
                             }
 
                             final hubs = snapshot.data ?? [];
@@ -325,14 +314,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         ...games.take(2).map((game) => Padding(
                                               padding: const EdgeInsets.only(
                                                   bottom: 12),
-                                              child: FuturisticCard(
+                                              child: PremiumCard(
                                                 onTap: () => context.push(
                                                     '/games/${game.gameId}'),
                                                 child: Row(
                                                   children: [
                                                     Icon(
                                                       Icons.calendar_today,
-                                                      color: FuturisticColors
+                                                      color: PremiumColors
                                                           .primary,
                                                       size: 20,
                                                     ),
@@ -379,7 +368,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                           horizontal: 12,
                                                           vertical: 6),
                                                       decoration: BoxDecoration(
-                                                        color: FuturisticColors
+                                                        color: PremiumColors
                                                             .secondary,
                                                         borderRadius:
                                                             BorderRadius
@@ -471,7 +460,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 16),
                                     side: BorderSide(
-                                        color: FuturisticColors.textSecondary
+                                        color: PremiumColors.textSecondary
                                             .withValues(alpha: 0.3)),
                                   ),
                                 ),
@@ -489,7 +478,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 16),
                                     side: BorderSide(
-                                        color: FuturisticColors.textSecondary
+                                        color: PremiumColors.textSecondary
                                             .withValues(alpha: 0.3)),
                                   ),
                                 ),
@@ -517,7 +506,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CircularProgressIndicator(),
+        child: KineticLoadingAnimation(size: 60),
       ),
     );
 
@@ -575,23 +564,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: FuturisticColors.surface,
+        backgroundColor: PremiumColors.surface,
         title: Text(
           'התנתקות',
-          style: FuturisticTypography.heading3.copyWith(
-            color: FuturisticColors.textPrimary,
+          style: PremiumTypography.heading3.copyWith(
+            color: PremiumColors.textPrimary,
           ),
         ),
         content: Text(
           'האם אתה בטוח שברצונך להתנתק?',
-          style: FuturisticTypography.bodyMedium.copyWith(
-            color: FuturisticColors.textSecondary,
+          style: PremiumTypography.bodyMedium.copyWith(
+            color: PremiumColors.textSecondary,
           ),
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: FuturisticColors.surfaceVariant,
+            color: PremiumColors.surfaceVariant,
             width: 1,
           ),
         ),
@@ -600,15 +589,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
               'ביטול',
-              style: FuturisticTypography.labelLarge.copyWith(
-                color: FuturisticColors.textSecondary,
+              style: PremiumTypography.labelLarge.copyWith(
+                color: PremiumColors.textSecondary,
               ),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: FuturisticColors.error,
+              backgroundColor: PremiumColors.error,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -616,7 +605,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             child: Text(
               'התנתק',
-              style: FuturisticTypography.labelLarge,
+              style: PremiumTypography.labelLarge,
             ),
           ),
         ],
@@ -662,15 +651,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         height: 40,
         fit: BoxFit.contain,
       ),
-      backgroundColor: FuturisticColors.surface,
-      foregroundColor: FuturisticColors.textPrimary,
+      backgroundColor: PremiumColors.surface,
+      foregroundColor: PremiumColors.textPrimary,
       elevation: 0,
       automaticallyImplyLeading: false,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(
           height: 1,
-          color: FuturisticColors.surfaceVariant,
+          color: PremiumColors.surfaceVariant,
         ),
       ),
       actions: [
@@ -679,7 +668,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           icon: const Icon(Icons.inbox_outlined),
           onPressed: () => context.push('/messages'),
           tooltip: 'הודעות',
-          color: FuturisticColors.textSecondary,
+          color: PremiumColors.textSecondary,
         ),
         // Stopwatch/Countdown Timer
         const StopwatchCountdownWidget(),
@@ -688,14 +677,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           icon: const Icon(Icons.explore_outlined),
           onPressed: () => context.push('/discover'),
           tooltip: 'גלה הובים',
-          color: FuturisticColors.textSecondary,
+          color: PremiumColors.textSecondary,
         ),
         // Leaderboard icon
         IconButton(
           icon: const Icon(Icons.emoji_events_outlined),
           onPressed: () => context.push('/leaderboard'),
           tooltip: 'שולחן מובילים',
-          color: FuturisticColors.textSecondary,
+          color: PremiumColors.textSecondary,
         ),
         // Notifications icon with badge
         StreamBuilder<int>(
@@ -708,7 +697,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   icon: const Icon(Icons.notifications_outlined),
                   onPressed: () => context.push('/notifications'),
                   tooltip: 'התראות',
-                  color: FuturisticColors.textSecondary,
+                  color: PremiumColors.textSecondary,
                 ),
                 if (count > 0)
                   Positioned(
@@ -718,7 +707,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       width: 8,
                       height: 8,
                       decoration: const BoxDecoration(
-                        color: FuturisticColors.error,
+                        color: PremiumColors.error,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -735,18 +724,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
-                color: FuturisticColors.surfaceVariant,
+                color: PremiumColors.surfaceVariant,
                 width: 1,
               ),
             ),
-            color: FuturisticColors.surface,
+            color: PremiumColors.surface,
             child: Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: FuturisticColors.primary, // solid color for visibility
+                  color: PremiumColors.primary, // solid color for visibility
                   width: 2,
                 ),
               ),
@@ -757,7 +746,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       clickable: false,
                     )
                   : const Icon(Icons.person,
-                      color: FuturisticColors.textPrimary),
+                      color: PremiumColors.textPrimary),
             ),
             onSelected: (value) {
               switch (value) {
@@ -779,14 +768,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Icon(
                       Icons.person,
-                      color: FuturisticColors.textPrimary,
+                      color: PremiumColors.textPrimary,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'הפרופיל שלי',
-                      style: FuturisticTypography.labelLarge.copyWith(
-                        color: FuturisticColors.textPrimary,
+                      style: PremiumTypography.labelLarge.copyWith(
+                        color: PremiumColors.textPrimary,
                       ),
                     ),
                   ],
@@ -798,14 +787,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Icon(
                       Icons.settings,
-                      color: FuturisticColors.textPrimary,
+                      color: PremiumColors.textPrimary,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'הגדרות',
-                      style: FuturisticTypography.labelLarge.copyWith(
-                        color: FuturisticColors.textPrimary,
+                      style: PremiumTypography.labelLarge.copyWith(
+                        color: PremiumColors.textPrimary,
                       ),
                     ),
                   ],
@@ -818,14 +807,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Icon(
                       Icons.logout,
-                      color: FuturisticColors.error,
+                      color: PremiumColors.error,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'התנתק',
-                      style: FuturisticTypography.labelLarge.copyWith(
-                        color: FuturisticColors.error,
+                      style: PremiumTypography.labelLarge.copyWith(
+                        color: PremiumColors.error,
                       ),
                     ),
                   ],
@@ -871,7 +860,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           return const SizedBox.shrink();
         }
 
-        return FuturisticCard(
+        return PremiumCard(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -941,7 +930,7 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
         final temp = data['temperature'] as int?;
         final aqi = data['aqiIndex'] as int?;
 
-        return FuturisticCard(
+        return PremiumCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           onTap: () => context.push(AppPaths.weatherDetail),
           child: Row(
@@ -953,7 +942,7 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                 child: Text(
                   vibeMessage,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: FuturisticColors.textPrimary,
+                        color: PremiumColors.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                   overflow: TextOverflow.ellipsis,
@@ -970,13 +959,13 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                     Icon(
                       Icons.thermostat,
                       size: 16,
-                      color: FuturisticColors.primary.withValues(alpha: 0.8),
+                      color: PremiumColors.primary.withValues(alpha: 0.8),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '$temp°',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: FuturisticColors.textSecondary,
+                            color: PremiumColors.textSecondary,
                           ),
                     ),
                     const SizedBox(width: 12),
@@ -986,13 +975,13 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
                     Icon(
                       Icons.air,
                       size: 16,
-                      color: FuturisticColors.secondary.withValues(alpha: 0.8),
+                      color: PremiumColors.secondary.withValues(alpha: 0.8),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '$aqi',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: FuturisticColors.textSecondary,
+                            color: PremiumColors.textSecondary,
                           ),
                     ),
                   ],
@@ -1003,7 +992,7 @@ class HomeWeatherVibeWidget extends ConsumerWidget {
         );
       },
       loading: () => const SkeletonLoader(height: 100),
-      error: (err, stack) => FuturisticEmptyState(
+      error: (err, stack) => PremiumEmptyState(
         icon: Icons.cloud_off,
         title: 'שגיאה בטעינת נתוני מזג אוויר',
         message: 'לא ניתן לטעון את נתוני מזג האוויר כרגע',
@@ -1236,15 +1225,15 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
 
     if (_isGpsMode) {
       icon = Icons.gps_fixed;
-      iconColor = FuturisticColors.primary;
+      iconColor = PremiumColors.primary;
       tooltip = 'GPS פעיל - לחץ לניהול';
     } else if (_isManualMode) {
       icon = Icons.edit_location;
-      iconColor = FuturisticColors.secondary;
+      iconColor = PremiumColors.secondary;
       tooltip = 'מיקום ידני - לחץ לניהול';
     } else {
       icon = Icons.location_off;
-      iconColor = FuturisticColors.textSecondary;
+      iconColor = PremiumColors.textSecondary;
       tooltip = 'מיקום מושבת - לחץ להפעיל';
     }
 
@@ -1261,7 +1250,6 @@ class _ProfileSummaryCard extends StatelessWidget {
   final String currentUserId;
   final Stream<Gamification?> gamificationStream;
   final VoidCallback onPerformanceTap;
-  final Widget? performanceSnippet;
   final Future<void> Function(bool) onAvailabilityChanged;
 
   const _ProfileSummaryCard({
@@ -1269,29 +1257,55 @@ class _ProfileSummaryCard extends StatelessWidget {
     required this.currentUserId,
     required this.gamificationStream,
     required this.onPerformanceTap,
-    this.performanceSnippet,
     required this.onAvailabilityChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticCard(
+    return PremiumCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: FuturisticColors.primaryGradient,
-                ),
-                padding: const EdgeInsets.all(4),
-                child: PlayerAvatar(
-                  user: user,
-                  size: AvatarSize.lg,
+              GestureDetector(
+                onTap: () => _showAvatarPicker(context, user, currentUserId),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: PremiumColors.primaryGradient,
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: PlayerAvatar(
+                        user: user,
+                        size: AvatarSize.lg,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: PremiumColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 16),
@@ -1308,18 +1322,12 @@ class _ProfileSummaryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _InlineStatsRow(
-                      gamificationStream: gamificationStream,
-                    ),
                     if (user.city != null && user.city!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          user.city!,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: const Color(0xFF757575),
-                          ),
+                      Text(
+                        user.city!,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: const Color(0xFF757575),
                         ),
                       ),
                   ],
@@ -1358,82 +1366,13 @@ class _ProfileSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          if (performanceSnippet != null) ...[
-            const SizedBox(height: 8),
-            performanceSnippet!,
-          ],
         ],
       ),
     );
   }
-}
 
-class _InlineStatsRow extends StatelessWidget {
-  final Stream<Gamification?> gamificationStream;
-
-  const _InlineStatsRow({
-    required this.gamificationStream,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<Gamification?>(
-      stream: gamificationStream,
-      builder: (context, snapshot) {
-        final stats = snapshot.data?.stats ?? {};
-        return Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: [
-            _statBubble(
-              label: 'משחקים',
-              value: (stats['gamesPlayed'] ?? 0).toString(),
-              color: FuturisticColors.primary,
-            ),
-            _statBubble(
-              label: 'ניצחונות',
-              value: (stats['gamesWon'] ?? 0).toString(),
-              color: Colors.green,
-            ),
-            _statBubble(
-              label: 'שערים',
-              value: (stats['goals'] ?? 0).toString(),
-              color: Colors.orange,
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _statBubble({
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: FuturisticTypography.labelMedium
-                .copyWith(color: color, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: FuturisticTypography.labelSmall
-                .copyWith(color: color.withValues(alpha: 0.8)),
-          ),
-        ],
-      ),
-    );
+  void _showAvatarPicker(BuildContext context, User user, String userId) {
+    // Navigate to edit profile screen to change avatar
+    context.push('/profile/$userId/edit');
   }
 }

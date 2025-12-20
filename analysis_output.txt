@@ -1,75 +1,15 @@
 Analyzing kickabout...                                          
 
-warning • Unused import: 'package:kattrick/models/hub_role.dart' • lib/data/games_repository.dart:9:8 • unused_import
-warning • Unused import: 'package:kattrick/data/users_repository.dart' • lib/data/games_repository.dart:16:8 • unused_import
-warning • Unused import: 'package:kattrick/data/signups_repository.dart' • lib/data/games_repository.dart:17:8 • unused_import
-warning • Unused import: 'package:kattrick/data/chat_repository.dart' • lib/data/games_repository.dart:18:8 • unused_import
-   info • Use interpolation to compose strings and values • lib/data/games_repository.dart:117:41 • prefer_interpolation_to_compose_strings
-  error • The method 'toJson' isn't defined for the type 'Game' • lib/data/games_repository.dart:181:25 • undefined_method
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/data/games_repository.dart:311:20 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/data/games_repository.dart:311:53 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/data/games_repository.dart:383:26 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/data/games_repository.dart:384:26 • undefined_getter
    info • 'updateGamification' is deprecated and shouldn't be used. Use Cloud Function onGameCompleted instead • lib/data/gamification_repository.dart:32:21 • deprecated_member_use_from_same_package
-   info • The type of the right operand ('String') isn't a subtype or a supertype of the left operand ('HubMemberStatus') • lib/data/hubs_repository.dart:618:44 • unrelated_type_equality_checks
-   info • Use 'isNotEmpty' instead of 'length' to test whether the collection is empty • lib/data/hubs_repository.dart:783:27 • prefer_is_empty
    info • 'PollsRepositoryRef' is deprecated and shouldn't be used. Will be removed in 3.0. Use Ref instead • lib/data/polls_repository.dart:12:33 • deprecated_member_use_from_same_package
    info • Don't invoke 'print' in production code • lib/l10n/fix_arb_metadata.dart:10:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/l10n/fix_arb_metadata.dart:17:7 • avoid_print
    info • Don't invoke 'print' in production code • lib/l10n/fix_arb_metadata.dart:21:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/l10n/fix_arb_metadata.dart:44:5 • avoid_print
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/logic/session_logic.dart:68:14 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/logic/session_logic.dart:79:14 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/logic/session_logic.dart:135:30 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/logic/session_logic.dart:164:14 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/logic/session_logic.dart:199:30 • undefined_getter
-  error • A value of type 'double' can't be assigned to a variable of type 'int' • lib/logic/session_logic.dart:210:25 • invalid_assignment
-  error • A value of type 'double' can't be assigned to a variable of type 'int' • lib/logic/session_logic.dart:211:29 • invalid_assignment
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/logic/session_logic.dart:244:30 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/logic/session_logic.dart:289:14 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/logic/session_logic.dart:316:14 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/logic/session_logic.dart:321:14 • undefined_getter
    info • Angle brackets will be interpreted as HTML • lib/models/converters/timestamp_map_converter.dart:5:17 • unintended_html_in_doc_comment
    info • Angle brackets will be interpreted as HTML • lib/models/converters/timestamp_map_converter.dart:5:48 • unintended_html_in_doc_comment
-  error • Target of URI hasn't been generated: 'package:kattrick/models/game.g.dart' • lib/models/game.dart:14:6 • uri_has_not_been_generated
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:84:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:86:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:88:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:90:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:92:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:94:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:96:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:98:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:100:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:103:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:106:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:108:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:119:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:121:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:123:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:125:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/models/game.dart:135:9 • curly_braces_in_flow_control_structures
-  error • The method '_$GameFromJson' isn't defined for the type 'Game' • lib/models/game.dart:144:12 • undefined_method
-  error • The method 'toJson' isn't defined for the type 'Game' • lib/models/game.dart:159:19 • undefined_method
-warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/models/game_session.dart:13:6 • invalid_annotation_target
-warning • The annotation 'JsonKey.new' can only be used on fields or getters • lib/models/game_session.dart:14:6 • invalid_annotation_target
    info • Angle brackets will be interpreted as HTML • lib/models/targeting_criteria.dart:24:17 • unintended_html_in_doc_comment
    info • Angle brackets will be interpreted as HTML • lib/models/team.dart:33:33 • unintended_html_in_doc_comment
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:427:22 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:427:55 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:432:29 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:449:29 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:457:22 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:457:55 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:492:22 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:492:48 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:505:26 • undefined_getter
-  error • The getter 'goalScorerNames' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:541:22 • undefined_getter
-  error • The getter 'goalScorerNames' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:545:32 • undefined_getter
-  error • The getter 'mvpPlayerName' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:566:22 • undefined_getter
-  error • The getter 'mvpPlayerName' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:566:52 • undefined_getter
-  error • The getter 'mvpPlayerName' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:580:48 • undefined_getter
-  error • The getter 'mvpPlayerName' isn't defined for the type 'Game' • lib/screens/activity/community_activity_feed_screen.dart:583:36 • undefined_getter
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/admin/admin_dashboard_screen.dart:149:39 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/admin/admin_dashboard_screen.dart:163:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/admin/admin_dashboard_screen.dart:210:60 • deprecated_member_use
@@ -79,102 +19,51 @@ warning • The annotation 'JsonKey.new' can only be used on fields or getters �
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/auth_screen.dart:245:51 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/auth_screen.dart:252:51 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/auth_screen.dart:262:53 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/register_screen.dart:301:44 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/register_screen.dart:302:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/register_screen.dart:302:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/register_screen.dart:303:46 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/community/community_screen.dart:160:42 • deprecated_member_use
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/screens/community/community_screen.dart:228:26 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/community/community_screen.dart:246:26 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/screens/event/game_session_screen.dart:331:34 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/screens/event/game_session_screen.dart:333:46 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/screens/event/game_session_screen.dart:335:36 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/screens/event/game_session_screen.dart:507:24 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/screens/event/game_session_screen.dart:515:51 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/screens/event/game_session_screen.dart:521:33 • undefined_getter
-   info • The 'if' statement could be replaced by a null-aware assignment • lib/screens/event/game_session_screen.dart:675:30 • prefer_conditional_assignment
-warning • The operand can't be 'null', so the condition is always 'true' • lib/screens/event/team_generator_config_screen.dart:81:34 • unnecessary_null_comparison
-warning • The '!' will have no effect because the receiver can't be null • lib/screens/event/team_generator_config_screen.dart:82:63 • unnecessary_non_null_assertion
-  error • The named parameter 'matches' isn't defined • lib/screens/event/team_generator_result_screen.dart:197:9 • undefined_named_parameter
-  error • The named parameter 'aggregateWins' isn't defined • lib/screens/event/team_generator_result_screen.dart:198:9 • undefined_named_parameter
-  error • The getter 'maxParticipants' isn't defined for the type 'Game' • lib/screens/game/attendance_monitoring_screen.dart:67:39 • undefined_getter
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/screens/game/attendance_monitoring_screen.dart:83:36 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/game/attendance_monitoring_screen.dart:94:38 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/game/attendance_monitoring_screen.dart:100:61 • undefined_getter
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/attendance_monitoring_screen.dart:137:42 • deprecated_member_use
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/screens/game/confirm_attendance_screen.dart:185:32 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/game/confirm_attendance_screen.dart:196:34 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/game/confirm_attendance_screen.dart:202:57 • undefined_getter
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/confirm_attendance_screen.dart:218:42 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/confirm_attendance_screen.dart:219:43 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/confirm_attendance_screen.dart:292:42 • deprecated_member_use
-warning • Unused import: 'package:kattrick/screens/location/map_picker_screen.dart' • lib/screens/game/create_game_screen.dart:12:8 • unused_import
-   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/game/create_game_screen.dart:528:25 • deprecated_member_use
-   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/game/create_game_screen.dart:835:25 • deprecated_member_use
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1020:18 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1020:45 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1022:23 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1022:56 • undefined_getter
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/game/game_detail_screen.dart:1531:54 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/game/game_detail_screen.dart:1534:9 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/game/game_detail_screen.dart:1566:30 • use_build_context_synchronously
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1891:22 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1894:30 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1915:29 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/game/game_detail_screen.dart:1916:29 • undefined_getter
-   info • Don't use 'BuildContext's across async gaps • lib/screens/game/team_maker_screen.dart:133:23 • use_build_context_synchronously
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/team_maker_screen.dart:386:37 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/team_maker_screen.dart:456:49 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/team_maker_screen.dart:571:54 • deprecated_member_use
-   info • Statements in an if should be enclosed in a block • lib/screens/home_screen_futuristic_figma.dart:285:31 • curly_braces_in_flow_control_structures
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/home_screen_futuristic_figma.dart:639:9 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/home_screen_futuristic_figma.dart:644:7 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/home_screen_futuristic_figma.dart:649:9 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps • lib/screens/home_screen_futuristic_figma.dart:1069:11 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps • lib/screens/home_screen_futuristic_figma.dart:1107:11 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps • lib/screens/home_screen_futuristic_figma.dart:1137:13 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps • lib/screens/home_screen_futuristic_figma.dart:1191:36 • use_build_context_synchronously
-warning • Unused import: 'package:kattrick/services/hub_permissions_service.dart' • lib/screens/hub/create_hub_event_screen.dart:8:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/attendance_monitoring_screen.dart:139:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/confirm_attendance_screen.dart:219:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/confirm_attendance_screen.dart:220:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/confirm_attendance_screen.dart:293:42 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/game/game_detail_screen.dart:1538:54 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/game/game_detail_screen.dart:1541:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/game/game_detail_screen.dart:1573:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/game/team_maker_screen.dart:134:23 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/team_maker_screen.dart:388:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/team_maker_screen.dart:454:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/game/team_maker_screen.dart:569:51 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/home/home_screen.dart:638:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/home/home_screen.dart:643:7 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/home/home_screen.dart:648:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/home/home_screen.dart:1064:11 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/home/home_screen.dart:1102:11 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/home/home_screen.dart:1132:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/home/home_screen.dart:1186:36 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps • lib/screens/hub/create_hub_event_screen.dart:206:32 • use_build_context_synchronously
-   info • Unnecessary braces in a string interpolation • lib/screens/hub/create_hub_screen.dart:107:30 • unnecessary_brace_in_string_interps
-   info • Unnecessary braces in a string interpolation • lib/screens/hub/create_hub_screen.dart:111:62 • unnecessary_brace_in_string_interps
-   info • Unnecessary braces in a string interpolation • lib/screens/hub/create_hub_screen.dart:118:58 • unnecessary_brace_in_string_interps
    info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/create_poll_screen.dart:246:23 • deprecated_member_use
    info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/create_poll_screen.dart:247:23 • deprecated_member_use
    info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/create_poll_screen.dart:255:23 • deprecated_member_use
    info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/create_poll_screen.dart:256:23 • deprecated_member_use
    info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/create_poll_screen.dart:264:23 • deprecated_member_use
    info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/create_poll_screen.dart:265:23 • deprecated_member_use
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/hub/edit_game_screen.dart:119:45 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/hub/edit_game_screen.dart:120:45 • undefined_getter
    info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:232:34 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:236:32 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:253:34 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:260:34 • use_build_context_synchronously
-   info • Statements in an if should be enclosed in a block • lib/screens/hub/edit_hub_event_screen.dart:323:19 • curly_braces_in_flow_control_structures
-   info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:406:32 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:418:34 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:422:32 • use_build_context_synchronously
-  error • A value of type 'double' can't be assigned to a variable of type 'int' • lib/screens/hub/hub_analytics_screen.dart:109:34 • invalid_assignment
-  error • The getter 'confirmedPlayerIds' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:109:39 • undefined_getter
-  error • The getter 'goalScorerIds' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:126:35 • undefined_getter
-  error • The getter 'mvpPlayerId' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:131:16 • undefined_getter
-  error • The getter 'mvpPlayerId' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:132:23 • undefined_getter
-  error • The getter 'mvpPlayerId' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:132:54 • undefined_getter
-  error • The getter 'confirmedPlayerIds' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:136:35 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:165:14 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:165:47 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:167:25 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/hub/hub_analytics_screen.dart:168:25 • undefined_getter
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_analytics_screen.dart:351:26 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_analytics_screen.dart:417:59 • deprecated_member_use
-   info • Statements in an if should be enclosed in a block • lib/screens/hub/hub_analytics_screen.dart:577:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/screens/hub/hub_analytics_screen.dart:581:9 • curly_braces_in_flow_control_structures
-   info • Statements in an if should be enclosed in a block • lib/screens/hub/hub_analytics_screen.dart:582:70 • curly_braces_in_flow_control_structures
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_events_tab.dart:388:41 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_events_tab.dart:450:65 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:407:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:419:34 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/hub/edit_hub_event_screen.dart:423:32 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_analytics_screen.dart:355:26 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_analytics_screen.dart:421:56 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/screens/hub/hub_analytics_screen.dart:585:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/screens/hub/hub_analytics_screen.dart:586:70 • curly_braces_in_flow_control_structures
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_events_tab.dart:389:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_events_tab.dart:451:65 • use_build_context_synchronously
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_insights_screen.dart:173:26 • deprecated_member_use
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_invitations_screen.dart:194:34 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_invitations_screen.dart:206:34 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_invitations_screen.dart:209:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_invitations_screen.dart:202:34 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_invitations_screen.dart:214:34 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_invitations_screen.dart:217:32 • use_build_context_synchronously
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_manage_requests_screen.dart:548:39 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_manage_requests_screen.dart:552:43 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_manage_requests_screen.dart:624:53 • deprecated_member_use
@@ -182,58 +71,35 @@ warning • Unused import: 'package:kattrick/services/hub_permissions_service.da
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_manage_requests_screen.dart:688:38 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_manage_requests_screen.dart:690:57 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/hub/hub_manage_requests_screen.dart:774:53 • deprecated_member_use
-   info • The private field _tempRatings could be 'final' • lib/screens/hub/hub_players_list_screen.dart:54:23 • prefer_final_fields
    info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_players_list_screen.dart:534:72 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:661:7 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:677:21 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:679:34 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:683:9 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:687:21 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:689:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:682:7 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:698:21 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:700:34 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:704:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:708:21 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/hub/hub_settings_screen.dart:710:9 • use_build_context_synchronously
+   info • 'getAllHubs' is deprecated and shouldn't be used. Use getHubsPaginated instead for better performance and pagination support • lib/screens/hub/join_by_invite_screen.dart:41:38 • deprecated_member_use_from_same_package
    info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/poll_detail_screen.dart:103:15 • deprecated_member_use
    info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/screens/hub/poll_detail_screen.dart:105:15 • deprecated_member_use
-   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/hub/scouting_screen.dart:173:15 • deprecated_member_use
-   info • The import of 'package:kattrick/models/venue.dart' is unnecessary because all of the used elements are also provided by the import of 'package:kattrick/models/models.dart' • lib/screens/location/map_screen.dart:13:8 • unnecessary_import
-   info • 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead • lib/screens/location/map_screen.dart:113:26 • deprecated_member_use
-   info • 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead • lib/screens/location/map_screen.dart:117:26 • deprecated_member_use
-   info • 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead • lib/screens/location/map_screen.dart:121:26 • deprecated_member_use
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/location/map_screen.dart:853:21 • use_build_context_synchronously
-   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/location/map_screen.dart:859:42 • use_build_context_synchronously
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/location/map_screen.dart:1561:47 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/location/map_screen.dart:1575:47 • deprecated_member_use
-   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/players/players_list_screen.dart:723:21 • deprecated_member_use
+   info • 'getAllHubs' is deprecated and shouldn't be used. Use getHubsPaginated instead for better performance and pagination support • lib/screens/hubs/hubs_board_screen.dart:543:31 • deprecated_member_use_from_same_package
+   info • 'getAllHubs' is deprecated and shouldn't be used. Use getHubsPaginated instead for better performance and pagination support • lib/screens/location/discover_hubs_screen.dart:83:38 • deprecated_member_use_from_same_package
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/location/map_screen.dart:703:21 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/location/map_screen.dart:709:42 • use_build_context_synchronously
    info • 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead • lib/screens/players/players_map_screen.dart:41:50 • deprecated_member_use
    info • Don't use 'BuildContext's across async gaps • lib/screens/profile/blocked_users_screen.dart:48:34 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/profile/edit_profile_screen.dart:334:31 • use_build_context_synchronously
-  error • A value of type 'double' can't be assigned to a variable of type 'int' • lib/screens/profile/hub_stats_screen.dart:84:16 • invalid_assignment
-  error • The getter 'goalScorerIds' isn't defined for the type 'Game' • lib/screens/profile/hub_stats_screen.dart:84:21 • undefined_getter
-  error • The getter 'mvpPlayerId' isn't defined for the type 'Game' • lib/screens/profile/hub_stats_screen.dart:87:16 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/screens/profile/hub_stats_screen.dart:92:31 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/screens/profile/hub_stats_screen.dart:93:31 • undefined_getter
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/hub_stats_screen.dart:179:52 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/hub_stats_screen.dart:268:53 • deprecated_member_use
-   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/profile/notification_settings_screen.dart:367:7 • deprecated_member_use
-  error • The getter 'confirmedPlayerIds' isn't defined for the type 'Game' • lib/screens/profile/performance_breakdown_screen.dart:44:29 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/screens/profile/performance_breakdown_screen.dart:66:38 • undefined_getter
-  error • A value of type 'double' can't be assigned to a variable of type 'int' • lib/screens/profile/performance_breakdown_screen.dart:69:19 • invalid_assignment
-  error • A value of type 'double' can't be assigned to a variable of type 'int' • lib/screens/profile/performance_breakdown_screen.dart:71:19 • invalid_assignment
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/performance_breakdown_screen.dart:324:22 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/performance_breakdown_screen.dart:326:41 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/performance_breakdown_screen.dart:343:28 • deprecated_member_use
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/screens/profile/player_profile_screen_futuristic.dart:1053:32 • undefined_getter
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/screens/profile/player_profile_screen_futuristic.dart:1073:30 • undefined_getter
-   info • 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre • lib/screens/profile/profile_setup_wizard.dart:213:47 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:213:62 • deprecated_member_use
-   info • 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre • lib/screens/profile/profile_setup_wizard.dart:241:47 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:241:62 • deprecated_member_use
-   info • 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre • lib/screens/profile/profile_setup_wizard.dart:269:47 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:269:62 • deprecated_member_use
-   info • 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre • lib/screens/profile/profile_setup_wizard.dart:297:47 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:297:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/hub_stats_screen.dart:181:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/hub_stats_screen.dart:270:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/performance_breakdown_screen.dart:330:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/performance_breakdown_screen.dart:332:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/performance_breakdown_screen.dart:349:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:213:71 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:241:71 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:269:71 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:297:71 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:392:42 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:396:34 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/profile/profile_setup_wizard.dart:406:44 • deprecated_member_use
-   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/social/create_recruiting_post_screen.dart:289:17 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/social/feed_screen.dart:152:52 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/social/feed_screen.dart:153:54 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/stopwatch/advanced_stopwatch_screen.dart:251:41 • deprecated_member_use
@@ -245,11 +111,7 @@ warning • Unused import: 'package:kattrick/services/hub_permissions_service.da
    info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/venue/venue_search_screen.dart:236:44 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/venue/venue_search_screen.dart:237:17 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/venue/venue_search_screen.dart:240:42 • use_build_context_synchronously
-   info • 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead • lib/screens/venues/discover_venues_screen.dart:67:26 • deprecated_member_use
-   info • 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead • lib/screens/venues/discover_venues_screen.dart:71:26 • deprecated_member_use
-   info • 'fromAssetImage' is deprecated and shouldn't be used. Use BitmapDescriptor.asset method instead • lib/screens/venues/discover_venues_screen.dart:75:26 • deprecated_member_use
    info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:399:5 • avoid_print
-  error • The method 'toJson' isn't defined for the type 'Game' • lib/scripts/generate_dummy_data.dart:503:63 • undefined_method
    info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:566:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:682:7 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:726:5 • avoid_print
@@ -264,17 +126,12 @@ warning • Unused import: 'package:kattrick/services/hub_permissions_service.da
    info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:804:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:881:7 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:886:5 • avoid_print
-  error • The named parameter 'legacyTeamAScore' isn't defined • lib/scripts/generate_dummy_data.dart:934:11 • undefined_named_parameter
-  error • The named parameter 'legacyTeamBScore' isn't defined • lib/scripts/generate_dummy_data.dart:935:11 • undefined_named_parameter
-  error • The method 'toJson' isn't defined for the type 'Game' • lib/scripts/generate_dummy_data.dart:939:67 • undefined_method
-warning • The value of the local variable 'ageGroups' isn't used • lib/scripts/generate_dummy_data.dart:1233:11 • unused_local_variable
-   info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:1434:5 • avoid_print
-   info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:1565:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:1435:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/scripts/generate_dummy_data.dart:1566:5 • avoid_print
    info • Angle brackets will be interpreted as HTML • lib/scripts/migrate_hub_memberships.dart:7:29 • unintended_html_in_doc_comment
    info • Angle brackets will be interpreted as HTML • lib/scripts/migrate_hub_memberships.dart:8:19 • unintended_html_in_doc_comment
    info • Angle brackets will be interpreted as HTML • lib/scripts/migrate_hub_memberships.dart:9:28 • unintended_html_in_doc_comment
    info • Angle brackets will be interpreted as HTML • lib/scripts/migrate_hub_memberships.dart:10:28 • unintended_html_in_doc_comment
-   info • Library names are not necessary • lib/scripts/migrate_hub_memberships.dart:26:9 • unnecessary_library_name
    info • Don't invoke 'print' in production code • lib/scripts/migrate_hub_memberships.dart:79:3 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_hub_memberships.dart:80:3 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_hub_memberships.dart:81:3 • avoid_print
@@ -307,7 +164,6 @@ warning • The value of the local variable 'ageGroups' isn't used • lib/scrip
    info • Don't invoke 'print' in production code • lib/scripts/migrate_hub_memberships.dart:358:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_hub_memberships.dart:362:3 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_hub_memberships.dart:390:5 • avoid_print
-   info • Library names are not necessary • lib/scripts/migrate_ratings_to_7_scale.dart:20:9 • unnecessary_library_name
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:72:3 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:73:3 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:74:3 • avoid_print
@@ -322,7 +178,6 @@ warning • The value of the local variable 'ageGroups' isn't used • lib/scrip
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:163:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:171:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:176:3 • avoid_print
-   info • Use interpolation to compose strings and values • lib/scripts/migrate_ratings_to_7_scale.dart:176:9 • prefer_interpolation_to_compose_strings
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:177:3 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:178:3 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:181:5 • avoid_print
@@ -340,23 +195,6 @@ warning • The value of the local variable 'ageGroups' isn't used • lib/scrip
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:255:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:264:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/scripts/migrate_ratings_to_7_scale.dart:275:5 • avoid_print
-   info • Use interpolation to compose strings and values • lib/scripts/team_balancing_test_script.dart:341:16 • prefer_interpolation_to_compose_strings
-  error • The getter 'confirmedPlayerCount' isn't defined for the type 'Game' • lib/services/game_management_service.dart:82:16 • undefined_getter
-  error • The getter 'confirmedPlayerCount' isn't defined for the type 'Game' • lib/services/game_management_service.dart:84:35 • undefined_getter
-  error • The getter 'confirmedPlayerCount' isn't defined for the type 'Game' • lib/services/game_management_service.dart:99:29 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/services/game_management_service.dart:409:28 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/services/game_management_service.dart:410:28 • undefined_getter
-  error • The getter 'goalScorerIds' isn't defined for the type 'Game' • lib/services/game_management_service.dart:411:31 • undefined_getter
-  error • The getter 'mvpPlayerId' isn't defined for the type 'Game' • lib/services/game_management_service.dart:412:29 • undefined_getter
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/services/game_management_service.dart:418:31 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/services/game_management_service.dart:419:31 • undefined_getter
-  error • The getter 'goalScorerIds' isn't defined for the type 'Game' • lib/services/game_management_service.dart:430:35 • undefined_getter
-  error • The getter 'confirmedPlayerIds' isn't defined for the type 'Game' • lib/services/game_management_service.dart:592:25 • undefined_getter
-   info • Unnecessary escape in string literal • lib/services/google_places_service.dart:379:47 • unnecessary_string_escapes
-   info • Unnecessary escape in string literal • lib/services/google_places_service.dart:379:55 • unnecessary_string_escapes
-   info • Unnecessary escape in string literal • lib/services/google_places_service.dart:387:92 • unnecessary_string_escapes
-   info • Unnecessary escape in string literal • lib/services/google_places_service.dart:387:100 • unnecessary_string_escapes
-   info • Library names are not necessary • lib/services/hub_permissions_service.dart:12:9 • unnecessary_library_name
    info • Don't invoke 'print' in production code • lib/services/hub_permissions_service.dart:250:9 • avoid_print
    info • The constant name 'MAX_TILE_CACHE_SIZE' isn't a lowerCamelCase identifier • lib/services/map_cache_service.dart:26:20 • constant_identifier_names
    info • The constant name 'MAX_VENUE_CACHE_SIZE' isn't a lowerCamelCase identifier • lib/services/map_cache_service.dart:27:20 • constant_identifier_names
@@ -364,15 +202,6 @@ warning • The value of the local variable 'ageGroups' isn't used • lib/scrip
    info • The constant name 'TILE_CACHE_TTL' isn't a lowerCamelCase identifier • lib/services/map_cache_service.dart:31:25 • constant_identifier_names
    info • The constant name 'VENUE_CACHE_TTL' isn't a lowerCamelCase identifier • lib/services/map_cache_service.dart:32:25 • constant_identifier_names
    info • The constant name 'HUB_CACHE_TTL' isn't a lowerCamelCase identifier • lib/services/map_cache_service.dart:33:25 • constant_identifier_names
-   info • Don't needlessly type annotate initializing formals • lib/services/map_cache_service.dart:168:15 • type_init_formals
-  error • The getter 'mvpPlayerId' isn't defined for the type 'Game' • lib/services/player_merge_service.dart:213:18 • undefined_getter
-  error • The getter 'goalScorerIds' isn't defined for the type 'Game' • lib/services/player_merge_service.dart:218:18 • undefined_getter
-  error • The getter 'goalScorerIds' isn't defined for the type 'Game' • lib/services/player_merge_service.dart:219:35 • undefined_getter
-warning • Unused import: 'dart:io' • lib/services/storage_service.dart:1:8 • unused_import
-   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' • lib/services/storage_service.dart:2:8 • unnecessary_import
-warning • The value of the field '_hub' isn't used • lib/ui/team_builder/manual_team_builder.dart:42:8 • unused_field
-warning • The operand can't be 'null', so the condition is always 'true' • lib/ui/team_builder/team_builder_page.dart:71:38 • unnecessary_null_comparison
-warning • The '!' will have no effect because the receiver can't be null • lib/ui/team_builder/team_builder_page.dart:72:68 • unnecessary_non_null_assertion
    info • Don't invoke 'print' in production code • lib/utils/dummy_players_creator.dart:138:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/utils/dummy_players_creator.dart:139:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/utils/dummy_players_creator.dart:140:5 • avoid_print
@@ -383,31 +212,10 @@ warning • The '!' will have no effect because the receiver can't be null • l
    info • Don't invoke 'print' in production code • lib/utils/dummy_players_creator.dart:267:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/utils/dummy_players_creator.dart:278:5 • avoid_print
    info • Don't invoke 'print' in production code • lib/utils/dummy_players_creator.dart:280:5 • avoid_print
-  error • The getter 'legacyTeamAScore' isn't defined for the type 'Game' • lib/widgets/dialogs/edit_game_result_dialog.dart:49:26 • undefined_getter
-  error • The getter 'legacyTeamBScore' isn't defined for the type 'Game' • lib/widgets/dialogs/edit_game_result_dialog.dart:52:26 • undefined_getter
-  error • The getter 'goalScorerIds' isn't defined for the type 'Game' • lib/widgets/dialogs/edit_game_result_dialog.dart:56:40 • undefined_getter
-  error • The getter 'mvpPlayerId' isn't defined for the type 'Game' • lib/widgets/dialogs/edit_game_result_dialog.dart:60:32 • undefined_getter
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/widgets/game/game_feed_card.dart:50:20 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/widgets/game/game_feed_card.dart:138:36 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/widgets/game/game_feed_card.dart:157:45 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/widgets/game/game_feed_card.dart:270:38 • undefined_getter
-  error • The getter 'confirmedPlayerCount' isn't defined for the type 'Game' • lib/widgets/game/game_feed_card.dart:291:39 • undefined_getter
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/widgets/game/game_feed_card.dart:318:39 • undefined_getter
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/widgets/game/my_next_match_card.dart:159:47 • undefined_getter
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/widgets/game/my_next_match_card.dart:170:49 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/widgets/game/my_next_match_card.dart:205:47 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/widgets/game/my_next_match_card.dart:217:51 • undefined_getter
+   info • Use a 'SizedBox' to add whitespace to a layout • lib/widgets/gamification/gamification_visuals.dart:114:12 • sized_box_for_whitespace
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/home/hubs_carousel.dart:97:37 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/home/hubs_carousel.dart:136:49 • deprecated_member_use
-  error • The getter 'confirmedPlayerIds' isn't defined for the type 'Game' • lib/widgets/home/next_game_spotlight_card.dart:568:35 • undefined_getter
-  error • The getter 'venueName' isn't defined for the type 'Game' • lib/widgets/home/next_game_spotlight_card.dart:575:47 • undefined_getter
-  error • The getter 'hubName' isn't defined for the type 'Game' • lib/widgets/home/next_game_spotlight_card.dart:577:29 • undefined_getter
-  error • The getter 'createdByName' isn't defined for the type 'Game' • lib/widgets/home/next_game_spotlight_card.dart:578:33 • undefined_getter
-  error • The getter 'confirmedPlayerCount' isn't defined for the type 'Game' • lib/widgets/home/next_game_spotlight_card.dart:579:38 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/widgets/hub/hub_games_tab.dart:133:51 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/widgets/hub/hub_games_tab.dart:229:22 • undefined_getter
-  error • The getter 'aggregateWins' isn't defined for the type 'Game' • lib/widgets/hub/hub_games_tab.dart:239:35 • undefined_getter
-  error • The getter 'matches' isn't defined for the type 'Game' • lib/widgets/hub/hub_games_tab.dart:294:34 • undefined_getter
+   info • 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre • lib/widgets/hub/hub_header.dart:46:54 • deprecated_member_use
    info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/widgets/hub/hub_venues_manager.dart:185:21 • deprecated_member_use
    info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/widgets/hub/hub_venues_manager.dart:186:21 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/input/smart_venue_search_field.dart:268:34 • deprecated_member_use
@@ -423,17 +231,16 @@ warning • The '!' will have no effect because the receiver can't be null • l
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:255:42 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:283:33 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:303:52 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:325:40 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:379:49 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:407:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:325:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:379:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:407:40 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/player_card.dart:438:64 • deprecated_member_use
-   info • Statements in an if should be enclosed in a block • lib/widgets/player_card.dart:505:7 • curly_braces_in_flow_control_structures
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/polls/poll_card.dart:82:56 • deprecated_member_use
-   info • 'onWillAccept' is deprecated and shouldn't be used. Use onWillAcceptWithDetails instead. This callback is similar to onWillAcceptWithDetails but does not provide drag details. This feature was deprecated after v3.14.0-0.2.pre • lib/widgets/team_card.dart:37:9 • deprecated_member_use
-   info • 'onAccept' is deprecated and shouldn't be used. Use onAcceptWithDetails instead. This callback is similar to onAcceptWithDetails but does not provide drag details. This feature was deprecated after v3.14.0-0.2.pre • lib/widgets/team_card.dart:41:9 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/team_card.dart:58:35 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/team_card.dart:150:55 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/team_card.dart:154:60 • deprecated_member_use
+   info • Use a 'SizedBox' to add whitespace to a layout • lib/widgets/premium/empty_state_illustrations.dart:51:12 • sized_box_for_whitespace
+   info • Use a 'SizedBox' to add whitespace to a layout • lib/widgets/premium/empty_state_illustrations.dart:92:12 • sized_box_for_whitespace
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/premium/skeleton_loader.dart:100:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/premium/skeleton_loader.dart:140:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/premium/skeleton_loader.dart:172:44 • deprecated_member_use
    info • 'signInAnonymously' is deprecated and shouldn't be used. Anonymous sign-in is disabled. Users must register and sign in • test/integration/auth_flow_test.dart:47:27 • deprecated_member_use_from_same_package
-warning • The value of the local variable 'changedMainId' isn't used • test/widgets/hub_venues_manager_test.dart:132:15 • unused_local_variable
 
+242 issues found. (ran in 12.9s)

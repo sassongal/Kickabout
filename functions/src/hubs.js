@@ -203,11 +203,24 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 
 exports.createSuperAdmin = onCall(
   {
-    // This function should be protected - only callable by existing super admins or manually
-    // For now, we'll allow authenticated users (you can restrict this later)
-    invoker: 'authenticated',
+    // SECURITY: Only existing super admins can create new super admins
+    // For initial setup, use Firebase Admin SDK manually
+    invoker: 'private', // 🔒 Restricted to prevent unauthorized access
   },
   async (request) => {
+    // Verify caller is an existing super admin
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    const callerClaims = request.auth.token;
+    if (!callerClaims.isSuperAdmin) {
+      throw new HttpsError(
+        'permission-denied',
+        'Only existing super admins can create new super admins'
+      );
+    }
+
     const { phoneNumber } = request.data;
 
     if (!phoneNumber) {

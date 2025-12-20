@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Settings Screen - Account settings and logout
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -53,23 +53,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: FuturisticColors.surface,
+        backgroundColor: PremiumColors.surface,
         title: Text(
           'התנתקות',
-          style: FuturisticTypography.heading3.copyWith(
-            color: FuturisticColors.textPrimary,
+          style: PremiumTypography.heading3.copyWith(
+            color: PremiumColors.textPrimary,
           ),
         ),
         content: Text(
           'האם אתה בטוח שברצונך להתנתק?',
-          style: FuturisticTypography.bodyMedium.copyWith(
-            color: FuturisticColors.textSecondary,
+          style: PremiumTypography.bodyMedium.copyWith(
+            color: PremiumColors.textSecondary,
           ),
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: FuturisticColors.surfaceVariant,
+            color: PremiumColors.surfaceVariant,
             width: 1,
           ),
         ),
@@ -78,15 +78,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
               'ביטול',
-              style: FuturisticTypography.labelLarge.copyWith(
-                color: FuturisticColors.textSecondary,
+              style: PremiumTypography.labelLarge.copyWith(
+                color: PremiumColors.textSecondary,
               ),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: FuturisticColors.error,
+              backgroundColor: PremiumColors.error,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -94,7 +94,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             child: Text(
               'התנתק',
-              style: FuturisticTypography.labelLarge,
+              style: PremiumTypography.labelLarge,
             ),
           ),
         ],
@@ -141,13 +141,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _currentUser == null) {
-      return FuturisticScaffold(
+      return PremiumScaffold(
         title: 'הגדרות',
-        body: const FuturisticLoadingState(message: 'טוען הגדרות...'),
+        body: const PremiumLoadingState(message: 'טוען הגדרות...'),
       );
     }
 
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'הגדרות',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -157,7 +157,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // Account Section
             _buildSectionHeader('חשבון'),
             const SizedBox(height: 8),
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: Column(
                 children: [
@@ -168,7 +168,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onTap: () => context.push('/profile/${widget.userId}/edit'),
                   ),
                   const Divider(
-                      height: 1, color: FuturisticColors.surfaceVariant),
+                      height: 1, color: PremiumColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.privacy_tip,
                     title: 'הגדרות פרטיות',
@@ -177,7 +177,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         context.push('/profile/${widget.userId}/privacy'),
                   ),
                   const Divider(
-                      height: 1, color: FuturisticColors.surfaceVariant),
+                      height: 1, color: PremiumColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.block,
                     title: 'משתמשים חסומים',
@@ -192,7 +192,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // Preferences Section
             _buildSectionHeader('העדפות'),
             const SizedBox(height: 8),
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: Column(
                 children: [
@@ -204,7 +204,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         context.push('/profile/${widget.userId}/notifications'),
                   ),
                   const Divider(
-                      height: 1, color: FuturisticColors.surfaceVariant),
+                      height: 1, color: PremiumColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.location_on,
                     title: 'מיקום',
@@ -223,7 +223,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // App Section
             _buildSectionHeader('אפליקציה'),
             const SizedBox(height: 8),
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: Column(
                 children: [
@@ -235,24 +235,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          backgroundColor: FuturisticColors.surface,
+                          backgroundColor: PremiumColors.surface,
                           title: Text(
                             'אודות Kattrick',
-                            style: FuturisticTypography.heading3.copyWith(
-                              color: FuturisticColors.textPrimary,
+                            style: PremiumTypography.heading3.copyWith(
+                              color: PremiumColors.textPrimary,
                             ),
                           ),
                           content: Text(
                             'Kattrick - אפליקציית כדורגל קהילתית\n\n'
                             'חבר שחקנים, צור הובים, ארגן משחקים וצור קהילה סביב אהבת הכדורגל.',
-                            style: FuturisticTypography.bodyMedium.copyWith(
-                              color: FuturisticColors.textSecondary,
+                            style: PremiumTypography.bodyMedium.copyWith(
+                              color: PremiumColors.textSecondary,
                             ),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
-                              color: FuturisticColors.surfaceVariant,
+                              color: PremiumColors.surfaceVariant,
                               width: 1,
                             ),
                           ),
@@ -261,8 +261,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               onPressed: () => Navigator.of(context).pop(),
                               child: Text(
                                 'סגור',
-                                style: FuturisticTypography.labelLarge.copyWith(
-                                  color: FuturisticColors.primary,
+                                style: PremiumTypography.labelLarge.copyWith(
+                                  color: PremiumColors.primary,
                                 ),
                               ),
                             ),
@@ -272,7 +272,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                   const Divider(
-                      height: 1, color: FuturisticColors.surfaceVariant),
+                      height: 1, color: PremiumColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.security,
                     title: 'סטטוס אימות',
@@ -280,7 +280,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onTap: () => context.push('/debug/auth-status'),
                   ),
                   const Divider(
-                      height: 1, color: FuturisticColors.surfaceVariant),
+                      height: 1, color: PremiumColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.help_outline,
                     title: 'עזרה ותמיכה',
@@ -289,11 +289,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          backgroundColor: FuturisticColors.surface,
+                          backgroundColor: PremiumColors.surface,
                           title: Text(
                             'עזרה ותמיכה',
-                            style: FuturisticTypography.heading3.copyWith(
-                              color: FuturisticColors.textPrimary,
+                            style: PremiumTypography.heading3.copyWith(
+                              color: PremiumColors.textPrimary,
                             ),
                           ),
                           content: Column(
@@ -302,8 +302,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             children: [
                               Text(
                                 'צריך עזרה?',
-                                style: FuturisticTypography.bodyMedium.copyWith(
-                                  color: FuturisticColors.textSecondary,
+                                style: PremiumTypography.bodyMedium.copyWith(
+                                  color: PremiumColors.textSecondary,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -319,7 +319,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 icon: const Icon(Icons.email),
                                 label: const Text('צור קשר'),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: FuturisticColors.primary,
+                                  foregroundColor: PremiumColors.primary,
                                 ),
                               ),
                             ],
@@ -327,7 +327,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
-                              color: FuturisticColors.surfaceVariant,
+                              color: PremiumColors.surfaceVariant,
                               width: 1,
                             ),
                           ),
@@ -336,8 +336,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               onPressed: () => Navigator.of(context).pop(),
                               child: Text(
                                 'סגור',
-                                style: FuturisticTypography.labelLarge.copyWith(
-                                  color: FuturisticColors.primary,
+                                style: PremiumTypography.labelLarge.copyWith(
+                                  color: PremiumColors.primary,
                                 ),
                               ),
                             ),
@@ -347,7 +347,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                   const Divider(
-                      height: 1, color: FuturisticColors.surfaceVariant),
+                      height: 1, color: PremiumColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.description,
                     title: 'תנאי שימוש',
@@ -360,7 +360,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                   const Divider(
-                      height: 1, color: FuturisticColors.surfaceVariant),
+                      height: 1, color: PremiumColors.surfaceVariant),
                   _buildSettingTile(
                     icon: Icons.privacy_tip_outlined,
                     title: 'מדיניות פרטיות',
@@ -378,14 +378,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             // Logout Section
             const SizedBox(height: 8),
-            FuturisticCard(
+            PremiumCard(
               margin: const EdgeInsets.only(bottom: 16),
               child: _buildSettingTile(
                 icon: Icons.logout,
                 title: 'התנתק',
                 subtitle: 'התנתק מהחשבון שלך',
-                iconColor: FuturisticColors.error,
-                textColor: FuturisticColors.error,
+                iconColor: PremiumColors.error,
+                textColor: PremiumColors.error,
                 onTap: _handleLogout,
                 showLoading: _isLoading,
               ),
@@ -407,8 +407,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Text(
         title,
-        style: FuturisticTypography.labelLarge.copyWith(
-          color: FuturisticColors.textSecondary,
+        style: PremiumTypography.labelLarge.copyWith(
+          color: PremiumColors.textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -434,13 +434,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: (iconColor ?? FuturisticColors.primary)
+                color: (iconColor ?? PremiumColors.primary)
                     .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
-                color: iconColor ?? FuturisticColors.primary,
+                color: iconColor ?? PremiumColors.primary,
                 size: 24,
               ),
             ),
@@ -451,8 +451,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: FuturisticTypography.labelLarge.copyWith(
-                      color: textColor ?? FuturisticColors.textPrimary,
+                    style: PremiumTypography.labelLarge.copyWith(
+                      color: textColor ?? PremiumColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -460,8 +460,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: FuturisticTypography.bodySmall.copyWith(
-                        color: FuturisticColors.textSecondary,
+                      style: PremiumTypography.bodySmall.copyWith(
+                        color: PremiumColors.textSecondary,
                       ),
                     ),
                   ],
@@ -475,14 +475,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    FuturisticColors.primary,
+                    PremiumColors.primary,
                   ),
                 ),
               )
             else
               Icon(
                 Icons.chevron_left,
-                color: FuturisticColors.textSecondary,
+                color: PremiumColors.textSecondary,
               ),
           ],
         ),
@@ -491,14 +491,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildUserInfoCard(User user) {
-    return FuturisticCard(
+    return PremiumCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'מידע על החשבון',
-            style: FuturisticTypography.labelLarge.copyWith(
-              color: FuturisticColors.textSecondary,
+            style: PremiumTypography.labelLarge.copyWith(
+              color: PremiumColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -524,16 +524,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             width: 100,
             child: Text(
               label,
-              style: FuturisticTypography.bodySmall.copyWith(
-                color: FuturisticColors.textSecondary,
+              style: PremiumTypography.bodySmall.copyWith(
+                color: PremiumColors.textSecondary,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: FuturisticTypography.bodyMedium.copyWith(
-                color: FuturisticColors.textPrimary,
+              style: PremiumTypography.bodyMedium.copyWith(
+                color: PremiumColors.textPrimary,
               ),
             ),
           ),

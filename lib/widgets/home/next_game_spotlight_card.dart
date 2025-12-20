@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Next Game Spotlight Card - Shows the user's next upcoming game/event
 ///
@@ -130,21 +131,18 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            FuturisticColors.surface,
-            FuturisticColors.surfaceVariant,
+            PremiumColors.surface,
+            PremiumColors.surfaceVariant,
           ],
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: FuturisticColors.primary.withValues(alpha: 0.3),
+          color: PremiumColors.primary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
-      child: Center(
-        child: CircularProgressIndicator(
-          color: FuturisticColors.primary,
-          strokeWidth: 2,
-        ),
+      child: const Center(
+        child: KineticLoadingAnimation(size: 40),
       ),
     );
   }
@@ -209,7 +207,8 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
         return GestureDetector(
           onTap: () {
             if (gameData.isEvent) {
-              context.push('/hubs/${gameData.hubId}/events/${gameData.id}/manage');
+              context
+                  .push('/hubs/${gameData.hubId}/events/${gameData.id}/manage');
             } else {
               context.push('/games/${gameData.id}');
             }
@@ -224,7 +223,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                   BoxShadow(
                     color: isUrgent
                         ? Colors.orange.withValues(alpha: 0.3)
-                        : FuturisticColors.primary.withValues(alpha: 0.2),
+                        : PremiumColors.primary.withValues(alpha: 0.2),
                     blurRadius: 20,
                     spreadRadius: 2,
                     offset: const Offset(0, 8),

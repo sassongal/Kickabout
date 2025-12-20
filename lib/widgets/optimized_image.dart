@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Optimized image widget with caching and error handling
 class OptimizedImage extends StatelessWidget {
@@ -35,16 +36,18 @@ class OptimizedImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        placeholder: (context, url) => placeholderWidget ??
+        placeholder: (context, url) =>
+            placeholderWidget ??
             Container(
               width: width,
               height: height,
               color: Colors.grey[200],
               child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: KineticLoadingAnimation(size: 24),
               ),
             ),
-        errorWidget: (context, url, error) => errorWidget ??
+        errorWidget: (context, url, error) =>
+            errorWidget ??
             Container(
               width: width,
               height: height,
@@ -70,7 +73,8 @@ class OptimizedImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) => errorWidget ??
+        errorBuilder: (context, error, stackTrace) =>
+            errorWidget ??
             Container(
               width: width,
               height: height,
@@ -90,7 +94,7 @@ class OptimizedImage extends StatelessWidget {
                 height: height,
                 color: Colors.grey[200],
                 child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: KineticLoadingAnimation(size: 24),
                 ),
               );
         },
@@ -107,4 +111,3 @@ class OptimizedImage extends StatelessWidget {
     return imageWidget;
   }
 }
-

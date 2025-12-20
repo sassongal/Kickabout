@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart' hide Notification;
 import 'package:kattrick/screens/social/hub_chat_screen.dart';
@@ -14,7 +14,7 @@ import 'package:kattrick/widgets/hub/hub_games_tab.dart';
 import 'package:kattrick/widgets/hub/hub_polls_tab.dart';
 import 'package:kattrick/widgets/hub/hub_admin_speed_dial.dart';
 import 'package:kattrick/widgets/hub/hub_non_member_view.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 
 /// Hub detail screen
 class HubDetailScreen extends ConsumerStatefulWidget {
@@ -74,7 +74,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
         if (snapshot.hasError) {
           return AppScaffold(
             title: 'פרטי Hub',
-            body: FuturisticEmptyState(
+            body: PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת Hub',
               message: ErrorHandlerService().handleException(
@@ -198,11 +198,11 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
           },
           loading: () => AppScaffold(
             title: hub.name,
-            body: const FuturisticLoadingState(message: 'בודק הרשאות...'),
+            body: const PremiumLoadingState(message: 'בודק הרשאות...'),
           ),
           error: (error, stack) => AppScaffold(
             title: hub.name,
-            body: FuturisticEmptyState(
+            body: PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בבדיקת הרשאות',
               message: error.toString(),

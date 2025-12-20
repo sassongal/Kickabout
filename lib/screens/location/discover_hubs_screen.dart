@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -226,7 +226,7 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
         ),
       ],
       body: _isLoadingLocation
-          ? const FuturisticLoadingState(message: 'מאתר את המיקום שלך...')
+          ? const PremiumLoadingState(message: 'מאתר את המיקום שלך...')
           : _currentPosition == null
               ? Center(
                   child: Column(
@@ -303,10 +303,10 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                     // Results (List or Map)
                     Expanded(
                       child: _isLoading
-                          ? const FuturisticLoadingState(
+                          ? const PremiumLoadingState(
                               message: 'מחפש הובים...')
                           : _nearbyHubs.isEmpty
-                              ? FuturisticEmptyState(
+                              ? PremiumEmptyState(
                                   icon: Icons.search_off,
                                   title: 'לא נמצאו הובים',
                                   message:

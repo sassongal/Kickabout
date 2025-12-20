@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/repositories.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 
 class HubVenuesList extends ConsumerWidget {
   final String hubId;

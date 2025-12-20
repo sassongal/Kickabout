@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Bubble Menu Item - פריט בתפריט הבועות
 class BubbleMenuItem {
@@ -121,7 +121,7 @@ class _BubbleMenuState extends State<BubbleMenu>
                     child: _BubbleItem(
                       icon: item.icon,
                       label: item.label,
-                      color: item.color ?? FuturisticColors.primary,
+                      color: item.color ?? PremiumColors.primary,
                       onTap: () {
                         _toggleMenu();
                         item.onTap();
@@ -152,15 +152,15 @@ class _BubbleMenuState extends State<BubbleMenu>
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          FuturisticColors.primary,
-                          FuturisticColors.primaryDark,
+                          PremiumColors.primary,
+                          PremiumColors.primaryDark,
                         ],
                       ),
                       borderRadius: BorderRadius.circular(32),
                       boxShadow: [
                         BoxShadow(
                           color:
-                              FuturisticColors.primary.withValues(alpha: 0.4),
+                              PremiumColors.primary.withValues(alpha: 0.4),
                           blurRadius: 20,
                           spreadRadius: 2,
                           offset: const Offset(0, 4),
@@ -277,19 +277,19 @@ class QuickActionsBubbleMenu extends StatelessWidget {
         BubbleMenuItem(
           icon: Icons.group_add,
           label: 'צור האב',
-          color: FuturisticColors.primary,
+          color: PremiumColors.primary,
           onTap: () => context.push('/hubs/create'),
         ),
         BubbleMenuItem(
           icon: Icons.explore,
           label: 'גלה',
-          color: FuturisticColors.secondary,
+          color: PremiumColors.secondary,
           onTap: () => context.push('/discover'),
         ),
         BubbleMenuItem(
           icon: Icons.person_search,
           label: 'מצא שחקנים',
-          color: FuturisticColors.accent,
+          color: PremiumColors.accent,
           onTap: () => context.push('/players'),
         ),
         BubbleMenuItem(

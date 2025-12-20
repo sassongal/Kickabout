@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/models/models.dart';
@@ -54,7 +54,7 @@ class _MessagesListScreenState extends ConsumerState<MessagesListScreen> {
           }
 
           if (snapshot.hasError) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.error_outline,
               title: 'שגיאה בטעינת הודעות',
               message: ErrorHandlerService().handleException(
@@ -75,7 +75,7 @@ class _MessagesListScreenState extends ConsumerState<MessagesListScreen> {
           final conversations = snapshot.data ?? [];
 
           if (conversations.isEmpty) {
-            return FuturisticEmptyState(
+            return PremiumEmptyState(
               icon: Icons.chat_bubble_outline,
               title: 'אין שיחות',
               message: 'כשיהיו הודעות חדשות, הן יופיעו כאן',

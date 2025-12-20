@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_card.dart';
-import 'package:kattrick/widgets/futuristic/skeleton_loader.dart';
-import 'package:kattrick/widgets/futuristic/empty_state.dart';
-import 'package:kattrick/widgets/futuristic/loading_state.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/services/google_places_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 
 /// Screen for searching venues (public and rental)
@@ -213,7 +213,7 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: widget.selectMode ? 'בחר מגרש' : 'חיפוש מגרשים',
       showBackButton: true,
       actions: [
@@ -276,7 +276,7 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                   children: [
                     Text(
                       'סינון:',
-                      style: FuturisticTypography.labelMedium,
+                      style: PremiumTypography.labelMedium,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -312,7 +312,7 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                   icon: const Icon(Icons.search),
                   label: const Text('חפש'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: FuturisticColors.primary,
+                    backgroundColor: PremiumColors.primary,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -322,9 +322,9 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
           // Results
           Expanded(
             child: _isLoadingLocation
-                ? const FuturisticLoadingState(message: 'מאתר את המיקום שלך...')
+                ? const PremiumLoadingState(message: 'מאתר את המיקום שלך...')
                 : _errorMessage != null && _venues.isEmpty
-                    ? FuturisticEmptyState(
+                    ? PremiumEmptyState(
                         icon: Icons.error_outline,
                         title: 'שגיאה',
                         message: _errorMessage,
@@ -350,7 +350,7 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                             ),
                           )
                         : _venues.isEmpty
-                            ? FuturisticEmptyState(
+                            ? PremiumEmptyState(
                                 icon: Icons.location_searching,
                                 title: 'לא נמצאו מגרשים',
                                 message: 'נסה לשנות את החיפוש או להגדיל את הרדיוס',
@@ -376,7 +376,7 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: FuturisticCard(
+                            child: PremiumCard(
                               onTap: () => _selectVenue(venue),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(12),
@@ -386,12 +386,12 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                                       : Icons.business,
                                   size: 40,
                                   color: venue.isPublic
-                                      ? FuturisticColors.primary
-                                      : FuturisticColors.secondary,
+                                      ? PremiumColors.primary
+                                      : PremiumColors.secondary,
                                 ),
                                 title: Text(
                                   venue.name,
-                                  style: FuturisticTypography.labelLarge,
+                                  style: PremiumTypography.labelLarge,
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,13 +403,13 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                                           Icon(
                                             Icons.location_on,
                                             size: 14,
-                                            color: FuturisticColors.textSecondary,
+                                            color: PremiumColors.textSecondary,
                                           ),
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: Text(
                                               venue.address!,
-                                              style: FuturisticTypography.bodySmall,
+                                              style: PremiumTypography.bodySmall,
                                             ),
                                           ),
                                         ],
@@ -419,7 +419,7 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         '${distance.toStringAsFixed(1)} ק"מ ממיקומך',
-                                        style: FuturisticTypography.bodySmall,
+                                        style: PremiumTypography.bodySmall,
                                       ),
                                     ],
                                     if (venue.rating != null) ...[
@@ -429,12 +429,12 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                                           Icon(
                                             Icons.star,
                                             size: 14,
-                                            color: FuturisticColors.warning,
+                                            color: PremiumColors.warning,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             '${venue.rating!.toStringAsFixed(1)} (${venue.userRatingsTotal ?? 0} ביקורות)',
-                                            style: FuturisticTypography.bodySmall,
+                                            style: PremiumTypography.bodySmall,
                                           ),
                                         ],
                                       ),
@@ -447,16 +447,16 @@ class _VenueSearchScreenState extends ConsumerState<VenueSearchScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: venue.isPublic
-                                            ? FuturisticColors.primary.withValues(alpha: 0.1)
-                                            : FuturisticColors.secondary.withValues(alpha: 0.1),
+                                            ? PremiumColors.primary.withValues(alpha: 0.1)
+                                            : PremiumColors.secondary.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         venue.isPublic ? 'ציבורי' : 'להשכרה',
-                                        style: FuturisticTypography.labelSmall.copyWith(
+                                        style: PremiumTypography.labelSmall.copyWith(
                                           color: venue.isPublic
-                                              ? FuturisticColors.primary
-                                              : FuturisticColors.secondary,
+                                              ? PremiumColors.primary
+                                              : PremiumColors.secondary,
                                         ),
                                       ),
                                     ),

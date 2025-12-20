@@ -6,12 +6,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/venues_repository.dart';
 import 'package:kattrick/services/google_places_service.dart';
-import 'package:kattrick/widgets/futuristic/futuristic_scaffold.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Screen for discovering and searching football venues in Israel
 class DiscoverVenuesScreen extends ConsumerStatefulWidget {
-  const DiscoverVenuesScreen({super.key});
+  final String? filterCity;
+
+  const DiscoverVenuesScreen({super.key, this.filterCity});
 
   @override
   ConsumerState<DiscoverVenuesScreen> createState() =>
@@ -64,16 +66,17 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
   Future<void> _loadCustomIcons() async {
     try {
       final icons = await Future.wait([
-        BitmapDescriptor.fromAssetImage(
+        BitmapDescriptor.asset(
           const ImageConfiguration(size: Size(80, 80)),
           'assets/icons/venue_public.png',
         ),
-        BitmapDescriptor.fromAssetImage(
+        BitmapDescriptor.asset(
           const ImageConfiguration(size: Size(80, 80)),
           'assets/icons/venue_rental.png',
         ),
-        BitmapDescriptor.fromAssetImage(
-          const ImageConfiguration(size: Size(100, 100)), // Slightly larger for selected
+        BitmapDescriptor.asset(
+          const ImageConfiguration(
+              size: Size(100, 100)), // Slightly larger for selected
           'assets/icons/venue_public.png',
         ),
       ]);
@@ -184,6 +187,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
       ),
       'name': _selectedPlace!.name,
       'address': _selectedPlace!.address,
+      'city': _selectedPlace!.city, // Include extracted city
     });
   }
 
@@ -196,7 +200,19 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
 
       if (mounted) {
         setState(() {
-          _venues = venues.where((v) => v.isPublic && v.isActive).toList();
+          // Filter by city if filterCity is provided
+          _venues = venues.where((v) {
+            final meetsBasicCriteria = v.isPublic && v.isActive;
+            if (!meetsBasicCriteria) return false;
+
+            // If filterCity is set, only show venues in that city
+            if (widget.filterCity != null && widget.filterCity!.isNotEmpty) {
+              return v.city?.trim().toLowerCase() ==
+                  widget.filterCity!.trim().toLowerCase();
+            }
+
+            return true;
+          }).toList();
           _filteredVenues = _venues;
           _isLoadingVenues = false;
           _updateMarkers();
@@ -222,11 +238,14 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
       BitmapDescriptor icon;
       if (_iconsLoaded) {
         if (isSelected) {
-          icon = _selectedVenueIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+          icon = _selectedVenueIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
         } else if (venue.isPublic) {
-          icon = _venuePublicIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+          icon = _venuePublicIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
         } else {
-          icon = _venueRentalIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+          icon = _venueRentalIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
         }
       } else {
         // Fallback to default markers while icons are loading
@@ -336,7 +355,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FuturisticScaffold(
+    return PremiumScaffold(
       title: 'חיפוש מגרשים',
       body: Column(
         children: [
@@ -414,12 +433,12 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                           leading: const Icon(Icons.location_on, size: 20),
                           title: Text(
                             prediction.structuredFormatting?.mainText ?? '',
-                            style: FuturisticTypography.labelMedium,
+                            style: PremiumTypography.labelMedium,
                           ),
                           subtitle: Text(
                             prediction.structuredFormatting?.secondaryText ??
                                 '',
-                            style: FuturisticTypography.bodySmall,
+                            style: PremiumTypography.bodySmall,
                           ),
                           onTap: () {
                             FocusScope.of(context).unfocus(); // Hide keyboard
@@ -450,7 +469,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                         : const Icon(Icons.my_location),
                     label: Text(_isLoadingLocation ? 'מאתר...' : 'המיקום שלי'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: FuturisticColors.primary,
+                      backgroundColor: PremiumColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -553,7 +572,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                         Flexible(
                           child: Text(
                             'החזק לחוץ על המפה לבחירת מיקום ידני',
-                            style: FuturisticTypography.labelSmall.copyWith(
+                            style: PremiumTypography.labelSmall.copyWith(
                               color: Colors.white,
                             ),
                           ),
@@ -581,8 +600,8 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 'לחץ "שמור מגרש" כדי להוסיף את "${_selectedPlace!.name}"',
-                                style: FuturisticTypography.bodySmall.copyWith(
-                                  color: FuturisticColors.primary,
+                                style: PremiumTypography.bodySmall.copyWith(
+                                  color: PremiumColors.primary,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -601,12 +620,12 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             color: isSelected
-                                ? FuturisticColors.primary
+                                ? PremiumColors.primary
                                     .withValues(alpha: 0.1)
                                 : null,
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: FuturisticColors.primary,
+                                backgroundColor: PremiumColors.primary,
                                 child: Icon(
                                   _getSurfaceIcon(venue.surfaceType),
                                   color: Colors.white,
@@ -614,9 +633,9 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                               ),
                               title: Text(
                                 venue.name,
-                                style: FuturisticTypography.labelLarge.copyWith(
+                                style: PremiumTypography.labelLarge.copyWith(
                                   color: isSelected
-                                      ? FuturisticColors.primary
+                                      ? PremiumColors.primary
                                       : null,
                                 ),
                               ),
@@ -633,7 +652,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                                           child: Text(
                                             venue.address!,
                                             style:
-                                                FuturisticTypography.bodySmall,
+                                                PremiumTypography.bodySmall,
                                           ),
                                         ),
                                       ],
@@ -692,14 +711,14 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color:
-                                FuturisticColors.primary.withValues(alpha: 0.1),
+                                PremiumColors.primary.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             _selectedVenue != null
                                 ? Icons.sports_soccer
                                 : Icons.location_on,
-                            color: FuturisticColors.primary,
+                            color: PremiumColors.primary,
                             size: 24,
                           ),
                         ),
@@ -711,14 +730,14 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                             children: [
                               Text(
                                 _selectedVenue?.name ?? _selectedPlace!.name,
-                                style: FuturisticTypography.labelLarge
+                                style: PremiumTypography.labelLarge
                                     .copyWith(fontSize: 18),
                               ),
                               if (_selectedVenue?.description != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   _selectedVenue!.description!,
-                                  style: FuturisticTypography.bodySmall,
+                                  style: PremiumTypography.bodySmall,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -728,7 +747,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   _selectedPlace!.address!,
-                                  style: FuturisticTypography.bodySmall,
+                                  style: PremiumTypography.bodySmall,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -750,7 +769,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: FuturisticColors.primary,
+                          backgroundColor: PremiumColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -811,7 +830,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
       ),
       child: Text(
         label,
-        style: FuturisticTypography.labelSmall.copyWith(color: color),
+        style: PremiumTypography.labelSmall.copyWith(color: color),
       ),
     );
   }

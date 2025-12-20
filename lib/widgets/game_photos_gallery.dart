@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Widget for displaying game photos in a grid gallery
 class GamePhotosGallery extends StatelessWidget {
@@ -125,7 +126,8 @@ class GamePhotosGallery extends StatelessWidget {
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('מחק תמונה'),
-                              content: const Text('האם אתה בטוח שברצונך למחוק תמונה זו?'),
+                              content: const Text(
+                                  'האם אתה בטוח שברצונך למחוק תמונה זו?'),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
@@ -136,7 +138,8 @@ class GamePhotosGallery extends StatelessWidget {
                                     Navigator.pop(context);
                                     onDeletePhoto!(photoUrl);
                                   },
-                                  child: const Text('מחק', style: TextStyle(color: Colors.red)),
+                                  child: const Text('מחק',
+                                      style: TextStyle(color: Colors.red)),
                                 ),
                               ],
                             ),
@@ -193,7 +196,7 @@ class _PhotoViewer extends StatelessWidget {
         itemCount: photoUrls.length,
         itemBuilder: (context, index) {
           return Center(
-              child: InteractiveViewer(
+            child: InteractiveViewer(
               minScale: 0.5,
               maxScale: 3.0,
               child: OptimizedImage(
@@ -207,8 +210,8 @@ class _PhotoViewer extends StatelessWidget {
                   ),
                 ),
                 placeholderWidget: const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
+                  child: KineticLoadingAnimation(
+                    size: 40,
                   ),
                 ),
               ),
@@ -219,4 +222,3 @@ class _PhotoViewer extends StatelessWidget {
     );
   }
 }
-

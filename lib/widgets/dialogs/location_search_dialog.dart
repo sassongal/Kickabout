@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/google_places_service.dart';
-import 'package:kattrick/theme/futuristic_theme.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Dialog for searching and selecting a location using Google Places Autocomplete
@@ -180,7 +180,7 @@ class _LocationSearchDialogState extends ConsumerState<LocationSearchDialog> {
                   style: GoogleFonts.montserrat(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: FuturisticColors.textPrimary,
+                    color: PremiumColors.textPrimary,
                   ),
                 ),
                 const Spacer(),
@@ -202,7 +202,7 @@ class _LocationSearchDialogState extends ConsumerState<LocationSearchDialog> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: FuturisticColors.surface,
+                fillColor: PremiumColors.surface,
               ),
               onChanged: (value) {
                 // Debounce search
@@ -231,7 +231,7 @@ class _LocationSearchDialogState extends ConsumerState<LocationSearchDialog> {
                     'לא נמצאו תוצאות',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: FuturisticColors.textSecondary,
+                      color: PremiumColors.textSecondary,
                     ),
                   ),
                 ),
@@ -244,7 +244,7 @@ class _LocationSearchDialogState extends ConsumerState<LocationSearchDialog> {
                     'התחל להקליד כדי לחפש...',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: FuturisticColors.textSecondary,
+                      color: PremiumColors.textSecondary,
                     ),
                   ),
                 ),
@@ -257,13 +257,13 @@ class _LocationSearchDialogState extends ConsumerState<LocationSearchDialog> {
                   itemBuilder: (context, index) {
                     final prediction = _predictions[index];
                     return ListTile(
-                      leading: const Icon(Icons.location_on, color: FuturisticColors.primary),
+                      leading: const Icon(Icons.location_on, color: PremiumColors.primary),
                       title: Text(
                         prediction.description,
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: FuturisticColors.textPrimary,
+                          color: PremiumColors.textPrimary,
                         ),
                       ),
                       subtitle: prediction.structuredFormatting?.secondaryText != null
@@ -271,7 +271,7 @@ class _LocationSearchDialogState extends ConsumerState<LocationSearchDialog> {
                               prediction.structuredFormatting!.secondaryText!,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                color: FuturisticColors.textSecondary,
+                                color: PremiumColors.textSecondary,
                               ),
                             )
                           : null,

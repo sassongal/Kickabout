@@ -1,15 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/stopwatch_utility.dart';
+import 'package:kattrick/data/offline_event_queue.dart';
 
 /// Game-specific stopwatch for recording goals and events during an active game
-/// 
+///
 /// Features:
 /// - Stopwatch for game duration
 /// - Record goals with timestamps
 /// - Record assists with timestamps
 /// - Record other events (cards, saves, etc.)
 /// - Export game events
+/// - 🔒 OFFLINE PERSISTENCE: Events saved to local DB to prevent data loss
 class GameStopwatch extends ChangeNotifier {
   final StopwatchUtility _stopwatch = StopwatchUtility();
   final List<GameEventRecord> _events = [];
@@ -69,7 +71,7 @@ class GameStopwatch extends ChangeNotifier {
   }
 
   /// Record a goal
-  /// 
+  ///
   /// [playerId] - ID of the player who scored
   /// [playerName] - Name of the player (for display)
   /// [team] - Which team (A or B)
@@ -82,25 +84,42 @@ class GameStopwatch extends ChangeNotifier {
     String? assistPlayerId,
     String? assistPlayerName,
   }) {
+    final recordedAt = DateTime.now();
+    final timestamp = _stopwatch.elapsed;
+    final metadata = {
+      if (assistPlayerId != null) 'assistPlayerId': assistPlayerId,
+      if (assistPlayerName != null) 'assistPlayerName': assistPlayerName,
+    };
+
     final event = GameEventRecord(
       eventId: '',
       type: EventType.goal,
       playerId: playerId,
       playerName: playerName,
       team: team,
-      timestamp: _stopwatch.elapsed,
-      recordedAt: DateTime.now(),
-      metadata: {
-        if (assistPlayerId != null) 'assistPlayerId': assistPlayerId,
-        if (assistPlayerName != null) 'assistPlayerName': assistPlayerName,
-      },
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
     );
     _events.add(event);
     notifyListeners();
+
+    // 🔒 PERSIST TO OFFLINE QUEUE - Prevents data loss if app crashes
+    offlineEventQueue.enqueue(
+      gameId: gameId,
+      hubId: hubId,
+      eventType: EventType.goal,
+      playerId: playerId,
+      playerName: playerName,
+      team: team,
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
+    );
   }
 
   /// Record an assist
-  /// 
+  ///
   /// [playerId] - ID of the player who provided the assist
   /// [playerName] - Name of the player
   /// [team] - Which team (A or B)
@@ -113,25 +132,42 @@ class GameStopwatch extends ChangeNotifier {
     required String goalPlayerId,
     required String goalPlayerName,
   }) {
+    final recordedAt = DateTime.now();
+    final timestamp = _stopwatch.elapsed;
+    final metadata = {
+      'goalPlayerId': goalPlayerId,
+      'goalPlayerName': goalPlayerName,
+    };
+
     final event = GameEventRecord(
       eventId: '',
       type: EventType.assist,
       playerId: playerId,
       playerName: playerName,
       team: team,
-      timestamp: _stopwatch.elapsed,
-      recordedAt: DateTime.now(),
-      metadata: {
-        'goalPlayerId': goalPlayerId,
-        'goalPlayerName': goalPlayerName,
-      },
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
     );
     _events.add(event);
     notifyListeners();
+
+    // 🔒 PERSIST TO OFFLINE QUEUE
+    offlineEventQueue.enqueue(
+      gameId: gameId,
+      hubId: hubId,
+      eventType: EventType.assist,
+      playerId: playerId,
+      playerName: playerName,
+      team: team,
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
+    );
   }
 
   /// Record a card (yellow/red)
-  /// 
+  ///
   /// [playerId] - ID of the player
   /// [playerName] - Name of the player
   /// [team] - Which team (A or B)
@@ -142,24 +178,39 @@ class GameStopwatch extends ChangeNotifier {
     required String team,
     required String cardType, // 'yellow' or 'red'
   }) {
+    final recordedAt = DateTime.now();
+    final timestamp = _stopwatch.elapsed;
+    final metadata = {'cardType': cardType};
+
     final event = GameEventRecord(
       eventId: '',
       type: EventType.card,
       playerId: playerId,
       playerName: playerName,
       team: team,
-      timestamp: _stopwatch.elapsed,
-      recordedAt: DateTime.now(),
-      metadata: {
-        'cardType': cardType,
-      },
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
     );
     _events.add(event);
     notifyListeners();
+
+    // 🔒 PERSIST TO OFFLINE QUEUE
+    offlineEventQueue.enqueue(
+      gameId: gameId,
+      hubId: hubId,
+      eventType: EventType.card,
+      playerId: playerId,
+      playerName: playerName,
+      team: team,
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
+    );
   }
 
   /// Record a save (for goalkeepers)
-  /// 
+  ///
   /// [playerId] - ID of the goalkeeper
   /// [playerName] - Name of the goalkeeper
   /// [team] - Which team (A or B)
@@ -168,22 +219,39 @@ class GameStopwatch extends ChangeNotifier {
     required String playerName,
     required String team,
   }) {
+    final recordedAt = DateTime.now();
+    final timestamp = _stopwatch.elapsed;
+    final metadata = <String, dynamic>{};
+
     final event = GameEventRecord(
       eventId: '',
       type: EventType.save,
       playerId: playerId,
       playerName: playerName,
       team: team,
-      timestamp: _stopwatch.elapsed,
-      recordedAt: DateTime.now(),
-      metadata: {},
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
     );
     _events.add(event);
     notifyListeners();
+
+    // 🔒 PERSIST TO OFFLINE QUEUE
+    offlineEventQueue.enqueue(
+      gameId: gameId,
+      hubId: hubId,
+      eventType: EventType.save,
+      playerId: playerId,
+      playerName: playerName,
+      team: team,
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: metadata,
+    );
   }
 
   /// Record a custom event
-  /// 
+  ///
   /// [type] - Event type
   /// [playerId] - ID of the player
   /// [playerName] - Name of the player
@@ -196,18 +264,35 @@ class GameStopwatch extends ChangeNotifier {
     required String team,
     Map<String, dynamic>? metadata,
   }) {
+    final recordedAt = DateTime.now();
+    final timestamp = _stopwatch.elapsed;
+    final eventMetadata = metadata ?? {};
+
     final event = GameEventRecord(
       eventId: '',
       type: type,
       playerId: playerId,
       playerName: playerName,
       team: team,
-      timestamp: _stopwatch.elapsed,
-      recordedAt: DateTime.now(),
-      metadata: metadata ?? {},
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: eventMetadata,
     );
     _events.add(event);
     notifyListeners();
+
+    // 🔒 PERSIST TO OFFLINE QUEUE
+    offlineEventQueue.enqueue(
+      gameId: gameId,
+      hubId: hubId,
+      eventType: type,
+      playerId: playerId,
+      playerName: playerName,
+      team: team,
+      timestamp: timestamp,
+      recordedAt: recordedAt,
+      metadata: eventMetadata,
+    );
   }
 
   /// Remove an event

@@ -15,7 +15,7 @@ const { checkRateLimit } = require('../../rateLimit');
  */
 exports.notifyHubOnNewGame = onCall(
     {
-        invoker: 'authenticated', // ✅ Requires authentication
+        invoker: 'public', // ✅ Changed from 'authenticated' to allow Firebase Auth users
         memory: '256MiB', // ✅ Reduced from default (512MB not needed)
     },
     async (request) => {
@@ -129,7 +129,7 @@ exports.notifyHubOnNewGame = onCall(
 // ========================================
 exports.startGameEarly = onCall(
     {
-        invoker: 'authenticated',
+        invoker: 'public', // ✅ Changed from 'authenticated' to allow Firebase Auth users
         memory: '256MiB',
     },
     async (request) => {
