@@ -28,7 +28,18 @@ mixin _$Hub {
   @TimestampConverter()
   DateTime get createdAt =>
       throw _privateConstructorUsedError; // Member count (denormalized for display, kept in sync by Cloud Function)
-  int get memberCount => throw _privateConstructorUsedError; // Settings
+  int get memberCount =>
+      throw _privateConstructorUsedError; // Denormalized member arrays (CRITICAL for Firestore Rules optimization)
+// These eliminate costly get() calls in security rules by denormalizing
+// membership data directly into the Hub document.
+// ⚠️ MUST be kept in sync by repository methods (addMember, removeMember, updateMemberRole)
+  List<String> get activeMemberIds =>
+      throw _privateConstructorUsedError; // All active member user IDs
+  List<String> get managerIds =>
+      throw _privateConstructorUsedError; // User IDs with 'manager' role
+  List<String> get moderatorIds =>
+      throw _privateConstructorUsedError; // User IDs with 'moderator' role
+// Settings
   Map<String, dynamic> get settings =>
       throw _privateConstructorUsedError; // Custom permissions (RARE overrides only)
 // Example: Allow specific user to create events even if not moderator
@@ -98,6 +109,9 @@ abstract class $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       int memberCount,
+      List<String> activeMemberIds,
+      List<String> managerIds,
+      List<String> moderatorIds,
       Map<String, dynamic> settings,
       Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
@@ -140,6 +154,9 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? createdBy = null,
     Object? createdAt = null,
     Object? memberCount = null,
+    Object? activeMemberIds = null,
+    Object? managerIds = null,
+    Object? moderatorIds = null,
     Object? settings = null,
     Object? permissions = null,
     Object? location = freezed,
@@ -186,6 +203,18 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
           ? _value.memberCount
           : memberCount // ignore: cast_nullable_to_non_nullable
               as int,
+      activeMemberIds: null == activeMemberIds
+          ? _value.activeMemberIds
+          : activeMemberIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      managerIds: null == managerIds
+          ? _value.managerIds
+          : managerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      moderatorIds: null == moderatorIds
+          ? _value.moderatorIds
+          : moderatorIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       settings: null == settings
           ? _value.settings
           : settings // ignore: cast_nullable_to_non_nullable
@@ -283,6 +312,9 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       String createdBy,
       @TimestampConverter() DateTime createdAt,
       int memberCount,
+      List<String> activeMemberIds,
+      List<String> managerIds,
+      List<String> moderatorIds,
       Map<String, dynamic> settings,
       Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
@@ -322,6 +354,9 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? createdBy = null,
     Object? createdAt = null,
     Object? memberCount = null,
+    Object? activeMemberIds = null,
+    Object? managerIds = null,
+    Object? moderatorIds = null,
     Object? settings = null,
     Object? permissions = null,
     Object? location = freezed,
@@ -368,6 +403,18 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           ? _value.memberCount
           : memberCount // ignore: cast_nullable_to_non_nullable
               as int,
+      activeMemberIds: null == activeMemberIds
+          ? _value._activeMemberIds
+          : activeMemberIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      managerIds: null == managerIds
+          ? _value._managerIds
+          : managerIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      moderatorIds: null == moderatorIds
+          ? _value._moderatorIds
+          : moderatorIds // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       settings: null == settings
           ? _value._settings
           : settings // ignore: cast_nullable_to_non_nullable
@@ -462,6 +509,9 @@ class _$HubImpl implements _Hub {
       required this.createdBy,
       @TimestampConverter() required this.createdAt,
       this.memberCount = 0,
+      final List<String> activeMemberIds = const [],
+      final List<String> managerIds = const [],
+      final List<String> moderatorIds = const [],
       final Map<String, dynamic> settings = const {
         'showManagerContactInfo': true,
         'allowJoinRequests': true,
@@ -486,7 +536,10 @@ class _$HubImpl implements _Hub {
       this.gameCount,
       @TimestampConverter() this.lastActivity,
       this.activityScore = 0})
-      : _settings = settings,
+      : _activeMemberIds = activeMemberIds,
+        _managerIds = managerIds,
+        _moderatorIds = moderatorIds,
+        _settings = settings,
         _permissions = permissions,
         _venueIds = venueIds;
 
@@ -509,8 +562,49 @@ class _$HubImpl implements _Hub {
   @override
   @JsonKey()
   final int memberCount;
+// Denormalized member arrays (CRITICAL for Firestore Rules optimization)
+// These eliminate costly get() calls in security rules by denormalizing
+// membership data directly into the Hub document.
+// ⚠️ MUST be kept in sync by repository methods (addMember, removeMember, updateMemberRole)
+  final List<String> _activeMemberIds;
+// Denormalized member arrays (CRITICAL for Firestore Rules optimization)
+// These eliminate costly get() calls in security rules by denormalizing
+// membership data directly into the Hub document.
+// ⚠️ MUST be kept in sync by repository methods (addMember, removeMember, updateMemberRole)
+  @override
+  @JsonKey()
+  List<String> get activeMemberIds {
+    if (_activeMemberIds is EqualUnmodifiableListView) return _activeMemberIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_activeMemberIds);
+  }
+
+// All active member user IDs
+  final List<String> _managerIds;
+// All active member user IDs
+  @override
+  @JsonKey()
+  List<String> get managerIds {
+    if (_managerIds is EqualUnmodifiableListView) return _managerIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_managerIds);
+  }
+
+// User IDs with 'manager' role
+  final List<String> _moderatorIds;
+// User IDs with 'manager' role
+  @override
+  @JsonKey()
+  List<String> get moderatorIds {
+    if (_moderatorIds is EqualUnmodifiableListView) return _moderatorIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_moderatorIds);
+  }
+
+// User IDs with 'moderator' role
 // Settings
   final Map<String, dynamic> _settings;
+// User IDs with 'moderator' role
 // Settings
   @override
   @JsonKey()
@@ -609,7 +703,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, settings: $settings, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, profileImageUrl: $profileImageUrl, logoUrl: $logoUrl, bannerUrl: $bannerUrl, hubRules: $hubRules, region: $region, city: $city, isPrivate: $isPrivate, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, activityScore: $activityScore)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, activeMemberIds: $activeMemberIds, managerIds: $managerIds, moderatorIds: $moderatorIds, settings: $settings, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, profileImageUrl: $profileImageUrl, logoUrl: $logoUrl, bannerUrl: $bannerUrl, hubRules: $hubRules, region: $region, city: $city, isPrivate: $isPrivate, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, activityScore: $activityScore)';
   }
 
   @override
@@ -627,6 +721,12 @@ class _$HubImpl implements _Hub {
                 other.createdAt == createdAt) &&
             (identical(other.memberCount, memberCount) ||
                 other.memberCount == memberCount) &&
+            const DeepCollectionEquality()
+                .equals(other._activeMemberIds, _activeMemberIds) &&
+            const DeepCollectionEquality()
+                .equals(other._managerIds, _managerIds) &&
+            const DeepCollectionEquality()
+                .equals(other._moderatorIds, _moderatorIds) &&
             const DeepCollectionEquality().equals(other._settings, _settings) &&
             const DeepCollectionEquality()
                 .equals(other._permissions, _permissions) &&
@@ -672,6 +772,9 @@ class _$HubImpl implements _Hub {
         createdBy,
         createdAt,
         memberCount,
+        const DeepCollectionEquality().hash(_activeMemberIds),
+        const DeepCollectionEquality().hash(_managerIds),
+        const DeepCollectionEquality().hash(_moderatorIds),
         const DeepCollectionEquality().hash(_settings),
         const DeepCollectionEquality().hash(_permissions),
         location,
@@ -718,6 +821,9 @@ abstract class _Hub implements Hub {
       required final String createdBy,
       @TimestampConverter() required final DateTime createdAt,
       final int memberCount,
+      final List<String> activeMemberIds,
+      final List<String> managerIds,
+      final List<String> moderatorIds,
       final Map<String, dynamic> settings,
       final Map<String, dynamic> permissions,
       @NullableGeoPointConverter() final GeoPoint? location,
@@ -755,7 +861,17 @@ abstract class _Hub implements Hub {
   DateTime
       get createdAt; // Member count (denormalized for display, kept in sync by Cloud Function)
   @override
-  int get memberCount; // Settings
+  int get memberCount; // Denormalized member arrays (CRITICAL for Firestore Rules optimization)
+// These eliminate costly get() calls in security rules by denormalizing
+// membership data directly into the Hub document.
+// ⚠️ MUST be kept in sync by repository methods (addMember, removeMember, updateMemberRole)
+  @override
+  List<String> get activeMemberIds; // All active member user IDs
+  @override
+  List<String> get managerIds; // User IDs with 'manager' role
+  @override
+  List<String> get moderatorIds; // User IDs with 'moderator' role
+// Settings
   @override
   Map<String, dynamic> get settings; // Custom permissions (RARE overrides only)
 // Example: Allow specific user to create events even if not moderator

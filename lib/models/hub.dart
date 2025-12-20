@@ -17,6 +17,11 @@ part 'hub.g.dart';
 ///
 /// This model now represents hub IDENTITY only, not membership lists.
 /// All per-user data lives in the HubMember subcollection.
+///
+/// PERFORMANCE OPTIMIZATION (2025-12-20):
+/// Added denormalized member arrays (activeMemberIds, managerIds, moderatorIds)
+/// to eliminate costly get() calls in Firestore security rules.
+/// These arrays MUST be kept in sync by HubsRepository methods.
 @freezed
 class Hub with _$Hub {
   const factory Hub({
@@ -29,6 +34,14 @@ class Hub with _$Hub {
 
     // Member count (denormalized for display, kept in sync by Cloud Function)
     @Default(0) int memberCount,
+
+    // Denormalized member arrays (CRITICAL for Firestore Rules optimization)
+    // These eliminate costly get() calls in security rules by denormalizing
+    // membership data directly into the Hub document.
+    // ⚠️ MUST be kept in sync by repository methods (addMember, removeMember, updateMemberRole)
+    @Default([]) List<String> activeMemberIds, // All active member user IDs
+    @Default([]) List<String> managerIds, // User IDs with 'manager' role
+    @Default([]) List<String> moderatorIds, // User IDs with 'moderator' role
 
     // Settings
     @Default({

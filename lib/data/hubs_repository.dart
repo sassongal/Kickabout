@@ -374,6 +374,9 @@ class HubsRepository {
         // NOTE: Cloud Function (onMembershipChange) should now only verify
         // the count is correct, not set it. This transaction is the source of truth.
       });
+
+      // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
+      await _syncDenormalizedMemberArrays(hubId);
     } catch (e) {
       throw Exception('Failed to add member: $e');
     }
@@ -438,6 +441,9 @@ class HubsRepository {
         // NOTE: Cloud Function (onMembershipChange) should now only verify
         // the count is correct, not set it. This transaction is the source of truth.
       });
+
+      // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
+      await _syncDenormalizedMemberArrays(hubId);
     } catch (e) {
       throw Exception('Failed to remove member: $e');
     }
@@ -474,6 +480,9 @@ class HubsRepository {
         'updatedAt': FieldValue.serverTimestamp(),
         'updatedBy': updatedBy,
       });
+
+      // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
+      await _syncDenormalizedMemberArrays(hubId);
     } catch (e) {
       throw Exception('Failed to update member role: $e');
     }
@@ -619,6 +628,61 @@ class HubsRepository {
       return hubIds.contains(hubId);
     } catch (e) {
       return false;
+    }
+  }
+
+  /// CRITICAL: Sync denormalized member arrays (FIRESTORE RULES OPTIMIZATION)
+  ///
+  /// This method rebuilds the activeMemberIds, managerIds, and moderatorIds arrays
+  /// in the Hub document based on the current state of the members subcollection.
+  ///
+  /// WHY: Eliminates expensive get() calls in Firestore security rules by denormalizing
+  /// membership data directly into the Hub document for O(1) lookup.
+  ///
+  /// WHEN TO CALL: After any membership change (add, remove, role update)
+  ///
+  /// PERFORMANCE: Single collectionGroup() query + single document update
+  Future<void> _syncDenormalizedMemberArrays(String hubId) async {
+    if (!Env.isFirebaseAvailable) return;
+
+    try {
+      // Fetch all active members in one query
+      final membersSnap = await _firestore
+          .collection('hubs/$hubId/members')
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      final activeMemberIds = <String>[];
+      final managerIds = <String>[];
+      final moderatorIds = <String>[];
+
+      for (final doc in membersSnap.docs) {
+        final data = doc.data();
+        final userId = doc.id;
+        final role = data['role'] as String? ?? 'member';
+
+        activeMemberIds.add(userId);
+
+        if (role == 'manager') {
+          managerIds.add(userId);
+        } else if (role == 'moderator') {
+          moderatorIds.add(userId);
+        }
+      }
+
+      // Update hub document with denormalized arrays
+      await _firestore.doc(FirestorePaths.hub(hubId)).update({
+        'activeMemberIds': activeMemberIds,
+        'managerIds': managerIds,
+        'moderatorIds': moderatorIds,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Invalidate cache to reflect new member arrays
+      CacheService().clear(CacheKeys.hub(hubId));
+    } catch (e) {
+      debugPrint('Error syncing denormalized member arrays for hub $hubId: $e');
+      // Non-fatal: rules will fall back to slower checks if arrays are stale
     }
   }
 

@@ -14,6 +14,18 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
       createdAt:
           const TimestampConverter().fromJson(json['createdAt'] as Object),
       memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+      activeMemberIds: (json['activeMemberIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      managerIds: (json['managerIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      moderatorIds: (json['moderatorIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       settings: json['settings'] as Map<String, dynamic>? ??
           const {
             'showManagerContactInfo': true,
@@ -53,6 +65,9 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'createdBy': instance.createdBy,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'memberCount': instance.memberCount,
+      'activeMemberIds': instance.activeMemberIds,
+      'managerIds': instance.managerIds,
+      'moderatorIds': instance.moderatorIds,
       'settings': instance.settings,
       'permissions': instance.permissions,
       'location': const NullableGeoPointConverter().toJson(instance.location),

@@ -1053,6 +1053,132 @@ abstract class AppLocalizations {
   /// **'הצטרף להוב'**
   String get joinHubButton;
 
+  /// Snackbar message when user sets availability to available
+  ///
+  /// In he, this message translates to:
+  /// **'סטטוס עודכן: זמין למשחקים'**
+  String get statusUpdatedAvailable;
+
+  /// Snackbar message when user sets availability to not available
+  ///
+  /// In he, this message translates to:
+  /// **'סטטוס עודכן: לא זמין למשחקים'**
+  String get statusUpdatedNotAvailable;
+
+  /// Error message when status update fails
+  ///
+  /// In he, this message translates to:
+  /// **'שגיאה בעדכון סטטוס: {error}'**
+  String statusUpdateError(String error);
+
+  /// Notification when a join request is approved
+  ///
+  /// In he, this message translates to:
+  /// **'בקשתך אושרה!'**
+  String get requestApproved;
+
+  /// Message when a game is postponed
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק נדחה'**
+  String get gamePostponed;
+
+  /// Message when a game is cancelled
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק בוטל'**
+  String get gameCancelled;
+
+  /// Message when a game is completed
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק הסתיים'**
+  String get gameCompleted;
+
+  /// Message when game signup is confirmed
+  ///
+  /// In he, this message translates to:
+  /// **'ההרשמה אושרה!'**
+  String get signupConfirmed;
+
+  /// Message when game signup is cancelled
+  ///
+  /// In he, this message translates to:
+  /// **'ההרשמה בוטלה'**
+  String get signupCancelled;
+
+  /// Success message for location update
+  ///
+  /// In he, this message translates to:
+  /// **'המיקום עודכן בהצלחה'**
+  String get locationUpdatedSuccess;
+
+  /// Error message for location update failure
+  ///
+  /// In he, this message translates to:
+  /// **'שגיאה בעדכון מיקום: {error}'**
+  String locationUpdateError(String error);
+
+  /// Generic permission denied message
+  ///
+  /// In he, this message translates to:
+  /// **'אין לך הרשאה לבצע פעולה זו'**
+  String get noPermissionForAction;
+
+  /// Generic not found message
+  ///
+  /// In he, this message translates to:
+  /// **'הפריט לא נמצא'**
+  String get itemNotFound;
+
+  /// Service unavailable error message
+  ///
+  /// In he, this message translates to:
+  /// **'השירות לא זמין כרגע, נסה שוב מאוחר יותר'**
+  String get serviceUnavailable;
+
+  /// Message asking user to sign in again
+  ///
+  /// In he, this message translates to:
+  /// **'נא להתחבר מחדש'**
+  String get pleaseSignInAgain;
+
+  /// Generic error message
+  ///
+  /// In he, this message translates to:
+  /// **'אירעה שגיאה, נסה שוב'**
+  String get genericError;
+
+  /// Section title for upcoming games
+  ///
+  /// In he, this message translates to:
+  /// **'משחקים קרובים'**
+  String get upcomingGames;
+
+  /// Link text to view all events
+  ///
+  /// In he, this message translates to:
+  /// **'לכל האירועים'**
+  String get toAllEvents;
+
+  /// Admin console button label
+  ///
+  /// In he, this message translates to:
+  /// **'לוח בקרה'**
+  String get adminConsole;
+
+  /// Generate dummy data button for dev mode
+  ///
+  /// In he, this message translates to:
+  /// **'יצירת נתוני דמה (פיתוח)'**
+  String get generateDummyData;
+
+  /// Force location button for dev mode
+  ///
+  /// In he, this message translates to:
+  /// **'כפה מיקום (פיתוח)'**
+  String get forceLocation;
+
   /// No description provided for @temp.
   ///
   /// In he, this message translates to:

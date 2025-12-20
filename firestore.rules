@@ -50,34 +50,35 @@ service cloud.firestore {
     }
 
     /// Check if user is an active member of hub
-    /// Hub creator is ALWAYS considered active (even without HubMember doc)
-    /// Check if user is an active member of hub
+    /// OPTIMIZED (2025-12-20): Uses denormalized activeMemberIds array to eliminate get() calls
     /// Hub creator is ALWAYS considered active (even without HubMember doc)
     function isActiveHubMember(hubId) {
       let hub = getHubData(hubId);
-      let membership = getMembership(hubId, request.auth.uid);
       
       return isAuthenticated() && (
         // Creator is always active
         hub.createdBy == request.auth.uid ||
-        // Or has active membership
-        (membership != null && membership.status == 'active')
+        // OPTIMIZED: O(1) array lookup instead of get() call
+        // Check if user is in denormalized activeMemberIds array
+        (hub.activeMemberIds != null && request.auth.uid in hub.activeMemberIds)
       );
     }
 
     /// Check if user has one of the allowed roles in hub
+    /// OPTIMIZED (2025-12-20): Uses denormalized role arrays to eliminate get() calls
     /// Hub creator is ALWAYS manager (even without HubMember doc)
     function hasRole(hubId, userId, allowedRoles) {
       let hub = getHubData(hubId);
-      let membership = getMembership(hubId, userId);
       
       return (
         // Creator is always manager
         (hub.createdBy == userId && 'manager' in allowedRoles) ||
-        // Or has active membership with allowed role
-        (membership != null && 
-         membership.status == 'active' && 
-         membership.role in allowedRoles)
+        // OPTIMIZED: O(1) array lookups instead of get() call
+        // Check denormalized role arrays
+        ('manager' in allowedRoles && hub.managerIds != null && userId in hub.managerIds) ||
+        ('moderator' in allowedRoles && hub.moderatorIds != null && userId in hub.moderatorIds) ||
+        // Regular members check active membership array
+        ('member' in allowedRoles && hub.activeMemberIds != null && userId in hub.activeMemberIds)
       );
     }
 

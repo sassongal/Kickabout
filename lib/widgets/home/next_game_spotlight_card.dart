@@ -270,7 +270,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                       padding: const EdgeInsets.all(14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           // Header: Type badge + Hub/Creator

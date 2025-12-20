@@ -20,7 +20,7 @@
     "@google-cloud/firestore": "^7.10.0",
     "axios": "^1.7.9",
     "firebase-admin": "^13.0.1",
-    "firebase-functions": "^6.1.1"
+    "firebase-functions": "^7.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.28.5",

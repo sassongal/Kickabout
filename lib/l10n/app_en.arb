@@ -418,5 +418,99 @@
   "sendJoinRequest": "Send Join Request",
   "@sendJoinRequest": {},
   "joinHubButton": "Join Hub",
-  "@joinHubButton": {}
+  "@joinHubButton": {},
+  "statusUpdatedAvailable": "Status updated: Available for games",
+  "@statusUpdatedAvailable": {
+    "description": "Snackbar message when user sets availability to available"
+  },
+  "statusUpdatedNotAvailable": "Status updated: Not available for games",
+  "@statusUpdatedNotAvailable": {
+    "description": "Snackbar message when user sets availability to not available"
+  },
+  "statusUpdateError": "Error updating status: {error}",
+  "@statusUpdateError": {
+    "description": "Error message when status update fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "requestApproved": "Your request was approved!",
+  "@requestApproved": {
+    "description": "Notification when a join request is approved"
+  },
+  "gamePostponed": "Game postponed",
+  "@gamePostponed": {
+    "description": "Message when a game is postponed"
+  },
+  "gameCancelled": "Game cancelled",
+  "@gameCancelled": {
+    "description": "Message when a game is cancelled"
+  },
+  "gameCompleted": "Game completed",
+  "@gameCompleted": {
+    "description": "Message when a game is completed"
+  },
+  "signupConfirmed": "Signup confirmed!",
+  "@signupConfirmed": {
+    "description": "Message when game signup is confirmed"
+  },
+  "signupCancelled": "Signup cancelled",
+  "@signupCancelled": {
+    "description": "Message when game signup is cancelled"
+  },
+  "locationUpdatedSuccess": "Location updated successfully",
+  "@locationUpdatedSuccess": {
+    "description": "Success message for location update"
+  },
+  "locationUpdateError": "Error updating location: {error}",
+  "@locationUpdateError": {
+    "description": "Error message for location update failure",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noPermissionForAction": "You don't have permission for this action",
+  "@noPermissionForAction": {
+    "description": "Generic permission denied message"
+  },
+  "itemNotFound": "Item not found",
+  "@itemNotFound": {
+    "description": "Generic not found message"
+  },
+  "serviceUnavailable": "Service unavailable, please try again later",
+  "@serviceUnavailable": {
+    "description": "Service unavailable error message"
+  },
+  "pleaseSignInAgain": "Please sign in again",
+  "@pleaseSignInAgain": {
+    "description": "Message asking user to sign in again"
+  },
+  "genericError": "An error occurred, please try again",
+  "@genericError": {
+    "description": "Generic error message"
+  },
+  "upcomingGames": "Upcoming Games",
+  "@upcomingGames": {
+    "description": "Section title for upcoming games"
+  },
+  "toAllEvents": "To All Events",
+  "@toAllEvents": {
+    "description": "Link text to view all events"
+  },
+  "adminConsole": "Admin Console",
+  "@adminConsole": {
+    "description": "Admin console button label"
+  },
+  "generateDummyData": "Generate Dummy Data (Dev)",
+  "@generateDummyData": {
+    "description": "Generate dummy data button for dev mode"
+  },
+  "forceLocation": "Force Location (Dev)",
+  "@forceLocation": {
+    "description": "Force location button for dev mode"
+  }
 }

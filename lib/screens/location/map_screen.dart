@@ -557,6 +557,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Load venues (prefer Firestore; fallback to Google Places)
       if (_selectedFilter == 'all' || _selectedFilter == 'venues') {
+        if (!mounted) return; // Check before using ref
         final venuesRepo = ref.read(venuesRepositoryProvider);
         try {
           final nearbyVenues = await venuesRepo
@@ -567,6 +568,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               )
               .timeout(const Duration(seconds: 10), onTimeout: () => []);
 
+          if (!mounted) return; // Check after await
           for (final venue in nearbyVenues) {
             items.add(MapPlace(
               id: 'venue_${venue.venueId}',
@@ -587,6 +589,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             final existingIds = items.map((e) => e.id).toSet();
             final googlePlaces = await _fetchGooglePlaces(
                 centerLat, centerLng, searchRadiusKm.toInt(), existingIds);
+            if (!mounted) return; // Check after await
             items.addAll(googlePlaces);
           } catch (e) {
             debugPrint('⚠️ Error fetching Google Places (skipping): $e');
@@ -598,6 +601,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Load hubs
       if (_selectedFilter == 'all' || _selectedFilter == 'hubs') {
+        if (!mounted) return; // Check before using ref
         final hubsRepo = ref.read(hubsRepositoryProvider);
         try {
           final hubs = await hubsRepo
@@ -608,6 +612,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               )
               .timeout(const Duration(seconds: 10), onTimeout: () => []);
 
+          if (!mounted) return; // Check after await
           for (final hub in hubs) {
             GeoPoint? loc = hub.primaryVenueLocation ?? hub.location;
             // (Simplified location logic for brevity - ideally keep the detailed one)
@@ -627,17 +632,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Load games
       if (_selectedFilter == 'all' || _selectedFilter == 'games') {
+        if (!mounted) return; // Check before using ref
         final gamesRepo = ref.read(gamesRepositoryProvider);
         // Games logic currently loads by USER hubs. Maybe we should load by LOCATION?
         // Existing logic was "Get games from user's hubs" AND filter by location.
         // We will keep that logic for now as fetching ALL games by location might not exist in repo yet.
         final currentUserId = ref.read(currentUserIdProvider);
         if (currentUserId != null) {
+          if (!mounted) return; // Check before using ref again
           // ... logic similar to before ...
           final hubsRepo = ref.read(hubsRepositoryProvider);
           final userHubs = await hubsRepo.getHubsByMember(currentUserId);
+          if (!mounted) return; // Check after await
           for (final hub in userHubs) {
             final games = await gamesRepo.getGamesByHub(hub.hubId);
+            if (!mounted) return; // Check after await
             for (final game in games) {
               if (game.locationPoint != null) {
                 // Check if in bounds

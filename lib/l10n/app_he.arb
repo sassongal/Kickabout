@@ -455,5 +455,99 @@
   "@sendJoinRequest": {},
   "joinHubButton": "הצטרף להוב",
   "@joinHubButton": {},
+  "statusUpdatedAvailable": "סטטוס עודכן: זמין למשחקים",
+  "@statusUpdatedAvailable": {
+    "description": "Snackbar message when user sets availability to available"
+  },
+  "statusUpdatedNotAvailable": "סטטוס עודכן: לא זמין למשחקים",
+  "@statusUpdatedNotAvailable": {
+    "description": "Snackbar message when user sets availability to not available"
+  },
+  "statusUpdateError": "שגיאה בעדכון סטטוס: {error}",
+  "@statusUpdateError": {
+    "description": "Error message when status update fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "requestApproved": "בקשתך אושרה!",
+  "@requestApproved": {
+    "description": "Notification when a join request is approved"
+  },
+  "gamePostponed": "המשחק נדחה",
+  "@gamePostponed": {
+    "description": "Message when a game is postponed"
+  },
+  "gameCancelled": "המשחק בוטל",
+  "@gameCancelled": {
+    "description": "Message when a game is cancelled"
+  },
+  "gameCompleted": "המשחק הסתיים",
+  "@gameCompleted": {
+    "description": "Message when a game is completed"
+  },
+  "signupConfirmed": "ההרשמה אושרה!",
+  "@signupConfirmed": {
+    "description": "Message when game signup is confirmed"
+  },
+  "signupCancelled": "ההרשמה בוטלה",
+  "@signupCancelled": {
+    "description": "Message when game signup is cancelled"
+  },
+  "locationUpdatedSuccess": "המיקום עודכן בהצלחה",
+  "@locationUpdatedSuccess": {
+    "description": "Success message for location update"
+  },
+  "locationUpdateError": "שגיאה בעדכון מיקום: {error}",
+  "@locationUpdateError": {
+    "description": "Error message for location update failure",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noPermissionForAction": "אין לך הרשאה לבצע פעולה זו",
+  "@noPermissionForAction": {
+    "description": "Generic permission denied message"
+  },
+  "itemNotFound": "הפריט לא נמצא",
+  "@itemNotFound": {
+    "description": "Generic not found message"
+  },
+  "serviceUnavailable": "השירות לא זמין כרגע, נסה שוב מאוחר יותר",
+  "@serviceUnavailable": {
+    "description": "Service unavailable error message"
+  },
+  "pleaseSignInAgain": "נא להתחבר מחדש",
+  "@pleaseSignInAgain": {
+    "description": "Message asking user to sign in again"
+  },
+  "genericError": "אירעה שגיאה, נסה שוב",
+  "@genericError": {
+    "description": "Generic error message"
+  },
+  "upcomingGames": "משחקים קרובים",
+  "@upcomingGames": {
+    "description": "Section title for upcoming games"
+  },
+  "toAllEvents": "לכל האירועים",
+  "@toAllEvents": {
+    "description": "Link text to view all events"
+  },
+  "adminConsole": "לוח בקרה",
+  "@adminConsole": {
+    "description": "Admin console button label"
+  },
+  "generateDummyData": "יצירת נתוני דמה (פיתוח)",
+  "@generateDummyData": {
+    "description": "Generate dummy data button for dev mode"
+  },
+  "forceLocation": "כפה מיקום (פיתוח)",
+  "@forceLocation": {
+    "description": "Force location button for dev mode"
+  },
   "temp": "temp"
 }

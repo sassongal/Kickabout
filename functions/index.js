@@ -71,3 +71,7 @@ exports.onMembershipChange = membership.onMembershipChange;
 exports.onChatMessage = membership.onChatMessage;
 exports.onGameSignup = membership.onGameSignup;
 exports.promoteVeterans = membership.promoteVeterans;
+
+// Migrations (One-time data migrations)
+const migrations = require('./src/migrations/migrate_hub_member_arrays');
+exports.migrateHubMemberArrays = migrations.migrateHubMemberArrays;

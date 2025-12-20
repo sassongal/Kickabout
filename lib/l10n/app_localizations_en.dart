@@ -521,5 +521,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String get joinHubButton => 'Join Hub';
 
   @override
+  String get statusUpdatedAvailable => 'Status updated: Available for games';
+
+  @override
+  String get statusUpdatedNotAvailable =>
+      'Status updated: Not available for games';
+
+  @override
+  String statusUpdateError(String error) {
+    return 'Error updating status: $error';
+  }
+
+  @override
+  String get requestApproved => 'Your request was approved!';
+
+  @override
+  String get gamePostponed => 'Game postponed';
+
+  @override
+  String get gameCancelled => 'Game cancelled';
+
+  @override
+  String get gameCompleted => 'Game completed';
+
+  @override
+  String get signupConfirmed => 'Signup confirmed!';
+
+  @override
+  String get signupCancelled => 'Signup cancelled';
+
+  @override
+  String get locationUpdatedSuccess => 'Location updated successfully';
+
+  @override
+  String locationUpdateError(String error) {
+    return 'Error updating location: $error';
+  }
+
+  @override
+  String get noPermissionForAction =>
+      'You don\'t have permission for this action';
+
+  @override
+  String get itemNotFound => 'Item not found';
+
+  @override
+  String get serviceUnavailable =>
+      'Service unavailable, please try again later';
+
+  @override
+  String get pleaseSignInAgain => 'Please sign in again';
+
+  @override
+  String get genericError => 'An error occurred, please try again';
+
+  @override
+  String get upcomingGames => 'Upcoming Games';
+
+  @override
+  String get toAllEvents => 'To All Events';
+
+  @override
+  String get adminConsole => 'Admin Console';
+
+  @override
+  String get generateDummyData => 'Generate Dummy Data (Dev)';
+
+  @override
+  String get forceLocation => 'Force Location (Dev)';
+
+  @override
   String get temp => 'temp';
 }

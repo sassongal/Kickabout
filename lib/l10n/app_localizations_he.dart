@@ -516,5 +516,72 @@ class AppLocalizationsHe extends AppLocalizations {
   String get joinHubButton => 'הצטרף להוב';
 
   @override
+  String get statusUpdatedAvailable => 'סטטוס עודכן: זמין למשחקים';
+
+  @override
+  String get statusUpdatedNotAvailable => 'סטטוס עודכן: לא זמין למשחקים';
+
+  @override
+  String statusUpdateError(String error) {
+    return 'שגיאה בעדכון סטטוס: $error';
+  }
+
+  @override
+  String get requestApproved => 'בקשתך אושרה!';
+
+  @override
+  String get gamePostponed => 'המשחק נדחה';
+
+  @override
+  String get gameCancelled => 'המשחק בוטל';
+
+  @override
+  String get gameCompleted => 'המשחק הסתיים';
+
+  @override
+  String get signupConfirmed => 'ההרשמה אושרה!';
+
+  @override
+  String get signupCancelled => 'ההרשמה בוטלה';
+
+  @override
+  String get locationUpdatedSuccess => 'המיקום עודכן בהצלחה';
+
+  @override
+  String locationUpdateError(String error) {
+    return 'שגיאה בעדכון מיקום: $error';
+  }
+
+  @override
+  String get noPermissionForAction => 'אין לך הרשאה לבצע פעולה זו';
+
+  @override
+  String get itemNotFound => 'הפריט לא נמצא';
+
+  @override
+  String get serviceUnavailable => 'השירות לא זמין כרגע, נסה שוב מאוחר יותר';
+
+  @override
+  String get pleaseSignInAgain => 'נא להתחבר מחדש';
+
+  @override
+  String get genericError => 'אירעה שגיאה, נסה שוב';
+
+  @override
+  String get upcomingGames => 'משחקים קרובים';
+
+  @override
+  String get toAllEvents => 'לכל האירועים';
+
+  @override
+  String get adminConsole => 'לוח בקרה';
+
+  @override
+  String get generateDummyData => 'יצירת נתוני דמה (פיתוח)';
+
+  @override
+  String get forceLocation => 'כפה מיקום (פיתוח)';
+
+  @override
   String get temp => 'temp';
 }

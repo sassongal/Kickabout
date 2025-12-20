@@ -107,9 +107,11 @@ class PremiumColors {
 
   // Text - High contrast hierarchy
   static const textPrimary = Color(0xFF09090B); // Near black (shadcn zinc-950)
-  static const textSecondary = Color(0xFF52525B); // Medium gray (shadcn zinc-600)
+  static const textSecondary =
+      Color(0xFF52525B); // Medium gray (shadcn zinc-600)
   static const textTertiary = Color(0xFFA1A1AA); // Light gray (shadcn zinc-400)
-  static const textMuted = Color(0xFFD4D4D8); // Very light gray (shadcn zinc-300)
+  static const textMuted =
+      Color(0xFFD4D4D8); // Very light gray (shadcn zinc-300)
 
   // Borders - Subtle but defined
   static const border = Color(0xFFE4E4E7); // Light border (shadcn zinc-200)
@@ -173,43 +175,45 @@ class PremiumTypography {
     color: PremiumColors.textPrimary,
   );
 
-  // Body - Inter (clean, modern)
-  static TextStyle bodyLarge = GoogleFonts.inter(
+  // Body - Heebo (Hebrew support, clean, modern)
+  // Heebo is a Google Font with excellent Hebrew glyph coverage
+  static TextStyle bodyLarge = GoogleFonts.heebo(
     fontSize: 16,
     fontWeight: FontWeight.normal,
     color: PremiumColors.textPrimary,
-    height: 1.5,
+    height: 1.6, // Slightly increased for Hebrew readability
   );
 
-  static TextStyle bodyMedium = GoogleFonts.inter(
+  static TextStyle bodyMedium = GoogleFonts.heebo(
     fontSize: 14,
     fontWeight: FontWeight.normal,
     color: PremiumColors.textSecondary,
-    height: 1.5,
+    height: 1.6,
   );
 
-  static TextStyle bodySmall = GoogleFonts.inter(
+  static TextStyle bodySmall = GoogleFonts.heebo(
     fontSize: 12,
     fontWeight: FontWeight.normal,
     color: PremiumColors.textTertiary,
-    height: 1.4,
+    height: 1.5,
   );
 
-  // Labels - Montserrat (bold, geometric)
-  static TextStyle labelSmall = GoogleFonts.montserrat(
+  // Labels - Rubik (Hebrew support, bold, geometric)
+  // Rubik is a Google Font with strong Hebrew glyph coverage
+  static TextStyle labelSmall = GoogleFonts.rubik(
     fontSize: 10,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.5,
     color: PremiumColors.textTertiary,
   );
-  static TextStyle labelLarge = GoogleFonts.montserrat(
+  static TextStyle labelLarge = GoogleFonts.rubik(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.5,
     color: PremiumColors.textPrimary,
   );
 
-  static TextStyle labelMedium = GoogleFonts.montserrat(
+  static TextStyle labelMedium = GoogleFonts.rubik(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.3,
@@ -330,8 +334,7 @@ ThemeData get premiumTheme => ThemeData(
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(PremiumRadii.md),
-          borderSide:
-              const BorderSide(color: PremiumColors.primary, width: 2),
+          borderSide: const BorderSide(color: PremiumColors.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(PremiumRadii.md),
