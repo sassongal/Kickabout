@@ -503,6 +503,61 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Show "Start Session" or "Enter Session" button if teams exist and game created
+            if (event.teams.isNotEmpty && event.gameId != null) ...[
+              StreamBuilder<Game?>(
+                stream: ref.read(gamesRepositoryProvider).watchGame(event.gameId!),
+                builder: (context, gameSnapshot) {
+                  final game = gameSnapshot.data;
+
+                  // Check if session is active
+                  final isSessionActive = game?.session.isActive ?? false;
+                  final hasSessionEnded = game?.session.sessionEndedAt != null;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // Navigate to GameSessionScreen
+                          context.push(
+                            '/hubs/${widget.hubId}/events/${widget.eventId}/game-session',
+                          );
+                        },
+                        icon: Icon(
+                          isSessionActive
+                            ? Icons.sports_soccer
+                            : hasSessionEnded
+                              ? Icons.emoji_events
+                              : Icons.play_arrow,
+                        ),
+                        label: Text(
+                          isSessionActive
+                            ? 'כנס לסשן פעיל'
+                            : hasSessionEnded
+                              ? 'צפה בסיכום'
+                              : 'התחל סשן',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 24,
+                          ),
+                          backgroundColor: isSessionActive
+                            ? Colors.green
+                            : hasSessionEnded
+                              ? Colors.amber
+                              : PremiumColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+
             // Show teams if they exist
             if (event.teams.isNotEmpty) ...[
               ...event.teams.asMap().entries.map((entry) {

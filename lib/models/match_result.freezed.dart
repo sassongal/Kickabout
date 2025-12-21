@@ -36,8 +36,17 @@ mixin _$MatchResult {
   DateTime get createdAt =>
       throw _privateConstructorUsedError; // When this match was logged
   String? get loggedBy =>
-      throw _privateConstructorUsedError; // User ID who logged this match (manager)
-  int get matchDurationMinutes => throw _privateConstructorUsedError;
+      throw _privateConstructorUsedError; // User ID who logged this match (manager or moderator)
+  int get matchDurationMinutes =>
+      throw _privateConstructorUsedError; // Duration of this specific match in minutes
+// Moderator approval workflow fields
+  MatchApprovalStatus get approvalStatus => throw _privateConstructorUsedError;
+  String? get approvedBy =>
+      throw _privateConstructorUsedError; // User ID of manager who approved (if moderator submitted)
+  @TimestampConverter()
+  DateTime? get approvedAt =>
+      throw _privateConstructorUsedError; // When manager approved
+  String? get rejectionReason => throw _privateConstructorUsedError;
 
   /// Serializes this MatchResult to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -65,7 +74,11 @@ abstract class $MatchResultCopyWith<$Res> {
       List<String> assistIds,
       @TimestampConverter() DateTime createdAt,
       String? loggedBy,
-      int matchDurationMinutes});
+      int matchDurationMinutes,
+      MatchApprovalStatus approvalStatus,
+      String? approvedBy,
+      @TimestampConverter() DateTime? approvedAt,
+      String? rejectionReason});
 }
 
 /// @nodoc
@@ -93,6 +106,10 @@ class _$MatchResultCopyWithImpl<$Res, $Val extends MatchResult>
     Object? createdAt = null,
     Object? loggedBy = freezed,
     Object? matchDurationMinutes = null,
+    Object? approvalStatus = null,
+    Object? approvedBy = freezed,
+    Object? approvedAt = freezed,
+    Object? rejectionReason = freezed,
   }) {
     return _then(_value.copyWith(
       matchId: null == matchId
@@ -135,6 +152,22 @@ class _$MatchResultCopyWithImpl<$Res, $Val extends MatchResult>
           ? _value.matchDurationMinutes
           : matchDurationMinutes // ignore: cast_nullable_to_non_nullable
               as int,
+      approvalStatus: null == approvalStatus
+          ? _value.approvalStatus
+          : approvalStatus // ignore: cast_nullable_to_non_nullable
+              as MatchApprovalStatus,
+      approvedBy: freezed == approvedBy
+          ? _value.approvedBy
+          : approvedBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      approvedAt: freezed == approvedAt
+          ? _value.approvedAt
+          : approvedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      rejectionReason: freezed == rejectionReason
+          ? _value.rejectionReason
+          : rejectionReason // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -157,7 +190,11 @@ abstract class _$$MatchResultImplCopyWith<$Res>
       List<String> assistIds,
       @TimestampConverter() DateTime createdAt,
       String? loggedBy,
-      int matchDurationMinutes});
+      int matchDurationMinutes,
+      MatchApprovalStatus approvalStatus,
+      String? approvedBy,
+      @TimestampConverter() DateTime? approvedAt,
+      String? rejectionReason});
 }
 
 /// @nodoc
@@ -183,6 +220,10 @@ class __$$MatchResultImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? loggedBy = freezed,
     Object? matchDurationMinutes = null,
+    Object? approvalStatus = null,
+    Object? approvedBy = freezed,
+    Object? approvedAt = freezed,
+    Object? rejectionReason = freezed,
   }) {
     return _then(_$MatchResultImpl(
       matchId: null == matchId
@@ -225,6 +266,22 @@ class __$$MatchResultImplCopyWithImpl<$Res>
           ? _value.matchDurationMinutes
           : matchDurationMinutes // ignore: cast_nullable_to_non_nullable
               as int,
+      approvalStatus: null == approvalStatus
+          ? _value.approvalStatus
+          : approvalStatus // ignore: cast_nullable_to_non_nullable
+              as MatchApprovalStatus,
+      approvedBy: freezed == approvedBy
+          ? _value.approvedBy
+          : approvedBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      approvedAt: freezed == approvedAt
+          ? _value.approvedAt
+          : approvedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      rejectionReason: freezed == rejectionReason
+          ? _value.rejectionReason
+          : rejectionReason // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -242,7 +299,11 @@ class _$MatchResultImpl implements _MatchResult {
       final List<String> assistIds = const [],
       @TimestampConverter() required this.createdAt,
       this.loggedBy,
-      this.matchDurationMinutes = 12})
+      this.matchDurationMinutes = 12,
+      this.approvalStatus = MatchApprovalStatus.approved,
+      this.approvedBy,
+      @TimestampConverter() this.approvedAt,
+      this.rejectionReason})
       : _scorerIds = scorerIds,
         _assistIds = assistIds;
 
@@ -292,14 +353,28 @@ class _$MatchResultImpl implements _MatchResult {
 // When this match was logged
   @override
   final String? loggedBy;
-// User ID who logged this match (manager)
+// User ID who logged this match (manager or moderator)
   @override
   @JsonKey()
   final int matchDurationMinutes;
+// Duration of this specific match in minutes
+// Moderator approval workflow fields
+  @override
+  @JsonKey()
+  final MatchApprovalStatus approvalStatus;
+  @override
+  final String? approvedBy;
+// User ID of manager who approved (if moderator submitted)
+  @override
+  @TimestampConverter()
+  final DateTime? approvedAt;
+// When manager approved
+  @override
+  final String? rejectionReason;
 
   @override
   String toString() {
-    return 'MatchResult(matchId: $matchId, teamAColor: $teamAColor, teamBColor: $teamBColor, scoreA: $scoreA, scoreB: $scoreB, scorerIds: $scorerIds, assistIds: $assistIds, createdAt: $createdAt, loggedBy: $loggedBy, matchDurationMinutes: $matchDurationMinutes)';
+    return 'MatchResult(matchId: $matchId, teamAColor: $teamAColor, teamBColor: $teamBColor, scoreA: $scoreA, scoreB: $scoreB, scorerIds: $scorerIds, assistIds: $assistIds, createdAt: $createdAt, loggedBy: $loggedBy, matchDurationMinutes: $matchDurationMinutes, approvalStatus: $approvalStatus, approvedBy: $approvedBy, approvedAt: $approvedAt, rejectionReason: $rejectionReason)';
   }
 
   @override
@@ -323,7 +398,15 @@ class _$MatchResultImpl implements _MatchResult {
             (identical(other.loggedBy, loggedBy) ||
                 other.loggedBy == loggedBy) &&
             (identical(other.matchDurationMinutes, matchDurationMinutes) ||
-                other.matchDurationMinutes == matchDurationMinutes));
+                other.matchDurationMinutes == matchDurationMinutes) &&
+            (identical(other.approvalStatus, approvalStatus) ||
+                other.approvalStatus == approvalStatus) &&
+            (identical(other.approvedBy, approvedBy) ||
+                other.approvedBy == approvedBy) &&
+            (identical(other.approvedAt, approvedAt) ||
+                other.approvedAt == approvedAt) &&
+            (identical(other.rejectionReason, rejectionReason) ||
+                other.rejectionReason == rejectionReason));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -339,7 +422,11 @@ class _$MatchResultImpl implements _MatchResult {
       const DeepCollectionEquality().hash(_assistIds),
       createdAt,
       loggedBy,
-      matchDurationMinutes);
+      matchDurationMinutes,
+      approvalStatus,
+      approvedBy,
+      approvedAt,
+      rejectionReason);
 
   /// Create a copy of MatchResult
   /// with the given fields replaced by the non-null parameter values.
@@ -368,7 +455,11 @@ abstract class _MatchResult implements MatchResult {
       final List<String> assistIds,
       @TimestampConverter() required final DateTime createdAt,
       final String? loggedBy,
-      final int matchDurationMinutes}) = _$MatchResultImpl;
+      final int matchDurationMinutes,
+      final MatchApprovalStatus approvalStatus,
+      final String? approvedBy,
+      @TimestampConverter() final DateTime? approvedAt,
+      final String? rejectionReason}) = _$MatchResultImpl;
 
   factory _MatchResult.fromJson(Map<String, dynamic> json) =
       _$MatchResultImpl.fromJson;
@@ -392,9 +483,20 @@ abstract class _MatchResult implements MatchResult {
   @TimestampConverter()
   DateTime get createdAt; // When this match was logged
   @override
-  String? get loggedBy; // User ID who logged this match (manager)
+  String? get loggedBy; // User ID who logged this match (manager or moderator)
   @override
-  int get matchDurationMinutes;
+  int get matchDurationMinutes; // Duration of this specific match in minutes
+// Moderator approval workflow fields
+  @override
+  MatchApprovalStatus get approvalStatus;
+  @override
+  String?
+      get approvedBy; // User ID of manager who approved (if moderator submitted)
+  @override
+  @TimestampConverter()
+  DateTime? get approvedAt; // When manager approved
+  @override
+  String? get rejectionReason;
 
   /// Create a copy of MatchResult
   /// with the given fields replaced by the non-null parameter values.

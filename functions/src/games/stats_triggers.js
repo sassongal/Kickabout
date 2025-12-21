@@ -1,13 +1,14 @@
 /* eslint-disable max-len */
 const { onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { info } = require('firebase-functions/logger');
-const { db, messaging, FieldValue, getUserFCMTokens } = require('../utils');
+const { db, messaging, FieldValue } = require('../utils');
 
 // --- Game Completion Trigger ---
 exports.onGameCompleted = onDocumentUpdated(
     'games/{gameId}',
     async (event) => {
         const gameId = event.params.gameId;
+        const eventId = event.id; // Unique event ID for idempotency
         const beforeData = event.data.before.data();
         const afterData = event.data.after.data();
 
@@ -26,6 +27,24 @@ exports.onGameCompleted = onDocumentUpdated(
             info(`Game ${gameId} was processed by new flow. Skipping onGameCompleted.`);
             return;
         }
+
+        // ✅ IDEMPOTENCY CHECK: Prevent duplicate execution
+        // Firebase Functions can sometimes retry, this prevents double-processing
+        const processedRef = db.collection('processed_events').doc(eventId);
+        const processedDoc = await processedRef.get();
+
+        if (processedDoc.exists) {
+            info(`Event ${eventId} already processed for game ${gameId}. Skipping.`);
+            return;
+        }
+
+        // Mark event as being processed (with TTL for auto-cleanup after 7 days)
+        await processedRef.set({
+            eventType: 'game_completed',
+            gameId: gameId,
+            processedAt: FieldValue.serverTimestamp(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        });
 
         info(`Game ${gameId} completed. Calculating player statistics.`);
 
@@ -128,67 +147,67 @@ exports.onGameCompleted = onDocumentUpdated(
                 });
             } else {
                 info(`No events found for game ${gameId}. Checking for simple mode stats on game document.`);
-                // Fallback for games logged without events (e.g., from finalizeGame)
-                const goalScorers = gameData.goalScorerIds || [];
-                goalScorers.forEach((playerId) => {
-                    if (playerStats[playerId]) {
-                        playerStats[playerId].goals += 1;
-                    }
-                });
 
-                const assistProviders = gameData.assistPlayerIds || [];
-                assistProviders.forEach((playerId) => {
-                    if (playerStats[playerId]) {
-                        playerStats[playerId].assists += 1;
-                    }
-                });
+                // Check if this is a multi-match session (Winner Stays format)
+                const session = gameData.session || {};
+                const matches = session.matches || [];
 
-                if (gameData.mvpPlayerId) {
-                    const mvpPlayerId = gameData.mvpPlayerId;
-                    if (playerStats[mvpPlayerId]) {
-                        playerStats[mvpPlayerId].mvpVotes += 1;
+                if (matches.length > 0) {
+                    info(`Processing session game ${gameId} with ${matches.length} matches`);
+
+                    // Aggregate goals/assists across ALL approved matches
+                    matches.forEach((match) => {
+                        // Only count approved matches
+                        if (match.approvalStatus !== 'approved') {
+                            info(`Skipping unapproved match ${match.matchId} (status: ${match.approvalStatus})`);
+                            return;
+                        }
+
+                        // Aggregate goal scorers
+                        const matchGoalScorers = match.scorerIds || [];
+                        matchGoalScorers.forEach((playerId) => {
+                            if (playerStats[playerId]) {
+                                playerStats[playerId].goals += 1;
+                            }
+                        });
+
+                        // Aggregate assist providers
+                        const matchAssistProviders = match.assistIds || [];
+                        matchAssistProviders.forEach((playerId) => {
+                            if (playerStats[playerId]) {
+                                playerStats[playerId].assists += 1;
+                            }
+                        });
+                    });
+
+                    info(`✅ Aggregated stats from ${matches.filter(m => m.approvalStatus === 'approved').length} approved matches`);
+                } else {
+                    // Fallback for legacy single-match games (e.g., from finalizeGame)
+                    const goalScorers = gameData.goalScorerIds || [];
+                    goalScorers.forEach((playerId) => {
+                        if (playerStats[playerId]) {
+                            playerStats[playerId].goals += 1;
+                        }
+                    });
+
+                    const assistProviders = gameData.assistPlayerIds || [];
+                    assistProviders.forEach((playerId) => {
+                        if (playerStats[playerId]) {
+                            playerStats[playerId].assists += 1;
+                        }
+                    });
+
+                    if (gameData.mvpPlayerId) {
+                        const mvpPlayerId = gameData.mvpPlayerId;
+                        if (playerStats[mvpPlayerId]) {
+                            playerStats[mvpPlayerId].mvpVotes += 1;
+                        }
                     }
                 }
             }
 
-            // ✅ PERFORMANCE FIX: Fetch all gamification docs in PARALLEL
-            const gamificationRefs = Object.keys(playerStats).map((playerId) =>
-                db
-                    .collection('users')
-                    .doc(playerId)
-                    .collection('gamification')
-                    .doc('stats')
-            );
-
-            const gamificationDocs = await Promise.all(
-                gamificationRefs.map((ref) => ref.get())
-            );
-
-            // Create map for quick lookup
-            const gamificationMap = new Map();
-            gamificationDocs.forEach((doc, index) => {
-                const playerId = Object.keys(playerStats)[index];
-                gamificationMap.set(
-                    playerId,
-                    doc.exists
-                        ? doc.data()
-                        : {
-                            points: 0,
-                            level: 1,
-                            badges: [],
-                            achievements: {},
-                            stats: {
-                                gamesPlayed: 0,
-                                gamesWon: 0,
-                                goals: 0,
-                                assists: 0,
-                                saves: 0,
-                            },
-                        }
-                );
-            });
-
             // Update gamification stats for each player using batch writes
+            // NOTE: Badge awards are now handled by a separate trigger (onUserStatsUpdated)
             const batch = db.batch();
 
             for (const [playerId, stats] of Object.entries(playerStats)) {
@@ -197,9 +216,6 @@ exports.onGameCompleted = onDocumentUpdated(
                     .doc(playerId)
                     .collection('gamification')
                     .doc('stats');
-
-                // Get current gamification data from map (for badge checks only)
-                const currentData = gamificationMap.get(playerId);
 
                 // Determine if player won (check if their team is the winning team)
                 const playerWon = winningTeamId !== null && stats.teamId === winningTeamId;
@@ -217,56 +233,18 @@ exports.onGameCompleted = onDocumentUpdated(
                     statsUpdate['stats.gamesWon'] = FieldValue.increment(1);
                 }
 
-                // Check for milestone badges (based on current data - best effort)
-                // Note: Exact milestone detection requires reading fresh data, but for UX
-                // it's acceptable to award badges based on pre-read data
-                const badgesToAward = [];
-                const currentGamesPlayed = currentData.stats?.gamesPlayed || 0;
-                const currentGoals = currentData.stats?.goals || 0;
-                const currentBadges = currentData.badges || [];
-
-                // Award badges at milestones (approximate - may be +/- 1 game due to concurrency)
-                if (currentGamesPlayed + 1 === 1 && !currentBadges.includes('firstGame')) {
-                    badgesToAward.push('firstGame');
-                }
-                if (currentGamesPlayed + 1 === 10 && !currentBadges.includes('tenGames')) {
-                    badgesToAward.push('tenGames');
-                }
-                if (currentGamesPlayed + 1 === 50 && !currentBadges.includes('fiftyGames')) {
-                    badgesToAward.push('fiftyGames');
-                }
-                if (currentGamesPlayed + 1 === 100 && !currentBadges.includes('hundredGames')) {
-                    badgesToAward.push('hundredGames');
-                }
-
-                // Goal badges
-                if (currentGoals + stats.goals >= 1 && !currentBadges.includes('firstGoal')) {
-                    badgesToAward.push('firstGoal');
-                }
-                if (currentGoals + stats.goals >= 3 && !currentBadges.includes('hatTrick')) {
-                    badgesToAward.push('hatTrick');
-                }
-
                 // Build update object
+                // NOTE: Badge awards are now handled by onUserStatsUpdated trigger
+                // which listens to changes in gamification/stats
                 const updateData = {
                     ...statsUpdate,
                     userId: playerId,
                     updatedAt: FieldValue.serverTimestamp(),
                 };
 
-                // Add badges if any were earned
-                if (badgesToAward.length > 0) {
-                    updateData.badges = FieldValue.arrayUnion(...badgesToAward);
-                }
-
                 // Use set() with merge to handle both existing and new documents
                 // This allows atomic increments to work even if document doesn't exist yet
                 batch.set(gamificationRef, updateData, { merge: true });
-
-                // Log badge awards
-                if (badgesToAward.length > 0) {
-                    info(`Player ${playerId} earned badges: ${badgesToAward.join(', ')}`);
-                }
 
                 // Also update user's totalParticipations
                 const userRef = db.collection('users').doc(playerId);
@@ -410,103 +388,35 @@ exports.onGameCompleted = onDocumentUpdated(
                 info(`Failed to update denormalized data for game ${gameId}:`, denormError);
             }
 
-            // ✅ PERFORMANCE FIX: Send "Game Summary" notification with PARALLEL token fetch + BATCH send
+            // ✅ OPTIMIZED: Send "Game Summary" notification to hub topic
             try {
-                // Fetch hub and all tokens in PARALLEL
-                const [hubDoc, ...tokenArrays] = await Promise.all([
-                    db.collection('hubs').doc(gameData.hubId).get(),
-                    ...participantIds.map((playerId) => getUserFCMTokens(playerId)),
-                ]);
-
+                const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
                 const hubName = hubDoc.exists
                     ? hubDoc.data()?.name || 'האב'
                     : 'האב';
 
-                // Collect all tokens
-                const tokens = tokenArrays.flat();
-                const uniqueTokens = [...new Set(tokens)];
+                // Send to topic instead of individual tokens (100x faster!)
+                const message = {
+                    notification: {
+                        title: 'סיכום משחק',
+                        body: `משחק הושלם ב-${hubName}! תוצאה: ${teamAScore}-${teamBScore}`,
+                    },
+                    data: {
+                        type: 'game_summary',
+                        gameId: gameId,
+                        hubId: gameData.hubId,
+                    },
+                    topic: `hub_${gameData.hubId}`,
+                };
 
-                // ✅ Send all notifications in ONE batch
-                if (uniqueTokens.length > 0) {
-                    const message = {
-                        notification: {
-                            title: 'סיכום משחק',
-                            body: `משחק הושלם ב-${hubName}! תוצאה: ${teamAScore}-${teamBScore}`,
-                        },
-                        data: {
-                            type: 'game_summary',
-                            gameId: gameId,
-                            hubId: gameData.hubId,
-                        },
-                        tokens: uniqueTokens,
-                    };
-
-                    const response = await messaging.sendEachForMulticast(message);
-                    info(
-                        `Sent game summary notifications to ${response.successCount}/${uniqueTokens.length} devices.`
-                    );
-                } else {
-                    info('No FCM tokens found for game summary notifications.');
-                }
+                await messaging.send(message);
+                info(`Sent game summary notification to topic hub_${gameData.hubId}`);
             } catch (notificationError) {
                 info(`Failed to send game summary notifications:`, notificationError);
             }
 
-            // ✅ SOCIAL LOOP FIX: Create feed posts in BOTH hub feed AND regional feed
-            const gameRegion = gameData.region;
-            try {
-                const hubDoc = await db.collection('hubs').doc(gameData.hubId).get();
-                const hubData = hubDoc.exists ? hubDoc.data() : null;
-
-                // Prepare feed post data (shared between hub and regional feed)
-                const feedPostData = {
-                    hubId: gameData.hubId,
-                    hubName: hubData?.name || 'האב',
-                    hubLogoUrl: hubData?.logoUrl || null,
-                    type: 'game_completed',
-                    text: `משחק הושלם ב-${hubData?.name || 'האב'}! תוצאה: ${teamAScore}-${teamBScore}`,
-                    createdAt: FieldValue.serverTimestamp(),
-                    authorId: gameData.createdBy,
-                    authorName: null,
-                    authorPhotoUrl: null,
-                    entityId: gameId,
-                    gameId: gameId,
-                    region: gameRegion,
-                    likeCount: 0,
-                    commentCount: 0,
-                    likes: [],
-                    comments: [],
-                };
-
-                const feedBatch = db.batch();
-
-                // 1️⃣ Create post in HUB feed (for hub members) - THIS WAS MISSING!
-                const hubFeedPostRef = db
-                    .collection('hubs')
-                    .doc(gameData.hubId)
-                    .collection('feed')
-                    .doc('posts')
-                    .collection('items')
-                    .doc();
-                feedBatch.set(hubFeedPostRef, {
-                    ...feedPostData,
-                    postId: hubFeedPostRef.id,
-                });
-
-                // 2️⃣ Create post in REGIONAL feed (for discovery)
-                if (gameRegion) {
-                    const regionalFeedPostRef = db.collection('feedPosts').doc();
-                    feedBatch.set(regionalFeedPostRef, {
-                        ...feedPostData,
-                        postId: regionalFeedPostRef.id,
-                    });
-                }
-
-                await feedBatch.commit();
-                info(`✅ Created feed posts for game ${gameId} in hub feed and regional feed (${gameRegion || 'no region'}).`);
-            } catch (feedError) {
-                info(`⚠️ Failed to create feed posts for game ${gameId}:`, feedError);
-            }
+            // NOTE: Feed post creation is now handled by onGameFeedTrigger
+            // which listens to game status changes to 'completed'
         } catch (error) {
             info(`Error in onGameCompleted for game ${gameId}:`, error);
         }

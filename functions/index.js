@@ -37,6 +37,20 @@ exports.getHomeDashboardData = api.getHomeDashboardData;
 const gamification = require('./src/gamification');
 exports.onRatingSnapshotCreated = gamification.onRatingSnapshotCreated;
 
+// Badge Triggers (Separated from game completion for better performance)
+const badgeTriggers = require('./src/games/badge_triggers');
+exports.onUserStatsUpdated = badgeTriggers.onUserStatsUpdated;
+
+// Feed Triggers (Separated from game completion for better performance)
+const feedTriggers = require('./src/games/feed_triggers');
+exports.onGameFeedTrigger = feedTriggers.onGameFeedTrigger;
+
+// Session Triggers (Winner Stays session lifecycle)
+const sessionTriggers = require('./src/games/session_triggers');
+exports.onSessionEnded = sessionTriggers.onSessionEnded;
+exports.onSessionStarted = sessionTriggers.onSessionStarted;
+exports.cleanupAbandonedSessions = sessionTriggers.cleanupAbandonedSessions;
+
 // Hubs
 const hubs = require('./src/hubs');
 exports.addSuperAdminToHub = hubs.addSuperAdminToHub;

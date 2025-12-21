@@ -3,21 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/hub_permissions_service.dart';
+import 'package:kattrick/screens/event/session_controller.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/stopwatch_widget.dart';
+import 'package:kattrick/widgets/session/rotation_queue_widget.dart';
+import 'package:kattrick/widgets/session/pending_approvals_widget.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/utils/stopwatch_utility.dart';
 import 'package:kattrick/theme/premium_theme.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Game Session Screen - Winner Stays Format
 ///
-/// Manages a session with 3 teams where:
+/// Manages sessions with 2-8 teams where:
 /// - 2 teams play at a time
 /// - Winner stays, loser rotates out with waiting team
 /// - Unlimited short matches
 /// - Real-time stopwatch and score tracking
+/// - Moderator approval workflow for tie-breaking
 class GameSessionScreen extends ConsumerStatefulWidget {
   final String hubId;
   final String eventId;
@@ -36,35 +39,21 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
   HubEvent? _event;
   Game? _game;
   bool _isLoading = true;
-
-  // Stopwatch state
-  late final StopwatchUtility _stopwatch;
-
-  // Current match state
-  int? _teamAIndex; // Index into _game.teams (0, 1, or 2)
-  int? _teamBIndex;
-  int _waitingTeamIndex = 2; // Default: third team waits
-
-  // Match scoring
-  int _teamAScore = 0;
-  int _teamBScore = 0;
-
-  bool _isSubmitting = false;
+  StreamSubscription<Game?>? _gameSubscription;
 
   @override
   void initState() {
     super.initState();
-    _stopwatch = StopwatchUtility();
-    _loadEventAndGame();
+    _loadEvent();
   }
 
   @override
   void dispose() {
-    _stopwatch.dispose();
+    _gameSubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadEventAndGame() async {
+  Future<void> _loadEvent() async {
     setState(() => _isLoading = true);
 
     try {
@@ -75,14 +64,21 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
         throw Exception('אירוע או משחק לא נמצא');
       }
 
-      final gamesRepo = ref.read(gamesRepositoryProvider);
-      final game = await gamesRepo.getGame(event.gameId!);
-
       if (mounted) {
         setState(() {
           _event = event;
-          _game = game;
-          _isLoading = false;
+        });
+
+        // Subscribe to real-time game updates
+        _gameSubscription?.cancel();
+        final gamesRepo = ref.read(gamesRepositoryProvider);
+        _gameSubscription = gamesRepo.watchGame(event.gameId!).listen((game) {
+          if (mounted) {
+            setState(() {
+              _game = game;
+              _isLoading = false;
+            });
+          }
         });
       }
     } catch (e) {
@@ -93,197 +89,66 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
     }
   }
 
-  Future<void> _selectTeamsForMatch() async {
-    if (_game == null || _game!.teams.length < 3) return;
+  Future<void> _startSession() async {
+    if (_game == null) return;
 
-    final result = await showDialog<Map<String, int>>(
-      context: context,
-      builder: (context) => _SelectTeamsDialog(teams: _game!.teams),
-    );
-
-    if (result != null) {
-      setState(() {
-        _teamAIndex = result['teamA']!;
-        _teamBIndex = result['teamB']!;
-        // Find waiting team
-        _waitingTeamIndex = [0, 1, 2].firstWhere(
-          (i) => i != _teamAIndex && i != _teamBIndex,
-        );
-        _teamAScore = 0;
-        _teamBScore = 0;
-        _stopwatch.reset();
-      });
-    }
-  }
-
-  Future<void> _logGoal(int teamIndex) async {
-    setState(() {
-      if (teamIndex == _teamAIndex) {
-        _teamAScore++;
-      } else if (teamIndex == _teamBIndex) {
-        _teamBScore++;
-      }
-    });
-  }
-
-  Future<void> _finishMatch() async {
-    if (_teamAIndex == null || _teamBIndex == null || _game == null) return;
-
-    _stopwatch.stop();
-
-    // Determine winner
-    int? winnerIndex;
-    if (_teamAScore > _teamBScore) {
-      winnerIndex = _teamAIndex;
-    } else if (_teamBScore > _teamAScore) {
-      winnerIndex = _teamBIndex;
-    }
-
-    setState(() => _isSubmitting = true);
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
 
     try {
-      final teamA = _game!.teams[_teamAIndex!];
-      final teamB = _game!.teams[_teamBIndex!];
-
-      // Create match result
-      final firestore = FirebaseFirestore.instance;
-      final matchId = firestore.collection('temp').doc().id;
-
-      final match = MatchResult(
-        matchId: matchId,
-        teamAColor: teamA.color ?? teamA.name,
-        teamBColor: teamB.color ?? teamB.name,
-        scoreA: _teamAScore,
-        scoreB: _teamBScore,
-        scorerIds: [], // Simplified - can be enhanced later
-        assistIds: [],
-        createdAt: DateTime.now(),
-        loggedBy: ref.read(currentUserIdProvider)!,
-      );
-
-      // Submit to game session
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      await gamesRepo.addMatchToSession(
-        _game!.gameId,
-        match,
-        ref.read(currentUserIdProvider)!,
-      );
-
-      // Reload to get updated aggregate wins
-      await _loadEventAndGame();
+      await gamesRepo.startSession(_game!.gameId, currentUserId);
 
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'תוצאה נרשמה!');
-
-        // Show Winner Stays rotation
-        if (winnerIndex != null) {
-          final winnerTeam = _game!.teams[winnerIndex];
-          final loserIndex =
-              (winnerIndex == _teamAIndex) ? _teamBIndex : _teamAIndex;
-
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              title: Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Color(winnerTeam.colorValue ?? 0xFF2196F3),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text('${winnerTeam.name} מנצח!')),
-                ],
-              ),
-              content: Text(
-                'הקבוצה המנצחת נשארת על המגרש.\n'
-                '${_game!.teams[loserIndex!].name} מחליפה את ${_game!.teams[_waitingTeamIndex].name}',
-              ),
-              actions: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    // Set up next match: winner + waiting team
-                    setState(() {
-                      _teamAIndex = winnerIndex;
-                      _teamBIndex = _waitingTeamIndex;
-                      _waitingTeamIndex = loserIndex;
-                      _teamAScore = 0;
-                      _teamBScore = 0;
-                      _stopwatch.reset();
-                      if (_stopwatch.isRunning) {
-                        _stopwatch.stop();
-                      }
-                    });
-                  },
-                  child: const Text('משחק הבא'),
-                ),
-              ],
-            ),
-          );
-        } else {
-          // Draw - ask which team rotates
-          final selectedTeam = await showDialog<int>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('תיקו - בחר קבוצה להחלפה'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Color(teamA.colorValue ?? 0xFF2196F3),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    title: Text(teamA.name),
-                    onTap: () => Navigator.pop(context, _teamAIndex),
-                  ),
-                  ListTile(
-                    leading: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Color(teamB.colorValue ?? 0xFF2196F3),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    title: Text(teamB.name),
-                    onTap: () => Navigator.pop(context, _teamBIndex),
-                  ),
-                ],
-              ),
-            ),
-          );
-
-          if (selectedTeam != null) {
-            final stayingTeam =
-                (selectedTeam == _teamAIndex) ? _teamBIndex : _teamAIndex;
-            setState(() {
-              _teamAIndex = stayingTeam;
-              _teamBIndex = _waitingTeamIndex;
-              _waitingTeamIndex = selectedTeam;
-              _teamAScore = 0;
-              _teamBScore = 0;
-              _stopwatch.reset();
-            });
-          }
-        }
+        SnackbarHelper.showSuccess(context, 'הסשן התחיל!');
       }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showErrorFromException(context, e);
       }
-    } finally {
+    }
+  }
+
+  Future<void> _endSession() async {
+    if (_game == null) return;
+
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
+
+    // Confirm with user
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('סיום סשן'),
+        content: const Text('האם אתה בטוח שברצונך לסיים את הסשן? כל הנתונים יישמרו.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PremiumColors.primary,
+            ),
+            child: const Text('סיים סשן'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final gamesRepo = ref.read(gamesRepositoryProvider);
+      await gamesRepo.endSession(_game!.gameId, currentUserId);
+
       if (mounted) {
-        setState(() => _isSubmitting = false);
+        SnackbarHelper.showSuccess(context, 'הסשן הסתיים!');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
       }
     }
   }
@@ -304,6 +169,10 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
       );
     }
 
+    // Determine session phase
+    final isActive = _game!.session.isActive;
+    final hasEnded = _game!.session.sessionEndedAt != null;
+
     return AppScaffold(
       title: _event!.title,
       body: SingleChildScrollView(
@@ -311,285 +180,17 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Aggregate Wins Scoreboard
-            PremiumCard(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'תוצאות מצטברות',
-                      style: PremiumTypography.techHeadline.copyWith(
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ..._game!.teams.map((team) {
-                      final wins = _game!
-                              .session.aggregateWins[team.color ?? team.name] ??
-                          0;
-                      final colorValue = team.colorValue ?? 0xFF2196F3;
-                      final maxWins =
-                          _game!.session.aggregateWins.values.isEmpty
-                              ? 1
-                              : _game!.session.aggregateWins.values
-                                  .reduce((a, b) => a > b ? a : b);
-                      final percentage = maxWins > 0 ? (wins / maxWins) : 0.0;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: Color(colorValue),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      team.color ?? team.name,
-                                      style: PremiumTypography.bodyLarge
-                                          .copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  '$wins ניצחונות',
-                                  style: PremiumTypography.heading2,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: percentage,
-                                minHeight: 24,
-                                backgroundColor: Colors.grey[300],
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(colorValue),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Stopwatch
-            PremiumCard(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: StopwatchWidget(
-                  stopwatch: _stopwatch,
-                  accentColor: PremiumColors.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Current Match or Team Selection
-            if (_teamAIndex != null && _teamBIndex != null) ...[
-              PremiumCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Text(
-                        'משחק נוכחי',
-                        style: PremiumTypography.techHeadline.copyWith(
-                          fontSize: 18,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          // Team A
-                          _buildTeamScore(_game!.teams[_teamAIndex!],
-                              _teamAScore, _teamAIndex!),
-                          Text(
-                            'VS',
-                            style: PremiumTypography.heading1.copyWith(
-                              color: PremiumColors.textSecondary,
-                            ),
-                          ),
-                          // Team B
-                          _buildTeamScore(_game!.teams[_teamBIndex!],
-                              _teamBScore, _teamBIndex!),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isSubmitting ? null : _finishMatch,
-                          icon: _isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Icon(Icons.check),
-                          label: Text(_isSubmitting ? 'שומר...' : 'סיום משחק'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: PremiumColors.primary,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Waiting team indicator
-              PremiumCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.hourglass_empty,
-                        color: PremiumColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'ממתין: ${_game!.teams[_waitingTeamIndex].name}',
-                        style: PremiumTypography.bodyMedium.copyWith(
-                          color: PremiumColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ] else ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _selectTeamsForMatch,
-                  icon: const Icon(Icons.sports_soccer),
-                  label: const Text('בחר קבוצות למשחק'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: PremiumColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-
-            // Recent matches
-            if (_game!.session.matches.isNotEmpty) ...[
-              PremiumCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'משחקים אחרונים (${_game!.session.matches.length})',
-                        style: PremiumTypography.techHeadline.copyWith(
-                          fontSize: 18,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ..._game!.session.matches.reversed.take(5).map((match) {
-                        final teamAColor = _game!.teams
-                            .firstWhere(
-                              (t) => (t.color ?? t.name) == match.teamAColor,
-                              orElse: () => _game!.teams.first,
-                            )
-                            .colorValue;
-                        final teamBColor = _game!.teams
-                            .firstWhere(
-                              (t) => (t.color ?? t.name) == match.teamBColor,
-                              orElse: () => _game!.teams.first,
-                            )
-                            .colorValue;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      color: Color(teamAColor ?? 0xFF2196F3),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(match.teamAColor),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${match.scoreA}',
-                                    style: PremiumTypography.heading2,
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                'VS',
-                                style: PremiumTypography.bodyMedium.copyWith(
-                                  color: PremiumColors.textSecondary,
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    '${match.scoreB}',
-                                    style: PremiumTypography.heading2,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(match.teamBColor),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      color: Color(teamBColor ?? 0xFF2196F3),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
+            // Phase 1: Setup (pre-session)
+            if (!isActive && !hasEnded) ...[
+              _buildSetupPhase(),
+            ]
+            // Phase 2: Active Session
+            else if (isActive && !hasEnded) ...[
+              _buildActiveSessionPhase(),
+            ]
+            // Phase 3: Summary (post-session)
+            else ...[
+              _buildSummaryPhase(),
             ],
           ],
         ),
@@ -597,7 +198,505 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
     );
   }
 
-  Widget _buildTeamScore(Team team, int score, int teamIndex) {
+  Widget _buildSetupPhase() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PremiumCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: PremiumColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'הכנת סשן',
+                        style: PremiumTypography.techHeadline.copyWith(fontSize: 18),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'הקבוצות נוצרו ומוכנות למשחק. לחץ "התחל סשן" כדי להתחיל.',
+                  style: PremiumTypography.bodyMedium.copyWith(
+                    color: PremiumColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Show teams preview
+                ...(_game!.teams.map((team) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: Color(team.colorValue ?? 0xFF2196F3),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          team.name,
+                          style: PremiumTypography.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(${team.playerIds.length} שחקנים)',
+                          style: PremiumTypography.bodySmall.copyWith(
+                            color: PremiumColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                })),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _startSession,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('התחל סשן'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: PremiumColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveSessionPhase() {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return const SizedBox.shrink();
+
+    // Check permissions - for public games, creator is manager, for hub games check hub permissions
+    bool isManager = false;
+    bool isModerator = false;
+
+    if (_game!.hubId != null) {
+      // Hub game - check hub permissions via StreamBuilder
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+
+      return StreamBuilder<Hub?>(
+        stream: hubsRepo.watchHub(_game!.hubId!),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final hub = snapshot.data;
+          if (hub != null) {
+            final permissions = HubPermissions(hub: hub, userId: currentUserId);
+            isManager = permissions.isManager;
+            isModerator = permissions.isModerator;
+          }
+
+          if (!isManager && !isModerator) {
+            return PremiumCard(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'רק מנהלי משחק יכולים לנהל את הסשן',
+                  style: PremiumTypography.bodyMedium.copyWith(
+                    color: PremiumColors.textSecondary,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return _buildActiveSessionContent(currentUserId, isManager, isModerator);
+        },
+      );
+    } else {
+      // Public game - creator is manager
+      isManager = _game!.createdBy == currentUserId;
+
+      if (!isManager) {
+        return PremiumCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'רק מנהלי משחק יכולים לנהל את הסשן',
+              style: PremiumTypography.bodyMedium.copyWith(
+                color: PremiumColors.textSecondary,
+              ),
+            ),
+          ),
+        );
+      }
+
+      return _buildActiveSessionContent(currentUserId, isManager, false);
+    }
+  }
+
+  Widget _buildActiveSessionContent(
+    String currentUserId,
+    bool isManager,
+    bool isModerator,
+  ) {
+    // Use SessionController
+    final sessionController = ref.watch(sessionControllerProvider(_game!.gameId).notifier);
+    final sessionState = ref.watch(sessionControllerProvider(_game!.gameId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Aggregate Wins Scoreboard
+        _buildAggregateScoreboard(),
+        const SizedBox(height: 16),
+
+        // Rotation Queue
+        RotationQueueWidget(
+          currentRotation: _game!.session.currentRotation,
+          teams: _game!.teams,
+        ),
+        const SizedBox(height: 16),
+
+        // Pending Approvals (Manager only)
+        if (isManager) ...[
+          StreamBuilder<List<MatchResult>>(
+            stream: ref.read(gamesRepositoryProvider).watchPendingMatches(_game!.gameId),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox.shrink();
+
+              final matches = snapshot.data!;
+              return PendingApprovalsWidget(
+                pendingMatches: matches,
+                teams: _game!.teams,
+                onApprove: (matchId) async {
+                  try {
+                    await ref.read(gamesRepositoryProvider).approveMatch(
+                          _game!.gameId,
+                          matchId,
+                          currentUserId,
+                        );
+                    if (mounted) {
+                      SnackbarHelper.showSuccess(context, 'תוצאה אושרה!');
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      SnackbarHelper.showErrorFromException(context, e);
+                    }
+                  }
+                },
+                onReject: (matchId, reason) async {
+                  try {
+                    await ref.read(gamesRepositoryProvider).rejectMatch(
+                          _game!.gameId,
+                          matchId,
+                          currentUserId,
+                          reason,
+                        );
+                    if (mounted) {
+                      SnackbarHelper.showSuccess(context, 'תוצאה נדחתה');
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      SnackbarHelper.showErrorFromException(context, e);
+                    }
+                  }
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Stopwatch
+        PremiumCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: StopwatchWidget(
+              stopwatch: sessionController.stopwatch,
+              accentColor: PremiumColors.primary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Current Match Scoring
+        if (_game!.session.currentRotation != null) ...[
+          _buildCurrentMatchScoring(
+            sessionController,
+            sessionState,
+            currentUserId,
+            isManager,
+            isModerator,
+          ),
+        ],
+        const SizedBox(height: 16),
+
+        // End Session Button (Manager only)
+        if (isManager) ...[
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _endSession,
+              icon: const Icon(Icons.stop),
+              label: const Text('סיים סשן'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Recent Matches
+        _buildRecentMatches(),
+      ],
+    );
+  }
+
+  Widget _buildCurrentMatchScoring(
+    SessionController controller,
+    SessionState state,
+    String currentUserId,
+    bool isManager,
+    bool isModerator,
+  ) {
+    final rotation = _game!.session.currentRotation;
+    if (rotation == null) return const SizedBox.shrink();
+
+    // Find teams
+    final teamA = _game!.teams.firstWhere(
+      (t) => (t.color ?? t.name) == rotation.teamAColor,
+      orElse: () => _game!.teams.first,
+    );
+    final teamB = _game!.teams.firstWhere(
+      (t) => (t.color ?? t.name) == rotation.teamBColor,
+      orElse: () => _game!.teams.first,
+    );
+
+    // Initialize scores if needed
+    if (!state.currentScores.containsKey(rotation.teamAColor) ||
+        !state.currentScores.containsKey(rotation.teamBColor)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.resetScores(rotation.teamAColor, rotation.teamBColor);
+      });
+    }
+
+    final scoreA = state.currentScores[rotation.teamAColor] ?? 0;
+    final scoreB = state.currentScores[rotation.teamBColor] ?? 0;
+
+    // Show tie selection dialog if needed
+    if (state.showTieDialog && state.pendingTieMatch != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showTieSelectionDialog(controller, state.pendingTieMatch!, currentUserId);
+      });
+    }
+
+    return PremiumCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              'משחק נוכחי',
+              style: PremiumTypography.techHeadline.copyWith(fontSize: 18),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                // Team A
+                _buildTeamScore(teamA, scoreA, rotation.teamAColor, controller),
+                Text(
+                  'VS',
+                  style: PremiumTypography.heading1.copyWith(
+                    color: PremiumColors.textSecondary,
+                  ),
+                ),
+                // Team B
+                _buildTeamScore(teamB, scoreB, rotation.teamBColor, controller),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Error message
+            if (state.errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        state.errorMessage!,
+                        style: PremiumTypography.bodySmall.copyWith(
+                          color: Colors.red[700],
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: controller.clearError,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Finish Match Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: state.isSubmitting
+                    ? null
+                    : () => controller.finishMatch(
+                          game: _game!,
+                          currentUserId: currentUserId,
+                          isManager: isManager,
+                          isModerator: isModerator,
+                          asModeratorRequest: !isManager && isModerator,
+                        ),
+                icon: state.isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check),
+                label: Text(
+                  state.isSubmitting
+                      ? 'שומר...'
+                      : (!isManager && isModerator)
+                          ? 'שלח לאישור מנהל'
+                          : 'סיום משחק',
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: PremiumColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showTieSelectionDialog(
+    SessionController controller,
+    MatchResult tieMatch,
+    String currentUserId,
+  ) async {
+    final selectedTeam = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('תיקו - בחר קבוצה שנשארת'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'המשחק הסתיים בתיקו. בחר איזו קבוצה תישאר על המגרש:',
+              style: PremiumTypography.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            // Team A Option
+            ListTile(
+              leading: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Color(
+                    _game!.teams
+                            .firstWhere(
+                              (t) => (t.color ?? t.name) == tieMatch.teamAColor,
+                              orElse: () => _game!.teams.first,
+                            )
+                            .colorValue ??
+                        0xFF2196F3,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              title: Text(tieMatch.teamAColor),
+              onTap: () => Navigator.pop(context, tieMatch.teamAColor),
+            ),
+            // Team B Option
+            ListTile(
+              leading: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Color(
+                    _game!.teams
+                            .firstWhere(
+                              (t) => (t.color ?? t.name) == tieMatch.teamBColor,
+                              orElse: () => _game!.teams.first,
+                            )
+                            .colorValue ??
+                        0xFF2196F3,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              title: Text(tieMatch.teamBColor),
+              onTap: () => Navigator.pop(context, tieMatch.teamBColor),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              controller.cancelTieSelection();
+              Navigator.pop(context);
+            },
+            child: const Text('ביטול'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedTeam != null) {
+      await controller.selectStayingTeam(selectedTeam, _game!, currentUserId);
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'תוצאה נרשמה!');
+      }
+    } else {
+      controller.cancelTieSelection();
+    }
+  }
+
+  Widget _buildTeamScore(
+    Team team,
+    int score,
+    String teamColor,
+    SessionController controller,
+  ) {
     return Column(
       children: [
         Container(
@@ -622,92 +721,381 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
           style: PremiumTypography.heading1.copyWith(fontSize: 48),
         ),
         const SizedBox(height: 8),
-        ElevatedButton.icon(
-          onPressed: () => _logGoal(teamIndex),
-          icon: const Icon(Icons.add_circle_outline),
-          label: const Text('גול'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(team.colorValue ?? 0xFF2196F3),
-            foregroundColor: Colors.white,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Decrement button
+            IconButton(
+              onPressed: score > 0 ? () => controller.decrementScore(teamColor) : null,
+              icon: const Icon(Icons.remove_circle_outline),
+              color: Colors.grey,
+            ),
+            // Increment button
+            ElevatedButton.icon(
+              onPressed: () => controller.incrementScore(teamColor),
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('גול'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(team.colorValue ?? 0xFF2196F3),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAggregateScoreboard() {
+    return PremiumCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ניצחונות מצטברים',
+              style: PremiumTypography.techHeadline.copyWith(fontSize: 18),
+            ),
+            const SizedBox(height: 16),
+            ...(_game!.teams.map((team) {
+              final wins =
+                  _game!.session.aggregateWins[team.color ?? team.name] ?? 0;
+              final colorValue = team.colorValue ?? 0xFF2196F3;
+              final maxWins = _game!.session.aggregateWins.values.isEmpty
+                  ? 1
+                  : _game!.session.aggregateWins.values
+                      .reduce((a, b) => a > b ? a : b);
+              final percentage = maxWins > 0 ? (wins / maxWins) : 0.0;
+              final isKing = wins > 0 && wins == maxWins;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: Color(colorValue),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              team.name,
+                              style: PremiumTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (isKing) ...[
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.emoji_events,
+                                color: Colors.amber,
+                                size: 20,
+                              ),
+                            ],
+                          ],
+                        ),
+                        Text(
+                          '$wins',
+                          style: PremiumTypography.heading2.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Color(colorValue),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: percentage,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation(Color(colorValue)),
+                    ),
+                  ],
+                ),
+              );
+            })),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentMatches() {
+    if (_game!.session.matches.isEmpty) return const SizedBox.shrink();
+
+    return PremiumCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'משחקים אחרונים (${_game!.session.matches.where((m) => m.approvalStatus == MatchApprovalStatus.approved).length})',
+              style: PremiumTypography.techHeadline.copyWith(fontSize: 18),
+            ),
+            const SizedBox(height: 16),
+            ...(_game!.session.matches.reversed.take(5).map((match) {
+              final teamAColor = _game!.teams
+                  .firstWhere(
+                    (t) => (t.color ?? t.name) == match.teamAColor,
+                    orElse: () => _game!.teams.first,
+                  )
+                  .colorValue;
+              final teamBColor = _game!.teams
+                  .firstWhere(
+                    (t) => (t.color ?? t.name) == match.teamBColor,
+                    orElse: () => _game!.teams.first,
+                  )
+                  .colorValue;
+
+              final isPending = match.approvalStatus == MatchApprovalStatus.pending;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isPending ? Colors.orange[50] : null,
+                  borderRadius: BorderRadius.circular(8),
+                  border: isPending
+                      ? Border.all(color: Colors.orange[200]!)
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Color(teamAColor ?? 0xFF2196F3),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(match.teamAColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${match.scoreA}',
+                          style: PremiumTypography.heading2,
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text(
+                          'VS',
+                          style: PremiumTypography.bodyMedium.copyWith(
+                            color: PremiumColors.textSecondary,
+                          ),
+                        ),
+                        if (isPending)
+                          Text(
+                            'ממתין',
+                            style: PremiumTypography.bodySmall.copyWith(
+                              color: Colors.orange,
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          '${match.scoreB}',
+                          style: PremiumTypography.heading2,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(match.teamBColor),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Color(teamBColor ?? 0xFF2196F3),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            })),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryPhase() {
+    final approvedMatches = _game!.session.matches
+        .where((m) => m.approvalStatus == MatchApprovalStatus.approved)
+        .toList();
+
+    // Find King of the Pitch
+    final maxWins = _game!.session.aggregateWins.values.isEmpty
+        ? 0
+        : _game!.session.aggregateWins.values.reduce((a, b) => a > b ? a : b);
+
+    final kingTeam = maxWins > 0
+        ? _game!.teams.firstWhere(
+            (t) =>
+                (_game!.session.aggregateWins[t.color ?? t.name] ?? 0) ==
+                maxWins,
+            orElse: () => _game!.teams.first,
+          )
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Session Complete Banner
+        PremiumCard(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  PremiumColors.primary.withValues(alpha: 0.1),
+                  PremiumColors.primary.withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.emoji_events,
+                  size: 48,
+                  color: Colors.amber,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'הסשן הסתיים!',
+                  style: PremiumTypography.heading1.copyWith(fontSize: 24),
+                ),
+                if (kingTeam != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Color(kingTeam.colorValue ?? 0xFF2196F3),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${kingTeam.name} - King of the Pitch!',
+                        style: PremiumTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Final Standings
+        _buildAggregateScoreboard(),
+        const SizedBox(height: 16),
+
+        // Session Stats
+        PremiumCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'סטטיסטיקות סשן',
+                  style: PremiumTypography.techHeadline.copyWith(fontSize: 18),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatCard(
+                      'משחקים',
+                      '${approvedMatches.length}',
+                      Icons.sports_soccer,
+                    ),
+                    _buildStatCard(
+                      'קבוצות',
+                      '${_game!.teams.length}',
+                      Icons.groups,
+                    ),
+                    _buildStatCard(
+                      'שחקנים',
+                      '${_game!.teams.fold<int>(0, (sum, team) => sum + team.playerIds.length)}',
+                      Icons.person,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // All Matches
+        _buildRecentMatches(),
+        const SizedBox(height: 24),
+
+        // Back Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('חזרה למרכז'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: PremiumColors.primary,
+              foregroundColor: Colors.white,
+            ),
           ),
         ),
       ],
     );
   }
-}
 
-class _SelectTeamsDialog extends StatefulWidget {
-  final List<Team> teams;
-
-  const _SelectTeamsDialog({required this.teams});
-
-  @override
-  State<_SelectTeamsDialog> createState() => _SelectTeamsDialogState();
-}
-
-class _SelectTeamsDialogState extends State<_SelectTeamsDialog> {
-  int? _selectedTeamA;
-  int? _selectedTeamB;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('בחר 2 קבוצות למשחק'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: widget.teams.asMap().entries.map((entry) {
-          final index = entry.key;
-          final team = entry.value;
-          final isSelected = _selectedTeamA == index || _selectedTeamB == index;
-
-          return CheckboxListTile(
-            value: isSelected,
-            onChanged: isSelected
-                ? (_) {
-                    setState(() {
-                      if (_selectedTeamA == index) _selectedTeamA = null;
-                      if (_selectedTeamB == index) _selectedTeamB = null;
-                    });
-                  }
-                : (_) {
-                    setState(() {
-                      if (_selectedTeamA == null) {
-                        _selectedTeamA = index;
-                      } else {
-                        _selectedTeamB ??= index;
-                      }
-                    });
-                  },
-            title: Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Color(team.colorValue ?? 0xFF2196F3),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(team.name),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('ביטול'),
+  Widget _buildStatCard(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: PremiumColors.primary, size: 32),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: PremiumTypography.heading1.copyWith(fontSize: 24),
         ),
-        ElevatedButton(
-          onPressed: _selectedTeamA != null && _selectedTeamB != null
-              ? () => Navigator.pop(context, {
-                    'teamA': _selectedTeamA!,
-                    'teamB': _selectedTeamB!,
-                  })
-              : null,
-          child: const Text('התחל משחק'),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: PremiumTypography.bodySmall.copyWith(
+            color: PremiumColors.textSecondary,
+          ),
         ),
       ],
     );

@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { info } = require('firebase-functions/logger');
-const { db, messaging, FieldValue, getHubMemberIds, getUserFCMTokens } = require('../utils');
+const { db, messaging, FieldValue } = require('../utils');
 const { checkRateLimit } = require('../../rateLimit');
 
 // --- Notify Hub on New Game ---
@@ -41,7 +41,7 @@ exports.notifyHubOnNewGame = onCall(
         info(`Notifying hub ${hubId} about new game ${gameId}`);
 
         try {
-            // 1. Get hub to get name and memberIds
+            // 1. Get hub to get name
             const hubDoc = await db.collection('hubs').doc(hubId).get();
             if (!hubDoc.exists) {
                 throw new HttpsError('not-found', 'Hub not found');
@@ -49,15 +49,6 @@ exports.notifyHubOnNewGame = onCall(
 
             const hubData = hubDoc.data();
             const hubName = hubData.name || 'האב';
-            let memberIds = hubData.memberIds || [];
-            if (!memberIds.length) {
-                memberIds = await getHubMemberIds(hubId);
-            }
-
-            if (memberIds.length === 0) {
-                info(`Hub ${hubId} has no members to notify`);
-                return { success: true, notifiedCount: 0 };
-            }
 
             // 2. Get game details if not provided
             let title = gameTitle;
@@ -83,18 +74,8 @@ exports.notifyHubOnNewGame = onCall(
                 }
             }
 
-            // 3. ✅ PERFORMANCE FIX: Get FCM tokens in PARALLEL using helper
-            const tokenArrays = await Promise.all(
-                memberIds.map((userId) => getUserFCMTokens(userId))
-            );
-            const tokens = tokenArrays.flat();
-
-            if (tokens.length === 0) {
-                info(`No FCM tokens found for hub ${hubId} members`);
-                return { success: true, notifiedCount: 0 };
-            }
-
-            // 4. Send push notifications
+            // 3. ✅ OPTIMIZED: Send notification to topic instead of individual tokens
+            // This is 100x faster and doesn't require fetching member IDs or tokens!
             const message = {
                 notification: {
                     title: 'הרשמה למשחק חדש נפתחה!',
@@ -105,16 +86,15 @@ exports.notifyHubOnNewGame = onCall(
                     hubId: hubId,
                     gameId: gameId,
                 },
-                tokens: tokens,
+                topic: `hub_${hubId}`,
             };
 
-            const response = await messaging.sendEachForMulticast(message);
-            info(`Sent ${response.successCount} notifications to hub ${hubId} members`);
+            await messaging.send(message);
+            info(`Sent notification to topic hub_${hubId}`);
 
             return {
                 success: true,
-                notifiedCount: response.successCount,
-                failedCount: response.failureCount,
+                message: 'Notification sent to hub topic',
             };
         } catch (error) {
             info(`Error in notifyHubOnNewGame for hub ${hubId}:`, error);

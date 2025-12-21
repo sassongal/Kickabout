@@ -223,6 +223,31 @@ class PushNotificationService {
       debugPrint('Failed to delete FCM token: $e');
     }
   }
+
+  /// Subscribe to hub topic for notifications
+  /// This allows sending notifications to ALL hub members with a single call
+  Future<void> subscribeToHubTopic(String hubId) async {
+    if (!Env.isFirebaseAvailable) return;
+
+    try {
+      await _messaging.subscribeToTopic('hub_$hubId');
+      debugPrint('Subscribed to hub topic: hub_$hubId');
+    } catch (e) {
+      debugPrint('Failed to subscribe to hub topic: $e');
+    }
+  }
+
+  /// Unsubscribe from hub topic
+  Future<void> unsubscribeFromHubTopic(String hubId) async {
+    if (!Env.isFirebaseAvailable) return;
+
+    try {
+      await _messaging.unsubscribeFromTopic('hub_$hubId');
+      debugPrint('Unsubscribed from hub topic: hub_$hubId');
+    } catch (e) {
+      debugPrint('Failed to unsubscribe from hub topic: $e');
+    }
+  }
 }
 
 /// Background message handler (must be top-level function)

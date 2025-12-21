@@ -71,7 +71,15 @@ class _MyNextMatchCardState extends State<MyNextMatchCard> {
         final isUrgent = safeCountdown.inHours < 24;
 
         return GestureDetector(
-          onTap: () => context.push('/games/${widget.game.gameId}'),
+          onTap: () {
+            if (widget.game.session.isActive && widget.game.eventId != null) {
+              // Navigate to active session screen
+              context.push('/hubs/${widget.game.hubId}/events/${widget.game.eventId}/game-session');
+            } else {
+              // Navigate to game details
+              context.push('/games/${widget.game.gameId}');
+            }
+          },
           child: RepaintBoundary(
             child: Container(
               height: 200,

@@ -14,6 +14,7 @@ import 'package:kattrick/services/monitoring_service.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/data/hubs_repository.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
+import 'package:kattrick/logic/session_rotation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -1059,17 +1060,48 @@ class GamesRepository {
           winnerColor = match.teamBColor;
         }
 
-        // Update aggregate wins
-        if (winnerColor != null) {
+        // Update aggregate wins (only for approved matches)
+        if (winnerColor != null &&
+            match.approvalStatus == MatchApprovalStatus.approved) {
           aggregateWins[winnerColor] = (aggregateWins[winnerColor] ?? 0) + 1;
         }
 
-        // Update game document (atomic)
-        transaction.update(gameRef, {
+        // Calculate next rotation state (if session is active)
+        final Map<String, dynamic> updateData = {
           'session.matches': matchesJson,
           'session.aggregateWins': aggregateWins,
           'updatedAt': FieldValue.serverTimestamp(),
-        });
+        };
+
+        // Update rotation state for active sessions with approved matches
+        if (currentGame.session.isActive &&
+            currentGame.session.currentRotation != null &&
+            match.approvalStatus == MatchApprovalStatus.approved) {
+          try {
+            // Calculate next rotation
+            // Note: For ties, managerSelectedStayingTeam should be set in the match
+            // before calling addMatchToSession (handled by UI layer)
+            final nextRotation = SessionRotationLogic.calculateNextRotation(
+              current: currentGame.session.currentRotation!,
+              completedMatch: match,
+              // If tie and no winner selected yet, rotation will throw error
+              // This is intentional - UI must handle tie selection first
+            );
+
+            updateData['session.currentRotation'] = nextRotation.toJson();
+            debugPrint(
+                '✅ Rotation updated: ${nextRotation.teamAColor} vs ${nextRotation.teamBColor}');
+          } catch (e) {
+            // If rotation calculation fails (e.g., tie without selection),
+            // still save the match but log the error
+            debugPrint('⚠️ Rotation not updated: $e');
+            // For ties, UI will need to handle manager selection
+            // and update rotation separately
+          }
+        }
+
+        // Update game document (atomic)
+        transaction.update(gameRef, updateData);
       });
 
       // Step 3: SEPARATE BATCH - Update player stats (eventual consistency OK)
@@ -1137,6 +1169,436 @@ class GamesRepository {
     } catch (e) {
       // Log but don't throw - stats update failure shouldn't block the match
       debugPrint('⚠️ Failed to update player stats for match: $e');
+    }
+  }
+
+  // =============================================================================
+  // SESSION LIFECYCLE METHODS (Winner Stays Format)
+  // =============================================================================
+
+  /// Start a session (activates Winner Stays rotation)
+  ///
+  /// Sets isActive=true and initializes currentRotation state.
+  /// Only hub managers or game creator can start sessions.
+  Future<void> startSession(String gameId, String managerId) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Verify game exists and user has permission
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
+      // Verify permissions
+      if (game.hubId != null) {
+        final hubsRepo = HubsRepository();
+        final hub = await hubsRepo.getHub(game.hubId!);
+        if (hub == null) {
+          throw Exception('Hub not found: ${game.hubId}');
+        }
+
+        final hubPermissions = HubPermissions(hub: hub, userId: managerId);
+        if (!hubPermissions.isManager) {
+          throw Exception('Unauthorized: Only Hub Managers can start sessions');
+        }
+      } else {
+        // Public game - check if user is creator
+        if (game.createdBy != managerId) {
+          throw Exception(
+              'Unauthorized: Only the game creator can start public sessions');
+        }
+      }
+
+      // Verify teams exist
+      if (game.teams.length < 2) {
+        throw Exception(
+            'Need at least 2 teams to start a session. Create teams first.');
+      }
+
+      // Initialize rotation state using SessionRotationLogic
+      final initialRotation =
+          SessionRotationLogic.createInitialState(game.teams);
+
+      // Update game document
+      await _firestore.doc(FirestorePaths.game(gameId)).update({
+        'session.isActive': true,
+        'session.sessionStartedAt': FieldValue.serverTimestamp(),
+        'session.sessionStartedBy': managerId,
+        'session.currentRotation': initialRotation.toJson(),
+        'status': 'inProgress', // Update game status
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Invalidate caches
+      _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
+
+      debugPrint('✅ Session started: $gameId by $managerId');
+    } catch (e) {
+      debugPrint('❌ Failed to start session: $e');
+      throw Exception('Failed to start session: $e');
+    }
+  }
+
+  /// End a session
+  ///
+  /// Sets isActive=false, marks sessionEndedAt.
+  /// This will trigger backend processing to finalize stats.
+  Future<void> endSession(String gameId, String managerId) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Verify game exists and user has permission
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
+      // Verify permissions
+      if (game.hubId != null) {
+        final hubsRepo = HubsRepository();
+        final hub = await hubsRepo.getHub(game.hubId!);
+        if (hub == null) {
+          throw Exception('Hub not found: ${game.hubId}');
+        }
+
+        final hubPermissions = HubPermissions(hub: hub, userId: managerId);
+        if (!hubPermissions.isManager) {
+          throw Exception('Unauthorized: Only Hub Managers can end sessions');
+        }
+      } else {
+        // Public game - check if user is creator
+        if (game.createdBy != managerId) {
+          throw Exception(
+              'Unauthorized: Only the game creator can end public sessions');
+        }
+      }
+
+      // Update game document
+      await _firestore.doc(FirestorePaths.game(gameId)).update({
+        'session.isActive': false,
+        'session.sessionEndedAt': FieldValue.serverTimestamp(),
+        'session.sessionEndedBy': managerId,
+        'status': 'statsInput', // Move to stats input phase
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Invalidate caches
+      _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
+
+      debugPrint('✅ Session ended: $gameId by $managerId');
+    } catch (e) {
+      debugPrint('❌ Failed to end session: $e');
+      throw Exception('Failed to end session: $e');
+    }
+  }
+
+  // =============================================================================
+  // MODERATOR APPROVAL WORKFLOW METHODS
+  // =============================================================================
+
+  /// Submit a match result with optional moderator approval workflow
+  ///
+  /// If requiresApproval=true, match is marked as pending and awaits manager approval.
+  /// If requiresApproval=false, match is immediately approved.
+  Future<void> submitMatchResult(
+    String gameId,
+    MatchResult match, {
+    required String submitterId,
+    bool requiresApproval = false,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Set approval status based on workflow
+      final matchToSubmit = requiresApproval
+          ? match.copyWith(
+              approvalStatus: MatchApprovalStatus.pending,
+              loggedBy: submitterId,
+            )
+          : match.copyWith(
+              approvalStatus: MatchApprovalStatus.approved,
+              loggedBy: submitterId,
+              approvedBy: submitterId,
+              approvedAt: DateTime.now(),
+            );
+
+      // Use existing addMatchToSession logic
+      await addMatchToSession(gameId, matchToSubmit, submitterId);
+
+      debugPrint(
+          '✅ Match submitted: ${match.matchId}, approval=${requiresApproval ? "pending" : "approved"}');
+    } catch (e) {
+      debugPrint('❌ Failed to submit match result: $e');
+      throw Exception('Failed to submit match result: $e');
+    }
+  }
+
+  /// Manager approves a pending match
+  ///
+  /// Updates approvalStatus from pending → approved.
+  /// Only hub managers can approve matches.
+  Future<void> approveMatch(
+    String gameId,
+    String matchId,
+    String managerId,
+  ) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Verify game exists and user has permission
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
+      // Verify permissions
+      if (game.hubId != null) {
+        final hubsRepo = HubsRepository();
+        final hub = await hubsRepo.getHub(game.hubId!);
+        if (hub == null) {
+          throw Exception('Hub not found: ${game.hubId}');
+        }
+
+        final hubPermissions = HubPermissions(hub: hub, userId: managerId);
+        if (!hubPermissions.isManager) {
+          throw Exception(
+              'Unauthorized: Only Hub Managers can approve matches');
+        }
+      } else {
+        throw Exception('Only hub sessions support moderator approval');
+      }
+
+      // Find and update the match
+      await _firestore.runTransaction((transaction) async {
+        final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+        final gameDoc = await transaction.get(gameRef);
+
+        if (!gameDoc.exists) {
+          throw Exception('Game not found');
+        }
+
+        final currentGame =
+            Game.fromJson({...gameDoc.data()!, 'gameId': gameId});
+        final matches = List<MatchResult>.from(currentGame.session.matches);
+
+        // Find the match to approve
+        final matchIndex = matches.indexWhere((m) => m.matchId == matchId);
+        if (matchIndex == -1) {
+          throw Exception('Match not found: $matchId');
+        }
+
+        final match = matches[matchIndex];
+        if (match.approvalStatus != MatchApprovalStatus.pending) {
+          throw Exception('Match is not pending approval');
+        }
+
+        // Update match with approval
+        matches[matchIndex] = match.copyWith(
+          approvalStatus: MatchApprovalStatus.approved,
+          approvedBy: managerId,
+          approvedAt: DateTime.now(),
+        );
+
+        // Update game document
+        final matchesJson = matches.map((m) => m.toJson()).toList();
+        transaction.update(gameRef, {
+          'session.matches': matchesJson,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      // Invalidate caches
+      _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
+
+      debugPrint('✅ Match approved: $matchId by $managerId');
+    } catch (e) {
+      debugPrint('❌ Failed to approve match: $e');
+      throw Exception('Failed to approve match: $e');
+    }
+  }
+
+  /// Manager rejects a pending match
+  ///
+  /// Updates approvalStatus from pending → rejected with reason.
+  /// Only hub managers can reject matches.
+  Future<void> rejectMatch(
+    String gameId,
+    String matchId,
+    String managerId,
+    String reason,
+  ) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Verify game exists and user has permission
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
+      // Verify permissions
+      if (game.hubId != null) {
+        final hubsRepo = HubsRepository();
+        final hub = await hubsRepo.getHub(game.hubId!);
+        if (hub == null) {
+          throw Exception('Hub not found: ${game.hubId}');
+        }
+
+        final hubPermissions = HubPermissions(hub: hub, userId: managerId);
+        if (!hubPermissions.isManager) {
+          throw Exception(
+              'Unauthorized: Only Hub Managers can reject matches');
+        }
+      } else {
+        throw Exception('Only hub sessions support moderator approval');
+      }
+
+      // Find and update the match
+      await _firestore.runTransaction((transaction) async {
+        final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+        final gameDoc = await transaction.get(gameRef);
+
+        if (!gameDoc.exists) {
+          throw Exception('Game not found');
+        }
+
+        final currentGame =
+            Game.fromJson({...gameDoc.data()!, 'gameId': gameId});
+        final matches = List<MatchResult>.from(currentGame.session.matches);
+
+        // Find the match to reject
+        final matchIndex = matches.indexWhere((m) => m.matchId == matchId);
+        if (matchIndex == -1) {
+          throw Exception('Match not found: $matchId');
+        }
+
+        final match = matches[matchIndex];
+        if (match.approvalStatus != MatchApprovalStatus.pending) {
+          throw Exception('Match is not pending approval');
+        }
+
+        // Update match with rejection
+        matches[matchIndex] = match.copyWith(
+          approvalStatus: MatchApprovalStatus.rejected,
+          approvedBy: managerId,
+          approvedAt: DateTime.now(),
+          rejectionReason: reason,
+        );
+
+        // Update game document
+        final matchesJson = matches.map((m) => m.toJson()).toList();
+        transaction.update(gameRef, {
+          'session.matches': matchesJson,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      // Invalidate caches
+      _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
+
+      debugPrint('✅ Match rejected: $matchId by $managerId');
+    } catch (e) {
+      debugPrint('❌ Failed to reject match: $e');
+      throw Exception('Failed to reject match: $e');
+    }
+  }
+
+  /// Stream pending matches awaiting approval
+  ///
+  /// Returns only matches with approvalStatus=pending
+  Stream<List<MatchResult>> watchPendingMatches(String gameId) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
+    return watchGame(gameId).map((game) {
+      if (game == null) return [];
+
+      return game.session.matches
+          .where((match) => match.approvalStatus == MatchApprovalStatus.pending)
+          .toList();
+    });
+  }
+
+  /// Update rotation state after a tie when manager selects staying team
+  ///
+  /// Used when a match ends in a tie and manager needs to manually
+  /// select which team stays on field.
+  Future<void> updateRotationAfterTie(
+    String gameId,
+    MatchResult tiedMatch,
+    String stayingTeamColor,
+    String managerId,
+  ) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Verify game exists and user has permission
+      final game = await getGame(gameId);
+      if (game == null) {
+        throw Exception('Game not found: $gameId');
+      }
+
+      // Verify permissions
+      if (game.hubId != null) {
+        final hubsRepo = HubsRepository();
+        final hub = await hubsRepo.getHub(game.hubId!);
+        if (hub == null) {
+          throw Exception('Hub not found: ${game.hubId}');
+        }
+
+        final hubPermissions = HubPermissions(hub: hub, userId: managerId);
+        if (!hubPermissions.isManager) {
+          throw Exception(
+              'Unauthorized: Only Hub Managers can update rotation');
+        }
+      } else {
+        // Public game - check if user is creator
+        if (game.createdBy != managerId) {
+          throw Exception(
+              'Unauthorized: Only the game creator can update rotation');
+        }
+      }
+
+      // Verify session is active and has rotation state
+      if (!game.session.isActive || game.session.currentRotation == null) {
+        throw Exception('Session is not active or has no rotation state');
+      }
+
+      // Calculate next rotation with manager's selection
+      final nextRotation = SessionRotationLogic.calculateNextRotation(
+        current: game.session.currentRotation!,
+        completedMatch: tiedMatch,
+        managerSelectedStayingTeam: stayingTeamColor,
+      );
+
+      // Update game document
+      await _firestore.doc(FirestorePaths.game(gameId)).update({
+        'session.currentRotation': nextRotation.toJson(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Invalidate caches
+      _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
+
+      debugPrint(
+          '✅ Rotation updated after tie: ${nextRotation.teamAColor} vs ${nextRotation.teamBColor}');
+    } catch (e) {
+      debugPrint('❌ Failed to update rotation after tie: $e');
+      throw Exception('Failed to update rotation after tie: $e');
     }
   }
 }

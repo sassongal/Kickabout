@@ -54,7 +54,11 @@ class GameFeedCard extends StatelessWidget {
       onTap: () {
         if (isLocked) {
           _showLockedDialog(context);
+        } else if (game.session.isActive && game.eventId != null) {
+          // Navigate to active session screen
+          context.push('/hubs/${game.hubId}/events/${game.eventId}/game-session');
         } else {
+          // Navigate to game details
           context.push('/games/${game.gameId}');
         }
       },
@@ -136,8 +140,40 @@ class GameFeedCard extends StatelessWidget {
                               ),
                             ),
                             const Spacer(),
-                            // Multi-match session badge
-                            if (game.session.matches.isNotEmpty) ...[
+                            // Active Session Badge (LIVE)
+                            if (game.session.isActive) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: Colors.green,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.sports_soccer,
+                                        size: 10, color: Colors.green),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'פעיל',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ]
+                            // Multi-match session badge (only if NOT active)
+                            else if (game.session.matches.isNotEmpty) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 3),

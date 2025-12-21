@@ -11,6 +11,7 @@ import 'package:kattrick/utils/geohash_utils.dart';
 import 'package:kattrick/services/cache_service.dart';
 import 'package:kattrick/services/retry_service.dart';
 import 'package:kattrick/services/monitoring_service.dart';
+import 'package:kattrick/services/push_notification_service.dart';
 
 /// Repository for Hub operations
 class HubsRepository {
@@ -377,6 +378,10 @@ class HubsRepository {
 
       // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
       await _syncDenormalizedMemberArrays(hubId);
+
+      // Subscribe to hub topic for optimized push notifications
+      // This allows sending notifications to ALL hub members with a single API call
+      await PushNotificationService().subscribeToHubTopic(hubId);
     } catch (e) {
       throw Exception('Failed to add member: $e');
     }
@@ -444,6 +449,9 @@ class HubsRepository {
 
       // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
       await _syncDenormalizedMemberArrays(hubId);
+
+      // Unsubscribe from hub topic to stop receiving push notifications
+      await PushNotificationService().unsubscribeFromHubTopic(hubId);
     } catch (e) {
       throw Exception('Failed to remove member: $e');
     }

@@ -26,6 +26,13 @@ _$MatchResultImpl _$$MatchResultImplFromJson(Map<String, dynamic> json) =>
       loggedBy: json['loggedBy'] as String?,
       matchDurationMinutes:
           (json['matchDurationMinutes'] as num?)?.toInt() ?? 12,
+      approvalStatus: json['approvalStatus'] == null
+          ? MatchApprovalStatus.approved
+          : MatchApprovalStatus.fromJson(json['approvalStatus'] as String),
+      approvedBy: json['approvedBy'] as String?,
+      approvedAt: _$JsonConverterFromJson<Object, DateTime>(
+          json['approvedAt'], const TimestampConverter().fromJson),
+      rejectionReason: json['rejectionReason'] as String?,
     );
 
 Map<String, dynamic> _$$MatchResultImplToJson(_$MatchResultImpl instance) =>
@@ -40,4 +47,21 @@ Map<String, dynamic> _$$MatchResultImplToJson(_$MatchResultImpl instance) =>
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
       'loggedBy': instance.loggedBy,
       'matchDurationMinutes': instance.matchDurationMinutes,
+      'approvalStatus': instance.approvalStatus,
+      'approvedBy': instance.approvedBy,
+      'approvedAt': _$JsonConverterToJson<Object, DateTime>(
+          instance.approvedAt, const TimestampConverter().toJson),
+      'rejectionReason': instance.rejectionReason,
     };
+
+Value? _$JsonConverterFromJson<Json, Value>(
+  Object? json,
+  Value? Function(Json json) fromJson,
+) =>
+    json == null ? null : fromJson(json as Json);
+
+Json? _$JsonConverterToJson<Json, Value>(
+  Value? value,
+  Json? Function(Value value) toJson,
+) =>
+    value == null ? null : toJson(value);

@@ -24,7 +24,20 @@ mixin _$GameSession {
   Map<String, int> get aggregateWins =>
       throw _privateConstructorUsedError; // Legacy support fields
   int? get legacyTeamAScore => throw _privateConstructorUsedError;
-  int? get legacyTeamBScore => throw _privateConstructorUsedError;
+  int? get legacyTeamBScore =>
+      throw _privateConstructorUsedError; // Session lifecycle tracking (for Winner Stays format)
+  bool get isActive => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime? get sessionStartedAt => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime? get sessionEndedAt => throw _privateConstructorUsedError;
+  String? get sessionStartedBy =>
+      throw _privateConstructorUsedError; // User ID of manager who started session
+// Rotation queue state (for 2-8 team sessions)
+  RotationState? get currentRotation =>
+      throw _privateConstructorUsedError; // Finalization tracking
+  @TimestampConverter()
+  DateTime? get finalizedAt => throw _privateConstructorUsedError;
 
   /// Serializes this GameSession to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -46,7 +59,15 @@ abstract class $GameSessionCopyWith<$Res> {
       {List<MatchResult> matches,
       Map<String, int> aggregateWins,
       int? legacyTeamAScore,
-      int? legacyTeamBScore});
+      int? legacyTeamBScore,
+      bool isActive,
+      @TimestampConverter() DateTime? sessionStartedAt,
+      @TimestampConverter() DateTime? sessionEndedAt,
+      String? sessionStartedBy,
+      RotationState? currentRotation,
+      @TimestampConverter() DateTime? finalizedAt});
+
+  $RotationStateCopyWith<$Res>? get currentRotation;
 }
 
 /// @nodoc
@@ -68,6 +89,12 @@ class _$GameSessionCopyWithImpl<$Res, $Val extends GameSession>
     Object? aggregateWins = null,
     Object? legacyTeamAScore = freezed,
     Object? legacyTeamBScore = freezed,
+    Object? isActive = null,
+    Object? sessionStartedAt = freezed,
+    Object? sessionEndedAt = freezed,
+    Object? sessionStartedBy = freezed,
+    Object? currentRotation = freezed,
+    Object? finalizedAt = freezed,
   }) {
     return _then(_value.copyWith(
       matches: null == matches
@@ -86,7 +113,45 @@ class _$GameSessionCopyWithImpl<$Res, $Val extends GameSession>
           ? _value.legacyTeamBScore
           : legacyTeamBScore // ignore: cast_nullable_to_non_nullable
               as int?,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      sessionStartedAt: freezed == sessionStartedAt
+          ? _value.sessionStartedAt
+          : sessionStartedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      sessionEndedAt: freezed == sessionEndedAt
+          ? _value.sessionEndedAt
+          : sessionEndedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      sessionStartedBy: freezed == sessionStartedBy
+          ? _value.sessionStartedBy
+          : sessionStartedBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      currentRotation: freezed == currentRotation
+          ? _value.currentRotation
+          : currentRotation // ignore: cast_nullable_to_non_nullable
+              as RotationState?,
+      finalizedAt: freezed == finalizedAt
+          ? _value.finalizedAt
+          : finalizedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
+  }
+
+  /// Create a copy of GameSession
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $RotationStateCopyWith<$Res>? get currentRotation {
+    if (_value.currentRotation == null) {
+      return null;
+    }
+
+    return $RotationStateCopyWith<$Res>(_value.currentRotation!, (value) {
+      return _then(_value.copyWith(currentRotation: value) as $Val);
+    });
   }
 }
 
@@ -102,7 +167,16 @@ abstract class _$$GameSessionImplCopyWith<$Res>
       {List<MatchResult> matches,
       Map<String, int> aggregateWins,
       int? legacyTeamAScore,
-      int? legacyTeamBScore});
+      int? legacyTeamBScore,
+      bool isActive,
+      @TimestampConverter() DateTime? sessionStartedAt,
+      @TimestampConverter() DateTime? sessionEndedAt,
+      String? sessionStartedBy,
+      RotationState? currentRotation,
+      @TimestampConverter() DateTime? finalizedAt});
+
+  @override
+  $RotationStateCopyWith<$Res>? get currentRotation;
 }
 
 /// @nodoc
@@ -122,6 +196,12 @@ class __$$GameSessionImplCopyWithImpl<$Res>
     Object? aggregateWins = null,
     Object? legacyTeamAScore = freezed,
     Object? legacyTeamBScore = freezed,
+    Object? isActive = null,
+    Object? sessionStartedAt = freezed,
+    Object? sessionEndedAt = freezed,
+    Object? sessionStartedBy = freezed,
+    Object? currentRotation = freezed,
+    Object? finalizedAt = freezed,
   }) {
     return _then(_$GameSessionImpl(
       matches: null == matches
@@ -140,6 +220,30 @@ class __$$GameSessionImplCopyWithImpl<$Res>
           ? _value.legacyTeamBScore
           : legacyTeamBScore // ignore: cast_nullable_to_non_nullable
               as int?,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      sessionStartedAt: freezed == sessionStartedAt
+          ? _value.sessionStartedAt
+          : sessionStartedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      sessionEndedAt: freezed == sessionEndedAt
+          ? _value.sessionEndedAt
+          : sessionEndedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      sessionStartedBy: freezed == sessionStartedBy
+          ? _value.sessionStartedBy
+          : sessionStartedBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      currentRotation: freezed == currentRotation
+          ? _value.currentRotation
+          : currentRotation // ignore: cast_nullable_to_non_nullable
+              as RotationState?,
+      finalizedAt: freezed == finalizedAt
+          ? _value.finalizedAt
+          : finalizedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -151,7 +255,13 @@ class _$GameSessionImpl implements _GameSession {
       {final List<MatchResult> matches = const [],
       final Map<String, int> aggregateWins = const {},
       this.legacyTeamAScore,
-      this.legacyTeamBScore})
+      this.legacyTeamBScore,
+      this.isActive = false,
+      @TimestampConverter() this.sessionStartedAt,
+      @TimestampConverter() this.sessionEndedAt,
+      this.sessionStartedBy,
+      this.currentRotation,
+      @TimestampConverter() this.finalizedAt})
       : _matches = matches,
         _aggregateWins = aggregateWins;
 
@@ -181,10 +291,30 @@ class _$GameSessionImpl implements _GameSession {
   final int? legacyTeamAScore;
   @override
   final int? legacyTeamBScore;
+// Session lifecycle tracking (for Winner Stays format)
+  @override
+  @JsonKey()
+  final bool isActive;
+  @override
+  @TimestampConverter()
+  final DateTime? sessionStartedAt;
+  @override
+  @TimestampConverter()
+  final DateTime? sessionEndedAt;
+  @override
+  final String? sessionStartedBy;
+// User ID of manager who started session
+// Rotation queue state (for 2-8 team sessions)
+  @override
+  final RotationState? currentRotation;
+// Finalization tracking
+  @override
+  @TimestampConverter()
+  final DateTime? finalizedAt;
 
   @override
   String toString() {
-    return 'GameSession(matches: $matches, aggregateWins: $aggregateWins, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore)';
+    return 'GameSession(matches: $matches, aggregateWins: $aggregateWins, legacyTeamAScore: $legacyTeamAScore, legacyTeamBScore: $legacyTeamBScore, isActive: $isActive, sessionStartedAt: $sessionStartedAt, sessionEndedAt: $sessionEndedAt, sessionStartedBy: $sessionStartedBy, currentRotation: $currentRotation, finalizedAt: $finalizedAt)';
   }
 
   @override
@@ -198,7 +328,19 @@ class _$GameSessionImpl implements _GameSession {
             (identical(other.legacyTeamAScore, legacyTeamAScore) ||
                 other.legacyTeamAScore == legacyTeamAScore) &&
             (identical(other.legacyTeamBScore, legacyTeamBScore) ||
-                other.legacyTeamBScore == legacyTeamBScore));
+                other.legacyTeamBScore == legacyTeamBScore) &&
+            (identical(other.isActive, isActive) ||
+                other.isActive == isActive) &&
+            (identical(other.sessionStartedAt, sessionStartedAt) ||
+                other.sessionStartedAt == sessionStartedAt) &&
+            (identical(other.sessionEndedAt, sessionEndedAt) ||
+                other.sessionEndedAt == sessionEndedAt) &&
+            (identical(other.sessionStartedBy, sessionStartedBy) ||
+                other.sessionStartedBy == sessionStartedBy) &&
+            (identical(other.currentRotation, currentRotation) ||
+                other.currentRotation == currentRotation) &&
+            (identical(other.finalizedAt, finalizedAt) ||
+                other.finalizedAt == finalizedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -208,7 +350,13 @@ class _$GameSessionImpl implements _GameSession {
       const DeepCollectionEquality().hash(_matches),
       const DeepCollectionEquality().hash(_aggregateWins),
       legacyTeamAScore,
-      legacyTeamBScore);
+      legacyTeamBScore,
+      isActive,
+      sessionStartedAt,
+      sessionEndedAt,
+      sessionStartedBy,
+      currentRotation,
+      finalizedAt);
 
   /// Create a copy of GameSession
   /// with the given fields replaced by the non-null parameter values.
@@ -231,7 +379,13 @@ abstract class _GameSession implements GameSession {
       {final List<MatchResult> matches,
       final Map<String, int> aggregateWins,
       final int? legacyTeamAScore,
-      final int? legacyTeamBScore}) = _$GameSessionImpl;
+      final int? legacyTeamBScore,
+      final bool isActive,
+      @TimestampConverter() final DateTime? sessionStartedAt,
+      @TimestampConverter() final DateTime? sessionEndedAt,
+      final String? sessionStartedBy,
+      final RotationState? currentRotation,
+      @TimestampConverter() final DateTime? finalizedAt}) = _$GameSessionImpl;
 
   factory _GameSession.fromJson(Map<String, dynamic> json) =
       _$GameSessionImpl.fromJson;
@@ -243,7 +397,24 @@ abstract class _GameSession implements GameSession {
   @override
   int? get legacyTeamAScore;
   @override
-  int? get legacyTeamBScore;
+  int?
+      get legacyTeamBScore; // Session lifecycle tracking (for Winner Stays format)
+  @override
+  bool get isActive;
+  @override
+  @TimestampConverter()
+  DateTime? get sessionStartedAt;
+  @override
+  @TimestampConverter()
+  DateTime? get sessionEndedAt;
+  @override
+  String? get sessionStartedBy; // User ID of manager who started session
+// Rotation queue state (for 2-8 team sessions)
+  @override
+  RotationState? get currentRotation; // Finalization tracking
+  @override
+  @TimestampConverter()
+  DateTime? get finalizedAt;
 
   /// Create a copy of GameSession
   /// with the given fields replaced by the non-null parameter values.
