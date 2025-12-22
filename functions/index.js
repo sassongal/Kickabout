@@ -25,6 +25,7 @@ exports.onCommentCreated = social.onCommentCreated;
 exports.onRecruitingPostCreated = social.onRecruitingPostCreated;
 exports.onContactMessageCreated = social.onContactMessageCreated;
 exports.onFollowCreated = social.onFollowCreated;
+exports.onUserUpdatedSyncPosts = social.onUserUpdatedSyncPosts;
 
 // API
 const api = require('./src/api');

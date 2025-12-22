@@ -127,6 +127,9 @@ class TeamCreationResult {
 class TeamMaker {
   // Static field to hold the last computed balance score (0-100)
   static double lastBalanceScore = 0.0;
+  static const double _weightRating = 0.5;
+  static const double _weightPosition = 0.3;
+  static const double _weightGoalkeeper = 0.2;
 
   /// Create balanced teams using snake draft + local swap.
   /// Returns a record containing the list of teams and the balance score.
@@ -196,9 +199,9 @@ class TeamMaker {
     // (1-7 scale has tighter range, so adjusted thresholds)
     final ratingScore = (1.0 - (metrics.stddev / 1.5)).clamp(0.0, 1.0);
 
-    final score = (ratingScore * 0.5 +
-            metrics.positionBalance * 0.3 +
-            metrics.goalkeeperBalance * 0.2) *
+    final score = (ratingScore * _weightRating +
+            metrics.positionBalance * _weightPosition +
+            metrics.goalkeeperBalance * _weightGoalkeeper) *
         100;
 
     lastBalanceScore = score;

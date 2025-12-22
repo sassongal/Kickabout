@@ -1167,6 +1167,529 @@ abstract class AppLocalizations {
   /// **'כפה מיקום (פיתוח)'**
   String get forceLocation;
 
+  /// No description provided for @gameDetailsTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'פרטי משחק'**
+  String get gameDetailsTitle;
+
+  /// No description provided for @gameLoadingMessage.
+  ///
+  /// In he, this message translates to:
+  /// **'טוען משחק...'**
+  String get gameLoadingMessage;
+
+  /// No description provided for @gameLoadingError.
+  ///
+  /// In he, this message translates to:
+  /// **'שגיאה בטעינת המשחק'**
+  String get gameLoadingError;
+
+  /// No description provided for @attendanceMonitoring.
+  ///
+  /// In he, this message translates to:
+  /// **'ניטור הגעה'**
+  String get attendanceMonitoring;
+
+  /// No description provided for @locationNotSpecified.
+  ///
+  /// In he, this message translates to:
+  /// **'מיקום לא צוין'**
+  String get locationNotSpecified;
+
+  /// No description provided for @teamCountLabel.
+  ///
+  /// In he, this message translates to:
+  /// **'{count} קבוצות'**
+  String teamCountLabel(Object count);
+
+  /// No description provided for @signupsCount.
+  ///
+  /// In he, this message translates to:
+  /// **'{count} נרשמו'**
+  String signupsCount(Object count);
+
+  /// No description provided for @signupsCountFull.
+  ///
+  /// In he, this message translates to:
+  /// **'{count} נרשמו (מלא)'**
+  String signupsCountFull(Object count);
+
+  /// No description provided for @gameRulesTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'חוקי המשחק'**
+  String get gameRulesTitle;
+
+  /// No description provided for @gameDurationLabel.
+  ///
+  /// In he, this message translates to:
+  /// **'משך: {minutes} דקות'**
+  String gameDurationLabel(Object minutes);
+
+  /// No description provided for @gameEndConditionLabel.
+  ///
+  /// In he, this message translates to:
+  /// **'תנאי סיום: {condition}'**
+  String gameEndConditionLabel(Object condition);
+
+  /// No description provided for @statusApproved.
+  ///
+  /// In he, this message translates to:
+  /// **'מאושר'**
+  String get statusApproved;
+
+  /// No description provided for @statusPending.
+  ///
+  /// In he, this message translates to:
+  /// **'ממתין'**
+  String get statusPending;
+
+  /// No description provided for @removePlayerTooltip.
+  ///
+  /// In he, this message translates to:
+  /// **'הסר שחקן'**
+  String get removePlayerTooltip;
+
+  /// No description provided for @signupRemovedSuccess.
+  ///
+  /// In he, this message translates to:
+  /// **'הסרת הרשמה'**
+  String get signupRemovedSuccess;
+
+  /// No description provided for @signupSuccess.
+  ///
+  /// In he, this message translates to:
+  /// **'נרשמת למשחק'**
+  String get signupSuccess;
+
+  /// No description provided for @onlyCreatorCanStartGame.
+  ///
+  /// In he, this message translates to:
+  /// **'רק יוצר המשחק יכול להתחיל'**
+  String get onlyCreatorCanStartGame;
+
+  /// No description provided for @gameStartedSuccess.
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק התחיל'**
+  String get gameStartedSuccess;
+
+  /// No description provided for @onlyCreatorCanEndGame.
+  ///
+  /// In he, this message translates to:
+  /// **'רק יוצר המשחק יכול לסיים'**
+  String get onlyCreatorCanEndGame;
+
+  /// No description provided for @gameEndedSuccess.
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק הסתיים'**
+  String get gameEndedSuccess;
+
+  /// No description provided for @gameStatusDraft.
+  ///
+  /// In he, this message translates to:
+  /// **'טיוטה'**
+  String get gameStatusDraft;
+
+  /// No description provided for @gameStatusScheduled.
+  ///
+  /// In he, this message translates to:
+  /// **'מתוכנן'**
+  String get gameStatusScheduled;
+
+  /// No description provided for @gameStatusRecruiting.
+  ///
+  /// In he, this message translates to:
+  /// **'גיוס שחקנים'**
+  String get gameStatusRecruiting;
+
+  /// No description provided for @gameStatusTeamSelection.
+  ///
+  /// In he, this message translates to:
+  /// **'בחירת קבוצות'**
+  String get gameStatusTeamSelection;
+
+  /// No description provided for @gameStatusTeamsFormed.
+  ///
+  /// In he, this message translates to:
+  /// **'קבוצות נוצרו'**
+  String get gameStatusTeamsFormed;
+
+  /// No description provided for @gameStatusFull.
+  ///
+  /// In he, this message translates to:
+  /// **'מלא'**
+  String get gameStatusFull;
+
+  /// No description provided for @gameStatusInProgress.
+  ///
+  /// In he, this message translates to:
+  /// **'במהלך'**
+  String get gameStatusInProgress;
+
+  /// No description provided for @gameStatusCompleted.
+  ///
+  /// In he, this message translates to:
+  /// **'הושלם'**
+  String get gameStatusCompleted;
+
+  /// No description provided for @gameStatusStatsInput.
+  ///
+  /// In he, this message translates to:
+  /// **'הזנת סטטיסטיקות'**
+  String get gameStatusStatsInput;
+
+  /// No description provided for @gameStatusCancelled.
+  ///
+  /// In he, this message translates to:
+  /// **'בוטל'**
+  String get gameStatusCancelled;
+
+  /// No description provided for @gameStatusArchivedNotPlayed.
+  ///
+  /// In he, this message translates to:
+  /// **'ארכיון - לא שוחק'**
+  String get gameStatusArchivedNotPlayed;
+
+  /// No description provided for @playersLoadError.
+  ///
+  /// In he, this message translates to:
+  /// **'שגיאה בטעינת שחקנים'**
+  String get playersLoadError;
+
+  /// No description provided for @targetingMismatchWarning.
+  ///
+  /// In he, this message translates to:
+  /// **'שים לב: המשחק מיועד לגילאים {minAge}-{maxAge} {genderSuffix}'**
+  String targetingMismatchWarning(
+      Object minAge, Object maxAge, Object genderSuffix);
+
+  /// No description provided for @genderMaleSuffix.
+  ///
+  /// In he, this message translates to:
+  /// **'(גברים)'**
+  String get genderMaleSuffix;
+
+  /// No description provided for @genderFemaleSuffix.
+  ///
+  /// In he, this message translates to:
+  /// **'(נשים)'**
+  String get genderFemaleSuffix;
+
+  /// No description provided for @gameChatButton.
+  ///
+  /// In he, this message translates to:
+  /// **'צ\'אט משחק'**
+  String get gameChatButton;
+
+  /// No description provided for @requestToJoin.
+  ///
+  /// In he, this message translates to:
+  /// **'בקש להצטרף'**
+  String get requestToJoin;
+
+  /// No description provided for @signupForGame.
+  ///
+  /// In he, this message translates to:
+  /// **'הירשם למשחק'**
+  String get signupForGame;
+
+  /// No description provided for @requestSentPendingApproval.
+  ///
+  /// In he, this message translates to:
+  /// **'בקשה נשלחה - ממתין לאישור'**
+  String get requestSentPendingApproval;
+
+  /// No description provided for @cancelSignup.
+  ///
+  /// In he, this message translates to:
+  /// **'בטל הרשמה'**
+  String get cancelSignup;
+
+  /// No description provided for @gameFullWaitlist.
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק מלא - ניתן להירשם לרשימת המתנה'**
+  String get gameFullWaitlist;
+
+  /// No description provided for @pendingRequestsTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'בקשות ממתינות ({count})'**
+  String pendingRequestsTitle(Object count);
+
+  /// No description provided for @findMissingPlayers.
+  ///
+  /// In he, this message translates to:
+  /// **'מצא שחקנים חסרים'**
+  String get findMissingPlayers;
+
+  /// No description provided for @createTeams.
+  ///
+  /// In he, this message translates to:
+  /// **'צור קבוצות'**
+  String get createTeams;
+
+  /// No description provided for @logResultAndStats.
+  ///
+  /// In he, this message translates to:
+  /// **'תעד תוצאה וסטטיסטיקות'**
+  String get logResultAndStats;
+
+  /// No description provided for @startGame.
+  ///
+  /// In he, this message translates to:
+  /// **'התחל משחק'**
+  String get startGame;
+
+  /// No description provided for @recordStats.
+  ///
+  /// In he, this message translates to:
+  /// **'רישום סטטיסטיקות'**
+  String get recordStats;
+
+  /// No description provided for @endGame.
+  ///
+  /// In he, this message translates to:
+  /// **'סיים משחק'**
+  String get endGame;
+
+  /// No description provided for @editResult.
+  ///
+  /// In he, this message translates to:
+  /// **'ערוך תוצאה'**
+  String get editResult;
+
+  /// No description provided for @viewFullStats.
+  ///
+  /// In he, this message translates to:
+  /// **'צפה בסטטיסטיקות המלאות'**
+  String get viewFullStats;
+
+  /// No description provided for @signupsTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'נרשמים'**
+  String get signupsTitle;
+
+  /// No description provided for @confirmedSignupsTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'מאושרים ({count})'**
+  String confirmedSignupsTitle(Object count);
+
+  /// No description provided for @pendingSignupsTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'ממתינים ({count})'**
+  String pendingSignupsTitle(Object count);
+
+  /// No description provided for @noSignups.
+  ///
+  /// In he, this message translates to:
+  /// **'אין נרשמים'**
+  String get noSignups;
+
+  /// No description provided for @requestedToJoinAt.
+  ///
+  /// In he, this message translates to:
+  /// **'ביקש להצטרף • {time}'**
+  String requestedToJoinAt(Object time);
+
+  /// No description provided for @approveTooltip.
+  ///
+  /// In he, this message translates to:
+  /// **'אשר'**
+  String get approveTooltip;
+
+  /// No description provided for @rejectTooltip.
+  ///
+  /// In he, this message translates to:
+  /// **'דחה'**
+  String get rejectTooltip;
+
+  /// No description provided for @playerApprovedSuccess.
+  ///
+  /// In he, this message translates to:
+  /// **'שחקן אושר בהצלחה'**
+  String get playerApprovedSuccess;
+
+  /// No description provided for @rejectRequestTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'דחיית בקשה'**
+  String get rejectRequestTitle;
+
+  /// No description provided for @rejectionReasonLabel.
+  ///
+  /// In he, this message translates to:
+  /// **'סיבת הדחייה (חובה)'**
+  String get rejectionReasonLabel;
+
+  /// No description provided for @rejectionReasonHint.
+  ///
+  /// In he, this message translates to:
+  /// **'לדוגמה: המשחק מלא, לא מתאים לרמה...'**
+  String get rejectionReasonHint;
+
+  /// No description provided for @rejectRequestButton.
+  ///
+  /// In he, this message translates to:
+  /// **'דחה בקשה'**
+  String get rejectRequestButton;
+
+  /// No description provided for @requestRejectedSuccess.
+  ///
+  /// In he, this message translates to:
+  /// **'בקשה נדחתה'**
+  String get requestRejectedSuccess;
+
+  /// No description provided for @findMissingPlayersDescription.
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק יהפוך ל-\"מגייס שחקנים\" ויוצג בפיד האזורי.\nנדרשים {count} שחקנים נוספים.'**
+  String findMissingPlayersDescription(Object count);
+
+  /// No description provided for @confirm.
+  ///
+  /// In he, this message translates to:
+  /// **'אישור'**
+  String get confirm;
+
+  /// No description provided for @recruitingFeedContent.
+  ///
+  /// In he, this message translates to:
+  /// **'האב {hubName} צריך {count} שחקנים למשחק ב-{gameDate}'**
+  String recruitingFeedContent(Object hubName, Object count, Object gameDate);
+
+  /// No description provided for @gamePromotedToRegionalFeed.
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק הוצג בפיד האזורי למציאת שחקנים'**
+  String get gamePromotedToRegionalFeed;
+
+  /// No description provided for @gameOpenForRecruiting.
+  ///
+  /// In he, this message translates to:
+  /// **'המשחק פתוח כעת לגיוס שחקנים'**
+  String get gameOpenForRecruiting;
+
+  /// No description provided for @loadingWeather.
+  ///
+  /// In he, this message translates to:
+  /// **'טוען תנאי מזג אוויר...'**
+  String get loadingWeather;
+
+  /// No description provided for @gameWeatherTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'תנאי מזג אוויר למשחק'**
+  String get gameWeatherTitle;
+
+  /// No description provided for @temperatureCelsius.
+  ///
+  /// In he, this message translates to:
+  /// **'{temp}°C'**
+  String temperatureCelsius(Object temp);
+
+  /// No description provided for @resultUpdatedSuccess.
+  ///
+  /// In he, this message translates to:
+  /// **'התוצאה עודכנה בהצלחה'**
+  String get resultUpdatedSuccess;
+
+  /// No description provided for @resultUpdateError.
+  ///
+  /// In he, this message translates to:
+  /// **'שגיאה בעדכון התוצאה: {error}'**
+  String resultUpdateError(Object error);
+
+  /// No description provided for @teamsTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'הקבוצות'**
+  String get teamsTitle;
+
+  /// No description provided for @teamPlayerCount.
+  ///
+  /// In he, this message translates to:
+  /// **'({count})'**
+  String teamPlayerCount(Object count);
+
+  /// No description provided for @noPlayers.
+  ///
+  /// In he, this message translates to:
+  /// **'אין שחקנים'**
+  String get noPlayers;
+
+  /// No description provided for @sessionSummaryTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'סיכום סשן'**
+  String get sessionSummaryTitle;
+
+  /// No description provided for @sessionWinnerLabel.
+  ///
+  /// In he, this message translates to:
+  /// **'מנצח: {winner}'**
+  String sessionWinnerLabel(Object winner);
+
+  /// No description provided for @teamStatsTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'סטטיסטיקות קבוצות'**
+  String get teamStatsTitle;
+
+  /// No description provided for @teamStatsRecord.
+  ///
+  /// In he, this message translates to:
+  /// **'ניצחונות: {wins} | תיקו: {draws} | הפסדים: {losses}'**
+  String teamStatsRecord(Object wins, Object draws, Object losses);
+
+  /// No description provided for @teamStatsGoals.
+  ///
+  /// In he, this message translates to:
+  /// **'שערים: {goalsFor} | הפרש: {goalDifference}'**
+  String teamStatsGoals(Object goalsFor, Object goalDifference);
+
+  /// No description provided for @pointsShort.
+  ///
+  /// In he, this message translates to:
+  /// **'{points} נק\''**
+  String pointsShort(Object points);
+
+  /// No description provided for @totalMatchesLabel.
+  ///
+  /// In he, this message translates to:
+  /// **'סה\"כ {count} משחקים'**
+  String totalMatchesLabel(Object count);
+
+  /// No description provided for @teamADefaultName.
+  ///
+  /// In he, this message translates to:
+  /// **'קבוצה א\''**
+  String get teamADefaultName;
+
+  /// No description provided for @teamBDefaultName.
+  ///
+  /// In he, this message translates to:
+  /// **'קבוצה ב\''**
+  String get teamBDefaultName;
+
+  /// No description provided for @finalScoreTitle.
+  ///
+  /// In he, this message translates to:
+  /// **'תוצאה סופית'**
+  String get finalScoreTitle;
+
+  /// No description provided for @hubFallbackName.
+  ///
+  /// In he, this message translates to:
+  /// **'האב'**
+  String get hubFallbackName;
+
   /// No description provided for @temp.
   ///
   /// In he, this message translates to:

@@ -52,6 +52,7 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       durationInMinutes: (json['durationInMinutes'] as num?)?.toInt(),
       gameEndCondition: json['gameEndCondition'] as String?,
       region: json['region'] as String?,
+      city: json['city'] as String?,
       showInCommunityFeed: json['showInCommunityFeed'] as bool? ?? false,
       enableAttendanceReminder:
           json['enableAttendanceReminder'] as bool? ?? true,
@@ -102,6 +103,7 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'durationInMinutes': instance.durationInMinutes,
       'gameEndCondition': instance.gameEndCondition,
       'region': instance.region,
+      'city': instance.city,
       'showInCommunityFeed': instance.showInCommunityFeed,
       'enableAttendanceReminder': instance.enableAttendanceReminder,
       'reminderSent2Hours': instance.reminderSent2Hours,

@@ -6,6 +6,7 @@ import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 /// Screen for editing/logging game data (score, goals, assists, MVP)
 class EditGameScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
   bool _isLoadingData = true;
 
   Game? _game;
+  Hub? _hub;
   List<HubEvent> _events = [];
   List<User> _hubMembers = [];
 
@@ -71,6 +73,8 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
         throw Exception('משחק לא נמצא');
       }
 
+      final hub = await hubsRepo.getHub(widget.hubId);
+
       // Load events
       final events = await eventsRepo.getHubEvents(widget.hubId);
 
@@ -113,6 +117,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       if (mounted) {
         setState(() {
           _game = game;
+          _hub = hub;
           _events = events;
           _hubMembers = members;
           _selectedEventId = game.eventId;
@@ -181,6 +186,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
 
       // Get venue name
       String? venueName;
+      Venue? venueForCity;
       if (_selectedEventId != null) {
         HubEvent? event;
         try {
@@ -196,7 +202,11 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       } else if (_game?.venueId != null) {
         final venue = await venuesRepo.getVenue(_game!.venueId!);
         venueName = venue?.name;
+        venueForCity = venue;
       }
+      final city = _hub?.city ?? venueForCity?.city;
+      final region = _hub?.region ??
+          (city != null ? CityUtils.getRegionForCity(city) : null);
 
       // Update game with denormalized data
       await gamesRepo.updateGame(widget.gameId, {
@@ -205,6 +215,8 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
         'teamBScore': teamBScore,
         'status': 'completed',
         'showInCommunityFeed': _showInCommunityFeed,
+        'region': region,
+        'city': city,
         'goalScorerIds': goalScorerIds,
         'goalScorerNames': goalScorerNames,
         'mvpPlayerId': _mvpPlayerId,
@@ -265,6 +277,7 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
       try {
         final feedRepo = ref.read(feedRepositoryProvider);
         final usersRepo = ref.read(usersRepositoryProvider);
+        final currentUser = await usersRepo.getUser(currentUserId);
         final creator = await usersRepo.getUser(_game?.createdBy ?? '');
         final creatorName = creator?.name ?? 'מישהו';
 
@@ -304,6 +317,8 @@ class _EditGameScreenState extends ConsumerState<EditGameScreen> {
           text: storyParts.join(' | '),
           entityId: widget.gameId,
           createdAt: DateTime.now(),
+          authorName: currentUser?.name,
+          authorPhotoUrl: currentUser?.photoUrl,
         );
 
         await feedRepo.createPost(feedPost);

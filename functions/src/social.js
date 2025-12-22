@@ -1,7 +1,38 @@
 /* eslint-disable max-len */
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { Timestamp } = require('firebase-admin/firestore');
 const { info } = require('firebase-functions/logger');
 const { db, messaging, FieldValue, getHubMemberIds, getUserFCMTokens } = require('./utils');
+
+const RECENT_POST_DAYS = 90;
+const MAX_POSTS_TO_UPDATE = 200;
+const BATCH_LIMIT = 450;
+
+async function updatePostsSnapshot(snapshot, updateData) {
+  if (snapshot.empty) return 0;
+
+  let batch = db.batch();
+  let processed = 0;
+  let updated = 0;
+
+  for (const doc of snapshot.docs) {
+    batch.update(doc.ref, updateData);
+    processed += 1;
+    updated += 1;
+
+    if (processed >= BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      processed = 0;
+    }
+  }
+
+  if (processed > 0) {
+    await batch.commit();
+  }
+
+  return updated;
+}
 
 exports.onHubMessageCreated = onDocumentCreated(
   'hubs/{hubId}/chat/{messageId}',
@@ -399,3 +430,64 @@ exports.onFollowCreated = onDocumentCreated(
   },
 );
 
+// --- Sync denormalized author fields when user profile changes ---
+exports.onUserUpdatedSyncPosts = onDocumentUpdated(
+  'users/{userId}',
+  async (event) => {
+    const userId = event.params.userId;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    if (!after) return;
+
+    const beforeName = before?.displayName || before?.name || null;
+    const afterName = after.displayName || after.name || null;
+    const beforePhoto = before?.photoUrl || null;
+    const afterPhoto = after.photoUrl || null;
+
+    if (beforeName === afterName && beforePhoto === afterPhoto) {
+      return;
+    }
+
+    const updateData = {
+      authorName: afterName,
+      authorPhotoUrl: afterPhoto,
+    };
+
+    const cutoff = Timestamp.fromDate(
+      new Date(Date.now() - RECENT_POST_DAYS * 24 * 60 * 60 * 1000),
+    );
+
+    try {
+      const hubPostsQuery = db
+        .collectionGroup('items')
+        .where('authorId', '==', userId)
+        .where('createdAt', '>=', cutoff)
+        .orderBy('createdAt', 'desc')
+        .limit(MAX_POSTS_TO_UPDATE);
+
+      const regionalPostsQuery = db
+        .collection('feedPosts')
+        .where('authorId', '==', userId)
+        .where('createdAt', '>=', cutoff)
+        .orderBy('createdAt', 'desc')
+        .limit(MAX_POSTS_TO_UPDATE);
+
+      const [hubSnap, regionalSnap] = await Promise.all([
+        hubPostsQuery.get(),
+        regionalPostsQuery.get(),
+      ]);
+
+      const [hubUpdated, regionalUpdated] = await Promise.all([
+        updatePostsSnapshot(hubSnap, updateData),
+        updatePostsSnapshot(regionalSnap, updateData),
+      ]);
+
+      info(
+        `Synced author fields for user ${userId}: hub posts ${hubUpdated}, regional posts ${regionalUpdated}.`,
+      );
+    } catch (error) {
+      info(`Error syncing posts for user ${userId}:`, error);
+    }
+  },
+);

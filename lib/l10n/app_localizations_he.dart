@@ -577,5 +577,308 @@ class AppLocalizationsHe extends AppLocalizations {
   String get forceLocation => 'כפה מיקום (פיתוח)';
 
   @override
+  String get gameDetailsTitle => 'פרטי משחק';
+
+  @override
+  String get gameLoadingMessage => 'טוען משחק...';
+
+  @override
+  String get gameLoadingError => 'שגיאה בטעינת המשחק';
+
+  @override
+  String get attendanceMonitoring => 'ניטור הגעה';
+
+  @override
+  String get locationNotSpecified => 'מיקום לא צוין';
+
+  @override
+  String teamCountLabel(Object count) {
+    return '$count קבוצות';
+  }
+
+  @override
+  String signupsCount(Object count) {
+    return '$count נרשמו';
+  }
+
+  @override
+  String signupsCountFull(Object count) {
+    return '$count נרשמו (מלא)';
+  }
+
+  @override
+  String get gameRulesTitle => 'חוקי המשחק';
+
+  @override
+  String gameDurationLabel(Object minutes) {
+    return 'משך: $minutes דקות';
+  }
+
+  @override
+  String gameEndConditionLabel(Object condition) {
+    return 'תנאי סיום: $condition';
+  }
+
+  @override
+  String get statusApproved => 'מאושר';
+
+  @override
+  String get statusPending => 'ממתין';
+
+  @override
+  String get removePlayerTooltip => 'הסר שחקן';
+
+  @override
+  String get signupRemovedSuccess => 'הסרת הרשמה';
+
+  @override
+  String get signupSuccess => 'נרשמת למשחק';
+
+  @override
+  String get onlyCreatorCanStartGame => 'רק יוצר המשחק יכול להתחיל';
+
+  @override
+  String get gameStartedSuccess => 'המשחק התחיל';
+
+  @override
+  String get onlyCreatorCanEndGame => 'רק יוצר המשחק יכול לסיים';
+
+  @override
+  String get gameEndedSuccess => 'המשחק הסתיים';
+
+  @override
+  String get gameStatusDraft => 'טיוטה';
+
+  @override
+  String get gameStatusScheduled => 'מתוכנן';
+
+  @override
+  String get gameStatusRecruiting => 'גיוס שחקנים';
+
+  @override
+  String get gameStatusTeamSelection => 'בחירת קבוצות';
+
+  @override
+  String get gameStatusTeamsFormed => 'קבוצות נוצרו';
+
+  @override
+  String get gameStatusFull => 'מלא';
+
+  @override
+  String get gameStatusInProgress => 'במהלך';
+
+  @override
+  String get gameStatusCompleted => 'הושלם';
+
+  @override
+  String get gameStatusStatsInput => 'הזנת סטטיסטיקות';
+
+  @override
+  String get gameStatusCancelled => 'בוטל';
+
+  @override
+  String get gameStatusArchivedNotPlayed => 'ארכיון - לא שוחק';
+
+  @override
+  String get playersLoadError => 'שגיאה בטעינת שחקנים';
+
+  @override
+  String targetingMismatchWarning(
+      Object minAge, Object maxAge, Object genderSuffix) {
+    return 'שים לב: המשחק מיועד לגילאים $minAge-$maxAge $genderSuffix';
+  }
+
+  @override
+  String get genderMaleSuffix => '(גברים)';
+
+  @override
+  String get genderFemaleSuffix => '(נשים)';
+
+  @override
+  String get gameChatButton => 'צ\'אט משחק';
+
+  @override
+  String get requestToJoin => 'בקש להצטרף';
+
+  @override
+  String get signupForGame => 'הירשם למשחק';
+
+  @override
+  String get requestSentPendingApproval => 'בקשה נשלחה - ממתין לאישור';
+
+  @override
+  String get cancelSignup => 'בטל הרשמה';
+
+  @override
+  String get gameFullWaitlist => 'המשחק מלא - ניתן להירשם לרשימת המתנה';
+
+  @override
+  String pendingRequestsTitle(Object count) {
+    return 'בקשות ממתינות ($count)';
+  }
+
+  @override
+  String get findMissingPlayers => 'מצא שחקנים חסרים';
+
+  @override
+  String get createTeams => 'צור קבוצות';
+
+  @override
+  String get logResultAndStats => 'תעד תוצאה וסטטיסטיקות';
+
+  @override
+  String get startGame => 'התחל משחק';
+
+  @override
+  String get recordStats => 'רישום סטטיסטיקות';
+
+  @override
+  String get endGame => 'סיים משחק';
+
+  @override
+  String get editResult => 'ערוך תוצאה';
+
+  @override
+  String get viewFullStats => 'צפה בסטטיסטיקות המלאות';
+
+  @override
+  String get signupsTitle => 'נרשמים';
+
+  @override
+  String confirmedSignupsTitle(Object count) {
+    return 'מאושרים ($count)';
+  }
+
+  @override
+  String pendingSignupsTitle(Object count) {
+    return 'ממתינים ($count)';
+  }
+
+  @override
+  String get noSignups => 'אין נרשמים';
+
+  @override
+  String requestedToJoinAt(Object time) {
+    return 'ביקש להצטרף • $time';
+  }
+
+  @override
+  String get approveTooltip => 'אשר';
+
+  @override
+  String get rejectTooltip => 'דחה';
+
+  @override
+  String get playerApprovedSuccess => 'שחקן אושר בהצלחה';
+
+  @override
+  String get rejectRequestTitle => 'דחיית בקשה';
+
+  @override
+  String get rejectionReasonLabel => 'סיבת הדחייה (חובה)';
+
+  @override
+  String get rejectionReasonHint => 'לדוגמה: המשחק מלא, לא מתאים לרמה...';
+
+  @override
+  String get rejectRequestButton => 'דחה בקשה';
+
+  @override
+  String get requestRejectedSuccess => 'בקשה נדחתה';
+
+  @override
+  String findMissingPlayersDescription(Object count) {
+    return 'המשחק יהפוך ל-\"מגייס שחקנים\" ויוצג בפיד האזורי.\nנדרשים $count שחקנים נוספים.';
+  }
+
+  @override
+  String get confirm => 'אישור';
+
+  @override
+  String recruitingFeedContent(Object hubName, Object count, Object gameDate) {
+    return 'האב $hubName צריך $count שחקנים למשחק ב-$gameDate';
+  }
+
+  @override
+  String get gamePromotedToRegionalFeed =>
+      'המשחק הוצג בפיד האזורי למציאת שחקנים';
+
+  @override
+  String get gameOpenForRecruiting => 'המשחק פתוח כעת לגיוס שחקנים';
+
+  @override
+  String get loadingWeather => 'טוען תנאי מזג אוויר...';
+
+  @override
+  String get gameWeatherTitle => 'תנאי מזג אוויר למשחק';
+
+  @override
+  String temperatureCelsius(Object temp) {
+    return '$temp°C';
+  }
+
+  @override
+  String get resultUpdatedSuccess => 'התוצאה עודכנה בהצלחה';
+
+  @override
+  String resultUpdateError(Object error) {
+    return 'שגיאה בעדכון התוצאה: $error';
+  }
+
+  @override
+  String get teamsTitle => 'הקבוצות';
+
+  @override
+  String teamPlayerCount(Object count) {
+    return '($count)';
+  }
+
+  @override
+  String get noPlayers => 'אין שחקנים';
+
+  @override
+  String get sessionSummaryTitle => 'סיכום סשן';
+
+  @override
+  String sessionWinnerLabel(Object winner) {
+    return 'מנצח: $winner';
+  }
+
+  @override
+  String get teamStatsTitle => 'סטטיסטיקות קבוצות';
+
+  @override
+  String teamStatsRecord(Object wins, Object draws, Object losses) {
+    return 'ניצחונות: $wins | תיקו: $draws | הפסדים: $losses';
+  }
+
+  @override
+  String teamStatsGoals(Object goalsFor, Object goalDifference) {
+    return 'שערים: $goalsFor | הפרש: $goalDifference';
+  }
+
+  @override
+  String pointsShort(Object points) {
+    return '$points נק\'';
+  }
+
+  @override
+  String totalMatchesLabel(Object count) {
+    return 'סה\"כ $count משחקים';
+  }
+
+  @override
+  String get teamADefaultName => 'קבוצה א\'';
+
+  @override
+  String get teamBDefaultName => 'קבוצה ב\'';
+
+  @override
+  String get finalScoreTitle => 'תוצאה סופית';
+
+  @override
+  String get hubFallbackName => 'האב';
+
+  @override
   String get temp => 'temp';
 }

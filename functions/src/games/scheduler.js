@@ -1,10 +1,11 @@
 /* eslint-disable max-len */
 const { onSchedule } = require('firebase-functions/v2/scheduler');
-const { info } = require('firebase-functions/logger');
+const { info, error: logError } = require('firebase-functions/logger');
 const { db, messaging, FieldValue, getUserFCMTokens } = require('../utils');
+const { sentryDsn, captureException, flushSentry } = require('../monitoring');
 
 exports.sendGameReminder = onSchedule(
-    'every 30 minutes',
+    { schedule: 'every 30 minutes', secrets: [sentryDsn] },
     async (event) => {
         const now = new Date();
         const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
@@ -108,9 +109,15 @@ exports.sendGameReminder = onSchedule(
             await Promise.all(reminderPromises);
             info(`✅ Completed sendGameReminder cron job - processed ${gamesSnapshot.size} games`);
             return null;
-        } catch (error) {
-            info(`⚠️ Error running sendGameReminder:`, error.message || error);
-            info(`Stack trace:`, error.stack);
+        } catch (err) {
+            logError('Error running sendGameReminder', err);
+            captureException(err, {
+                functionName: 'sendGameReminder',
+                extra: {
+                    scheduledFor: now.toISOString(),
+                },
+            });
+            await flushSentry();
             // Don't throw - this is a scheduled function, we don't want it to fail silently
             // but we also don't want it to crash the entire function
             return null;

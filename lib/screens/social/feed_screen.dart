@@ -6,10 +6,7 @@ import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/data/feed_repository.dart';
-import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/widgets/game_photos_gallery.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -90,8 +87,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
         final user = snapshot.data;
         final userRegion = user?.region;
-        final feedRepo = ref.read(feedRepositoryProvider);
-
         final filter = FeedFilter(
           hubId: widget.hubId,
           region: userRegion,
@@ -227,8 +222,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                         return _PostCard(
                           post: post,
                           currentUserId: currentUserId,
-                          feedRepo: feedRepo,
-                          usersRepo: ref.read(usersRepositoryProvider),
                         );
                       },
                     );
@@ -248,112 +241,103 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 class _PostCard extends ConsumerWidget {
   final FeedPost post;
   final String? currentUserId;
-  final FeedRepository feedRepo;
-  final UsersRepository usersRepo;
 
   const _PostCard({
     required this.post,
     required this.currentUserId,
-    required this.feedRepo,
-    required this.usersRepo,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userStream = usersRepo.watchUser(post.authorId);
+    final authorName = (post.authorName ?? '').trim().isNotEmpty
+        ? post.authorName!.trim()
+        : 'משתמש';
+    final authorPhotoUrl = (post.authorPhotoUrl ?? '').trim();
+    final authorInitial = authorName.isNotEmpty ? authorName[0] : '?';
     // Removed: Like functionality (simplified feed - no likes)
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: StreamBuilder<User?>(
-        stream: userStream,
-        builder: (context, userSnapshot) {
-          if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return const ListTile(
-              leading: CircularProgressIndicator(),
-              title: Text('טוען...'),
-            );
-          }
-
-          if (userSnapshot.hasError) {
-            return ListTile(
-              leading: const Icon(Icons.error_outline, color: Colors.red),
-              title: const Text('שגיאה בטעינת המשתמש'),
-              subtitle: Text(
-                ErrorHandlerService().handleException(
-                  userSnapshot.error,
-                  context: 'Feed post - user loading',
-                ),
-              ),
-            );
-          }
-
-          final author = userSnapshot.data;
-          if (author == null) {
-            return const ListTile(
-              leading: Icon(Icons.person_off),
-              title: Text('משתמש לא נמצא'),
-            );
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Author info
+            Row(
               children: [
-                // Author info
-                Row(
-                  children: [
-                    PlayerAvatar(
-                      user: author,
-                      radius: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            author.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            _getPostTypeText(post.type),
+                InkWell(
+                  onTap: () => context.push('/profile/${post.authorId}'),
+                  borderRadius: BorderRadius.circular(20),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
+                    backgroundImage: authorPhotoUrl.isNotEmpty
+                        ? NetworkImage(authorPhotoUrl)
+                        : null,
+                    child: authorPhotoUrl.isEmpty
+                        ? Text(
+                            authorInitial.toUpperCase(),
                             style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      _formatTime(post.createdAt),
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Content
-                if (post.content != null) ...[
-                  Text(post.content ?? post.text ?? ''),
-                  const SizedBox(height: 8),
-                ],
-                // Photos
-                if (post.photoUrls.isNotEmpty) ...[
-                  GamePhotosGallery(
-                    photoUrls: post.photoUrls,
-                    canAddPhotos: false,
-                    canDelete: false,
+                          )
+                        : null,
                   ),
-                  const SizedBox(height: 8),
-                ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.push('/profile/${post.authorId}'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          authorName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          _getPostTypeText(post.type),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatTime(post.createdAt),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Content
+            if (post.content != null) ...[
+              Text(post.content ?? post.text ?? ''),
+              const SizedBox(height: 8),
+            ],
+            // Photos
+            if (post.photoUrls.isNotEmpty) ...[
+              GamePhotosGallery(
+                photoUrls: post.photoUrls,
+                canAddPhotos: false,
+                canDelete: false,
+              ),
+              const SizedBox(height: 8),
+            ],
 
                 // NEW: Recruiting Post UI
                 if (post.type == 'hub_recruiting') ...[
@@ -490,21 +474,19 @@ class _PostCard extends ConsumerWidget {
                     ),
                   ),
                 const SizedBox(height: 8),
-                // Comments only (no likes)
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.comment_outlined),
-                      onPressed: () => context
-                          .push('/hubs/${post.hubId}/feed/${post.postId}'),
-                    ),
-                    Text('${post.commentsCount}'),
-                  ],
+            // Comments only (no likes)
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.comment_outlined),
+                  onPressed: () => context
+                      .push('/hubs/${post.hubId}/feed/${post.postId}'),
                 ),
+                Text('${post.commentsCount}'),
               ],
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }

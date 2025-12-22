@@ -51,6 +51,7 @@ class Game with _$Game {
     int? durationInMinutes,
     String? gameEndCondition,
     String? region,
+    String? city,
     // Community feed
     @Default(false) bool showInCommunityFeed,
     // Attendance

@@ -18,6 +18,7 @@
   "main": "index.js",
   "dependencies": {
     "@google-cloud/firestore": "^7.10.0",
+    "@sentry/node": "^8.11.1",
     "axios": "^1.7.9",
     "firebase-admin": "^13.0.1",
     "firebase-functions": "^7.0.2"

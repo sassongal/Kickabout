@@ -10,6 +10,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/routing/app_paths.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 import 'package:kattrick/models/targeting_criteria.dart';
@@ -220,6 +221,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
+      String? venueCity;
 
       final gameDate = DateTime(
         _selectedDate.year,
@@ -254,6 +256,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         }
         // Ensure venue has valid location if locationPoint is missing
         _selectedLocation ??= venue.location;
+        venueCity = venue.city;
       }
 
       // Get hub to copy region (optional)
@@ -262,6 +265,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
           ? await hubsRepo.getHub(selectedHubId)
           : null;
       final hubRegion = hub?.region;
+      final gameRegion = hubRegion ??
+          (venueCity != null ? CityUtils.getRegionForCity(venueCity) : null);
+      final gameCity = hub?.city ?? venueCity;
 
       // Create TargetingCriteria
       final targetingCriteria = TargetingCriteria(
@@ -301,7 +307,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         gameEndCondition: _gameEndConditionController.text.trim().isNotEmpty
             ? _gameEndConditionController.text.trim()
             : null,
-        region: hubRegion, // Copy region from hub
+        region: gameRegion,
+        city: gameCity,
         enableAttendanceReminder: _enableAttendanceReminder,
       );
 
@@ -316,6 +323,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         await _scheduleRecurringGames(
             gameId, gameDate, _recurrencePattern!, _recurrenceEndDate!);
       }
+
+      final usersRepo = ref.read(usersRepositoryProvider);
+      final currentUser = await usersRepo.getUser(currentUserId);
 
       // Get hub for notifications and reminders (already fetched above)
 
@@ -342,6 +352,12 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
             type: 'game',
             gameId: gameId,
             createdAt: DateTime.now(),
+            authorName: currentUser?.name,
+            authorPhotoUrl: currentUser?.photoUrl,
+            hubName: hub?.name,
+            hubLogoUrl: hub?.logoUrl,
+            region: hub?.region,
+            city: hub?.city,
           );
           await feedRepo.createPost(feedPost);
         } catch (e) {
@@ -355,9 +371,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         try {
           final pushIntegration =
               ref.read(pushNotificationIntegrationServiceProvider);
-          final usersRepo = ref.read(usersRepositoryProvider);
           final hubsRepo = ref.read(hubsRepositoryProvider);
-          final currentUser = await usersRepo.getUser(currentUserId);
 
           // Fetch member IDs from subcollection
           final memberIds = await hubsRepo.getHubMemberIds(selectedHubId);

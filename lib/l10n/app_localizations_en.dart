@@ -584,5 +584,310 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forceLocation => 'Force Location (Dev)';
 
   @override
+  String get gameDetailsTitle => 'Game Details';
+
+  @override
+  String get gameLoadingMessage => 'Loading game...';
+
+  @override
+  String get gameLoadingError => 'Failed to load game';
+
+  @override
+  String get attendanceMonitoring => 'Attendance Monitoring';
+
+  @override
+  String get locationNotSpecified => 'Location not specified';
+
+  @override
+  String teamCountLabel(Object count) {
+    return '$count teams';
+  }
+
+  @override
+  String signupsCount(Object count) {
+    return '$count registered';
+  }
+
+  @override
+  String signupsCountFull(Object count) {
+    return '$count registered (full)';
+  }
+
+  @override
+  String get gameRulesTitle => 'Game rules';
+
+  @override
+  String gameDurationLabel(Object minutes) {
+    return 'Duration: $minutes minutes';
+  }
+
+  @override
+  String gameEndConditionLabel(Object condition) {
+    return 'End condition: $condition';
+  }
+
+  @override
+  String get statusApproved => 'Approved';
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get removePlayerTooltip => 'Remove player';
+
+  @override
+  String get signupRemovedSuccess => 'Registration removed';
+
+  @override
+  String get signupSuccess => 'Joined the game';
+
+  @override
+  String get onlyCreatorCanStartGame => 'Only the game creator can start';
+
+  @override
+  String get gameStartedSuccess => 'Game started';
+
+  @override
+  String get onlyCreatorCanEndGame => 'Only the game creator can end';
+
+  @override
+  String get gameEndedSuccess => 'Game ended';
+
+  @override
+  String get gameStatusDraft => 'Draft';
+
+  @override
+  String get gameStatusScheduled => 'Scheduled';
+
+  @override
+  String get gameStatusRecruiting => 'Recruiting players';
+
+  @override
+  String get gameStatusTeamSelection => 'Team selection';
+
+  @override
+  String get gameStatusTeamsFormed => 'Teams formed';
+
+  @override
+  String get gameStatusFull => 'Full';
+
+  @override
+  String get gameStatusInProgress => 'In progress';
+
+  @override
+  String get gameStatusCompleted => 'Completed';
+
+  @override
+  String get gameStatusStatsInput => 'Stats input';
+
+  @override
+  String get gameStatusCancelled => 'Cancelled';
+
+  @override
+  String get gameStatusArchivedNotPlayed => 'Archived - not played';
+
+  @override
+  String get playersLoadError => 'Failed to load players';
+
+  @override
+  String targetingMismatchWarning(
+      Object minAge, Object maxAge, Object genderSuffix) {
+    return 'Note: this game is for ages $minAge-$maxAge $genderSuffix';
+  }
+
+  @override
+  String get genderMaleSuffix => '(men)';
+
+  @override
+  String get genderFemaleSuffix => '(women)';
+
+  @override
+  String get gameChatButton => 'Game chat';
+
+  @override
+  String get requestToJoin => 'Request to join';
+
+  @override
+  String get signupForGame => 'Sign up for game';
+
+  @override
+  String get requestSentPendingApproval => 'Request sent - awaiting approval';
+
+  @override
+  String get cancelSignup => 'Cancel registration';
+
+  @override
+  String get gameFullWaitlist => 'Game is full - you can join the waitlist';
+
+  @override
+  String pendingRequestsTitle(Object count) {
+    return 'Pending requests ($count)';
+  }
+
+  @override
+  String get findMissingPlayers => 'Find missing players';
+
+  @override
+  String get createTeams => 'Create teams';
+
+  @override
+  String get logResultAndStats => 'Log result & stats';
+
+  @override
+  String get startGame => 'Start game';
+
+  @override
+  String get recordStats => 'Record stats';
+
+  @override
+  String get endGame => 'End game';
+
+  @override
+  String get editResult => 'Edit result';
+
+  @override
+  String get viewFullStats => 'View full stats';
+
+  @override
+  String get signupsTitle => 'Signups';
+
+  @override
+  String confirmedSignupsTitle(Object count) {
+    return 'Confirmed ($count)';
+  }
+
+  @override
+  String pendingSignupsTitle(Object count) {
+    return 'Pending ($count)';
+  }
+
+  @override
+  String get noSignups => 'No signups';
+
+  @override
+  String requestedToJoinAt(Object time) {
+    return 'Requested to join • $time';
+  }
+
+  @override
+  String get approveTooltip => 'Approve';
+
+  @override
+  String get rejectTooltip => 'Reject';
+
+  @override
+  String get playerApprovedSuccess => 'Player approved successfully';
+
+  @override
+  String get rejectRequestTitle => 'Reject request';
+
+  @override
+  String get rejectionReasonLabel => 'Rejection reason (required)';
+
+  @override
+  String get rejectionReasonHint =>
+      'For example: the game is full, not the right level...';
+
+  @override
+  String get rejectRequestButton => 'Reject request';
+
+  @override
+  String get requestRejectedSuccess => 'Request rejected';
+
+  @override
+  String findMissingPlayersDescription(Object count) {
+    return 'The game will switch to \"recruiting\" and appear in the regional feed.\\n$count more players needed.';
+  }
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String recruitingFeedContent(Object hubName, Object count, Object gameDate) {
+    return 'Hub $hubName needs $count players for a game on $gameDate';
+  }
+
+  @override
+  String get gamePromotedToRegionalFeed =>
+      'The game was promoted to the regional feed to find players';
+
+  @override
+  String get gameOpenForRecruiting =>
+      'The game is now open for recruiting players';
+
+  @override
+  String get loadingWeather => 'Loading weather conditions...';
+
+  @override
+  String get gameWeatherTitle => 'Weather for the game';
+
+  @override
+  String temperatureCelsius(Object temp) {
+    return '$temp°C';
+  }
+
+  @override
+  String get resultUpdatedSuccess => 'Result updated successfully';
+
+  @override
+  String resultUpdateError(Object error) {
+    return 'Failed to update result: $error';
+  }
+
+  @override
+  String get teamsTitle => 'Teams';
+
+  @override
+  String teamPlayerCount(Object count) {
+    return '($count)';
+  }
+
+  @override
+  String get noPlayers => 'No players';
+
+  @override
+  String get sessionSummaryTitle => 'Session summary';
+
+  @override
+  String sessionWinnerLabel(Object winner) {
+    return 'Winner: $winner';
+  }
+
+  @override
+  String get teamStatsTitle => 'Team stats';
+
+  @override
+  String teamStatsRecord(Object wins, Object draws, Object losses) {
+    return 'Wins: $wins | Draws: $draws | Losses: $losses';
+  }
+
+  @override
+  String teamStatsGoals(Object goalsFor, Object goalDifference) {
+    return 'Goals: $goalsFor | Diff: $goalDifference';
+  }
+
+  @override
+  String pointsShort(Object points) {
+    return '$points pts';
+  }
+
+  @override
+  String totalMatchesLabel(Object count) {
+    return 'Total $count games';
+  }
+
+  @override
+  String get teamADefaultName => 'Team A';
+
+  @override
+  String get teamBDefaultName => 'Team B';
+
+  @override
+  String get finalScoreTitle => 'Final score';
+
+  @override
+  String get hubFallbackName => 'Hub';
+
+  @override
   String get temp => 'temp';
 }

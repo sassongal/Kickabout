@@ -55,7 +55,8 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
             'hidePhone': false,
             'hideCity': false,
             'hideStats': false,
-            'hideRatings': false
+            'hideRatings': false,
+            'allowHubInvites': true
           },
       notificationPreferences:
           (json['notificationPreferences'] as Map<String, dynamic>?)?.map(

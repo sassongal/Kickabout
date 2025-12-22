@@ -30,6 +30,8 @@ _$LogPastGameDetailsImpl _$$LogPastGameDetailsImplFromJson(
       mvpPlayerId: json['mvpPlayerId'] as String?,
       mvpPlayerName: json['mvpPlayerName'] as String?,
       venueName: json['venueName'] as String?,
+      region: json['region'] as String?,
+      city: json['city'] as String?,
     );
 
 Map<String, dynamic> _$$LogPastGameDetailsImplToJson(
@@ -49,4 +51,6 @@ Map<String, dynamic> _$$LogPastGameDetailsImplToJson(
       'mvpPlayerId': instance.mvpPlayerId,
       'mvpPlayerName': instance.mvpPlayerName,
       'venueName': instance.venueName,
+      'region': instance.region,
+      'city': instance.city,
     };

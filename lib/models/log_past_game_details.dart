@@ -23,9 +23,10 @@ class LogPastGameDetails with _$LogPastGameDetails {
     String? mvpPlayerId, // MVP player ID (optional)
     String? mvpPlayerName, // MVP player name (optional, denormalized)
     String? venueName, // Venue name (optional, denormalized)
+    String? region, // Region (optional, denormalized)
+    String? city, // City (optional, denormalized)
   }) = _LogPastGameDetails;
 
   factory LogPastGameDetails.fromJson(Map<String, dynamic> json) =>
       _$LogPastGameDetailsFromJson(json);
 }
-

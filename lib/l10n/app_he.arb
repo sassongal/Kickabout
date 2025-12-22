@@ -541,5 +541,201 @@
   "@forceLocation": {
     "description": "Force location button for dev mode"
   },
+  "gameDetailsTitle": "פרטי משחק",
+  "gameLoadingMessage": "טוען משחק...",
+  "gameLoadingError": "שגיאה בטעינת המשחק",
+  "gameNotFound": "משחק לא נמצא",
+  "attendanceMonitoring": "ניטור הגעה",
+  "locationNotSpecified": "מיקום לא צוין",
+  "teamCountLabel": "{count} קבוצות",
+  "@teamCountLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "signupsCount": "{count} נרשמו",
+  "@signupsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "signupsCountFull": "{count} נרשמו (מלא)",
+  "@signupsCountFull": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "gameRulesTitle": "חוקי המשחק",
+  "gameDurationLabel": "משך: {minutes} דקות",
+  "@gameDurationLabel": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "gameEndConditionLabel": "תנאי סיום: {condition}",
+  "@gameEndConditionLabel": {
+    "placeholders": {
+      "condition": {}
+    }
+  },
+  "checkingPermissions": "בודק הרשאות...",
+  "statusApproved": "מאושר",
+  "statusPending": "ממתין",
+  "removePlayerTooltip": "הסר שחקן",
+  "signupRemovedSuccess": "הסרת הרשמה",
+  "signupSuccess": "נרשמת למשחק",
+  "onlyCreatorCanStartGame": "רק יוצר המשחק יכול להתחיל",
+  "gameStartedSuccess": "המשחק התחיל",
+  "onlyCreatorCanEndGame": "רק יוצר המשחק יכול לסיים",
+  "gameEndedSuccess": "המשחק הסתיים",
+  "gameStatusDraft": "טיוטה",
+  "gameStatusScheduled": "מתוכנן",
+  "gameStatusRecruiting": "גיוס שחקנים",
+  "gameStatusTeamSelection": "בחירת קבוצות",
+  "gameStatusTeamsFormed": "קבוצות נוצרו",
+  "gameStatusFull": "מלא",
+  "gameStatusInProgress": "במהלך",
+  "gameStatusCompleted": "הושלם",
+  "gameStatusStatsInput": "הזנת סטטיסטיקות",
+  "gameStatusCancelled": "בוטל",
+  "gameStatusArchivedNotPlayed": "ארכיון - לא שוחק",
+  "playersLoadError": "שגיאה בטעינת שחקנים",
+  "targetingMismatchWarning": "שים לב: המשחק מיועד לגילאים {minAge}-{maxAge} {genderSuffix}",
+  "@targetingMismatchWarning": {
+    "placeholders": {
+      "minAge": {},
+      "maxAge": {},
+      "genderSuffix": {}
+    }
+  },
+  "genderMaleSuffix": "(גברים)",
+  "genderFemaleSuffix": "(נשים)",
+  "gameChatButton": "צ'אט משחק",
+  "requestToJoin": "בקש להצטרף",
+  "signupForGame": "הירשם למשחק",
+  "requestSentPendingApproval": "בקשה נשלחה - ממתין לאישור",
+  "cancelSignup": "בטל הרשמה",
+  "gameFullWaitlist": "המשחק מלא - ניתן להירשם לרשימת המתנה",
+  "pendingRequestsTitle": "בקשות ממתינות ({count})",
+  "@pendingRequestsTitle": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "findMissingPlayers": "מצא שחקנים חסרים",
+  "createTeams": "צור קבוצות",
+  "logResultAndStats": "תעד תוצאה וסטטיסטיקות",
+  "startGame": "התחל משחק",
+  "recordStats": "רישום סטטיסטיקות",
+  "endGame": "סיים משחק",
+  "editResult": "ערוך תוצאה",
+  "viewFullStats": "צפה בסטטיסטיקות המלאות",
+  "signupsTitle": "נרשמים",
+  "confirmedSignupsTitle": "מאושרים ({count})",
+  "@confirmedSignupsTitle": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "pendingSignupsTitle": "ממתינים ({count})",
+  "@pendingSignupsTitle": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noSignups": "אין נרשמים",
+  "requestedToJoinAt": "ביקש להצטרף • {time}",
+  "@requestedToJoinAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "approveTooltip": "אשר",
+  "rejectTooltip": "דחה",
+  "playerApprovedSuccess": "שחקן אושר בהצלחה",
+  "rejectRequestTitle": "דחיית בקשה",
+  "rejectionReasonLabel": "סיבת הדחייה (חובה)",
+  "rejectionReasonHint": "לדוגמה: המשחק מלא, לא מתאים לרמה...",
+  "rejectRequestButton": "דחה בקשה",
+  "requestRejectedSuccess": "בקשה נדחתה",
+  "findMissingPlayersDescription": "המשחק יהפוך ל-\"מגייס שחקנים\" ויוצג בפיד האזורי.\nנדרשים {count} שחקנים נוספים.",
+  "@findMissingPlayersDescription": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "confirm": "אישור",
+  "recruitingFeedContent": "האב {hubName} צריך {count} שחקנים למשחק ב-{gameDate}",
+  "@recruitingFeedContent": {
+    "placeholders": {
+      "hubName": {},
+      "count": {},
+      "gameDate": {}
+    }
+  },
+  "gamePromotedToRegionalFeed": "המשחק הוצג בפיד האזורי למציאת שחקנים",
+  "gameOpenForRecruiting": "המשחק פתוח כעת לגיוס שחקנים",
+  "loadingWeather": "טוען תנאי מזג אוויר...",
+  "gameWeatherTitle": "תנאי מזג אוויר למשחק",
+  "temperatureCelsius": "{temp}°C",
+  "@temperatureCelsius": {
+    "placeholders": {
+      "temp": {}
+    }
+  },
+  "resultUpdatedSuccess": "התוצאה עודכנה בהצלחה",
+  "resultUpdateError": "שגיאה בעדכון התוצאה: {error}",
+  "@resultUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "teamsTitle": "הקבוצות",
+  "teamPlayerCount": "({count})",
+  "@teamPlayerCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "noPlayers": "אין שחקנים",
+  "sessionSummaryTitle": "סיכום סשן",
+  "sessionWinnerLabel": "מנצח: {winner}",
+  "@sessionWinnerLabel": {
+    "placeholders": {
+      "winner": {}
+    }
+  },
+  "teamStatsTitle": "סטטיסטיקות קבוצות",
+  "teamStatsRecord": "ניצחונות: {wins} | תיקו: {draws} | הפסדים: {losses}",
+  "@teamStatsRecord": {
+    "placeholders": {
+      "wins": {},
+      "draws": {},
+      "losses": {}
+    }
+  },
+  "teamStatsGoals": "שערים: {goalsFor} | הפרש: {goalDifference}",
+  "@teamStatsGoals": {
+    "placeholders": {
+      "goalsFor": {},
+      "goalDifference": {}
+    }
+  },
+  "pointsShort": "{points} נק'",
+  "@pointsShort": {
+    "placeholders": {
+      "points": {}
+    }
+  },
+  "totalMatchesLabel": "סה\"כ {count} משחקים",
+  "@totalMatchesLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "teamADefaultName": "קבוצה א'",
+  "teamBDefaultName": "קבוצה ב'",
+  "finalScoreTitle": "תוצאה סופית",
+  "hubFallbackName": "האב",
   "temp": "temp"
 }

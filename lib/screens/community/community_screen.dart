@@ -8,13 +8,41 @@ import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 /// Community screen showing hub recruiting posts and public games
-class CommunityScreen extends ConsumerWidget {
+class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommunityScreen> createState() => _CommunityScreenState();
+}
+
+class _CommunityScreenState extends ConsumerState<CommunityScreen> {
+  String? _selectedRegion;
+  String? _selectedCity;
+  bool _initializedFromUser = false;
+
+  void _showFilters() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _CommunityFiltersSheet(
+        selectedRegion: _selectedRegion,
+        selectedCity: _selectedCity,
+        onApply: (region, city) {
+          setState(() {
+            _selectedRegion = region;
+            _selectedCity = city;
+          });
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final feedRepo = ref.watch(feedRepositoryProvider);
     final gamesRepo = ref.watch(gamesRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -29,15 +57,47 @@ class CommunityScreen extends ConsumerWidget {
       future: userFuture,
       builder: (context, userSnap) {
         final user = userSnap.data;
-        final region = user?.region;
+        final userRegion = user?.region;
+
+        if (!_initializedFromUser &&
+            _selectedRegion == null &&
+            userRegion != null &&
+            userRegion.isNotEmpty) {
+          _initializedFromUser = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _selectedRegion = userRegion);
+            }
+          });
+        }
+
+        final effectiveRegion = _selectedRegion ?? userRegion;
+        final effectiveCity = _selectedCity;
 
         final recruitingStream = feedRepo.streamRegionalFeed(
-          region: region,
+          region: effectiveRegion,
+          city: effectiveCity,
           postType: 'hub_recruiting',
         );
 
-        final publicGamesStream =
-            gamesRepo.watchPublicCompletedGames(limit: 50, region: region);
+        final publicGamesStream = gamesRepo.watchPublicCompletedGames(
+          limit: 50,
+          region: effectiveRegion,
+          city: effectiveCity,
+        );
+
+        final hasFilters = (_selectedRegion != null &&
+                _selectedRegion!.isNotEmpty) ||
+            (_selectedCity != null && _selectedCity!.isNotEmpty);
+
+        final headerText = effectiveRegion != null &&
+                effectiveRegion.isNotEmpty
+            ? (effectiveCity != null && effectiveCity.isNotEmpty
+                ? 'תוכן לפי אזור: $effectiveRegion • $effectiveCity'
+                : 'תוכן לפי אזור: $effectiveRegion')
+            : (effectiveCity != null && effectiveCity.isNotEmpty
+                ? 'תוכן לפי עיר: $effectiveCity'
+                : 'תוכן קהילתי');
 
         return AppScaffold(
           title: 'קהילה',
@@ -52,11 +112,19 @@ class CommunityScreen extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        region != null && region.isNotEmpty
-                            ? 'תוכן לפי אזור: $region'
-                            : 'תוכן קהילתי',
+                        headerText,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
+                    ),
+                    IconButton(
+                      onPressed: _showFilters,
+                      icon: Icon(
+                        Icons.filter_list,
+                        color: hasFilters
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                      tooltip: 'סינון',
                     ),
                   ],
                 ),
@@ -135,6 +203,131 @@ class CommunityScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _CommunityFiltersSheet extends StatefulWidget {
+  final String? selectedRegion;
+  final String? selectedCity;
+  final void Function(String? region, String? city) onApply;
+
+  const _CommunityFiltersSheet({
+    required this.selectedRegion,
+    required this.selectedCity,
+    required this.onApply,
+  });
+
+  @override
+  State<_CommunityFiltersSheet> createState() => _CommunityFiltersSheetState();
+}
+
+class _CommunityFiltersSheetState extends State<_CommunityFiltersSheet> {
+  final List<String> _regions = ['צפון', 'מרכז', 'דרום', 'ירושלים'];
+  String? _region;
+  String? _city;
+
+  @override
+  void initState() {
+    super.initState();
+    _region = widget.selectedRegion;
+    _city = widget.selectedCity;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cities = _region == null
+        ? CityUtils.cities
+        : CityUtils.cities
+            .where((city) => CityUtils.getRegionForCity(city) == _region)
+            .toList();
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'סינון קהילה',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _region ?? '',
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'אזור'),
+              items: [
+                const DropdownMenuItem(value: '', child: Text('כל האזורים')),
+                ..._regions.map(
+                  (region) => DropdownMenuItem(
+                    value: region,
+                    child: Text(region),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                final nextRegion =
+                    value == null || value.isEmpty ? null : value;
+                String? nextCity = _city;
+                if (nextRegion != null && nextCity != null) {
+                  final cityRegion = CityUtils.getRegionForCity(nextCity);
+                  if (cityRegion != nextRegion) {
+                    nextCity = null;
+                  }
+                }
+                setState(() {
+                  _region = nextRegion;
+                  _city = nextCity;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _city ?? '',
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'עיר'),
+              items: [
+                const DropdownMenuItem(value: '', child: Text('כל הערים')),
+                ...cities.map(
+                  (city) => DropdownMenuItem(
+                    value: city,
+                    child: Text(city),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                final nextCity = value == null || value.isEmpty ? null : value;
+                setState(() {
+                  _city = nextCity;
+                  if (nextCity != null) {
+                    _region = CityUtils.getRegionForCity(nextCity);
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => widget.onApply(null, null),
+                  child: const Text('נקה סינון'),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: () => widget.onApply(_region, _city),
+                  child: const Text('החל'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

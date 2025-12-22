@@ -64,7 +64,8 @@ mixin _$Game {
 // Game rules
   int? get durationInMinutes => throw _privateConstructorUsedError;
   String? get gameEndCondition => throw _privateConstructorUsedError;
-  String? get region => throw _privateConstructorUsedError; // Community feed
+  String? get region => throw _privateConstructorUsedError;
+  String? get city => throw _privateConstructorUsedError; // Community feed
   bool get showInCommunityFeed =>
       throw _privateConstructorUsedError; // Attendance
   bool get enableAttendanceReminder => throw _privateConstructorUsedError;
@@ -117,6 +118,7 @@ abstract class $GameCopyWith<$Res> {
       int? durationInMinutes,
       String? gameEndCondition,
       String? region,
+      String? city,
       bool showInCommunityFeed,
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
@@ -173,6 +175,7 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
+    Object? city = freezed,
     Object? showInCommunityFeed = null,
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
@@ -290,6 +293,10 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
       showInCommunityFeed: null == showInCommunityFeed
           ? _value.showInCommunityFeed
           : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
@@ -401,6 +408,7 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       int? durationInMinutes,
       String? gameEndCondition,
       String? region,
+      String? city,
       bool showInCommunityFeed,
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
@@ -458,6 +466,7 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? durationInMinutes = freezed,
     Object? gameEndCondition = freezed,
     Object? region = freezed,
+    Object? city = freezed,
     Object? showInCommunityFeed = null,
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
@@ -575,6 +584,10 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.region
           : region // ignore: cast_nullable_to_non_nullable
               as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
       showInCommunityFeed: null == showInCommunityFeed
           ? _value.showInCommunityFeed
           : showInCommunityFeed // ignore: cast_nullable_to_non_nullable
@@ -638,6 +651,7 @@ class _$GameImpl extends _Game {
       this.durationInMinutes,
       this.gameEndCondition,
       this.region,
+      this.city,
       this.showInCommunityFeed = false,
       this.enableAttendanceReminder = true,
       this.reminderSent2Hours,
@@ -745,6 +759,8 @@ class _$GameImpl extends _Game {
   final String? gameEndCondition;
   @override
   final String? region;
+  @override
+  final String? city;
 // Community feed
   @override
   @JsonKey()
@@ -770,7 +786,7 @@ class _$GameImpl extends _Game {
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, targetingCriteria: $targetingCriteria, requiresApproval: $requiresApproval, minPlayersToPlay: $minPlayersToPlay, maxPlayers: $maxPlayers, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, teams: $teams, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt, denormalized: $denormalized, session: $session, audit: $audit)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, targetingCriteria: $targetingCriteria, requiresApproval: $requiresApproval, minPlayersToPlay: $minPlayersToPlay, maxPlayers: $maxPlayers, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, teams: $teams, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, city: $city, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt, denormalized: $denormalized, session: $session, audit: $audit)';
   }
 
   @override
@@ -824,6 +840,7 @@ class _$GameImpl extends _Game {
             (identical(other.gameEndCondition, gameEndCondition) ||
                 other.gameEndCondition == gameEndCondition) &&
             (identical(other.region, region) || other.region == region) &&
+            (identical(other.city, city) || other.city == city) &&
             (identical(other.showInCommunityFeed, showInCommunityFeed) ||
                 other.showInCommunityFeed == showInCommunityFeed) &&
             (identical(
@@ -870,6 +887,7 @@ class _$GameImpl extends _Game {
         durationInMinutes,
         gameEndCondition,
         region,
+        city,
         showInCommunityFeed,
         enableAttendanceReminder,
         reminderSent2Hours,
@@ -924,6 +942,7 @@ abstract class _Game extends Game {
       final int? durationInMinutes,
       final String? gameEndCondition,
       final String? region,
+      final String? city,
       final bool showInCommunityFeed,
       final bool enableAttendanceReminder,
       final bool? reminderSent2Hours,
@@ -997,7 +1016,9 @@ abstract class _Game extends Game {
   @override
   String? get gameEndCondition;
   @override
-  String? get region; // Community feed
+  String? get region;
+  @override
+  String? get city; // Community feed
   @override
   bool get showInCommunityFeed; // Attendance
   @override

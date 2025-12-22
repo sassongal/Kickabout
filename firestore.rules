@@ -42,13 +42,6 @@ service cloud.firestore {
     // 4. All permission checks query /hubs/{hubId}/members/{userId}
     // ============================================
 
-    /// Get user's HubMember document
-    /// Returns null if doesn't exist
-    function getMembership(hubId, userId) {
-      let memberPath = /databases/$(database)/documents/hubs/$(hubId)/members/$(userId);
-      return exists(memberPath) ? get(memberPath).data : null;
-    }
-
     /// Check if user is an active member of hub
     /// OPTIMIZED (2025-12-20): Uses denormalized activeMemberIds array to eliminate get() calls
     /// Hub creator is ALWAYS considered active (even without HubMember doc)
@@ -158,16 +151,6 @@ service cloud.firestore {
     // ============================================
     // Schema Validation Functions
     // ============================================
-
-    /// Validates player rating is on 1.0-7.0 scale with 0.5 increments
-    /// Examples: 1.0, 1.5, 2.0, ..., 6.5, 7.0 (valid)
-    ///           0.5, 7.5, 3.3, 4.7 (invalid)
-    function isValidRating(rating) {
-      return rating is number &&
-             rating >= 1.0 &&
-             rating <= 7.0 &&
-             (rating * 2) % 1 == 0;  // Must be 0.5 increments
-    }
 
     /// Validates game score is a non-negative integer (max 99)
     function isValidScore(score) {
@@ -398,7 +381,9 @@ service cloud.firestore {
       }
 
       match /events/{eventId} {
-        allow read: if isHubMember(hubId) || isSuperAdmin();
+        allow read: if isHubMember(hubId) ||
+          (isAuthenticated() && resource.data.showInCommunityFeed == true) ||
+          isSuperAdmin();
         allow create: if (canCreateEvents(hubId) &&
           isValidHubEvent(request.resource.data) &&
           request.resource.data.eventId == eventId &&
@@ -425,7 +410,13 @@ service cloud.firestore {
     // Games Collection
     // ============================================
     match /games/{gameId} {
-      allow read: if isAuthenticated() && (resource.data.hubId == null || resource.data.hubId == '' || isHubMember(resource.data.hubId));
+      allow read: if isAuthenticated() && (
+        resource.data.hubId == null ||
+        resource.data.hubId == '' ||
+        isHubMember(resource.data.hubId) ||
+        (resource.data.showInCommunityFeed == true &&
+          resource.data.status == 'completed')
+      );
 
       allow create: if ((
         (request.resource.data.hubId == '' && isAuthenticated()) ||

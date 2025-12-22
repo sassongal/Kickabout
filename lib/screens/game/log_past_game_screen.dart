@@ -8,6 +8,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/log_past_game_details.dart';
 import 'package:kattrick/ui/team_builder/manual_team_builder.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 /// Screen for logging a past game retroactively
 class LogPastGameScreen extends ConsumerStatefulWidget {
@@ -174,6 +175,18 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
 
       final teamAScore = int.tryParse(_teamAScoreController.text.trim()) ?? 0;
       final teamBScore = int.tryParse(_teamBScoreController.text.trim()) ?? 0;
+      Venue? selectedVenue;
+      if (_selectedVenueId != null) {
+        for (final venue in _venues) {
+          if (venue.venueId == _selectedVenueId) {
+            selectedVenue = venue;
+            break;
+          }
+        }
+      }
+      final city = _hub?.city ?? selectedVenue?.city;
+      final region = _hub?.region ??
+          (city != null ? CityUtils.getRegionForCity(city) : null);
 
       final details = LogPastGameDetails(
         hubId: widget.hubId,
@@ -185,6 +198,8 @@ class _LogPastGameScreenState extends ConsumerState<LogPastGameScreen> {
         playerIds: _selectedPlayerIds.toList(),
         teams: _teams,
         showInCommunityFeed: _showInCommunityFeed,
+        region: region,
+        city: city,
       );
       
       await gamesRepo.logPastGame(details, currentUserId);

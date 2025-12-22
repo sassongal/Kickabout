@@ -40,7 +40,8 @@ class CacheInvalidationService {
   }
 
   /// Invalidate caches when a game is updated
-  void onGameUpdated(String gameId, {String? hubId, String? region}) {
+  void onGameUpdated(String gameId,
+      {String? hubId, String? region, String? city}) {
     _cache.clear(CacheKeys.game(gameId));
 
     if (hubId != null && hubId.isNotEmpty) {
@@ -48,7 +49,9 @@ class CacheInvalidationService {
     }
 
     if (region != null) {
-      _cache.clear(CacheKeys.publicGames(region: region));
+      _cache.clear(CacheKeys.publicGames(region: region, city: city));
+    } else if (city != null) {
+      _cache.clear(CacheKeys.publicGames(city: city));
     }
 
     _cache.clear(CacheKeys.publicGames());

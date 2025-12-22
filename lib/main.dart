@@ -139,6 +139,17 @@ void _initializeErrorHandling() {
   try {
     // Pass all uncaught Flutter framework errors to Crashlytics.
     FlutterError.onError = (errorDetails) {
+      final message = errorDetails.exceptionAsString();
+      if (message.contains('RenderFlex overflowed')) {
+        FlutterError.presentError(errorDetails);
+        FirebaseCrashlytics.instance.recordError(
+          errorDetails.exception,
+          errorDetails.stack ?? StackTrace.current,
+          fatal: false,
+          reason: 'RenderFlex overflow',
+        );
+        return;
+      }
       FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
     };
 

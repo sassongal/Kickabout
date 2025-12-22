@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 
@@ -46,6 +48,11 @@ class ChatRepository {
       throw Exception('Firebase not available');
     }
 
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid == null) {
+      throw Exception('User not authenticated');
+    }
+
     try {
       final docRef = _firestore
           .collection('hubs')
@@ -58,9 +65,9 @@ class ChatRepository {
       final data = {
         'messageId': messageId, // Include messageId in data (required by Firestore rules)
         'hubId': hubId,
-        'authorId': authorId,
+        'authorId': currentUid,
         'text': text.trim(),
-        'readBy': [authorId],
+        'readBy': [currentUid],
         'createdAt': FieldValue.serverTimestamp(),
       };
 
@@ -153,10 +160,19 @@ class ChatRepository {
       throw Exception('Firebase not available');
     }
 
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid == null) {
+      throw Exception('User not authenticated');
+    }
+
+    if (senderId != currentUid) {
+      debugPrint('sendGameMessage: ignoring mismatched senderId, using auth uid');
+    }
+
     try {
       final data = {
         'gameId': gameId,
-        'senderId': senderId, // Game chat uses senderId per Firestore rules
+        'senderId': currentUid, // Game chat uses senderId per Firestore rules
         'text': text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       };
@@ -197,4 +213,3 @@ class ChatRepository {
     }
   }
 }
-

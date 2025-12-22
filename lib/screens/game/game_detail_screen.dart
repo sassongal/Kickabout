@@ -1,27 +1,60 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/error_widget.dart';
-import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
-import 'package:kattrick/models/targeting_criteria.dart';
 import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/widgets/optimized_image.dart';
 import 'package:kattrick/services/weather_service.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
-import 'package:kattrick/logic/session_logic.dart';
 import 'package:kattrick/widgets/loading_widget.dart';
 import 'package:kattrick/services/game_management_service.dart';
 import 'package:kattrick/widgets/dialogs/edit_game_result_dialog.dart';
-import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/screens/game/strategies/active_game_state.dart';
+import 'package:kattrick/screens/game/strategies/completed_game_state.dart';
+import 'package:kattrick/screens/game/strategies/pending_game_state.dart';
+
+@immutable
+class _TeamUsersRequest {
+  final String gameId;
+  final List<String> playerIds;
+
+  _TeamUsersRequest({
+    required this.gameId,
+    required List<String> playerIds,
+  }) : playerIds = List.unmodifiable(playerIds);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _TeamUsersRequest &&
+        other.gameId == gameId &&
+        listEquals(other.playerIds, playerIds);
+  }
+
+  @override
+  int get hashCode => Object.hash(gameId, Object.hashAll(playerIds));
+}
+
+final _teamUsersProvider = FutureProvider.autoDispose
+    .family<Map<String, User>, _TeamUsersRequest>((ref, request) async {
+  if (request.playerIds.isEmpty) {
+    return {};
+  }
+  final usersRepo = ref.watch(usersRepositoryProvider);
+  final users = await usersRepo.getUsers(request.playerIds);
+  return {for (final user in users) user.uid: user};
+});
 
 /// Game detail screen
 class GameDetailScreen extends ConsumerStatefulWidget {
@@ -36,6 +69,7 @@ class GameDetailScreen extends ConsumerStatefulWidget {
 class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final currentUserId = ref.watch(currentUserIdProvider);
     // Use ref.read for repositories - they don't change, so no need to watch
     final gamesRepo = ref.read(gamesRepositoryProvider);
@@ -46,17 +80,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final signupsStream = signupsRepo.watchSignups(widget.gameId);
 
     return AppScaffold(
-      title: 'פרטי משחק',
+      title: l10n.gameDetailsTitle,
       body: StreamBuilder<Game?>(
         stream: gameStream,
         builder: (context, gameSnapshot) {
           if (gameSnapshot.connectionState == ConnectionState.waiting) {
-            return const AppLoadingWidget(message: 'טוען משחק...');
+            return AppLoadingWidget(message: l10n.gameLoadingMessage);
           }
 
           if (gameSnapshot.hasError) {
             return AppErrorWidget(
-              message: 'שגיאה בטעינת המשחק',
+              message: l10n.gameLoadingError,
               onRetry: () {
                 // Stream will automatically retry
               },
@@ -65,8 +99,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
           final game = gameSnapshot.data;
           if (game == null) {
-            return const AppEmptyWidget(
-              message: 'משחק לא נמצא',
+            return AppEmptyWidget(
+              message: l10n.gameNotFound,
               icon: Icons.sports_soccer,
             );
           }
@@ -110,6 +144,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                   final maxPlayers =
                       game.teamCount * 3; // 3 players per team minimum
                   final isGameFull = confirmedSignups.length >= maxPlayers;
+                  final teamUsersAsync = ref.watch(
+                    _teamUsersProvider(_buildTeamUsersRequest(game)),
+                  );
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.all(AppConstants.defaultPadding),
@@ -126,7 +163,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                     .push('/games/${widget.gameId}/attendance');
                               },
                               icon: const Icon(Icons.people),
-                              label: const Text('ניטור הגעה'),
+                              label: Text(l10n.attendanceMonitoring),
                               style: ElevatedButton.styleFrom(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 12),
@@ -160,13 +197,16 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                           .read(venuesRepositoryProvider)
                                           .watchVenue(game.venueId!),
                                       builder: (context, venueSnapshot) {
+                                        final l10n =
+                                            AppLocalizations.of(context)!;
                                         final venue = venueSnapshot.data;
                                         final locationText = venue?.name ??
                                             game.location ??
-                                            'מיקום לא צוין';
+                                            l10n.locationNotSpecified;
 
                                         if (locationText.isEmpty ||
-                                            locationText == 'מיקום לא צוין') {
+                                            locationText ==
+                                                l10n.locationNotSpecified) {
                                           return const SizedBox.shrink();
                                         }
 
@@ -240,19 +280,23 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                   Row(
                                     children: [
                                       Chip(
-                                        label:
-                                            Text(_getStatusText(game.status)),
+                                        label: Text(
+                                            _getStatusText(game.status, l10n)),
                                         backgroundColor: _getStatusColor(
                                                 game.status, context)
                                             .withValues(alpha: 0.1),
                                       ),
                                       const SizedBox(width: 8),
-                                      Text('${game.teamCount} קבוצות'),
+                                      Text(
+                                          l10n.teamCountLabel(game.teamCount)),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${signups.length} נרשמו${isGameFull ? ' (מלא)' : ''}',
+                                    isGameFull
+                                        ? l10n.signupsCountFull(
+                                            signups.length)
+                                        : l10n.signupsCount(signups.length),
                                     style:
                                         Theme.of(context).textTheme.bodyMedium,
                                   ),
@@ -263,7 +307,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                     const Divider(),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'חוקי המשחק',
+                                      l10n.gameRulesTitle,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleSmall
@@ -285,7 +329,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            'משך: ${game.durationInMinutes} דקות',
+                                            l10n.gameDurationLabel(
+                                                game.durationInMinutes!),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall,
@@ -310,7 +355,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: Text(
-                                              'תנאי סיום: ${game.gameEndCondition}',
+                                              l10n.gameEndConditionLabel(
+                                                  game.gameEndCondition!),
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall,
@@ -338,11 +384,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           game,
                           role,
                           isCreator,
+                          currentUserId,
                           isSignedUp,
                           isGameFull,
                           confirmedSignups,
                           pendingSignups,
                           usersRepo,
+                          teamUsersAsync,
                         ),
                       ],
                     ),
@@ -350,9 +398,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 },
               );
             },
-            loading: () => const AppLoadingWidget(message: 'בודק הרשאות...'),
+            loading: () => AppLoadingWidget(message: l10n.checkingPermissions),
             error: (error, stack) => AppErrorWidget(
-              message: 'שגיאה בבדיקת הרשאות: $error',
+              message: l10n.permissionCheckErrorDetails(error.toString()),
               onRetry: () {
                 // Stream will automatically retry
               },
@@ -363,69 +411,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  Widget _buildSignupTile(
-    BuildContext context,
-    GameSignup signup,
-    UsersRepository usersRepo,
-    bool isConfirmed, {
-    bool isAdmin = false,
-  }) {
-    return FutureBuilder<User?>(
-      future: usersRepo.getUser(signup.playerId),
-      builder: (context, snapshot) {
-        final user = snapshot.data;
-        if (user == null) {
-          return const ListTile(
-            leading: SizedBox(
-              width: 20,
-              height: 20,
-              child: KineticLoadingAnimation(size: 20),
-            ),
-            title: Text('טוען...'),
-          );
-        }
-        return ListTile(
-          leading: PlayerAvatar(
-            user: user,
-            radius: 20,
-            clickable: true,
-          ),
-          title: Text(user.name),
-          subtitle: Text(user.email),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isConfirmed)
-                const Chip(
-                  label: Text('מאושר'),
-                  backgroundColor: Colors.green,
-                )
-              else
-                const Chip(
-                  label: Text('ממתין'),
-                  backgroundColor: Colors.orange,
-                ),
-              if (isAdmin) ...[
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.remove_circle_outline,
-                      color: Colors.red),
-                  onPressed: () => _rejectPlayer(signup.playerId),
-                  tooltip: 'הסר שחקן',
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _toggleSignup(
     BuildContext context,
     Game game,
     bool isSignedUp,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) return;
 
@@ -440,7 +431,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           'totalParticipations': FieldValue.increment(-1),
         });
         if (context.mounted) {
-          SnackbarHelper.showSuccess(context, 'הסרת הרשמה');
+          SnackbarHelper.showSuccess(context, l10n.signupRemovedSuccess);
         }
       } else {
         await signupsRepo.setSignup(
@@ -459,7 +450,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         }
 
         if (context.mounted) {
-          SnackbarHelper.showSuccess(context, 'נרשמת למשחק');
+          SnackbarHelper.showSuccess(context, l10n.signupSuccess);
         }
       }
     } catch (e) {
@@ -470,8 +461,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Future<void> _startGame(BuildContext context, Game game) async {
+    final l10n = AppLocalizations.of(context)!;
     if (game.createdBy != ref.read(currentUserIdProvider)) {
-      SnackbarHelper.showWarning(context, 'רק יוצר המשחק יכול להתחיל');
+      SnackbarHelper.showWarning(context, l10n.onlyCreatorCanStartGame);
       return;
     }
 
@@ -479,7 +471,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       await gamesRepo.updateGameStatus(widget.gameId, GameStatus.inProgress);
       if (context.mounted) {
-        SnackbarHelper.showSuccess(context, 'המשחק התחיל');
+        SnackbarHelper.showSuccess(context, l10n.gameStartedSuccess);
       }
     } catch (e) {
       if (context.mounted) {
@@ -489,8 +481,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Future<void> _endGame(BuildContext context, Game game) async {
+    final l10n = AppLocalizations.of(context)!;
     if (game.createdBy != ref.read(currentUserIdProvider)) {
-      SnackbarHelper.showWarning(context, 'רק יוצר המשחק יכול לסיים');
+      SnackbarHelper.showWarning(context, l10n.onlyCreatorCanEndGame);
       return;
     }
 
@@ -498,7 +491,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       await gamesRepo.updateGameStatus(widget.gameId, GameStatus.completed);
       if (context.mounted) {
-        SnackbarHelper.showSuccess(context, 'המשחק הסתיים');
+        SnackbarHelper.showSuccess(context, l10n.gameEndedSuccess);
       }
     } catch (e) {
       if (context.mounted) {
@@ -522,31 +515,40 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     }
   }
 
-  String _getStatusText(GameStatus status) {
+  String _getStatusText(GameStatus status, AppLocalizations l10n) {
     switch (status) {
       case GameStatus.draft:
-        return 'טיוטה';
+        return l10n.gameStatusDraft;
       case GameStatus.scheduled:
-        return 'מתוכנן';
+        return l10n.gameStatusScheduled;
       case GameStatus.recruiting:
-        return 'גיוס שחקנים';
+        return l10n.gameStatusRecruiting;
       case GameStatus.teamSelection:
-        return 'בחירת קבוצות';
+        return l10n.gameStatusTeamSelection;
       case GameStatus.teamsFormed:
-        return 'קבוצות נוצרו';
+        return l10n.gameStatusTeamsFormed;
       case GameStatus.fullyBooked:
-        return 'מלא';
+        return l10n.gameStatusFull;
       case GameStatus.inProgress:
-        return 'במהלך';
+        return l10n.gameStatusInProgress;
       case GameStatus.completed:
-        return 'הושלם';
+        return l10n.gameStatusCompleted;
       case GameStatus.statsInput:
-        return 'הזנת סטטיסטיקות';
+        return l10n.gameStatusStatsInput;
       case GameStatus.cancelled:
-        return 'בוטל';
+        return l10n.gameStatusCancelled;
       case GameStatus.archivedNotPlayed:
-        return 'ארכיון - לא שוחק';
+        return l10n.gameStatusArchivedNotPlayed;
     }
+  }
+
+  _TeamUsersRequest _buildTeamUsersRequest(Game game) {
+    final uniqueIds = <String>{};
+    for (final team in game.teams) {
+      uniqueIds.addAll(team.playerIds.where((id) => id.isNotEmpty));
+    }
+    final sortedIds = uniqueIds.toList()..sort();
+    return _TeamUsersRequest(gameId: game.gameId, playerIds: sortedIds);
   }
 
   /// Build state-aware content based on game status
@@ -555,667 +557,71 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     Game game,
     UserRole role,
     bool isCreator,
+    String? currentUserId,
     bool isSignedUp,
     bool isGameFull,
     List<GameSignup> confirmedSignups,
     List<GameSignup> pendingSignups,
     UsersRepository usersRepo,
+    AsyncValue<Map<String, User>> teamUsersAsync,
   ) {
     switch (game.status) {
-      // New statuses - default to pending state behavior
       case GameStatus.draft:
       case GameStatus.scheduled:
       case GameStatus.recruiting:
       case GameStatus.teamSelection:
-        return _buildPendingState(
-          context,
-          game,
-          role,
-          isCreator,
-          isSignedUp,
-          isGameFull,
-          confirmedSignups,
-          pendingSignups,
-          usersRepo,
+        return PendingGameState(
+          game: game,
+          gameId: widget.gameId,
+          role: role,
+          isCreator: isCreator,
+          isSignedUp: isSignedUp,
+          isGameFull: isGameFull,
+          confirmedSignups: confirmedSignups,
+          pendingSignups: pendingSignups,
+          usersRepo: usersRepo,
+          currentUserId: currentUserId,
+          onToggleSignup: _toggleSignup,
+          onApprovePlayer: _approvePlayer,
+          onRejectPlayer: _rejectPlayer,
         );
 
       case GameStatus.fullyBooked:
       case GameStatus.teamsFormed:
-        final maxPlayers = game.teamCount * 3; // 3 players per team minimum
-        return _buildConfirmedState(
-          context,
-          game,
-          role,
-          isCreator,
-          confirmedSignups,
-          pendingSignups,
-          usersRepo,
-          isGameFull,
-          maxPlayers,
-        );
-
       case GameStatus.inProgress:
-        return _buildInProgressState(
-          context,
-          game,
-          role,
-          isCreator,
-          confirmedSignups,
-          usersRepo,
+      case GameStatus.statsInput:
+        return ActiveGameState(
+          game: game,
+          gameId: widget.gameId,
+          status: game.status,
+          role: role,
+          isCreator: isCreator,
+          isGameFull: isGameFull,
+          confirmedSignups: confirmedSignups,
+          pendingSignups: pendingSignups,
+          usersRepo: usersRepo,
+          currentUserId: currentUserId,
+          teamUsersAsync: teamUsersAsync,
+          onStartGame: _startGame,
+          onEndGame: _endGame,
+          onRejectPlayer: _rejectPlayer,
+          onFindMissingPlayers: _findMissingPlayers,
         );
 
       case GameStatus.completed:
-        return _buildCompletedState(
-          context,
-          game,
-          role,
-          confirmedSignups,
-          usersRepo,
-        );
-
-      case GameStatus.statsInput:
-        return _buildStatsInputState(
-          context,
-          game,
-          role,
-          isCreator,
-          confirmedSignups,
-          usersRepo,
-        );
-
       case GameStatus.cancelled:
       case GameStatus.archivedNotPlayed:
-        return _buildCompletedState(
-          context,
-          game,
-          role,
-          confirmedSignups,
-          usersRepo,
+        return CompletedGameState(
+          game: game,
+          gameId: widget.gameId,
+          role: role,
+          confirmedSignups: confirmedSignups,
+          usersRepo: usersRepo,
+          teamUsersAsync: teamUsersAsync,
+          onEditResult: (context, game) =>
+              _showEditResultDialog(context, game, usersRepo),
         );
     }
-  }
-
-  /// Build content for pending/teamSelection state
-  Widget _buildPendingState(
-    BuildContext context,
-    Game game,
-    UserRole role,
-    bool isCreator,
-    bool isSignedUp,
-    bool isGameFull,
-    List<GameSignup> confirmedSignups,
-    List<GameSignup> pendingSignups,
-    UsersRepository usersRepo,
-  ) {
-    final currentUserId = ref.read(currentUserIdProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Targeting Mismatch Warning (for joiners)
-        if (!isCreator &&
-            !isSignedUp &&
-            game.targetingCriteria != null &&
-            currentUserId != null)
-          FutureBuilder<User?>(
-            future: usersRepo.getUser(currentUserId),
-            builder: (context, snapshot) {
-              final user = snapshot.data;
-              if (user == null) return const SizedBox.shrink();
-
-              final age = DateTime.now().year - user.birthDate.year;
-              final criteria = game.targetingCriteria!;
-              final isAgeMatch =
-                  (criteria.minAge == null || age >= criteria.minAge!) &&
-                      (criteria.maxAge == null || age <= criteria.maxAge!);
-
-              // TODO: Add gender to User model to enable this check
-              final isGenderMatch = true;
-              /* criteria.gender == PlayerGender.any ||
-                  (user.gender == 'male' &&
-                      criteria.gender == PlayerGender.male) ||
-                  (user.gender == 'female' &&
-                      criteria.gender == PlayerGender.female); */
-
-              if (!isAgeMatch || !isGenderMatch) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber, color: Colors.amber),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'שים לב: המשחק מיועד לגילאים ${criteria.minAge}-${criteria.maxAge} ${criteria.gender == PlayerGender.male ? '(גברים)' : criteria.gender == PlayerGender.female ? '(נשים)' : ''}',
-                          style: const TextStyle(color: Colors.amber),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
-        // Action buttons
-        if (currentUserId != null) ...[
-          // Chat button
-          OutlinedButton.icon(
-            onPressed: () => context.push('/games/${widget.gameId}/chat'),
-            icon: const Icon(Icons.chat),
-            label: const Text('צ\'אט משחק'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Sign up button logic
-          if (!isCreator && !isSignedUp && !isGameFull)
-            ElevatedButton.icon(
-              onPressed: () => _toggleSignup(context, game, isSignedUp),
-              icon: const Icon(Icons.person_add),
-              label: Text(game.requiresApproval ? 'בקש להצטרף' : 'הירשם למשחק'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-
-          // Pending Approval State
-          if (!isCreator &&
-              isSignedUp &&
-              pendingSignups.any((s) => s.playerId == currentUserId))
-            ElevatedButton.icon(
-              onPressed: null, // Disabled
-              icon: const Icon(Icons.hourglass_empty),
-              label: const Text('בקשה נשלחה - ממתין לאישור'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                disabledBackgroundColor: Colors.grey.withValues(alpha: 0.2),
-                disabledForegroundColor: Colors.grey,
-              ),
-            ),
-
-          if (!isCreator &&
-              isSignedUp &&
-              confirmedSignups.any((s) => s.playerId == currentUserId))
-            ElevatedButton.icon(
-              onPressed: () => _toggleSignup(context, game, isSignedUp),
-              icon: const Icon(Icons.person_remove),
-              label: const Text('בטל הרשמה'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Theme.of(context).colorScheme.error,
-                foregroundColor: Theme.of(context).colorScheme.onError,
-              ),
-            ),
-
-          if (isGameFull && !isSignedUp)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange),
-                  SizedBox(width: 8),
-                  Text('המשחק מלא - ניתן להירשם לרשימת המתנה'),
-                ],
-              ),
-            ),
-          const SizedBox(height: 24),
-        ],
-
-        // Pending Approvals Section (Admin Only)
-        if ((isCreator || role == UserRole.admin) &&
-            pendingSignups.isNotEmpty) ...[
-          Card(
-            color: Colors.orange.withValues(alpha: 0.05),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.orange.withValues(alpha: 0.3)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.verified_user, color: Colors.orange),
-                      const SizedBox(width: 8),
-                      Text(
-                        'בקשות ממתינות (${pendingSignups.length})',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ...pendingSignups.map((signup) => _buildPendingApprovalTile(
-                        context,
-                        signup,
-                        usersRepo,
-                      )),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-
-        // Signups section
-        _buildSignupsSection(
-          context,
-          confirmedSignups,
-          [], // Don't show pending in regular list if admin (shown above)
-          usersRepo,
-          isAdmin: isCreator || role == UserRole.admin,
-        ),
-      ],
-    );
-  }
-
-  /// Build content for confirmed/teamsFormed state
-  Widget _buildConfirmedState(
-    BuildContext context,
-    Game game,
-    UserRole role,
-    bool isCreator,
-    List<GameSignup> confirmedSignups,
-    List<GameSignup> pendingSignups,
-    UsersRepository usersRepo,
-    bool isGameFull,
-    int maxPlayers,
-  ) {
-    final currentUserId = ref.read(currentUserIdProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Action buttons
-        if (currentUserId != null) ...[
-          // Chat button
-          OutlinedButton.icon(
-            onPressed: () => context.push('/games/${widget.gameId}/chat'),
-            icon: const Icon(Icons.chat),
-            label: const Text('צ\'אט משחק'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Admin buttons
-          if (role == UserRole.admin) ...[
-            // Find Missing Players button (if game is private and not full)
-            if (game.visibility == GameVisibility.private && !isGameFull)
-              ElevatedButton.icon(
-                onPressed: () => _findMissingPlayers(
-                    context, game, confirmedSignups.length, maxPlayers),
-                icon: const Icon(Icons.person_add),
-                label: const Text('מצא שחקנים חסרים'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            if (game.visibility == GameVisibility.private && !isGameFull)
-              const SizedBox(height: 12),
-
-            // If teams not created yet
-            if (game.teams.isEmpty)
-              ElevatedButton.icon(
-                onPressed: () =>
-                    context.push('/games/${widget.gameId}/team-maker'),
-                icon: const Icon(Icons.group),
-                label: const Text('צור קבוצות'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-
-            // If teams created, show stats logger button
-            if (game.teams.isNotEmpty)
-              ElevatedButton.icon(
-                onPressed: () => context.push('/games/${widget.gameId}/stats'),
-                icon: const Icon(Icons.bar_chart),
-                label: const Text('תעד תוצאה וסטטיסטיקות'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-
-            // Start game button (creator only)
-            if (isCreator && game.teams.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => _startGame(context, game),
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('התחל משחק'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ],
-          const SizedBox(height: 24),
-        ],
-
-        // Display teams if created
-        if (game.teams.isNotEmpty) ...[
-          _TeamsDisplayWidget(teams: game.teams, usersRepo: usersRepo),
-          const SizedBox(height: 24),
-        ],
-
-        // Signups section
-        _buildSignupsSection(
-          context,
-          confirmedSignups,
-          pendingSignups,
-          usersRepo,
-        ),
-      ],
-    );
-  }
-
-  /// Build content for inProgress state
-  Widget _buildInProgressState(
-    BuildContext context,
-    Game game,
-    UserRole role,
-    bool isCreator,
-    List<GameSignup> confirmedSignups,
-    UsersRepository usersRepo,
-  ) {
-    final currentUserId = ref.read(currentUserIdProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Action buttons
-        if (currentUserId != null) ...[
-          // Chat button
-          OutlinedButton.icon(
-            onPressed: () => context.push('/games/${widget.gameId}/chat'),
-            icon: const Icon(Icons.chat),
-            label: const Text('צ\'אט משחק'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Admin buttons
-          if (role == UserRole.admin) ...[
-            ElevatedButton.icon(
-              onPressed: () => context.push('/games/${widget.gameId}/stats'),
-              icon: const Icon(Icons.bar_chart),
-              label: const Text('רישום סטטיסטיקות'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-
-          // Creator-only: End game button
-          if (isCreator)
-            ElevatedButton.icon(
-              onPressed: () => _endGame(context, game),
-              icon: const Icon(Icons.stop),
-              label: const Text('סיים משחק'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          const SizedBox(height: 24),
-        ],
-
-        // Display teams
-        if (game.teams.isNotEmpty) ...[
-          _TeamsDisplayWidget(teams: game.teams, usersRepo: usersRepo),
-          const SizedBox(height: 24),
-        ],
-
-        // Signups section
-        _buildSignupsSection(
-          context,
-          confirmedSignups,
-          [],
-          usersRepo,
-        ),
-      ],
-    );
-  }
-
-  /// Build content for completed state
-  Widget _buildCompletedState(
-    BuildContext context,
-    Game game,
-    UserRole role,
-    List<GameSignup> confirmedSignups,
-    UsersRepository usersRepo,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Final score widget (prominent) - Show Session Summary if matches exist, otherwise legacy score
-        if (game.session.matches.isNotEmpty ||
-            game.session.aggregateWins.isNotEmpty)
-          _SessionSummaryWidget(game: game)
-        else if (game.session.legacyTeamAScore != null &&
-            game.session.legacyTeamBScore != null)
-          _FinalScoreWidget(game: game),
-        const SizedBox(height: 24),
-
-        // Display teams
-        if (game.teams.isNotEmpty) ...[
-          _TeamsDisplayWidget(teams: game.teams, usersRepo: usersRepo),
-          const SizedBox(height: 24),
-        ],
-
-        // Manager-only: Edit Result button
-        if (role == UserRole.admin) ...[
-          OutlinedButton.icon(
-            onPressed: () => _showEditResultDialog(context, game, usersRepo),
-            icon: const Icon(Icons.edit),
-            label: const Text('ערוך תוצאה'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Colors.orange),
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-
-        // View full statistics button
-        ElevatedButton.icon(
-          onPressed: () => context.push('/games/${widget.gameId}/stats'),
-          icon: const Icon(Icons.bar_chart),
-          label: const Text('צפה בסטטיסטיקות המלאות'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Signups section
-        _buildSignupsSection(
-          context,
-          confirmedSignups,
-          [],
-          usersRepo,
-        ),
-      ],
-    );
-  }
-
-  /// Build content for statsInput state
-  Widget _buildStatsInputState(
-    BuildContext context,
-    Game game,
-    UserRole role,
-    bool isCreator,
-    List<GameSignup> confirmedSignups,
-    UsersRepository usersRepo,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Admin buttons
-        if (role == UserRole.admin) ...[
-          ElevatedButton.icon(
-            onPressed: () => context.push('/games/${widget.gameId}/stats'),
-            icon: const Icon(Icons.bar_chart),
-            label: const Text('רישום סטטיסטיקות'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-
-        // Display teams
-        if (game.teams.isNotEmpty) ...[
-          _TeamsDisplayWidget(teams: game.teams, usersRepo: usersRepo),
-          const SizedBox(height: 24),
-        ],
-
-        // Signups section
-        _buildSignupsSection(
-          context,
-          confirmedSignups,
-          [],
-          usersRepo,
-        ),
-      ],
-    );
-  }
-
-  /// Build signups section
-  Widget _buildSignupsSection(
-    BuildContext context,
-    List<GameSignup> confirmedSignups,
-    List<GameSignup> pendingSignups,
-    UsersRepository usersRepo, {
-    bool isAdmin = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'נרשמים',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-
-        // Confirmed signups
-        if (confirmedSignups.isNotEmpty) ...[
-          Text(
-            'מאושרים (${confirmedSignups.length})',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          ...confirmedSignups.map((signup) => _buildSignupTile(
-                context,
-                signup,
-                usersRepo,
-                true,
-                isAdmin: isAdmin,
-              )),
-          const SizedBox(height: 16),
-        ],
-
-        // Pending signups
-        if (pendingSignups.isNotEmpty) ...[
-          Text(
-            'ממתינים (${pendingSignups.length})',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          ...pendingSignups.map((signup) => _buildSignupTile(
-                context,
-                signup,
-                usersRepo,
-                false,
-                isAdmin: isAdmin,
-              )),
-        ],
-
-        if (confirmedSignups.isEmpty && pendingSignups.isEmpty)
-          const AppEmptyWidget(
-            message: 'אין נרשמים',
-            icon: Icons.people_outline,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildPendingApprovalTile(
-    BuildContext context,
-    GameSignup signup,
-    UsersRepository usersRepo,
-  ) {
-    return FutureBuilder<User?>(
-      future: usersRepo.getUser(signup.playerId),
-      builder: (context, snapshot) {
-        final user = snapshot.data;
-        if (user == null) return const SizedBox.shrink();
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: PlayerAvatar(user: user, radius: 20),
-            title: Text(user.name),
-            subtitle: Text(
-                'ביקש להצטרף • ${DateFormat('HH:mm dd/MM').format(signup.signedUpAt)}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.check_circle, color: Colors.green),
-                  onPressed: () => _approvePlayer(signup.playerId),
-                  tooltip: 'אשר',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.cancel, color: Colors.red),
-                  onPressed: () => _rejectPlayer(signup.playerId),
-                  tooltip: 'דחה',
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _approvePlayer(String playerId) async {
@@ -1225,7 +631,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         gameId: widget.gameId,
         userId: playerId,
       );
-      if (mounted) SnackbarHelper.showSuccess(context, 'שחקן אושר בהצלחה');
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        SnackbarHelper.showSuccess(context, l10n.playerApprovedSuccess);
+      }
     } catch (e) {
       if (mounted) SnackbarHelper.showErrorFromException(context, e);
     }
@@ -1233,27 +642,28 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   Future<void> _rejectPlayer(String playerId) async {
     final reasonController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('דחיית בקשה'),
+        title: Text(l10n.rejectRequestTitle),
         content: TextField(
           controller: reasonController,
-          decoration: const InputDecoration(
-            labelText: 'סיבת הדחייה (חובה)',
-            hintText: 'לדוגמה: המשחק מלא, לא מתאים לרמה...',
+          decoration: InputDecoration(
+            labelText: l10n.rejectionReasonLabel,
+            hintText: l10n.rejectionReasonHint,
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('ביטול')),
+              child: Text(l10n.cancel)),
           ElevatedButton(
             onPressed: () {
               if (reasonController.text.trim().isEmpty) return;
               Navigator.pop(context, true);
             },
-            child: const Text('דחה בקשה'),
+            child: Text(l10n.rejectRequestButton),
           ),
         ],
       ),
@@ -1267,7 +677,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           userId: playerId,
           reason: reasonController.text.trim(),
         );
-        if (mounted) SnackbarHelper.showSuccess(context, 'בקשה נדחתה');
+        if (mounted) {
+          SnackbarHelper.showSuccess(context, l10n.requestRejectedSuccess);
+        }
       } catch (e) {
         if (mounted) SnackbarHelper.showErrorFromException(context, e);
       }
@@ -1281,22 +693,24 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     int currentPlayers,
     int maxPlayers,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('מצא שחקנים חסרים'),
+        title: Text(l10n.findMissingPlayers),
         content: Text(
-          'המשחק יהפוך ל-"מגייס שחקנים" ויוצג בפיד האזורי.\n'
-          'נדרשים ${maxPlayers - currentPlayers} שחקנים נוספים.',
+          l10n.findMissingPlayersDescription(
+            maxPlayers - currentPlayers,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('ביטול'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('אישור'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -1308,6 +722,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       final gamesRepo = ref.read(gamesRepositoryProvider);
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final feedRepo = ref.read(feedRepositoryProvider);
+      final usersRepo = ref.read(usersRepositoryProvider);
 
       // Update game visibility to recruiting
       await gamesRepo.updateGame(widget.gameId, {
@@ -1318,20 +733,31 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       if (game.hubId != null) {
         // Get hub name
         final hub = await hubsRepo.getHub(game.hubId!);
-        final hubName = hub?.name ?? 'Hub';
+        final hubName = hub?.name ?? l10n.hubFallbackName;
 
         final currentUserId = ref.read(currentUserIdProvider);
         if (currentUserId != null) {
+          final currentUser = await usersRepo.getUser(currentUserId);
+          final gameDateLabel =
+              DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate);
           final post = FeedPost(
             postId: '', // Will be generated by repository
             hubId: game.hubId!,
             authorId: currentUserId,
             type: 'game_recruitment',
-            content:
-                'Hub $hubName צריך ${maxPlayers - currentPlayers} שחקנים למשחק ב-${DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate)}',
+            content: l10n.recruitingFeedContent(
+              hubName,
+              maxPlayers - currentPlayers,
+              gameDateLabel,
+            ),
             createdAt: DateTime.now(),
             gameId: widget.gameId,
             region: game.region ?? hub?.region,
+            city: hub?.city,
+            hubName: hub?.name,
+            hubLogoUrl: hub?.logoUrl,
+            authorName: currentUser?.name,
+            authorPhotoUrl: currentUser?.photoUrl,
           );
 
           await feedRepo.createPost(post);
@@ -1342,8 +768,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         SnackbarHelper.showSuccess(
           context,
           game.hubId != null
-              ? 'המשחק הוצג בפיד האזורי למציאת שחקנים'
-              : 'המשחק פתוח כעת לגיוס שחקנים',
+              ? l10n.gamePromotedToRegionalFeed
+              : l10n.gameOpenForRecruiting,
         );
       }
     } catch (e) {
@@ -1355,6 +781,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
   /// Build weather widget for game date and location
   Widget _buildGameWeatherWidget(Game game) {
+    final l10n = AppLocalizations.of(context)!;
     // If no locationPoint but we have venueId, load venue to get location
     if (game.locationPoint == null &&
         game.venueId != null &&
@@ -1389,7 +816,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'טוען תנאי מזג אוויר...',
+                        l10n.loadingWeather,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -1415,7 +842,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'תנאי מזג אוויר למשחק',
+                            l10n.gameWeatherTitle,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
@@ -1432,7 +859,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       ),
                     ),
                     Text(
-                      '${weather.temperature}°C',
+                      l10n.temperatureCelsius(weather.temperature),
                       style: const TextStyle(fontSize: 24),
                     ),
                   ],
@@ -1469,7 +896,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'טוען תנאי מזג אוויר...',
+                  l10n.loadingWeather,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -1495,7 +922,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'תנאי מזג אוויר למשחק',
+                      l10n.gameWeatherTitle,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -1509,7 +936,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 ),
               ),
               Text(
-                '${weather.temperature}°C',
+                l10n.temperatureCelsius(weather.temperature),
                 style: const TextStyle(fontSize: 24),
               ),
             ],
@@ -1525,6 +952,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     Game game,
     UsersRepository usersRepo,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       // Fetch all players involved in the game (from both teams)
       final allPlayerIds =
@@ -1565,454 +993,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       // If edit was successful, show success message
       if (result == true && mounted) {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('התוצאה עודכנה בהצלחה')),
+          SnackBar(content: Text(l10n.resultUpdatedSuccess)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה בעדכון התוצאה: $e')),
+          SnackBar(
+            content: Text(l10n.resultUpdateError(e.toString())),
+          ),
         );
       }
     }
-  }
-}
-
-/// Widget to display teams in two columns
-class _TeamsDisplayWidget extends StatelessWidget {
-  final List<Team> teams;
-  final UsersRepository usersRepo;
-
-  const _TeamsDisplayWidget({
-    required this.teams,
-    required this.usersRepo,
-  });
-
-  Color _getColorFromString(String? colorName) {
-    switch (colorName) {
-      case 'red':
-        return Colors.red;
-      case 'green':
-        return Colors.green;
-      case 'black':
-        return Colors.black;
-      case 'yellow':
-        return Colors.yellow;
-      case 'blue':
-        return Colors.blue;
-      case 'white':
-        return Colors.white;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (teams.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'הקבוצות',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: teams.take(2).map((team) {
-                final index = teams.indexOf(team);
-                final teamColor = _getColorFromString(team.color);
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: index == 0 ? 8 : 0,
-                      left: index == 1 ? 8 : 0,
-                    ),
-                    child: _buildTeamColumn(
-                      context,
-                      team,
-                      teamColor,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTeamColumn(BuildContext context, Team team, Color teamColor) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: teamColor.withValues(alpha: 0.3), width: 2),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: teamColor.withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(6),
-                topRight: Radius.circular(6),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  team.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: teamColor,
-                      ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '(${team.playerIds.length})',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: FutureBuilder<List<User>>(
-              future: usersRepo.getUsers(team.playerIds),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: KineticLoadingAnimation(size: 40));
-                }
-
-                final users = snapshot.data ?? [];
-                if (users.isEmpty) {
-                  return const Center(
-                    child: Text('אין שחקנים'),
-                  );
-                }
-
-                return Column(
-                  children: users.map((user) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundColor: teamColor.withValues(alpha: 0.2),
-                            child: user.photoUrl != null
-                                ? OptimizedImage(
-                                    imageUrl: user.photoUrl ?? '',
-                                    fit: BoxFit.cover,
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: BorderRadius.circular(12),
-                                    errorWidget: Icon(
-                                      Icons.person,
-                                      size: 12,
-                                      color: teamColor,
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.person,
-                                    size: 12,
-                                    color: teamColor,
-                                  ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              user.name,
-                              style: Theme.of(context).textTheme.bodySmall,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Widget to display session summary (for multi-match games)
-class _SessionSummaryWidget extends StatelessWidget {
-  final Game game;
-
-  const _SessionSummaryWidget({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    final isSessionMode = SessionLogic.isSessionMode(game);
-    if (!isSessionMode) {
-      return const SizedBox.shrink();
-    }
-
-    final teamStats = SessionLogic.getAllTeamStats(game);
-    final seriesScore = SessionLogic.getSeriesScoreDisplay(game);
-    final winner = SessionLogic.calculateSessionWinner(game);
-
-    return Card(
-      elevation: 4,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'סיכום סשן',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              seriesScore,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                  ),
-            ),
-            if (winner != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'מנצח: ${winner.displayName}',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            // Team stats table
-            if (teamStats.isNotEmpty) ...[
-              Text(
-                'סטטיסטיקות קבוצות',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              ...teamStats.values.map((stats) {
-                final team = game.teams.firstWhere(
-                  (t) => (t.color ?? '') == stats.teamColor,
-                  orElse: () => game.teams.first,
-                );
-                final colorValue = team.colorValue ?? 0xFF2196F3;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: Color(colorValue),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              team.name.isNotEmpty
-                                  ? team.name
-                                  : stats.teamColor,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            Text(
-                              'ניצחונות: ${stats.wins} | תיקו: ${stats.draws} | הפסדים: ${stats.losses}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                  ),
-                            ),
-                            Text(
-                              'שערים: ${stats.goalsFor} | הפרש: ${stats.goalDifference > 0 ? '+' : ''}${stats.goalDifference}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '${stats.points} נק\'',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-            if (game.session.matches.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(
-                'סה"כ ${game.session.matches.length} משחקים',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Widget to display final score prominently
-class _FinalScoreWidget extends StatelessWidget {
-  final Game game;
-
-  const _FinalScoreWidget({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    final teamAScore = game.session.legacyTeamAScore ?? 0;
-    final teamBScore = game.session.legacyTeamBScore ?? 0;
-    final teamAName = game.teams.isNotEmpty ? game.teams[0].name : 'קבוצה א\'';
-    final teamBName = game.teams.length > 1 ? game.teams[1].name : 'קבוצה ב\'';
-
-    return Card(
-      elevation: 4,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(
-              'תוצאה סופית',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        teamAName,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '$teamAScore',
-                        style:
-                            Theme.of(context).textTheme.displayLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    ':',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        teamBName,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '$teamBScore',
-                        style:
-                            Theme.of(context).textTheme.displayLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

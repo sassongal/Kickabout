@@ -132,7 +132,9 @@ class GamesRepository {
     final hashesToQuery = [centerHash, ...neighbors];
 
     // Query multiple geohash regions (parallel streams)
-    // This is more efficient than fetching 3x data
+    // Use a reduced per-hash limit to avoid 9x over-fetching
+    final computedLimit = (limit / 2).ceil();
+    final perHashLimit = computedLimit < 1 ? 1 : computedLimit;
     final streams = hashesToQuery.map((hash) {
       return _firestore
           .collection(FirestorePaths.games())
@@ -144,7 +146,7 @@ class GamesRepository {
           ])
           .where('geohash', isGreaterThanOrEqualTo: hash)
           .where('geohash', isLessThan: '$hash~')
-          .limit(limit) // No over-fetching
+          .limit(perHashLimit) // Reduced per-hash limit
           .snapshots();
     }).toList();
 
@@ -244,6 +246,7 @@ class GamesRepository {
             gameId,
             hubId: data['hubId'] as String?,
             region: data['region'] as String?,
+            city: data['city'] as String?,
           );
         },
         config: RetryConfig.network,
@@ -344,6 +347,7 @@ class GamesRepository {
     int limit = 50, // Reduced from 100, use pagination for more
     String? hubId,
     String? region,
+    String? city,
     DateTime? startDate,
     DateTime? endDate,
     DocumentSnapshot? startAfter, // Pagination cursor
@@ -364,18 +368,27 @@ class GamesRepository {
       // Apply additional filters
       if (hubId != null) {
         query = query.where('hubId', isEqualTo: hubId);
-      } else if (region != null) {
-        query = query.where('region', isEqualTo: region);
+      } else {
+        if (region != null) {
+          query = query.where('region', isEqualTo: region);
+        }
+        if (city != null) {
+          query = query.where('city', isEqualTo: city);
+        }
       }
 
       // Date filters - apply in Firestore if possible
-      if (startDate != null && hubId == null && region == null) {
+      if (startDate != null &&
+          hubId == null &&
+          region == null &&
+          city == null) {
         query = query.where('gameDate',
             isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
       }
       if (endDate != null &&
           hubId == null &&
           region == null &&
+          city == null &&
           startDate == null) {
         query = query.where('gameDate',
             isLessThanOrEqualTo: Timestamp.fromDate(endDate));
@@ -409,7 +422,8 @@ class GamesRepository {
                 .toList();
 
             // Apply date filters in memory only if they couldn't be applied in query
-            if (startDate != null && (hubId != null || region != null)) {
+            if (startDate != null &&
+                (hubId != null || region != null || city != null)) {
               games = games
                   .where((g) =>
                       g.gameDate.isAfter(startDate) ||
@@ -417,7 +431,10 @@ class GamesRepository {
                   .toList();
             }
             if (endDate != null &&
-                (hubId != null || region != null || startDate != null)) {
+                (hubId != null ||
+                    region != null ||
+                    city != null ||
+                    startDate != null)) {
               games = games
                   .where((g) =>
                       g.gameDate.isBefore(endDate) ||
@@ -426,7 +443,7 @@ class GamesRepository {
             }
 
             // Cache the result
-            final cacheKey = CacheKeys.publicGames(region: region);
+            final cacheKey = CacheKeys.publicGames(region: region, city: city);
             CacheService().set(cacheKey, games, ttl: CacheService.gamesTtl);
 
             return games;
@@ -434,6 +451,7 @@ class GamesRepository {
           metadata: {
             'count': snapshot.docs.length,
             'region': region,
+            'city': city,
             'hubId': hubId,
           },
         );
@@ -781,6 +799,8 @@ class GamesRepository {
         teamCount: 2,
         status: GameStatus.completed,
         showInCommunityFeed: details.showInCommunityFeed,
+        region: details.region,
+        city: details.city,
         teams: details.teams,
         createdAt: DateTime
             .now(), // approximation, will set server timestamp later if needed, but Game model expects DateTime.

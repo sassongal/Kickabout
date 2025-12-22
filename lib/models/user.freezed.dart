@@ -638,7 +638,8 @@ class _$UserImpl implements _User {
         'hidePhone': false,
         'hideCity': false,
         'hideStats': false,
-        'hideRatings': false
+        'hideRatings': false,
+        'allowHubInvites': true
       },
       final Map<String, bool> notificationPreferences = const {
         'game_reminder': true,

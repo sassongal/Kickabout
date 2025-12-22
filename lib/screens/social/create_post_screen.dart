@@ -176,6 +176,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     try {
       final feedRepo = ref.read(feedRepositoryProvider);
+      final usersRepo = ref.read(usersRepositoryProvider);
+      final currentUser = await usersRepo.getUser(currentUserId);
 
       final post = FeedPost(
         postId: '',
@@ -185,6 +187,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         content: content.isEmpty ? null : content,
         photoUrls: _photoUrls,
         createdAt: DateTime.now(),
+        authorName: currentUser?.name,
+        authorPhotoUrl: currentUser?.photoUrl,
       );
 
       await feedRepo.createPost(post);

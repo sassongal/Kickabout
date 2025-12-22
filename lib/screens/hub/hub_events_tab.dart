@@ -680,6 +680,8 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
           text: postText,
           entityId: event.eventId,
           createdAt: DateTime.now(),
+          authorName: user?.name,
+          authorPhotoUrl: user?.photoUrl,
         );
         await feedRepo.createPost(feedPost);
       } catch (e) {

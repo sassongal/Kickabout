@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/game_result.dart';
@@ -13,6 +12,7 @@ import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/cache_service.dart';
 import 'package:kattrick/models/game_audit_event.dart';
 import 'package:kattrick/data/notifications_repository.dart';
+import 'package:kattrick/services/logger.dart';
 
 /// Service for game management operations (rollback, edit, roster management)
 ///
@@ -130,7 +130,7 @@ class GameManagementService {
           ),
         );
       } catch (e) {
-        debugPrint('Failed to send approval notification: $e');
+        AppLogger.debug('Failed to send approval notification', error: e);
       }
 
       // Invalidate cache
@@ -229,7 +229,7 @@ class GameManagementService {
           ),
         );
       } catch (e) {
-        debugPrint('Failed to send kick notification: $e');
+        AppLogger.debug('Failed to send kick notification', error: e);
       }
 
       // Invalidate cache
@@ -355,7 +355,8 @@ class GameManagementService {
             ),
           );
         } catch (e) {
-          debugPrint('Failed to send reschedule notification to $playerId: $e');
+          AppLogger.debug('Failed to send reschedule notification to $playerId',
+              error: e);
         }
       }
 
@@ -568,10 +569,10 @@ class GameManagementService {
         CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
       }
 
-      debugPrint('✅ Game result rolled back: $gameId');
+      AppLogger.debug('Game result rolled back: $gameId');
       return originalData;
     } catch (e) {
-      debugPrint('❌ Failed to rollback game: $e');
+      AppLogger.debug('Failed to rollback game', error: e);
       throw Exception('Failed to rollback game: $e');
     }
   }
@@ -602,8 +603,9 @@ class GameManagementService {
     try {
       // Step 1: Rollback the old result
       final originalData = await rollbackGameResult(gameId);
-      debugPrint(
-          '   Rolled back original result: ${originalData['teamAScore']} vs ${originalData['teamBScore']}');
+      AppLogger.debug(
+        'Rolled back original result: ${originalData['teamAScore']} vs ${originalData['teamBScore']}',
+      );
 
       // Step 1.5: Get game to retrieve playerIds
       final game = await _gamesRepo.getGame(gameId);
@@ -623,12 +625,12 @@ class GameManagementService {
 
       await _gamesRepo.finalizeGame(gameId, result);
 
-      debugPrint('✅ Game result edited successfully: $gameId');
-      debugPrint(
-          '   Old: ${originalData['teamAScore']} vs ${originalData['teamBScore']}');
-      debugPrint('   New: $newTeamAScore vs $newTeamBScore');
+      AppLogger.debug('Game result edited successfully: $gameId');
+      AppLogger.debug(
+          'Old: ${originalData['teamAScore']} vs ${originalData['teamBScore']}');
+      AppLogger.debug('New: $newTeamAScore vs $newTeamBScore');
     } catch (e) {
-      debugPrint('❌ Failed to edit game result: $e');
+      AppLogger.debug('Failed to edit game result', error: e);
       // If finalize fails after rollback, the game is left in 'teamsFormed' state
       // This is safer than having incorrect stats
       throw Exception('Failed to edit game result: $e');

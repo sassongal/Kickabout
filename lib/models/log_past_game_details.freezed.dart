@@ -43,7 +43,11 @@ mixin _$LogPastGameDetails {
       throw _privateConstructorUsedError; // MVP player ID (optional)
   String? get mvpPlayerName =>
       throw _privateConstructorUsedError; // MVP player name (optional, denormalized)
-  String? get venueName => throw _privateConstructorUsedError;
+  String? get venueName =>
+      throw _privateConstructorUsedError; // Venue name (optional, denormalized)
+  String? get region =>
+      throw _privateConstructorUsedError; // Region (optional, denormalized)
+  String? get city => throw _privateConstructorUsedError;
 
   /// Serializes this LogPastGameDetails to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -75,7 +79,9 @@ abstract class $LogPastGameDetailsCopyWith<$Res> {
       List<String> goalScorerNames,
       String? mvpPlayerId,
       String? mvpPlayerName,
-      String? venueName});
+      String? venueName,
+      String? region,
+      String? city});
 }
 
 /// @nodoc
@@ -107,6 +113,8 @@ class _$LogPastGameDetailsCopyWithImpl<$Res, $Val extends LogPastGameDetails>
     Object? mvpPlayerId = freezed,
     Object? mvpPlayerName = freezed,
     Object? venueName = freezed,
+    Object? region = freezed,
+    Object? city = freezed,
   }) {
     return _then(_value.copyWith(
       hubId: null == hubId
@@ -165,6 +173,14 @@ class _$LogPastGameDetailsCopyWithImpl<$Res, $Val extends LogPastGameDetails>
           ? _value.venueName
           : venueName // ignore: cast_nullable_to_non_nullable
               as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -191,7 +207,9 @@ abstract class _$$LogPastGameDetailsImplCopyWith<$Res>
       List<String> goalScorerNames,
       String? mvpPlayerId,
       String? mvpPlayerName,
-      String? venueName});
+      String? venueName,
+      String? region,
+      String? city});
 }
 
 /// @nodoc
@@ -221,6 +239,8 @@ class __$$LogPastGameDetailsImplCopyWithImpl<$Res>
     Object? mvpPlayerId = freezed,
     Object? mvpPlayerName = freezed,
     Object? venueName = freezed,
+    Object? region = freezed,
+    Object? city = freezed,
   }) {
     return _then(_$LogPastGameDetailsImpl(
       hubId: null == hubId
@@ -279,6 +299,14 @@ class __$$LogPastGameDetailsImplCopyWithImpl<$Res>
           ? _value.venueName
           : venueName // ignore: cast_nullable_to_non_nullable
               as String?,
+      region: freezed == region
+          ? _value.region
+          : region // ignore: cast_nullable_to_non_nullable
+              as String?,
+      city: freezed == city
+          ? _value.city
+          : city // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -300,7 +328,9 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
       final List<String> goalScorerNames = const [],
       this.mvpPlayerId,
       this.mvpPlayerName,
-      this.venueName})
+      this.venueName,
+      this.region,
+      this.city})
       : _playerIds = playerIds,
         _teams = teams,
         _goalScorerIds = goalScorerIds,
@@ -377,10 +407,16 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
 // MVP player name (optional, denormalized)
   @override
   final String? venueName;
+// Venue name (optional, denormalized)
+  @override
+  final String? region;
+// Region (optional, denormalized)
+  @override
+  final String? city;
 
   @override
   String toString() {
-    return 'LogPastGameDetails(hubId: $hubId, gameDate: $gameDate, venueId: $venueId, eventId: $eventId, teamAScore: $teamAScore, teamBScore: $teamBScore, playerIds: $playerIds, teams: $teams, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName)';
+    return 'LogPastGameDetails(hubId: $hubId, gameDate: $gameDate, venueId: $venueId, eventId: $eventId, teamAScore: $teamAScore, teamBScore: $teamBScore, playerIds: $playerIds, teams: $teams, showInCommunityFeed: $showInCommunityFeed, goalScorerIds: $goalScorerIds, goalScorerNames: $goalScorerNames, mvpPlayerId: $mvpPlayerId, mvpPlayerName: $mvpPlayerName, venueName: $venueName, region: $region, city: $city)';
   }
 
   @override
@@ -411,7 +447,9 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
             (identical(other.mvpPlayerName, mvpPlayerName) ||
                 other.mvpPlayerName == mvpPlayerName) &&
             (identical(other.venueName, venueName) ||
-                other.venueName == venueName));
+                other.venueName == venueName) &&
+            (identical(other.region, region) || other.region == region) &&
+            (identical(other.city, city) || other.city == city));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -431,7 +469,9 @@ class _$LogPastGameDetailsImpl implements _LogPastGameDetails {
       const DeepCollectionEquality().hash(_goalScorerNames),
       mvpPlayerId,
       mvpPlayerName,
-      venueName);
+      venueName,
+      region,
+      city);
 
   /// Create a copy of LogPastGameDetails
   /// with the given fields replaced by the non-null parameter values.
@@ -465,7 +505,9 @@ abstract class _LogPastGameDetails implements LogPastGameDetails {
       final List<String> goalScorerNames,
       final String? mvpPlayerId,
       final String? mvpPlayerName,
-      final String? venueName}) = _$LogPastGameDetailsImpl;
+      final String? venueName,
+      final String? region,
+      final String? city}) = _$LogPastGameDetailsImpl;
 
   factory _LogPastGameDetails.fromJson(Map<String, dynamic> json) =
       _$LogPastGameDetailsImpl.fromJson;
@@ -500,7 +542,11 @@ abstract class _LogPastGameDetails implements LogPastGameDetails {
   @override
   String? get mvpPlayerName; // MVP player name (optional, denormalized)
   @override
-  String? get venueName;
+  String? get venueName; // Venue name (optional, denormalized)
+  @override
+  String? get region; // Region (optional, denormalized)
+  @override
+  String? get city;
 
   /// Create a copy of LogPastGameDetails
   /// with the given fields replaced by the non-null parameter values.

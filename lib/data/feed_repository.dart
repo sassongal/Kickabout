@@ -37,7 +37,7 @@ class FeedRepository {
   /// Filters by region and last 24 hours (or last 20 items)
   /// Optimized for bulletin board display
   Stream<List<FeedPost>> streamRegionalFeed(
-      {String? region, String? postType}) {
+      {String? region, String? city, String? postType}) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value([]);
     }
@@ -46,16 +46,17 @@ class FeedRepository {
     final now = DateTime.now();
     final twentyFourHoursAgo = now.subtract(const Duration(hours: 24));
 
-    Query<Map<String, dynamic>> query = _firestore.collection('feedPosts');
+    Query<Map<String, dynamic>> query = _firestore
+        .collection('feedPosts')
+        .where('createdAt',
+            isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
 
-    // Filter by region if provided (required for composite index)
     if (region != null && region.isNotEmpty) {
-      query = query.where('region', isEqualTo: region).where('createdAt',
-          isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
-    } else {
-      // If no region, just filter by time
-      query = query.where('createdAt',
-          isGreaterThan: Timestamp.fromDate(twentyFourHoursAgo));
+      query = query.where('region', isEqualTo: region);
+    }
+
+    if (city != null && city.isNotEmpty) {
+      query = query.where('city', isEqualTo: city);
     }
 
     if (postType != null) {

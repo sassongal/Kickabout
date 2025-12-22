@@ -370,6 +370,7 @@ class _CommunityActivityFeedScreenState
   void _showFilters() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) => _FiltersSheet(
         selectedHubId: _selectedHubId,
         selectedRegion: _selectedRegion,
@@ -767,17 +768,23 @@ class _FiltersSheetState extends State<_FiltersSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'סינונים',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'סינונים',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
 
           // Region filter
           DropdownButtonFormField<String>(
@@ -891,21 +898,22 @@ class _FiltersSheetState extends State<_FiltersSheet> {
             child: const Text('החל סינונים'),
           ),
           const SizedBox(height: 8),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _hubId = null;
-                _region = null;
-                _gameType = null;
-                _startDate = null;
-                _endDate = null;
-              });
-              widget.onApply(null, null, null, null, null);
-              Navigator.pop(context);
-            },
-            child: const Text('נקה סינונים'),
-          ),
-        ],
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _hubId = null;
+                  _region = null;
+                  _gameType = null;
+                  _startDate = null;
+                  _endDate = null;
+                });
+                widget.onApply(null, null, null, null, null);
+                Navigator.pop(context);
+              },
+              child: const Text('נקה סינונים'),
+            ),
+          ],
+        ),
       ),
     );
   }

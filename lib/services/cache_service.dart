@@ -511,9 +511,18 @@ class CacheService {
 class CacheKeys {
   static String game(String gameId) => 'game:$gameId';
   static String gamesByHub(String hubId) => 'games:hub:$hubId';
-  static String publicGames({String? region}) => region != null 
-      ? 'games:public:region:$region' 
-      : 'games:public';
+  static String publicGames({String? region, String? city}) {
+    if (region != null && city != null) {
+      return 'games:public:region:$region:city:$city';
+    }
+    if (region != null) {
+      return 'games:public:region:$region';
+    }
+    if (city != null) {
+      return 'games:public:city:$city';
+    }
+    return 'games:public';
+  }
   static String event(String hubId, String eventId) => 'event:$hubId:$eventId';
   static String eventsByHub(String hubId) => 'events:hub:$hubId';
   static String publicEvents({String? region}) => region != null
@@ -523,4 +532,3 @@ class CacheKeys {
   static String hub(String hubId) => 'hub:$hubId';
   static String venue(String venueId) => 'venue:$venueId';
 }
-
