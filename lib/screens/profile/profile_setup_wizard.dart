@@ -6,6 +6,7 @@ import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/models/models.dart' as model;
 import 'package:kattrick/models/age_group.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -576,12 +577,13 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('הגדרת פרופיל'),
-            leading: _step > 0
-                ? IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: _back,
-                  )
-                : null,
+            leadingWidth:
+                AppBarHomeLogo.leadingWidth(showBackButton: _step > 0),
+            leading: AppBarHomeLogo(
+              showBackButton: _step > 0,
+              onBack: _back,
+            ),
+            automaticallyImplyLeading: false,
           ),
           body: Column(
             children: [

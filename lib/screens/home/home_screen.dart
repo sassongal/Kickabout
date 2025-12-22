@@ -28,6 +28,7 @@ import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
 import 'package:kattrick/widgets/home/bubble_menu.dart';
 import 'package:kattrick/widgets/home/hubs_carousel.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Premium Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly
@@ -86,10 +87,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return Scaffold(
         backgroundColor: PremiumColors.background,
         appBar: AppBar(
-          title: Image.asset(
-            'assets/logo/KattrickLOGO.png',
+          title: const HomeLogoButton(
             height: 40,
-            fit: BoxFit.contain,
+            padding: EdgeInsets.zero,
           ),
           backgroundColor: PremiumColors.surface,
           foregroundColor: PremiumColors.textPrimary,
@@ -212,49 +212,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             gamificationStream: gamificationStream,
                             onPerformanceTap: () => context
                                 .push('/profile/$currentUserId/performance'),
-                            onAvailabilityChanged: (value) async {
-                              // currentUserId is guaranteed to be non-null here (checked at line 48)
-                              if (!context.mounted) return;
-                              try {
-                                // Update availability status without triggering navigation
-                                await ref
-                                    .read(usersRepositoryProvider)
-                                    .updateUser(
-                                  currentUserId,
-                                  {
-                                    'availabilityStatus':
-                                        value ? 'available' : 'notAvailable'
-                                  },
-                                );
-
-                                // Show feedback to user
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        value
-                                            ? 'סטטוס עודכן: זמין למשחקים'
-                                            : 'סטטוס עודכן: לא זמין למשחקים',
-                                      ),
-                                      duration: const Duration(seconds: 2),
-                                      backgroundColor:
-                                          value ? Colors.green : Colors.grey,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                // Handle error without breaking UI
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('שגיאה בעדכון סטטוס: $e'),
-                                      backgroundColor: Colors.red,
-                                      duration: const Duration(seconds: 3),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -446,45 +403,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Developer Tools Row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => context
-                                      .push('/admin/generate-dummy-data'),
-                                  icon: const Icon(Icons.science_outlined),
-                                  label:
-                                      const Text('Generate Dummy Data (Dev)'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    side: BorderSide(
-                                        color: PremiumColors.textSecondary
-                                            .withValues(alpha: 0.3)),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => _forceHaifaLocation(
-                                      context, currentUserId),
-                                  icon:
-                                      const Icon(Icons.location_city_outlined),
-                                  label:
-                                      const Text('Force Haifa Location (Dev)'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    side: BorderSide(
-                                        color: PremiumColors.textSecondary
-                                            .withValues(alpha: 0.3)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                           const SizedBox(height: 24),
                         ],
                       ],
@@ -498,65 +416,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       },
     );
-  }
-
-  /// Force Haifa location for emulator testing
-  Future<void> _forceHaifaLocation(BuildContext context, String userId) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: KineticLoadingAnimation(size: 60),
-      ),
-    );
-
-    try {
-      // Haifa coordinates
-      const double haifaLat = 32.7940;
-      const double haifaLng = 34.9896;
-
-      final firestore = FirebaseFirestore.instance;
-      final userRef = firestore.collection('users').doc(userId);
-
-      final locationService = ref.read(locationServiceProvider);
-      final geohash = locationService.generateGeohash(haifaLat, haifaLng);
-
-      await userRef.update({
-        'location': GeoPoint(haifaLat, haifaLng),
-        'geohash': geohash,
-        'city': 'חיפה',
-        'region': 'צפון',
-        'manualLocationCity': 'חיפה',
-        'hasManualLocation': true,
-      });
-
-      // Save to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('manual_location_city', 'חיפה');
-      await prefs.setBool('location_permission_skipped', true);
-
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ מיקום עודכן לחיפה (Dev Mode)'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ שגיאה בעדכון מיקום: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
   }
 
   /// Show logout confirmation dialog
@@ -646,10 +505,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String currentUserId,
   ) {
     return AppBar(
-      title: Image.asset(
-        'assets/logo/KattrickLOGO.png',
+      title: const HomeLogoButton(
         height: 40,
-        fit: BoxFit.contain,
+        padding: EdgeInsets.zero,
       ),
       backgroundColor: PremiumColors.surface,
       foregroundColor: PremiumColors.textPrimary,
@@ -1250,121 +1108,102 @@ class _ProfileSummaryCard extends StatelessWidget {
   final String currentUserId;
   final Stream<Gamification?> gamificationStream;
   final VoidCallback onPerformanceTap;
-  final Future<void> Function(bool) onAvailabilityChanged;
 
   const _ProfileSummaryCard({
     required this.user,
     required this.currentUserId,
     required this.gamificationStream,
     required this.onPerformanceTap,
-    required this.onAvailabilityChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(12),
+      child: Row(
         children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => _showAvatarPicker(context, user, currentUserId),
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: PremiumColors.primaryGradient,
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      child: PlayerAvatar(
-                        user: user,
-                        size: AvatarSize.lg,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: PremiumColors.primary,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.edit,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
+          // Compact Avatar with Edit Button
+          GestureDetector(
+            onTap: () => _showAvatarPicker(context, user, currentUserId),
+            child: Stack(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: PremiumColors.primaryGradient,
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: PlayerAvatar(
+                    user: user,
+                    size: AvatarSize.md,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.displayName ?? user.name,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF212121),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: PremiumColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    if (user.city != null && user.city!.isNotEmpty)
-                      Text(
-                        user.city!,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: const Color(0xFF757575),
-                        ),
-                      ),
-                  ],
+                    child: const Icon(
+                      Icons.edit,
+                      size: 10,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Divider(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onPerformanceTap,
-                  icon: const Icon(Icons.analytics_outlined),
-                  label: const Text('ביצועים'),
+          const SizedBox(width: 12),
+          // Name and City
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  user.displayName ?? user.name,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF212121),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'זמין למשחקים',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: const Color(0xFF757575),
-                      ),
+                if (user.city != null && user.city!.isNotEmpty)
+                  Text(
+                    user.city!,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF757575),
                     ),
-                    Switch(
-                      value: user.availabilityStatus == 'available',
-                      onChanged: onAvailabilityChanged,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Performance Button - Compact
+          OutlinedButton.icon(
+            onPressed: onPerformanceTap,
+            icon: const Icon(Icons.analytics_outlined, size: 18),
+            label: const Text('ביצועים'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
         ],
       ),

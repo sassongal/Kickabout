@@ -274,7 +274,9 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       final game = Game(
         gameId: '',
         createdBy: currentUserId,
-        hubId: _isPublicGame ? null : selectedHubId,
+        hubId: _isPublicGame
+            ? null
+            : (selectedHubId.isEmpty ? null : selectedHubId),
         gameDate: gameDate,
         location: _locationController.text.trim().isEmpty
             ? null

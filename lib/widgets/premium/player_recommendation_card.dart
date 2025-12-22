@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/data/proteams_repository.dart';
 
 /// Player recommendation card with profile photo and details
-class PlayerRecommendationCard extends StatelessWidget {
+class PlayerRecommendationCard extends ConsumerWidget {
   final User player;
   final String? reason; // Why this player is recommended
   final double? distanceKm; // Distance in km (if available)
@@ -19,37 +22,16 @@ class PlayerRecommendationCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return PremiumCard(
       onTap: () => context.push('/profile/${player.uid}'),
       showGlow: true,
       child: Row(
         children: [
           // Profile photo
-          Stack(
-            children: [
-              PlayerAvatar(
-                user: player,
-                radius: 32,
-              ),
-              // Availability indicator
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: _getAvailabilityColor(),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: PremiumColors.background,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          PlayerAvatar(
+            user: player,
+            radius: 32,
           ),
           const SizedBox(width: 16),
           // Player info
@@ -75,11 +57,40 @@ class PlayerRecommendationCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  player.name,
-                  style: PremiumTypography.heading3,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    // Player name
+                    Flexible(
+                      child: Text(
+                        player.name,
+                        style: PremiumTypography.heading3,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Favorite team badge
+                    if (player.favoriteProTeamId != null) ...[
+                      const SizedBox(width: 6),
+                      FutureBuilder<ProTeam?>(
+                        future: ref.read(proTeamsRepositoryProvider).getTeam(player.favoriteProTeamId!),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data != null) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: CachedNetworkImage(
+                                imageUrl: snapshot.data!.logoUrl,
+                                width: 20,
+                                height: 20,
+                                fit: BoxFit.contain,
+                                errorWidget: (context, url, error) => const SizedBox.shrink(),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -172,19 +183,6 @@ class PlayerRecommendationCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Color _getAvailabilityColor() {
-    switch (player.availabilityStatus) {
-      case 'available':
-        return Colors.green;
-      case 'busy':
-        return Colors.orange;
-      case 'notAvailable':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 }
 

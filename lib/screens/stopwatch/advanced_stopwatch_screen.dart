@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Advanced Stopwatch Screen with Lap Times and Countdown
 /// Professional UI with modern design principles
@@ -214,6 +215,7 @@ class _AdvancedStopwatchScreenState extends State<AdvancedStopwatchScreen>
   @override
   Widget build(BuildContext context) {
     final displayTime = _getCurrentDisplayTime();
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -221,6 +223,9 @@ class _AdvancedStopwatchScreenState extends State<AdvancedStopwatchScreen>
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black87,
+        leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+        leading: AppBarHomeLogo(showBackButton: canPop),
+        automaticallyImplyLeading: false,
         title: Text(
           'Stopwatch',
           style: GoogleFonts.orbitron(

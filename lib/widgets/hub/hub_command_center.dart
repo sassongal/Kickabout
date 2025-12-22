@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/hub_permissions_service.dart';
-import 'package:kattrick/utils/hub_sharing_utils.dart';
 
 class HubCommandCenter extends StatelessWidget {
   final String hubId;
@@ -24,149 +23,107 @@ class HubCommandCenter extends StatelessWidget {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Row 1: Top Actions (Manager Mode Toggle + IconButtons)
-        Row(
-          children: [
-            Flexible(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Requests badge (Manager only)
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('hubs')
-                        .doc(hubId)
-                        .collection('requests')
-                        .where('status', isEqualTo: 'pending')
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      final pendingCount = snapshot.data?.docs.length ?? 0;
-                      return Stack(
-                        children: [
-                          if (hubPermissions.canManageMembers)
-                            IconButton(
-                              icon: const Icon(Icons.inbox, size: 20),
-                              tooltip: 'בקשות הצטרפות',
-                              onPressed: () =>
-                                  context.push('/hubs/${hub.hubId}/requests'),
-                              color: Colors.orange,
-                            ),
-                          if (pendingCount > 0)
-                            Positioned(
-                              right: 8,
-                              top: 8,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: Text(
-                                  pendingCount > 9 ? '9+' : '$pendingCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                  if (hubPermissions.canManageMembers)
-                    IconButton(
-                      icon: const Icon(Icons.gpp_bad, size: 20),
-                      tooltip: 'משתמשים מנופים',
-                      onPressed: () =>
-                          context.push('/hubs/${hub.hubId}/banned'),
-                      color: Colors.red,
+        // Pending join requests pill
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('hubs')
+              .doc(hubId)
+              .collection('requests')
+              .where('status', isEqualTo: 'pending')
+              .snapshots(),
+          builder: (context, snapshot) {
+            final pendingCount = snapshot.data?.docs.length ?? 0;
+            if (!hubPermissions.canManageMembers) {
+              return const SizedBox.shrink();
+            }
+            return InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => context.push('/hubs/${hub.hubId}/requests'),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.inbox, size: 18, color: Colors.orange),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'בקשות הצטרפות',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.orange,
+                      ),
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.share, size: 20),
-                    tooltip: 'שתף ב-WhatsApp',
-                    onPressed: () =>
-                        HubSharingUtils.shareHubOnWhatsApp(context, hub),
-                    color: Colors.green,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.visibility, size: 20),
-                    tooltip: 'סקאוטינג',
-                    onPressed: () =>
-                        context.push('/hubs/${hub.hubId}/scouting'),
-                    color: Colors.blue,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.analytics, size: 20),
-                    tooltip: 'ניתוח',
-                    onPressed: () =>
-                        context.push('/hubs/${hub.hubId}/analytics'),
-                    color: Colors.purple,
-                  ),
-                  if (hubPermissions.canCreatePosts)
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.person_search),
-                          color: Colors.orange,
-                          iconSize: 28,
-                          onPressed: () => context.push(
-                              '/hubs/${hub.hubId}/create-recruiting-post'),
-                          tooltip: 'מחפש שחקנים',
+                    if (pendingCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        const Text(
-                          'מחפש שחקנים',
-                          style: TextStyle(
+                        child: Text(
+                          pendingCount > 9 ? '9+' : '$pendingCount',
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontSize: 11,
-                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
-        const SizedBox(height: 8),
-        // Row 2: Management Buttons (Settings & Roles)
+        const SizedBox(height: 12),
+        // Modern buttons for settings and roles
         Row(
           children: [
             Expanded(
-              child: Opacity(
-                opacity: hubPermissions.canManageSettings ? 1.0 : 0.5,
-                child: OutlinedButton.icon(
-                  onPressed: hubPermissions.canManageSettings
-                      ? () => context.push('/hubs/${hub.hubId}/settings')
-                      : null,
-                  icon: const Icon(Icons.settings, size: 18),
-                  label: const Text('הגדרות'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    minimumSize: const Size(0, 36),
+              child: ElevatedButton.icon(
+                onPressed: hubPermissions.canManageSettings
+                    ? () => context.push('/hubs/${hub.hubId}/settings')
+                    : null,
+                icon: const Icon(Icons.settings_outlined),
+                label: const Text('הגדרות'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey.shade900,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  elevation: 2,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
-              child: OutlinedButton.icon(
+              child: ElevatedButton.icon(
                 onPressed: () =>
                     context.push('/hubs/${hub.hubId}/manage-roles'),
-                icon: const Icon(Icons.admin_panel_settings, size: 18),
-                label: const Text('תפקידים'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  minimumSize: const Size(0, 36),
+                icon: const Icon(Icons.admin_panel_settings_outlined),
+                label: const Text('ניהול תפקידים'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 2,
                 ),
               ),
             ),

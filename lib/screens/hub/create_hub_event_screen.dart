@@ -42,7 +42,7 @@ class _CreateHubEventScreenState extends ConsumerState<CreateHubEventScreen> {
   TimeOfDay _selectedTime = TimeOfDay.now();
   int _teamCount = 3; // Default: 3 teams
   String? _gameType; // 3v3, 4v4, etc.
-  int _durationMinutes = 12; // Default: 12 minutes
+  int _durationMinutes = 8; // Default: 8 minutes
   int _maxParticipants = 15; // Default: 15, required
   bool _notifyMembers = false;
   bool _showInCommunityFeed = false;
@@ -640,8 +640,9 @@ class _DurationPickerDialogState extends State<_DurationPickerDialog> {
   void initState() {
     super.initState();
     _selectedValue = widget.initialValue;
-    // Start from 12 minutes (index 0)
-    final initialIndex = _selectedValue >= 12 ? _selectedValue - 12 : 0;
+    // Start from min value (6 minutes)
+    final initialIndex =
+        _selectedValue >= 6 ? (_selectedValue - 6).clamp(0, 39) : 0;
     _scrollController = FixedExtentScrollController(initialItem: initialIndex);
   }
 
@@ -653,7 +654,8 @@ class _DurationPickerDialogState extends State<_DurationPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final values = List.generate(89, (i) => i + 12); // 12 to 100 minutes
+    // Values 6..45 minutes
+    final values = List.generate(40, (i) => i + 6);
 
     return AlertDialog(
       title: const Text('בחר משך דקות'),

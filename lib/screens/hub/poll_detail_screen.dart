@@ -6,6 +6,7 @@ import 'package:kattrick/models/poll.dart';
 import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/premium/gradient_button.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Screen for viewing and voting on a poll
 class PollDetailScreen extends ConsumerStatefulWidget {
@@ -277,11 +278,15 @@ class _PollDetailScreenState extends ConsumerState<PollDetailScreen> {
         ref.watch(pollsRepositoryProvider).watchPoll(widget.pollId);
     final userAsync = ref.watch(currentUserProvider);
     final user = userAsync.valueOrNull;
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+        leading: AppBarHomeLogo(showBackButton: canPop),
         title: const Text('סקר'),
         elevation: 0,
+        automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<Poll?>(
         stream: pollStream,

@@ -455,14 +455,6 @@
   "@sendJoinRequest": {},
   "joinHubButton": "הצטרף להוב",
   "@joinHubButton": {},
-  "statusUpdatedAvailable": "סטטוס עודכן: זמין למשחקים",
-  "@statusUpdatedAvailable": {
-    "description": "Snackbar message when user sets availability to available"
-  },
-  "statusUpdatedNotAvailable": "סטטוס עודכן: לא זמין למשחקים",
-  "@statusUpdatedNotAvailable": {
-    "description": "Snackbar message when user sets availability to not available"
-  },
   "statusUpdateError": "שגיאה בעדכון סטטוס: {error}",
   "@statusUpdateError": {
     "description": "Error message when status update fails",

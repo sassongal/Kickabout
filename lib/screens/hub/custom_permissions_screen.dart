@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/models/hub.dart';
 import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Custom Permissions Management Screen
 /// Allows managers to grant special permissions to specific users
@@ -35,14 +36,18 @@ class _CustomPermissionsScreenState
   Widget build(BuildContext context) {
     // Check admin permissions
     final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
+    final canPop = Navigator.of(context).canPop();
 
     return roleAsync.when(
       data: (role) {
         if (role != UserRole.admin) {
           return Scaffold(
             appBar: AppBar(
+              leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+              leading: AppBarHomeLogo(showBackButton: canPop),
               title: const Text('Custom Permissions'),
               elevation: 0,
+              automaticallyImplyLeading: false,
             ),
             body: Center(
               child: Column(
@@ -70,8 +75,11 @@ class _CustomPermissionsScreenState
 
         return Scaffold(
           appBar: AppBar(
+            leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+            leading: AppBarHomeLogo(showBackButton: canPop),
             title: const Text('Custom Permissions'),
             elevation: 0,
+            automaticallyImplyLeading: false,
           ),
           body: StreamBuilder<Hub?>(
             stream: hubsRepo.watchHub(widget.hubId),
@@ -156,11 +164,21 @@ class _CustomPermissionsScreenState
         );
       },
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Custom Permissions')),
+        appBar: AppBar(
+          leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+          leading: AppBarHomeLogo(showBackButton: canPop),
+          title: const Text('Custom Permissions'),
+          automaticallyImplyLeading: false,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Custom Permissions')),
+        appBar: AppBar(
+          leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+          leading: AppBarHomeLogo(showBackButton: canPop),
+          title: const Text('Custom Permissions'),
+          automaticallyImplyLeading: false,
+        ),
         body: Center(child: Text('Error: $error')),
       ),
     );

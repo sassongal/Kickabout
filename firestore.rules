@@ -52,15 +52,17 @@ service cloud.firestore {
     /// Check if user is an active member of hub
     /// OPTIMIZED (2025-12-20): Uses denormalized activeMemberIds array to eliminate get() calls
     /// Hub creator is ALWAYS considered active (even without HubMember doc)
+    /// FALLBACK (2025-12-22): If activeMemberIds doesn't exist, check memberIds
     function isActiveHubMember(hubId) {
       let hub = getHubData(hubId);
-      
+
       return isAuthenticated() && (
         // Creator is always active
         hub.createdBy == request.auth.uid ||
-        // OPTIMIZED: O(1) array lookup instead of get() call
-        // Check if user is in denormalized activeMemberIds array
-        (hub.activeMemberIds != null && request.auth.uid in hub.activeMemberIds)
+        // OPTIMIZED: O(1) array lookup - check activeMemberIds first
+        (hub.activeMemberIds != null && request.auth.uid in hub.activeMemberIds) ||
+        // FALLBACK: If activeMemberIds doesn't exist, check memberIds
+        (hub.activeMemberIds == null && hub.memberIds != null && request.auth.uid in hub.memberIds)
       );
     }
 
@@ -184,7 +186,7 @@ service cloud.firestore {
     function isValidGame(game) {
       return game.keys().hasAll(['createdBy', 'hubId', 'gameDate']) &&
         game.createdBy is string &&
-        game.hubId is string &&
+        (game.hubId is string || game.hubId == null) &&
         game.gameDate is timestamp &&
         (!('teamCount' in game) || (game.teamCount is int && game.teamCount >= 2 && game.teamCount <= 6)) &&
         (!('teamAScore' in game) || isValidScore(game.teamAScore)) &&
@@ -263,6 +265,22 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow write: if false;
       }
+
+      // Player Stats Subcollection - Objective game performance logs only
+      // IMPORTANT: These contain ONLY objective data (goals, assists, MVP).
+      // Subjective skill ratings are in HubMember.managerRating (protected, manager-only).
+      match /stats/{gameId} {
+        // Users can read their own stats, hub members can read each other's stats
+        allow read: if isAuthenticated() && (
+          isOwner(userId) ||
+          // Anyone can read stats for discovery/leaderboards
+          true
+        );
+
+        // Only managers can write stats (usually done by Cloud Functions)
+        // Regular users cannot modify their own stats to prevent cheating
+        allow write: if false; // All writes handled by Cloud Functions
+      }
     }
 
     // ============================================
@@ -295,7 +313,7 @@ service cloud.firestore {
 
       match /members/{userId} {
         allow read: if isHubMember(hubId) || isSuperAdmin();
-        
+
         // CREATE: User can request to join (handled in /requests), or manager can add them.
         // User cannot set their own role on creation.
         allow create: if (isHubManager(hubId) &&
@@ -303,11 +321,17 @@ service cloud.firestore {
         ) || isSuperAdmin();
 
         // UPDATE: User can only update to leave. Manager can update roles/ratings.
+        // CRITICAL: managerRating is PROTECTED - only hub managers can modify it.
+        // This prevents players from inflating their own skill rating used for team balancing.
+        // Regular players CANNOT see their managerRating (read-protected in UI).
         allow update: if (
-          // User is leaving the hub
-          (isOwner(userId) && request.resource.data.status == 'left' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'managerRating'])) ||
-          // Manager is managing the member
-          (isHubManager(hubId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['veteranSince']))
+          // User is leaving the hub (CANNOT change role or managerRating)
+          (isOwner(userId) &&
+           request.resource.data.status == 'left' &&
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'managerRating'])) ||
+          // Manager is managing the member (CAN update role and managerRating, but NOT veteranSince)
+          (isHubManager(hubId) &&
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['veteranSince']))
         ) || isSuperAdmin();
 
         // DELETE: User can leave (delete their membership) or manager can remove them.
@@ -564,6 +588,17 @@ service cloud.firestore {
         // Update/Delete: Forbidden
         allow update, delete: if false;
       }
+    }
+
+    // ============================================
+    // ProTeams Collection (Israeli Football Teams)
+    // ============================================
+    match /proteams/{teamId} {
+      // Anyone authenticated can read teams (for favorite team selection)
+      allow read: if isAuthenticated();
+
+      // Only super admins can write/update teams
+      allow write: if isSuperAdmin();
     }
 
     // ============================================

@@ -24,7 +24,8 @@ class User with _$User {
     String? firstName,
     String? lastName,
     @TimestampConverter() required DateTime birthDate, // ✅ Required field
-    String? favoriteTeamId, // ID of favorite team from Firestore
+    String? favoriteTeamId, // DEPRECATED: Old field, use favoriteProTeamId instead
+    String? favoriteProTeamId, // ID of favorite professional team (Israeli Premier/National League)
     String? facebookProfileUrl,
     String? instagramProfileUrl,
     @Default(false)
@@ -68,6 +69,7 @@ class User with _$User {
       'hideCity': false,
       'hideStats': false,
       'hideRatings': false,
+      'allowHubInvites': true,
     })
     Map<String, bool> privacySettings,
     // Notification preferences - control which notifications user wants to receive

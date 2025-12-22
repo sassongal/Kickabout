@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/services/hub_analytics_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Hub Insights Dashboard - Analytics for hub managers
 class HubInsightsScreen extends ConsumerStatefulWidget {
@@ -36,10 +37,16 @@ class _HubInsightsScreenState extends ConsumerState<HubInsightsScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
+    final canPop = Navigator.of(context).canPop();
 
     if (currentUserId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Hub Insights')),
+        appBar: AppBar(
+          leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+          leading: AppBarHomeLogo(showBackButton: canPop),
+          title: const Text('Hub Insights'),
+          automaticallyImplyLeading: false,
+        ),
         body: const Center(child: Text('Not authenticated')),
       );
     }
@@ -52,8 +59,11 @@ class _HubInsightsScreenState extends ConsumerState<HubInsightsScreen> {
         if (role != UserRole.admin) {
           return Scaffold(
             appBar: AppBar(
+              leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+              leading: AppBarHomeLogo(showBackButton: canPop),
               title: const Text('Hub Insights'),
               elevation: 0,
+              automaticallyImplyLeading: false,
             ),
             body: Center(
               child: Column(
@@ -79,8 +89,11 @@ class _HubInsightsScreenState extends ConsumerState<HubInsightsScreen> {
 
         return Scaffold(
           appBar: AppBar(
+            leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+            leading: AppBarHomeLogo(showBackButton: canPop),
             title: const Text('Hub Insights'),
             elevation: 0,
+            automaticallyImplyLeading: false,
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -151,11 +164,21 @@ class _HubInsightsScreenState extends ConsumerState<HubInsightsScreen> {
         );
       },
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Hub Insights')),
+        appBar: AppBar(
+          leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+          leading: AppBarHomeLogo(showBackButton: canPop),
+          title: const Text('Hub Insights'),
+          automaticallyImplyLeading: false,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Hub Insights')),
+        appBar: AppBar(
+          leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+          leading: AppBarHomeLogo(showBackButton: canPop),
+          title: const Text('Hub Insights'),
+          automaticallyImplyLeading: false,
+        ),
         body: Center(child: Text('Error: $error')),
       ),
     );

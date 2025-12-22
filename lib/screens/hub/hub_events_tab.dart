@@ -38,83 +38,108 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
     final currentUserId = ref.watch(currentUserIdProvider);
     final eventsStream = hubEventsRepo.watchHubEvents(widget.hubId);
 
-    return Column(
-      children: [
+    return StreamBuilder<List<HubEvent>>(
+      stream: eventsStream,
+      builder: (context, snapshot) {
+        final slivers = <Widget>[];
+
         // Create event button (managers only)
-        if (widget.isManager) ...[
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              onPressed: () =>
-                  context.push('/hubs/${widget.hubId}/events/create'),
-              icon: const Icon(Icons.add),
-              label: const Text('צור אירוע'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+        if (widget.isManager) {
+          slivers.add(
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      context.push('/hubs/${widget.hubId}/events/create'),
+                  icon: const Icon(Icons.add),
+                  label: const Text('צור אירוע'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
-        // Events list
-        Expanded(
-          child: StreamBuilder<List<HubEvent>>(
-            stream: eventsStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: 3,
-                  itemBuilder: (context, index) => Padding(
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          slivers.add(
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: SkeletonLoader(height: 150),
                   ),
-                );
-              }
+                  childCount: 3,
+                ),
+              ),
+            ),
+          );
+          return CustomScrollView(slivers: slivers);
+        }
 
-              if (snapshot.hasError) {
-                return PremiumEmptyState(
-                  icon: Icons.error_outline,
-                  title: 'שגיאה בטעינת אירועים',
-                  message: ErrorHandlerService().handleException(
-                    snapshot.error,
-                    context: 'Hub events tab',
-                  ),
-                  action: ElevatedButton.icon(
-                    onPressed: () {
-                      // Retry by rebuilding
-                      setState(() {});
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('נסה שוב'),
-                  ),
-                );
-              }
+        if (snapshot.hasError) {
+          slivers.add(
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: PremiumEmptyState(
+                icon: Icons.error_outline,
+                title: 'שגיאה בטעינת אירועים',
+                message: ErrorHandlerService().handleException(
+                  snapshot.error,
+                  context: 'Hub events tab',
+                ),
+                action: ElevatedButton.icon(
+                  onPressed: () {
+                    // Retry by rebuilding
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('נסה שוב'),
+                ),
+              ),
+            ),
+          );
+          return CustomScrollView(slivers: slivers);
+        }
 
-              final events = snapshot.data ?? [];
-              if (events.isEmpty) {
-                return PremiumEmptyState(
-                  icon: Icons.event_note,
-                  title: 'אין אירועים',
-                  message: widget.isManager
-                      ? 'צור אירוע חדש כדי להתחיל'
-                      : 'אין אירועים זמינים כרגע',
-                  action: widget.isManager
-                      ? ElevatedButton.icon(
-                          onPressed: () => context
-                              .push('/hubs/${widget.hubId}/events/create'),
-                          icon: const Icon(Icons.add),
-                          label: const Text('צור אירוע'),
-                        )
-                      : null,
-                );
-              }
+        final events = snapshot.data ?? [];
+        if (events.isEmpty) {
+          slivers.add(
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: PremiumEmptyState(
+                icon: Icons.event_note,
+                title: 'אין אירועים',
+                message: widget.isManager
+                    ? 'צור אירוע חדש כדי להתחיל'
+                    : 'אין אירועים זמינים כרגע',
+                action: widget.isManager
+                    ? ElevatedButton.icon(
+                        onPressed: () =>
+                            context.push('/hubs/${widget.hubId}/events/create'),
+                        icon: const Icon(Icons.add),
+                        label: const Text('צור אירוע'),
+                      )
+                    : null,
+              ),
+            ),
+          );
+          return CustomScrollView(slivers: slivers);
+        }
 
-              final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
+        final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: events.length,
-                itemBuilder: (context, index) {
+        slivers.add(
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
                   final event = events[index];
                   final startTime = event.startedAt ?? event.eventDate;
                   final happeningWindowEnd =
@@ -585,11 +610,14 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                     ),
                   );
                 },
-              );
-            },
+                childCount: events.length,
+              ),
+            ),
           ),
-        ),
-      ],
+        );
+
+        return CustomScrollView(slivers: slivers);
+      },
     );
   }
 

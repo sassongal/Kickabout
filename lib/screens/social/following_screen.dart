@@ -5,6 +5,7 @@ import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Following screen - shows users that a user is following
 class FollowingScreen extends ConsumerWidget {
@@ -15,6 +16,8 @@ class FollowingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final followRepo = ref.watch(followRepositoryProvider);
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isOwnProfile = currentUserId == userId;
     final followingStream = followRepo.watchFollowing(userId);
 
     return AppScaffold(
@@ -49,17 +52,68 @@ class FollowingScreen extends ConsumerWidget {
 
           return ListView.builder(
             itemCount: users.length,
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(16),
             itemBuilder: (context, index) {
               final user = users[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  leading: PlayerAvatar(user: user, radius: 24),
-                  title: Text(user.name),
-                  subtitle: Text(user.email),
-                  trailing: const Icon(Icons.chevron_left),
-                  onTap: () => context.push('/profile/${user.uid}'),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: PremiumColors.border),
+                  boxShadow: PremiumShadows.sm,
+                ),
+                child: Row(
+                  children: [
+                    PlayerAvatar(user: user, radius: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.name,
+                            style: PremiumTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (user.city != null && user.city!.isNotEmpty)
+                            Text(
+                              user.city!,
+                              style: PremiumTypography.bodySmall
+                                  .copyWith(color: PremiumColors.textSecondary),
+                            )
+                          else
+                            Text(
+                              user.email,
+                              style: PremiumTypography.bodySmall
+                                  .copyWith(color: PremiumColors.textSecondary),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.message_outlined),
+                      tooltip: 'שלח הודעה',
+                      onPressed: () => _startChat(context, ref, user),
+                    ),
+                    if (isOwnProfile && currentUserId != null)
+                      IconButton(
+                        icon: const Icon(Icons.person_remove_alt_1_outlined),
+                        tooltip: 'הסר מעקב',
+                        onPressed: () => _unfollow(
+                          context,
+                          ref,
+                          currentUserId,
+                          user,
+                        ),
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new),
+                      onPressed: () => context.push('/profile/${user.uid}'),
+                    ),
+                  ],
                 ),
               );
             },
@@ -70,3 +124,71 @@ class FollowingScreen extends ConsumerWidget {
   }
 }
 
+Future<void> _startChat(
+  BuildContext context,
+  WidgetRef ref,
+  User target,
+) async {
+  final currentUserId = ref.read(currentUserIdProvider);
+  if (currentUserId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('נא להתחבר כדי לשלוח הודעה')),
+    );
+    return;
+  }
+
+  if (currentUserId == target.uid) {
+    return;
+  }
+
+  try {
+    final privateMessagesRepo = ref.read(privateMessagesRepositoryProvider);
+    final conversationId =
+        await privateMessagesRepo.getOrCreateConversation(
+      currentUserId,
+      target.uid,
+    );
+    if (context.mounted) {
+      context.go('/messages/$conversationId');
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('שגיאה בפתיחת שיחה: $e')),
+      );
+    }
+  }
+}
+
+Future<void> _unfollow(
+  BuildContext context,
+  WidgetRef ref,
+  String currentUserId,
+  User target,
+) async {
+  if (currentUserId == target.uid) return;
+
+  try {
+    await ref.read(followRepositoryProvider).unfollow(
+          currentUserId,
+          target.uid,
+        );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('הוסר מהמעקב'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('שגיאה בהסרת מעקב: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+}

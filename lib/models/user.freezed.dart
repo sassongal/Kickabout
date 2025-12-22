@@ -37,7 +37,9 @@ mixin _$User {
   DateTime get birthDate =>
       throw _privateConstructorUsedError; // ✅ Required field
   String? get favoriteTeamId =>
-      throw _privateConstructorUsedError; // ID of favorite team from Firestore
+      throw _privateConstructorUsedError; // DEPRECATED: Old field, use favoriteProTeamId instead
+  String? get favoriteProTeamId =>
+      throw _privateConstructorUsedError; // ID of favorite professional team (Israeli Premier/National League)
   String? get facebookProfileUrl => throw _privateConstructorUsedError;
   String? get instagramProfileUrl => throw _privateConstructorUsedError;
   bool get showSocialLinks =>
@@ -109,6 +111,7 @@ abstract class $UserCopyWith<$Res> {
       String? lastName,
       @TimestampConverter() DateTime birthDate,
       String? favoriteTeamId,
+      String? favoriteProTeamId,
       String? facebookProfileUrl,
       String? instagramProfileUrl,
       bool showSocialLinks,
@@ -162,6 +165,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? lastName = freezed,
     Object? birthDate = null,
     Object? favoriteTeamId = freezed,
+    Object? favoriteProTeamId = freezed,
     Object? facebookProfileUrl = freezed,
     Object? instagramProfileUrl = freezed,
     Object? showSocialLinks = null,
@@ -235,6 +239,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
       favoriteTeamId: freezed == favoriteTeamId
           ? _value.favoriteTeamId
           : favoriteTeamId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      favoriteProTeamId: freezed == favoriteProTeamId
+          ? _value.favoriteProTeamId
+          : favoriteProTeamId // ignore: cast_nullable_to_non_nullable
               as String?,
       facebookProfileUrl: freezed == facebookProfileUrl
           ? _value.facebookProfileUrl
@@ -356,6 +364,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String? lastName,
       @TimestampConverter() DateTime birthDate,
       String? favoriteTeamId,
+      String? favoriteProTeamId,
       String? facebookProfileUrl,
       String? instagramProfileUrl,
       bool showSocialLinks,
@@ -406,6 +415,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? lastName = freezed,
     Object? birthDate = null,
     Object? favoriteTeamId = freezed,
+    Object? favoriteProTeamId = freezed,
     Object? facebookProfileUrl = freezed,
     Object? instagramProfileUrl = freezed,
     Object? showSocialLinks = null,
@@ -479,6 +489,10 @@ class __$$UserImplCopyWithImpl<$Res>
       favoriteTeamId: freezed == favoriteTeamId
           ? _value.favoriteTeamId
           : favoriteTeamId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      favoriteProTeamId: freezed == favoriteProTeamId
+          ? _value.favoriteProTeamId
+          : favoriteProTeamId // ignore: cast_nullable_to_non_nullable
               as String?,
       facebookProfileUrl: freezed == facebookProfileUrl
           ? _value.facebookProfileUrl
@@ -596,6 +610,7 @@ class _$UserImpl implements _User {
       this.lastName,
       @TimestampConverter() required this.birthDate,
       this.favoriteTeamId,
+      this.favoriteProTeamId,
       this.facebookProfileUrl,
       this.instagramProfileUrl,
       this.showSocialLinks = false,
@@ -675,7 +690,10 @@ class _$UserImpl implements _User {
 // ✅ Required field
   @override
   final String? favoriteTeamId;
-// ID of favorite team from Firestore
+// DEPRECATED: Old field, use favoriteProTeamId instead
+  @override
+  final String? favoriteProTeamId;
+// ID of favorite professional team (Israeli Premier/National League)
   @override
   final String? facebookProfileUrl;
   @override
@@ -791,7 +809,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, showSocialLinks: $showSocialLinks, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, notificationPreferences: $notificationPreferences, blockedUserIds: $blockedUserIds)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, favoriteProTeamId: $favoriteProTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, showSocialLinks: $showSocialLinks, availabilityStatus: $availabilityStatus, isActive: $isActive, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, notificationPreferences: $notificationPreferences, blockedUserIds: $blockedUserIds)';
   }
 
   @override
@@ -819,6 +837,8 @@ class _$UserImpl implements _User {
                 other.birthDate == birthDate) &&
             (identical(other.favoriteTeamId, favoriteTeamId) ||
                 other.favoriteTeamId == favoriteTeamId) &&
+            (identical(other.favoriteProTeamId, favoriteProTeamId) ||
+                other.favoriteProTeamId == favoriteProTeamId) &&
             (identical(other.facebookProfileUrl, facebookProfileUrl) ||
                 other.facebookProfileUrl == facebookProfileUrl) &&
             (identical(other.instagramProfileUrl, instagramProfileUrl) ||
@@ -877,6 +897,7 @@ class _$UserImpl implements _User {
         lastName,
         birthDate,
         favoriteTeamId,
+        favoriteProTeamId,
         facebookProfileUrl,
         instagramProfileUrl,
         showSocialLinks,
@@ -933,6 +954,7 @@ abstract class _User implements User {
       final String? lastName,
       @TimestampConverter() required final DateTime birthDate,
       final String? favoriteTeamId,
+      final String? favoriteProTeamId,
       final String? facebookProfileUrl,
       final String? instagramProfileUrl,
       final bool showSocialLinks,
@@ -986,7 +1008,11 @@ abstract class _User implements User {
   @TimestampConverter()
   DateTime get birthDate; // ✅ Required field
   @override
-  String? get favoriteTeamId; // ID of favorite team from Firestore
+  String?
+      get favoriteTeamId; // DEPRECATED: Old field, use favoriteProTeamId instead
+  @override
+  String?
+      get favoriteProTeamId; // ID of favorite professional team (Israeli Premier/National League)
   @override
   String? get facebookProfileUrl;
   @override

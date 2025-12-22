@@ -521,13 +521,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get joinHubButton => 'Join Hub';
 
   @override
-  String get statusUpdatedAvailable => 'Status updated: Available for games';
-
-  @override
-  String get statusUpdatedNotAvailable =>
-      'Status updated: Not available for games';
-
-  @override
   String statusUpdateError(String error) {
     return 'Error updating status: $error';
   }

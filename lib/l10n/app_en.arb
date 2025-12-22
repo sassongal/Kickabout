@@ -419,14 +419,6 @@
   "@sendJoinRequest": {},
   "joinHubButton": "Join Hub",
   "@joinHubButton": {},
-  "statusUpdatedAvailable": "Status updated: Available for games",
-  "@statusUpdatedAvailable": {
-    "description": "Snackbar message when user sets availability to available"
-  },
-  "statusUpdatedNotAvailable": "Status updated: Not available for games",
-  "@statusUpdatedNotAvailable": {
-    "description": "Snackbar message when user sets availability to not available"
-  },
   "statusUpdateError": "Error updating status: {error}",
   "@statusUpdateError": {
     "description": "Error message when status update fails",

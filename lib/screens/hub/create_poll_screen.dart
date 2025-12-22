@@ -5,6 +5,7 @@ import 'package:kattrick/models/poll.dart';
 import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/premium/gradient_button.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Screen for creating a new poll in a Hub
 class CreatePollScreen extends ConsumerStatefulWidget {
@@ -181,10 +182,15 @@ class _CreatePollScreenState extends ConsumerState<CreatePollScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+        leading: AppBarHomeLogo(showBackButton: canPop),
         title: const Text('יצירת סקר חדש'),
         elevation: 0,
+        automaticallyImplyLeading: false,
       ),
       body: Form(
         key: _formKey,
@@ -416,4 +422,3 @@ class _CreatePollScreenState extends ConsumerState<CreatePollScreen> {
     );
   }
 }
-

@@ -1,143 +1,172 @@
-import 'dart:convert';
-import 'dart:math';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/player_stats.dart';
+import 'package:kattrick/services/firestore_paths.dart';
 
+/// Service for managing player game statistics.
+///
+/// IMPORTANT: This service manages OBJECTIVE game logs only (goals, assists, MVP).
+/// For skill ratings used in team balancing, use HubMember.managerRating instead.
+///
+/// Stats are stored in Firestore at:
+/// /users/{userId}/stats/{gameId}
 class PlayerStatsService {
-  static const String _playerStatsKey = 'player_stats';
-  
-  Future<List<PlayerStats>> getAllPlayerStats() async {
-    final prefs = await SharedPreferences.getInstance();
-    final statsJson = prefs.getString(_playerStatsKey);
-    
-    if (statsJson == null) {
-      // Return sample stats for demo
-      return _getSamplePlayerStats();
-    }
-    
-    final statsList = jsonDecode(statsJson) as List;
-    return statsList.map((json) => PlayerStats.fromJson(json)).toList();
-  }
-  
+  final FirebaseFirestore _firestore;
+
+  PlayerStatsService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  /// Get all game stats for a player
   Future<List<PlayerStats>> getPlayerStats(String playerId) async {
-    final allStats = await getAllPlayerStats();
-    return allStats.where((stats) => stats.playerId == playerId).toList();
+    try {
+      final snapshot = await _firestore
+          .doc(FirestorePaths.user(playerId))
+          .collection('stats')
+          .orderBy('gameDate', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => PlayerStats.fromJson({
+                ...doc.data(),
+                'playerId': playerId,
+                'gameId': doc.id,
+              }))
+          .toList();
+    } catch (e) {
+      // Return empty list on error (player may not have stats yet)
+      return [];
+    }
   }
-  
+
+  /// Get stats for a specific game
+  Future<PlayerStats?> getPlayerStatsForGame(
+    String playerId,
+    String gameId,
+  ) async {
+    try {
+      final doc = await _firestore
+          .doc(FirestorePaths.user(playerId))
+          .collection('stats')
+          .doc(gameId)
+          .get();
+
+      if (!doc.exists) return null;
+
+      return PlayerStats.fromJson({
+        ...doc.data()!,
+        'playerId': playerId,
+        'gameId': gameId,
+      });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get the most recent game stats for a player
   Future<PlayerStats?> getLatestPlayerStats(String playerId) async {
-    final playerStats = await getPlayerStats(playerId);
-    if (playerStats.isEmpty) return null;
-    
-    // Sort by game date (most recent first)
-    playerStats.sort((a, b) {
-      final aDate = a.gameDate ?? DateTime.now();
-      final bDate = b.gameDate ?? DateTime.now();
-      return bDate.compareTo(aDate);
-    });
-    
-    return playerStats.first;
-  }
-  
-  Future<void> savePlayerStats(List<PlayerStats> stats) async {
-    final prefs = await SharedPreferences.getInstance();
-    final statsJson = jsonEncode(stats.map((s) => s.toJson()).toList());
-    await prefs.setString(_playerStatsKey, statsJson);
-  }
-  
-  Future<void> addPlayerStats(PlayerStats stats) async {
-    final allStats = await getAllPlayerStats();
-    allStats.add(stats);
-    await savePlayerStats(allStats);
-  }
-  
-  Future<void> updatePlayerStats(PlayerStats updatedStats) async {
-    final allStats = await getAllPlayerStats();
-    final index = allStats.indexWhere((s) => 
-        s.playerId == updatedStats.playerId && s.gameId == updatedStats.gameId);
-    
-    if (index != -1) {
-      allStats[index] = updatedStats;
-      await savePlayerStats(allStats);
+    try {
+      final snapshot = await _firestore
+          .doc(FirestorePaths.user(playerId))
+          .collection('stats')
+          .orderBy('gameDate', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+
+      final doc = snapshot.docs.first;
+      return PlayerStats.fromJson({
+        ...doc.data(),
+        'playerId': playerId,
+        'gameId': doc.id,
+      });
+    } catch (e) {
+      return null;
     }
   }
-  
-  Future<Map<String, double>> getLeagueAverages() async {
-    final allStats = await getAllPlayerStats();
-    if (allStats.isEmpty) {
-      return Map.fromIterables(
-        PlayerStats.attributeNames,
-        List.filled(PlayerStats.attributeNames.length, 5.0),
-      );
-    }
-    
-    final totals = List.filled(PlayerStats.attributeNames.length, 0.0);
-    
-    for (final stats in allStats) {
-      final attributes = stats.attributesList;
-      for (int i = 0; i < attributes.length; i++) {
-        totals[i] += attributes[i];
-      }
-    }
-    
-    final averages = totals.map((total) => total / allStats.length).toList();
-    return Map.fromIterables(PlayerStats.attributeNames, averages);
+
+  /// Save or update player stats for a game
+  ///
+  /// This should typically be called by Cloud Functions after game completion.
+  /// Only Hub Managers should be able to manually log stats via UI.
+  Future<void> savePlayerStats(PlayerStats stats) async {
+    final data = stats.toJson();
+    // Remove playerId and gameId as they're part of the document path
+    data.remove('playerId');
+    data.remove('gameId');
+
+    await _firestore
+        .doc(FirestorePaths.user(stats.playerId))
+        .collection('stats')
+        .doc(stats.gameId)
+        .set(data, SetOptions(merge: true));
   }
-  
-  List<PlayerStats> _getSamplePlayerStats() {
-    final random = Random(42); // Fixed seed for consistent demo data
-    final now = DateTime.now();
-    final players = ['1', '2', '3', '4', '5', '6'];
-    final gameIds = ['game_1', 'game_2', 'game_3', 'game_4', 'game_5'];
-    
-    final stats = <PlayerStats>[];
-    
-    // Generate stats for each player across multiple games
-    for (final playerId in players) {
-      for (int gameIndex = 0; gameIndex < gameIds.length; gameIndex++) {
-        final gameId = gameIds[gameIndex];
-        final gameDate = now.subtract(Duration(days: gameIndex * 7 + random.nextInt(3)));
-        
-        // Create realistic stats based on player ID and position
-        final playerStats = _generateRealisticStats(playerId, gameId, gameDate, random);
-        stats.add(playerStats);
-      }
+
+  /// Batch save stats for multiple players (e.g., after game completion)
+  Future<void> batchSavePlayerStats(List<PlayerStats> statsList) async {
+    final batch = _firestore.batch();
+
+    for (final stats in statsList) {
+      final data = stats.toJson();
+      data.remove('playerId');
+      data.remove('gameId');
+
+      final ref = _firestore
+          .doc(FirestorePaths.user(stats.playerId))
+          .collection('stats')
+          .doc(stats.gameId);
+
+      batch.set(ref, data, SetOptions(merge: true));
     }
-    
-    return stats;
+
+    await batch.commit();
   }
-  
-  PlayerStats _generateRealisticStats(String playerId, String gameId, DateTime gameDate, Random random) {
-    // Base stats influenced by player type
-    final Map<String, List<double>> playerProfiles = {
-      '1': [6.5, 7.0, 8.5, 8.0, 7.5, 7.0, 7.5, 6.8], // Alex - Forward
-      '2': [7.0, 8.5, 7.0, 7.5, 7.0, 8.0, 8.5, 8.2], // Maria - Midfielder
-      '3': [8.5, 7.0, 5.5, 6.0, 8.0, 7.5, 8.0, 7.8], // David - Defender
-      '4': [8.0, 6.5, 4.0, 5.0, 8.5, 7.5, 7.0, 8.0], // Emma - Goalkeeper
-      '5': [5.0, 6.0, 8.0, 9.0, 7.0, 6.0, 6.5, 6.2], // Carlos - Forward
-      '6': [6.5, 8.0, 6.5, 7.0, 6.5, 7.5, 8.0, 7.5], // Sarah - Midfielder
+
+  /// Delete stats for a specific game (e.g., when rolling back game result)
+  Future<void> deletePlayerStats(String playerId, String gameId) async {
+    await _firestore
+        .doc(FirestorePaths.user(playerId))
+        .collection('stats')
+        .doc(gameId)
+        .delete();
+  }
+
+  /// Get aggregate stats for a player (total goals, assists, MVP count)
+  ///
+  /// This calculates aggregates from all games in Firestore.
+  /// For better performance, consider storing aggregates in a separate document
+  /// that's updated by Cloud Functions.
+  Future<Map<String, int>> getAggregateStats(String playerId) async {
+    final allStats = await getPlayerStats(playerId);
+
+    final totalGoals = allStats.fold<int>(0, (total, stats) => total + stats.goals);
+    final totalAssists =
+        allStats.fold<int>(0, (total, stats) => total + stats.assists);
+    final mvpCount =
+        allStats.where((stats) => stats.isMvp).length;
+    final gamesPlayed = allStats.length;
+
+    return {
+      'totalGoals': totalGoals,
+      'totalAssists': totalAssists,
+      'mvpCount': mvpCount,
+      'gamesPlayed': gamesPlayed,
+      'totalContribution': totalGoals + totalAssists,
     };
-    
-    final baseStats = playerProfiles[playerId] ?? List.filled(8, 6.0);
-    
-    // Add some random variation (±1.5 points)
-    final variableStats = baseStats.map((base) {
-      final variation = (random.nextDouble() - 0.5) * 3.0;
-      return (base + variation).clamp(1.0, 10.0);
-    }).toList();
-    
-    return PlayerStats(
-      playerId: playerId,
-      gameId: gameId,
-      defense: variableStats[0],
-      passing: variableStats[1],
-      shooting: variableStats[2],
-      dribbling: variableStats[3],
-      physical: variableStats[4],
-      leadership: variableStats[5],
-      teamPlay: variableStats[6],
-      consistency: variableStats[7],
-      gameDate: gameDate,
-      isVerified: random.nextBool(),
-    );
+  }
+
+  /// Stream player stats for real-time updates
+  Stream<List<PlayerStats>> streamPlayerStats(String playerId) {
+    return _firestore
+        .doc(FirestorePaths.user(playerId))
+        .collection('stats')
+        .orderBy('gameDate', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => PlayerStats.fromJson({
+                  ...doc.data(),
+                  'playerId': playerId,
+                  'gameId': doc.id,
+                }))
+            .toList());
   }
 }

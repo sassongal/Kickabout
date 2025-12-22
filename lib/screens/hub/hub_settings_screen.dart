@@ -149,66 +149,6 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('תמונת אייקון של ההאב',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold)),
-                              if (_isUploadingHero)
-                                const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: KineticLoadingAnimation(size: 20),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: AspectRatio(
-                              aspectRatio: 1,
-                              child: hub.profileImageUrl != null &&
-                                      hub.profileImageUrl!.isNotEmpty
-                                  ? Image.network(
-                                      hub.profileImageUrl!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        color: Colors.grey[200],
-                                        child: const Icon(
-                                            Icons.image_not_supported),
-                                      ),
-                                    )
-                                  : Container(
-                                      color: Colors.grey[200],
-                                      child: const Center(
-                                        child: Icon(Icons.photo, size: 48),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton.icon(
-                            onPressed: _isUploadingHero
-                                ? null
-                                : () => _uploadHeroImage(hub),
-                            icon: const Icon(Icons.upload),
-                            label: const Text('העלה תמונה'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
                   // Hub Banner Selection
                   Card(
                     child: Padding(

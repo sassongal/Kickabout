@@ -516,12 +516,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get joinHubButton => 'הצטרף להוב';
 
   @override
-  String get statusUpdatedAvailable => 'סטטוס עודכן: זמין למשחקים';
-
-  @override
-  String get statusUpdatedNotAvailable => 'סטטוס עודכן: לא זמין למשחקים';
-
-  @override
   String statusUpdateError(String error) {
     return 'שגיאה בעדכון סטטוס: $error';
   }

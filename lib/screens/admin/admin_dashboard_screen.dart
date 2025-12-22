@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/utils/venue_seeder_service.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Admin Dashboard Screen - Central hub for admin operations
 class AdminDashboardScreen extends ConsumerStatefulWidget {
@@ -18,6 +22,8 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   bool _isSeeding = false;
   String _seedingStatus = '';
+  bool _isForcingLocation = false;
+  String _forceLocationStatus = '';
 
   Future<void> _seedVenues() async {
     setState(() {
@@ -79,6 +85,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               icon: Icons.science,
               color: Colors.blue,
               onTap: () => context.push('/admin/generate-dummy-data'),
+            ),
+            const SizedBox(height: 16),
+
+            _buildAdminTile(
+              title: 'Force Haifa Location',
+              subtitle: 'קבע את מיקום המשתמש המחובר לחיפה (כלי Dev)',
+              icon: Icons.location_city,
+              color: Colors.indigo,
+              isLoading: _isForcingLocation,
+              statusText: _forceLocationStatus,
+              onTap: _isForcingLocation ? null : _forceHaifaLocation,
             ),
             const SizedBox(height: 16),
 
@@ -213,5 +230,66 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
       ),
     );
+  }
+
+  /// Force Haifa location for emulator testing (admin console)
+  Future<void> _forceHaifaLocation() async {
+    final currentUser =
+        firebase_auth.FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      SnackbarHelper.showError(
+          context, 'לא נמצא משתמש מחובר כדי לעדכן לו מיקום');
+      return;
+    }
+
+    setState(() {
+      _isForcingLocation = true;
+      _forceLocationStatus = 'מעדכן מיקום...';
+    });
+
+    try {
+      const double haifaLat = 32.7940;
+      const double haifaLng = 34.9896;
+
+      final firestore = FirebaseFirestore.instance;
+      final userRef = firestore.collection('users').doc(currentUser.uid);
+
+      final locationService = ref.read(locationServiceProvider);
+      final geohash = locationService.generateGeohash(haifaLat, haifaLng);
+
+      await userRef.update({
+        'location': GeoPoint(haifaLat, haifaLng),
+        'geohash': geohash,
+        'city': 'חיפה',
+        'region': 'צפון',
+        'manualLocationCity': 'חיפה',
+        'hasManualLocation': true,
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('manual_location_city', 'חיפה');
+      await prefs.setBool('location_permission_skipped', true);
+
+      if (mounted) {
+        setState(() {
+          _forceLocationStatus = 'בוצע בהצלחה';
+        });
+        SnackbarHelper.showSuccess(context, 'מיקום עודכן לחיפה (Dev Mode)');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _forceLocationStatus = 'שגיאה: $e';
+        });
+        SnackbarHelper.showError(
+            context, 'שגיאה בעדכון מיקום: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isForcingLocation = false;
+        });
+      }
+    }
   }
 }

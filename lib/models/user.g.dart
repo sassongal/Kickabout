@@ -20,6 +20,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       birthDate:
           const TimestampConverter().fromJson(json['birthDate'] as Object),
       favoriteTeamId: json['favoriteTeamId'] as String?,
+      favoriteProTeamId: json['favoriteProTeamId'] as String?,
       facebookProfileUrl: json['facebookProfileUrl'] as String?,
       instagramProfileUrl: json['instagramProfileUrl'] as String?,
       showSocialLinks: json['showSocialLinks'] as bool? ?? false,
@@ -91,6 +92,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'lastName': instance.lastName,
       'birthDate': const TimestampConverter().toJson(instance.birthDate),
       'favoriteTeamId': instance.favoriteTeamId,
+      'favoriteProTeamId': instance.favoriteProTeamId,
       'facebookProfileUrl': instance.facebookProfileUrl,
       'instagramProfileUrl': instance.instagramProfileUrl,
       'showSocialLinks': instance.showSocialLinks,

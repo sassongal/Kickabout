@@ -138,12 +138,7 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
 
             return AppScaffold(
               title: hub.name,
-              floatingActionButton: hubPermissions != null &&
-                      (hubPermissions.canCreateGames ||
-                          hubPermissions.canInvitePlayers)
-                  ? HubAdminSpeedDial(
-                      hubId: widget.hubId, permissions: hubPermissions)
-                  : null,
+              floatingActionButton: null,
               body: NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
                   return [

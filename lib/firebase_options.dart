@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDzz0lNtzpqFPcZalk3OIxjdsSuq-F8dFI',
-    appId: '1:731836758075:android:0dde0fad28e8c51003441e',
+    appId: '1:731836758075:android:3ff3d5b4ac20d84b03441e',
     messagingSenderId: '731836758075',
     projectId: 'kickabout-ddc06',
     storageBucket: 'kickabout-ddc06.firebasestorage.app',
@@ -66,13 +66,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyA50hudmE3ifuRuQvYT1WaSTE_mYA72SuU',
-    appId: '1:731836758075:ios:652bbc8c7695854403441e',
+    appId: '1:731836758075:ios:abddc1633e88e3c603441e',
     messagingSenderId: '731836758075',
     projectId: 'kickabout-ddc06',
     storageBucket: 'kickabout-ddc06.firebasestorage.app',
     androidClientId: '731836758075-d9maq17n6a05a38l4uc6c70vt36bml7b.apps.googleusercontent.com',
-    iosClientId: '731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com',
-    iosBundleId: 'com.mycompany.CounterApp',
+    iosClientId: '731836758075-jctc0uafq59bbh72ihlmvmmo4qtvhh9l.apps.googleusercontent.com',
+    iosBundleId: 'com.joyatech.kattrick',
   );
 
 }

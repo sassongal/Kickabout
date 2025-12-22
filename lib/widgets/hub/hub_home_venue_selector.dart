@@ -5,6 +5,8 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/venues_repository.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
+import 'package:kattrick/utils/city_utils.dart';
 
 /// Home Venue Selector - allows managers to select the hub's home field
 class HubHomeVenueSelector extends ConsumerWidget {
@@ -68,36 +70,61 @@ class _HubHomeVenueSelectorContentState
   }
 
   Future<void> _selectHomeVenue() async {
-    setState(() => _isLoading = true);
-
-    try {
-      // Show venue selection dialog
-      final result = await showDialog<Venue>(
-        context: context,
-        builder: (context) => _VenueSelectionDialog(
-          city: widget.hub.city ?? '',
-          venues: [],
-          venuesRepo: widget.venuesRepo,
-        ),
-      );
-
-      if (result != null && mounted) {
-        await _handleVenueSelection(result);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('שגיאה בעדכון מגרש הבית: $e'),
-            backgroundColor: Colors.red,
+    showModalBottomSheet<Venue>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'בחר מגרש בית',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  SmartVenueSearchField(
+                    onVenueSelected: (venue) {
+                      Navigator.pop(context, venue);
+                    },
+                    label: 'חפש או בחר ממפה',
+                    hint: 'שם מגרש, כתובת או גלילה במפה',
+                    hubId: widget.hubId,
+                    filterCity: widget.hub.city,
+                  ),
+                ],
+              ),
+            ),
           ),
         );
+      },
+    ).then((venue) async {
+      if (venue == null) return;
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+      try {
+        await _handleVenueSelection(venue);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('שגיאה בעדכון מגרש הבית: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+    });
   }
 
   Future<void> _handleVenueSelection(Venue result) async {
@@ -106,6 +133,17 @@ class _HubHomeVenueSelectorContentState
     debugPrint('🏟️ Setting home venue: ${result.name} (${result.venueId})');
 
     await hubsRepo.setHubPrimaryVenue(widget.hubId, result.venueId);
+
+    // If hub city is empty, populate from venue city (and region)
+    if ((widget.hub.city == null || widget.hub.city!.isEmpty) &&
+        result.city != null &&
+        result.city!.isNotEmpty) {
+      final region = CityUtils.getRegionForCity(result.city!);
+      await hubsRepo.updateHub(widget.hubId, {
+        'city': result.city,
+        'region': region,
+      });
+    }
 
     debugPrint('✅ Home venue saved successfully');
 

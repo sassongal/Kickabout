@@ -1,17 +1,23 @@
+import 'dart:ui' as ui show TextDirection;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
-import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/data/proteams_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/gamification/gamification_visuals.dart';
+import 'package:kattrick/widgets/optimized_image.dart';
+import 'package:kattrick/widgets/street_baller_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 // ignore_for_file: unused_element
 
@@ -33,12 +39,13 @@ class PlayerProfileScreen extends ConsumerStatefulWidget {
 class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isUploadingPhoto = false;
 
   @override
   void initState() {
     super.initState();
-    // Simplified: 3 tabs - Overview, Games, Hubs
-    _tabController = TabController(length: 3, vsync: this);
+    // Tabs: כללי, סקירה, משחקים, האבים
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -58,6 +65,90 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
       return user.displayName!;
     }
     return 'שחקן';
+  }
+
+  Future<void> _pickAndUploadPhoto(User user) async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId != user.uid) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('בחר מגלריה'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('צלם תמונה'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 90,
+      );
+      if (image == null) return;
+
+      final sizeBytes = await image.length();
+      if (sizeBytes > 12 * 1024 * 1024) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('הקובץ גדול מדי (מעל 12MB). נסה תמונה קלה יותר.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() => _isUploadingPhoto = true);
+
+      final storageService = ref.read(storageServiceProvider);
+      final photoUrl =
+          await storageService.uploadProfilePhoto(user.uid, image);
+      await ref.read(usersRepositoryProvider).updateUser(user.uid, {
+        'photoUrl': photoUrl,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('התמונה עודכנה בהצלחה'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה בהעלאת תמונה: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
   }
 
   @override
@@ -176,24 +267,6 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
 
           return Column(
             children: [
-              // Anonymous User Banner (if viewing own profile as anonymous)
-              if (isOwnProfile && isAnonymous) _buildAnonymousBanner(context),
-
-              // Hero Section
-              _buildHeroSection(
-                context,
-                user,
-                isOwnProfile,
-                currentUserId,
-                followRepo,
-                usersRepo,
-                isFollowingStream,
-                followingCountStream,
-                followersCountStream,
-                isAnonymous,
-              ),
-
-              // Tab Bar (Simplified: Only Overview and Games)
               Container(
                 color: PremiumColors.surface,
                 child: TabBar(
@@ -202,18 +275,29 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                   unselectedLabelColor: PremiumColors.textSecondary,
                   indicatorColor: PremiumColors.primary,
                   tabs: const [
+                    Tab(text: 'כללי', icon: Icon(Icons.person_outline)),
                     Tab(text: 'סקירה', icon: Icon(Icons.dashboard)),
                     Tab(text: 'משחקים', icon: Icon(Icons.sports_soccer)),
                     Tab(text: 'האבים', icon: Icon(Icons.group_work)),
                   ],
                 ),
               ),
-
-              // Tab Content
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
                   children: [
+                    _buildGeneralTab(
+                      context,
+                      user,
+                      isOwnProfile,
+                      currentUserId,
+                      followRepo,
+                      usersRepo,
+                      isFollowingStream,
+                      followingCountStream,
+                      followersCountStream,
+                      isAnonymous,
+                    ),
                     _buildOverviewTab(
                       context,
                       user,
@@ -235,6 +319,40 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildGeneralTab(
+    BuildContext context,
+    User user,
+    bool isOwnProfile,
+    String? currentUserId,
+    FollowRepository followRepo,
+    UsersRepository usersRepo,
+    Stream<bool> isFollowingStream,
+    Stream<int> followingCountStream,
+    Stream<int> followersCountStream,
+    bool isAnonymous,
+  ) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        children: [
+          if (isOwnProfile && isAnonymous) _buildAnonymousBanner(context),
+          _buildHeroSection(
+            context,
+            user,
+            isOwnProfile,
+            currentUserId,
+            followRepo,
+            usersRepo,
+            isFollowingStream,
+            followingCountStream,
+            followersCountStream,
+            isAnonymous,
+          ),
+        ],
       ),
     );
   }
@@ -317,144 +435,347 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     bool isAnonymous,
   ) {
     final privacy = user.privacySettings;
+    final avatarSize = 96.0;
+    final hasPhoto = user.photoUrl != null && user.photoUrl!.isNotEmpty;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: PremiumColors.primaryGradient,
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              // Profile Photo & Basic Info
-              Row(
-                children: [
-                  // Profile Photo
-                  Hero(
-                    tag: 'profile_${user.uid}',
-                    child: Stack(
-                      children: [
-                        PlayerAvatar(
-                          user: user,
-                          radius: 50,
-                          clickable: false,
+    final favoriteTeamTile = user.favoriteProTeamId == null
+        ? _buildProfileInfoTile(
+            icon: Icons.emoji_events_outlined,
+            label: 'קבוצה אהודה',
+            value: const Text('לא נבחרה'),
+            onTap: isOwnProfile
+                ? () => _openFavoriteTeamPicker(context, user)
+                : null,
+          )
+        : FutureBuilder<ProTeam?>(
+            future: ref
+                .read(proTeamsRepositoryProvider)
+                .getTeam(user.favoriteProTeamId!),
+            builder: (context, snapshot) {
+              final team = snapshot.data;
+              if (team == null) {
+                return _buildProfileInfoTile(
+                  icon: Icons.emoji_events_outlined,
+                  label: 'קבוצה אהודה',
+                  value: const Text('לא נבחרה'),
+                  onTap: isOwnProfile
+                      ? () => _openFavoriteTeamPicker(context, user)
+                      : null,
+                );
+              }
+              return _buildProfileInfoTile(
+                icon: Icons.emoji_events_outlined,
+                label: 'קבוצה אהודה',
+                value: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: CachedNetworkImage(
+                        imageUrl: team.logoUrl,
+                        width: 20,
+                        height: 20,
+                        fit: BoxFit.contain,
+                        errorWidget: (context, url, error) => const Icon(
+                          Icons.sports_soccer,
+                          size: 18,
+                          color: PremiumColors.textSecondary,
                         ),
-                        Positioned(
-                          right: -5,
-                          bottom: -5,
-                          child: StreamBuilder<Gamification?>(
-                            stream: ref
-                                .read(gamificationRepositoryProvider)
-                                .watchGamification(user.uid),
-                            builder: (context, snapshot) {
-                              final level = snapshot.data?.level ?? 1;
-                              return LevelIcon(level: level, size: 45);
-                            },
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        team.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                onTap: isOwnProfile
+                    ? () => _openFavoriteTeamPicker(context, user)
+                    : null,
+              );
+            },
+          );
 
-                  // Name & Position
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    final infoTiles = <Widget>[
+      if (!(privacy['hideCity'] ?? false))
+        _buildProfileInfoTile(
+          icon: Icons.location_on_outlined,
+          label: 'עיר',
+          value: Text(
+            user.city != null && user.city!.isNotEmpty
+                ? user.city!
+                : 'עיר לא עודכנה',
+          ),
+        ),
+      _buildProfileInfoTile(
+        icon: Icons.map_outlined,
+        label: 'אזור',
+        value: Text(
+          user.region != null && user.region!.isNotEmpty
+              ? user.region!
+              : 'אזור לא עודכן',
+        ),
+      ),
+      if (!(privacy['hidePhone'] ?? false))
+        _buildProfileInfoTile(
+          icon: Icons.phone_outlined,
+          label: 'טלפון',
+          value: Text(
+            user.phoneNumber != null && user.phoneNumber!.isNotEmpty
+                ? user.phoneNumber!
+                : 'טלפון לא עודכן',
+            textDirection: ui.TextDirection.ltr,
+          ),
+        ),
+      if (!(privacy['hideEmail'] ?? false))
+        _buildProfileInfoTile(
+          icon: Icons.email_outlined,
+          label: 'אימייל',
+          value: Text(
+            user.email,
+            textDirection: ui.TextDirection.ltr,
+          ),
+        ),
+      favoriteTeamTile,
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: PremiumCard(
+        showGlow: true,
+        glassmorphism: true,
+        glowColor: PremiumColors.accent,
+        elevation: PremiumCardElevation.lg,
+        padding: const EdgeInsets.all(16),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: -40,
+              top: -30,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: PremiumColors.accent.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              right: -50,
+              bottom: -40,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: PremiumColors.secondary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
                       children: [
-                        Text(
-                          _displayName(user),
-                          style: PremiumTypography.heading2.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Position & Age Group
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            // Preferred Position
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                user.preferredPosition,
-                                style:
-                                    PremiumTypography.labelMedium.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            // Age Group
-                            if (user.ageGroup != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.cake_outlined,
-                                      size: 14,
-                                      color: Colors.white,
+                        Hero(
+                          tag: 'profile_${user.uid}',
+                          child: GestureDetector(
+                            onTap: isOwnProfile && !isAnonymous && !_isUploadingPhoto
+                                ? () => _pickAndUploadPhoto(user)
+                                : null,
+                            child: SizedBox(
+                              width: avatarSize,
+                              height: avatarSize,
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: ClipOval(
+                                      child: hasPhoto
+                                          ? OptimizedImage(
+                                              imageUrl: user.photoUrl!,
+                                              width: avatarSize,
+                                              height: avatarSize,
+                                              fit: BoxFit.cover,
+                                              errorWidget: StreetBallerAvatar(
+                                                size: avatarSize,
+                                              ),
+                                            )
+                                          : StreetBallerAvatar(size: avatarSize),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      user.ageGroup!.displayNameHe,
-                                      style: PremiumTypography.labelMedium
-                                          .copyWith(
-                                        color: Colors.white,
+                                  ),
+                                  if (_isUploadingPhoto)
+                                    Positioned.fill(
+                                      child: ClipOval(
+                                        child: Container(
+                                          color: Colors.black.withValues(alpha: 0.35),
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  if (isOwnProfile && !isAnonymous && !_isUploadingPhoto)
+                                    Positioned(
+                                      bottom: 6,
+                                      right: 6,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: PremiumColors.primary,
+                                          shape: BoxShape.circle,
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Colors.black26,
+                                              blurRadius: 6,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt_outlined,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
-                          ],
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 8),
+                        Text(
+                          'מומלץ להעלות תמונת פורטרט',
+                          style: PremiumTypography.bodySmall.copyWith(
+                            color: PremiumColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Message Button (if not own profile)
-              if (!isOwnProfile)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: isAnonymous
-                        ? OutlinedButton.icon(
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _displayName(user),
+                            style: PremiumTypography.heading2.copyWith(
+                              color: PremiumColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildProfilePill(
+                                icon: Icons.sports_soccer,
+                                label: user.preferredPosition,
+                              ),
+                              if (user.ageGroup != null)
+                                _buildProfilePill(
+                                  icon: Icons.cake_outlined,
+                                  label: user.ageGroup!.displayNameHe,
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    _buildProfileStatTile(
+                      label: 'משחקים',
+                      value: Text('${user.totalParticipations}'),
+                    ),
+                    _buildProfileStatDivider(),
+                    _buildProfileStatTile(
+                      label: 'עוקבים',
+                      value: StreamBuilder<int>(
+                        stream: followersCountStream,
+                        builder: (context, snapshot) =>
+                            Text('${snapshot.data ?? 0}'),
+                      ),
+                      onTap: () => context.push(
+                        '/profile/${widget.playerId}/followers',
+                      ),
+                    ),
+                    _buildProfileStatDivider(),
+                    _buildProfileStatTile(
+                      label: 'עוקב',
+                      value: StreamBuilder<int>(
+                        stream: followingCountStream,
+                        builder: (context, snapshot) =>
+                            Text('${snapshot.data ?? 0}'),
+                      ),
+                      onTap: () => context.push(
+                        '/profile/${widget.playerId}/following',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final tileWidth = constraints.maxWidth >= 520
+                        ? (constraints.maxWidth - 12) / 2
+                        : constraints.maxWidth;
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: infoTiles
+                          .map(
+                            (tile) => SizedBox(
+                              width: tileWidth,
+                              child: tile,
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
+                ),
+                if (!isOwnProfile) ...[
+                  const SizedBox(height: 16),
+                  if (isAnonymous)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
                             onPressed: () => context.push('/login'),
                             icon: const Icon(Icons.login),
                             label: const Text('התחבר כדי לשלוח הודעה'),
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.2),
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          )
-                        : ElevatedButton.icon(
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => context.push('/login'),
+                            icon: const Icon(Icons.login),
+                            label: const Text('התחבר כדי לעקוב'),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
                             onPressed: () async {
                               if (currentUserId == null || isAnonymous) {
                                 if (context.mounted) {
@@ -497,229 +818,270 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: PremiumColors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: StreamBuilder<bool>(
+                            stream: isFollowingStream,
+                            builder: (context, snapshot) {
+                              final isFollowing = snapshot.data ?? false;
+                              return ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (currentUserId == null || isAnonymous) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'נא להתחבר כדי לעקוב אחרי שחקנים'),
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                  try {
+                                    if (isFollowing) {
+                                      await followRepo.unfollow(
+                                        currentUserId,
+                                        widget.playerId,
+                                      );
+                                    } else {
+                                      await followRepo.follow(
+                                        currentUserId,
+                                        widget.playerId,
+                                      );
+
+                                      try {
+                                        final pushIntegration = ref.read(
+                                          pushNotificationIntegrationServiceProvider,
+                                        );
+                                        final currentUser =
+                                            await usersRepo
+                                                .getUser(currentUserId);
+
+                                        await pushIntegration.notifyNewFollow(
+                                          followerName:
+                                              currentUser?.name ?? 'מישהו',
+                                          followingId: widget.playerId,
+                                        );
+                                      } catch (e) {
+                                        debugPrint(
+                                            'Failed to send follow notification: $e');
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text('שגיאה: $e'),
+                                          backgroundColor: PremiumColors.error,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: Icon(
+                                  isFollowing
+                                      ? Icons.person_remove
+                                      : Icons.person_add,
+                                ),
+                                label:
+                                    Text(isFollowing ? 'ביטול עקיבה' : 'עקוב'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isFollowing
+                                      ? PremiumColors.error
+                                      : Colors.white,
+                                  foregroundColor: isFollowing
+                                      ? Colors.white
+                                      : PremiumColors.primary,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFavoriteTeamPicker(
+    BuildContext context,
+    User user,
+  ) async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId != user.uid) return;
+
+    try {
+      final teams = await ref.read(allProTeamsProvider.future);
+      if (!mounted) return;
+
+      await showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) {
+          return SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.emoji_events_outlined,
+                          color: PremiumColors.accent),
+                      const SizedBox(width: 8),
+                      Text(
+                        'בחר קבוצה אהודה',
+                        style: PremiumTypography.heading3,
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
                 ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: teams.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        final isSelected =
+                            (user.favoriteProTeamId ?? '').isEmpty;
+                        return ListTile(
+                          leading: const Icon(Icons.block,
+                              color: PremiumColors.textSecondary),
+                          title: const Text('אין קבוצה אהודה'),
+                          trailing: isSelected
+                              ? const Icon(Icons.check_circle,
+                                  color: PremiumColors.primary)
+                              : null,
+                          onTap: () async {
+                            await ref
+                                .read(usersRepositoryProvider)
+                                .updateUser(user.uid, {
+                              'favoriteProTeamId': null,
+                            });
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                        );
+                      }
 
-              // Follow/Unfollow Button & Stats
-              Row(
-                children: [
-                  // Follow Button (if not own profile and not anonymous)
-                  if (!isOwnProfile && !isAnonymous)
-                    Expanded(
-                      child: StreamBuilder<bool>(
-                        stream: isFollowingStream,
-                        builder: (context, snapshot) {
-                          final isFollowing = snapshot.data ?? false;
-                          return ElevatedButton.icon(
-                            onPressed: () async {
-                              if (currentUserId == null || isAnonymous) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          'נא להתחבר כדי לעקוב אחרי שחקנים'),
-                                    ),
-                                  );
-                                }
-                                return;
-                              }
-                              try {
-                                if (isFollowing) {
-                                  await followRepo.unfollow(
-                                    currentUserId,
-                                    widget.playerId,
-                                  );
-                                } else {
-                                  await followRepo.follow(
-                                    currentUserId,
-                                    widget.playerId,
-                                  );
-
-                                  // Send notification
-                                  try {
-                                    final pushIntegration = ref.read(
-                                      pushNotificationIntegrationServiceProvider,
-                                    );
-                                    final currentUser =
-                                        await usersRepo.getUser(currentUserId);
-
-                                    await pushIntegration.notifyNewFollow(
-                                      followerName:
-                                          currentUser?.name ?? 'מישהו',
-                                      followingId: widget.playerId,
-                                    );
-                                  } catch (e) {
-                                    debugPrint(
-                                        'Failed to send follow notification: $e');
-                                  }
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('שגיאה: $e'),
-                                      backgroundColor: PremiumColors.error,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            icon: Icon(
-                              isFollowing
-                                  ? Icons.person_remove
-                                  : Icons.person_add,
-                            ),
-                            label: Text(isFollowing ? 'ביטול עקיבה' : 'עקוב'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isFollowing
-                                  ? PremiumColors.error
-                                  : Colors.white,
-                              foregroundColor: isFollowing
-                                  ? Colors.white
-                                  : PremiumColors.primary,
-                            ),
-                          );
+                      final team = teams[index - 1];
+                      final isSelected = team.teamId == user.favoriteProTeamId;
+                      return ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: CachedNetworkImage(
+                            imageUrl: team.logoUrl,
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.contain,
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.sports_soccer),
+                          ),
+                        ),
+                        title: Text(team.name),
+                        subtitle: Text(
+                          team.league == 'premier' ? 'ליגת העל' : 'ליגה לאומית',
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle,
+                                color: PremiumColors.primary)
+                            : null,
+                        onTap: () async {
+                          await ref
+                              .read(usersRepositoryProvider)
+                              .updateUser(user.uid, {
+                            'favoriteProTeamId': team.teamId,
+                          });
+                          if (context.mounted) Navigator.pop(context);
                         },
-                      ),
-                    ),
-
-                  // Anonymous user message for follow button
-                  if (!isOwnProfile && isAnonymous)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.push('/login'),
-                        icon: const Icon(Icons.login),
-                        label: const Text('התחבר כדי לעקוב'),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
-                        ),
-                      ),
-                    ),
-
-                  if (!isOwnProfile) const SizedBox(width: 12),
-
-                  // Followers Count
-                  StreamBuilder<int>(
-                    stream: followersCountStream,
-                    builder: (context, snapshot) {
-                      final count = snapshot.data ?? 0;
-                      return InkWell(
-                        onTap: () => context.push(
-                          '/profile/${widget.playerId}/followers',
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                '$count',
-                                style: PremiumTypography.heading3.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'עוקבים',
-                                style: PremiumTypography.labelSmall.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       );
                     },
                   ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בבחירת קבוצה: $e')),
+        );
+      }
+    }
+  }
 
-                  const SizedBox(width: 12),
+  Widget _buildProfilePill({
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: PremiumColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: PremiumColors.primary.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: PremiumColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: PremiumTypography.labelMedium.copyWith(
+              color: PremiumColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                  // Following Count
-                  StreamBuilder<int>(
-                    stream: followingCountStream,
-                    builder: (context, snapshot) {
-                      final count = snapshot.data ?? 0;
-                      return InkWell(
-                        onTap: () => context.push(
-                          '/profile/${widget.playerId}/following',
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                '$count',
-                                style: PremiumTypography.heading3.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'עוקב',
-                                style: PremiumTypography.labelSmall.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+  Widget _buildProfileStatTile({
+    required String label,
+    required Widget value,
+    VoidCallback? onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            children: [
+              DefaultTextStyle(
+                style: PremiumTypography.heading3.copyWith(
+                  color: PremiumColors.textPrimary,
+                ),
+                child: value,
               ),
-
-              const SizedBox(height: 12),
-
-              // Additional Info (respecting privacy)
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  if (user.city != null &&
-                      user.city!.isNotEmpty &&
-                      !(privacy['hideCity'] ?? false))
-                    _buildInfoChip(
-                      Icons.location_city,
-                      user.city!,
-                      Colors.white,
-                    ),
-                  if (user.phoneNumber != null &&
-                      user.phoneNumber!.isNotEmpty &&
-                      !(privacy['hidePhone'] ?? false))
-                    _buildInfoChip(
-                      Icons.phone,
-                      user.phoneNumber!,
-                      Colors.white,
-                    ),
-                  if (!(privacy['hideEmail'] ?? false))
-                    _buildInfoChip(
-                      Icons.email,
-                      user.email,
-                      Colors.white,
-                    ),
-                  _buildInfoChip(
-                    Icons.event,
-                    '${user.totalParticipations} משחקים',
-                    Colors.white,
-                  ),
-                ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: PremiumTypography.labelSmall.copyWith(
+                  color: PremiumColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -728,23 +1090,64 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label, Color color) {
+  Widget _buildProfileStatDivider() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: PremiumTypography.labelSmall.copyWith(color: color),
+      width: 1,
+      height: 32,
+      color: PremiumColors.borderStrong,
+    );
+  }
+
+  Widget _buildProfileInfoTile({
+    required IconData icon,
+    required String label,
+    required Widget value,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.9),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: PremiumColors.border),
           ),
-        ],
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 18, color: PremiumColors.accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: PremiumTypography.bodySmall.copyWith(
+                        color: PremiumColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    DefaultTextStyle(
+                      style: PremiumTypography.bodyMedium.copyWith(
+                        color: PremiumColors.textPrimary,
+                      ),
+                      child: value,
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_drop_down, color: PremiumColors.textSecondary),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -826,55 +1229,74 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                 final mvpCount =
                     stats['mvp'] ?? 0; // MVP count from stats (if available)
 
-                return Column(
-                  children: [
-                    // Big Counters Row
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final counterWidth =
+                        constraints.maxWidth >= 420
+                            ? (constraints.maxWidth - 10) / 2
+                            : constraints.maxWidth;
+                    return Column(
                       children: [
-                        _buildBigCounter(
-                          context,
-                          'משחקים',
-                          gamesPlayed.toString(),
-                          Icons.sports_soccer,
-                          PremiumColors.primary,
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            SizedBox(
+                              width: counterWidth,
+                              child: _buildBigCounter(
+                                context,
+                                'משחקים',
+                                gamesPlayed.toString(),
+                                Icons.sports_soccer,
+                                PremiumColors.primary,
+                              ),
+                            ),
+                            SizedBox(
+                              width: counterWidth,
+                              child: _buildBigCounter(
+                                context,
+                                'שערים',
+                                goals.toString(),
+                                Icons.sports_soccer,
+                                PremiumColors.secondary,
+                              ),
+                            ),
+                            SizedBox(
+                              width: counterWidth,
+                              child: _buildBigCounter(
+                                context,
+                                'בישולים',
+                                assists.toString(),
+                                Icons.assistant,
+                                Colors.purple,
+                              ),
+                            ),
+                            SizedBox(
+                              width: counterWidth,
+                              child: _buildBigCounter(
+                                context,
+                                'MVP',
+                                mvpCount.toString(),
+                                Icons.star,
+                                Colors.amber,
+                              ),
+                            ),
+                          ],
                         ),
-                        _buildBigCounter(
-                          context,
-                          'שערים',
-                          goals.toString(),
-                          Icons.sports_soccer,
-                          PremiumColors.secondary,
-                        ),
-                        _buildBigCounter(
-                          context,
-                          'בישולים',
-                          assists.toString(),
-                          Icons.assistant,
-                          Colors.purple,
-                        ),
-                        _buildBigCounter(
-                          context,
-                          'MVP',
-                          mvpCount.toString(),
-                          Icons.star,
-                          Colors.amber,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                        const SizedBox(height: 12),
 
-                    // Badges Strip
-                    _buildBadgesStrip(context, gamification),
-                  ],
+                        // Badges Strip
+                        _buildBadgesStrip(context, gamification),
+                      ],
+                    );
+                  },
                 );
               }
               return const SizedBox.shrink();
             },
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
 
           // Social Media Links Section (if enabled and links exist)
           if (user.showSocialLinks &&
@@ -883,7 +1305,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                   (user.instagramProfileUrl != null &&
                       user.instagramProfileUrl!.isNotEmpty)))
             PremiumCard(
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: const EdgeInsets.only(bottom: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -922,58 +1344,9 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
               ),
             ),
 
-          // Player meta info card (no rating)
-          PremiumCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'פרטי שחקן',
-                  style: PremiumTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  children: [
-                    _buildInfoChip(
-                      Icons.location_on_outlined,
-                      user.city != null && user.city!.isNotEmpty
-                          ? user.city!
-                          : 'עיר לא עודכנה',
-                      PremiumColors.textSecondary,
-                    ),
-                    _buildInfoChip(
-                      Icons.map_outlined,
-                      user.region != null && user.region!.isNotEmpty
-                          ? user.region!
-                          : 'אזור לא עודכן',
-                      PremiumColors.textSecondary,
-                    ),
-                    _buildInfoChip(
-                      Icons.sports,
-                      user.preferredPosition,
-                      PremiumColors.textSecondary,
-                    ),
-                    _buildInfoChip(
-                      Icons.wifi_tethering,
-                      user.availabilityStatus == 'available'
-                          ? 'זמין למשחקים'
-                          : 'לא זמין למשחקים',
-                      PremiumColors.textSecondary,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
           // Placeholder for future insights (removed rating charts)
           PremiumCard(
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1112,23 +1485,25 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
   ) {
     return PremiumCard(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Column(
           children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 12),
+            Icon(icon, size: 28, color: color),
+            const SizedBox(height: 6),
             Text(
               value,
               style: PremiumTypography.heading1.copyWith(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
                 color: color,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: PremiumTypography.labelLarge,
+              style: PremiumTypography.labelMedium.copyWith(
+                color: PremiumColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1144,7 +1519,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     if (gamification.badges.isEmpty) {
       return PremiumCard(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Text(
             'אין תגים עדיין',
             style: PremiumTypography.bodyMedium.copyWith(
@@ -1158,7 +1533,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
 
     return PremiumCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1174,6 +1549,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                 return AchievementBadge(
                   badgeId: badgeName,
                   label: _getBadgeDisplayName(badgeName),
+                  size: 64,
                 );
               }).toList(),
             ),

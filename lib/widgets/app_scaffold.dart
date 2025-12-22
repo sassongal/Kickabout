@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/widgets/premium/bottom_navigation_bar.dart';
 import 'package:kattrick/widgets/premium/offline_indicator.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 import 'package:kattrick/widgets/premium/kinetic_background.dart';
 
@@ -29,12 +30,17 @@ class AppScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentRoute = GoRouterState.of(context).uri.toString();
+    final canPop = context.canPop();
+    final showLeadingBack = showBackButton && canPop;
 
     return Scaffold(
       appBar: AppBar(
+        leadingWidth:
+            AppBarHomeLogo.leadingWidth(showBackButton: showLeadingBack),
+        leading: AppBarHomeLogo(showBackButton: showLeadingBack),
         title: Text(title),
         actions: actions,
-        automaticallyImplyLeading: showBackButton,
+        automaticallyImplyLeading: false,
       ),
       body: KineticBackground(
         child: Column(

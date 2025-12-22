@@ -30,6 +30,7 @@ class _CreateRecruitingPostScreenState
   final _descriptionController = TextEditingController();
 
   bool _isLoading = false;
+  bool _hasPermission = false;
   bool _isUrgent = false;
   DateTime? _recruitingUntil;
   String? _linkedGameId;
@@ -43,6 +44,7 @@ class _CreateRecruitingPostScreenState
   @override
   void initState() {
     super.initState();
+    _checkPermissions();
     _loadUpcomingGamesAndEvents();
   }
 
@@ -73,6 +75,38 @@ class _CreateRecruitingPostScreenState
       }
     } catch (e) {
       debugPrint('Error loading games and events: $e');
+    }
+  }
+
+  Future<void> _checkPermissions() async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'יש להתחבר כדי לפרסם גיוס שחקנים');
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    try {
+      final perms = await ref
+          .read(hubPermissionsProvider(
+                  (hubId: widget.hubId, userId: currentUserId))
+              .future);
+      final allowed = perms.isManager || perms.isModerator;
+      if (!allowed && mounted) {
+        SnackbarHelper.showError(
+            context, 'רק מנהלים/מודרטורים יכולים לפרסם גיוס שחקנים');
+        Navigator.pop(context);
+      } else if (mounted) {
+        setState(() => _hasPermission = true);
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(
+            context, 'שגיאה בבדיקת הרשאות: ${e.toString()}');
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -179,6 +213,7 @@ class _CreateRecruitingPostScreenState
   }
 
   Future<void> _createRecruitingPost() async {
+    if (!_hasPermission) return;
     if (!_formKey.currentState!.validate()) return;
 
     // Check if event is full

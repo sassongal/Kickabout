@@ -32,3 +32,5 @@ export 'contact_message.dart';
 // Player and Stats
 export 'player.dart';
 export 'player_stats.dart';
+// Professional Teams
+export 'pro_team.dart';

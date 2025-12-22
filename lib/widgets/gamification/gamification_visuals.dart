@@ -14,23 +14,15 @@ class LevelIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color levelColor;
-    String levelName;
 
-    if (level < 5) {
-      levelColor = Colors.grey;
-      levelName = 'Novice';
-    } else if (level < 15) {
-      levelColor = PremiumColors.primary;
-      levelName = 'Amateur';
+    if (level < 15) {
+      levelColor = PremiumColors.primaryLight;
     } else if (level < 30) {
       levelColor = PremiumColors.secondary;
-      levelName = 'Pro';
     } else if (level < 50) {
       levelColor = Colors.purple;
-      levelName = 'Elite';
     } else {
       levelColor = Colors.amber;
-      levelName = 'Legend';
     }
 
     return Container(
@@ -45,10 +37,6 @@ class LevelIcon extends StatelessWidget {
             levelColor.withValues(alpha: 0.4),
             levelColor.withValues(alpha: 0.1),
           ],
-        ),
-        border: Border.all(
-          color: levelColor.withValues(alpha: 0.5),
-          width: 2,
         ),
         boxShadow: [
           BoxShadow(
@@ -74,15 +62,6 @@ class LevelIcon extends StatelessWidget {
                     blurRadius: 5,
                   ),
                 ],
-              ),
-            ),
-            Text(
-              levelName,
-              style: TextStyle(
-                fontSize: size * 0.15,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.8),
-                letterSpacing: 1,
               ),
             ),
           ],

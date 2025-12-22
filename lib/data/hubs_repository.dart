@@ -91,6 +91,10 @@ class HubsRepository {
 
       // Initialize memberCount to 1 (creator)
       data['memberCount'] = 1;
+      data['activeMemberIds'] = [hub.createdBy];
+      data['memberIds'] = [hub.createdBy];
+      data['managerIds'] = [hub.createdBy];
+      data['moderatorIds'] = <String>[];
 
       // Remove legacy 'roles' field - we now use HubMember subcollection exclusively
       data.remove('roles');
@@ -108,7 +112,12 @@ class HubsRepository {
         'joinedAt': FieldValue.serverTimestamp(),
         'role': 'manager',
         'status': 'active',
+        'veteranSince': null,
         'managerRating': 0.0,
+        'lastActiveAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': hub.createdBy,
+        'statusReason': null,
       });
 
       // Update user's hubIds
@@ -120,6 +129,9 @@ class HubsRepository {
       }
 
       await batch.commit();
+
+      // Sync denormalized arrays to keep rules fast/safe
+      await _syncDenormalizedMemberArrays(docRef.id);
 
       // Invalidate cache
       CacheService().clear(CacheKeys.hub(docRef.id));

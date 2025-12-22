@@ -1,0 +1,214 @@
+{
+  "proteams": {
+    "maccabi-tel-aviv": {
+      "name": "מכבי תל אביב",
+      "nameEn": "Maccabi Tel Aviv",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/c/c0/Maccabi_Tel_Aviv_FC_logo.svg",
+      "isActive": true
+    },
+    "maccabi-haifa": {
+      "name": "מכבי חיפה",
+      "nameEn": "Maccabi Haifa",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/9/9b/Maccabi_Haifa_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-beer-sheva": {
+      "name": "הפועל באר שבע",
+      "nameEn": "Hapoel Be'er Sheva",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/1/1c/Hapoel_Be%27er_Sheva_FC_Logo.svg",
+      "isActive": true
+    },
+    "maccabi-petah-tikva": {
+      "name": "מכבי פתח תקווה",
+      "nameEn": "Maccabi Petah Tikva",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/a/ab/Maccabi_Petah_Tikva_FC_logo.svg",
+      "isActive": true
+    },
+    "beitar-jerusalem": {
+      "name": "בית״ר ירושלים",
+      "nameEn": "Beitar Jerusalem",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/f/f9/Beitar_Jerusalem_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-haifa": {
+      "name": "הפועל חיפה",
+      "nameEn": "Hapoel Haifa",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/2/2f/Hapoel_Haifa_FC_logo.svg",
+      "isActive": true
+    },
+    "bnei-sakhnin": {
+      "name": "בני סכנין",
+      "nameEn": "Bnei Sakhnin",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/5/57/Bnei_Sakhnin_FC_logo.svg",
+      "isActive": true
+    },
+    "maccabi-bnei-reineh": {
+      "name": "מכבי בני ריינה",
+      "nameEn": "Maccabi Bnei Reineh",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/e/e7/Maccabi_Bnei_Reineh_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-jerusalem": {
+      "name": "הפועל ירושלים",
+      "nameEn": "Hapoel Jerusalem",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/7/73/Hapoel_Jerusalem_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-tel-aviv": {
+      "name": "הפועל תל אביב",
+      "nameEn": "Hapoel Tel Aviv",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/b/b7/Hapoel_Tel_Aviv_FC_logo.svg",
+      "isActive": true
+    },
+    "ashdod": {
+      "name": "אשדוד",
+      "nameEn": "Ashdod SC",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/5/5d/Ashdod_SC_logo.svg",
+      "isActive": true
+    },
+    "maccabi-netanya": {
+      "name": "מכבי נתניה",
+      "nameEn": "Maccabi Netanya",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/c/c6/Maccabi_Netanya_FC_logo.svg",
+      "isActive": true
+    },
+    "ironi-kiryat-shmona": {
+      "name": "עירוני קריית שמונה",
+      "nameEn": "Ironi Kiryat Shmona",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/d/dc/Ironi_Kiryat_Shmona_FC_logo.svg",
+      "isActive": true
+    },
+    "sektzia-ness-ziona": {
+      "name": "סקציה נס ציונה",
+      "nameEn": "Sektzia Ness Ziona",
+      "league": "premier",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/e/e4/Sektzia_Ness_Ziona_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-hadera": {
+      "name": "הפועל חדרה",
+      "nameEn": "Hapoel Hadera",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/7/73/Hapoel_Hadera_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-acre": {
+      "name": "הפועל עכו",
+      "nameEn": "Hapoel Acre",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/a/ab/Hapoel_Acre_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-raanana": {
+      "name": "הפועל רעננה",
+      "nameEn": "Hapoel Ra'anana",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/f/f4/Hapoel_Ra%27anana_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-kfar-saba": {
+      "name": "הפועל כפר סבא",
+      "nameEn": "Hapoel Kfar Saba",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/c/c6/Hapoel_Kfar_Saba_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-petah-tikva": {
+      "name": "הפועל פתח תקווה",
+      "nameEn": "Hapoel Petah Tikva",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/8/85/Hapoel_Petah_Tikva_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-nof-hagalil": {
+      "name": "הפועל נוף הגליל",
+      "nameEn": "Hapoel Nof HaGalil",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/1/16/Hapoel_Nof_HaGalil_FC_logo.svg",
+      "isActive": true
+    },
+    "beitar-tel-aviv": {
+      "name": "בית״ר תל אביב רמת גן",
+      "nameEn": "Beitar Tel Aviv Ramla",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/0/0c/Beitar_Tel_Aviv_Bat_Yam_FC_logo.svg",
+      "isActive": true
+    },
+    "maccabi-kabilio-jaffa": {
+      "name": "מכבי קביליו יפו",
+      "nameEn": "Maccabi Kabilio Jaffa",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/a/a8/Maccabi_Jaffa_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-afula": {
+      "name": "הפועל עפולה",
+      "nameEn": "Hapoel Afula",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/5/54/Hapoel_Afula_FC_logo.svg",
+      "isActive": true
+    },
+    "maccabi-herzliya": {
+      "name": "מכבי הרצליה",
+      "nameEn": "Maccabi Herzliya",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/2/27/Maccabi_Herzliya_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-umm-al-fahm": {
+      "name": "הפועל אום אל-פחם",
+      "nameEn": "Hapoel Umm al-Fahm",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/3/3e/Hapoel_Umm_al-Fahm_FC_logo.svg",
+      "isActive": true
+    },
+    "ms-kafr-qasim": {
+      "name": "מ.ס. כפר קאסם",
+      "nameEn": "MS Kafr Qasim",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/9/91/MS_Kafr_Qasim_FC_logo.svg",
+      "isActive": true
+    },
+    "ironi-tiberias": {
+      "name": "עירוני טבריה",
+      "nameEn": "Ironi Tiberias",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/6/6d/Ironi_Tiberias_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-rishon-lezion": {
+      "name": "הפועל ראשון לציון",
+      "nameEn": "Hapoel Rishon LeZion",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/f/fe/Hapoel_Rishon_LeZion_FC_logo.svg",
+      "isActive": true
+    },
+    "maccabi-yavne": {
+      "name": "מכבי יבנה",
+      "nameEn": "Maccabi Yavne",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/4/49/Maccabi_Yavne_FC_logo.svg",
+      "isActive": true
+    },
+    "hapoel-nazareth-illit": {
+      "name": "הפועל נצרת עילית",
+      "nameEn": "Hapoel Nazareth Illit",
+      "league": "national",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/7/75/Hapoel_Nazareth_Illit_FC_logo.svg",
+      "isActive": true
+    }
+  }
+}

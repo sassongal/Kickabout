@@ -10,6 +10,7 @@ import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/models/notification.dart' as app_notification;
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Scouting Screen - AI-powered player discovery for Hub managers
 class ScoutingScreen extends ConsumerStatefulWidget {
@@ -32,9 +33,9 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
   AgeGroup?
       _selectedAgeGroup; // ✅ Filter by age group (alternative to age range)
   String? _selectedRegion;
-  bool _activeOnly = true;
   bool _isLoading = false;
   List<ScoutingResult> _results = [];
+  bool _canManageRecruiting = false;
 
   final List<String> _regions = [
     'צפון',
@@ -42,6 +43,30 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
     'דרום',
     'ירושלים',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPermissions();
+  }
+
+  Future<void> _loadPermissions() async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
+    try {
+      final perms = await ref
+          .read(hubPermissionsProvider(
+                  (hubId: widget.hubId, userId: currentUserId))
+              .future);
+      if (mounted) {
+        setState(() {
+          _canManageRecruiting = perms.isManager || perms.isModerator;
+        });
+      }
+    } catch (_) {
+      // default false
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,14 +240,6 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Active only checkbox
-            CheckboxListTile(
-              title: const Text('רק שחקנים פעילים'),
-              value: _activeOnly,
-              onChanged: (value) {
-                setState(() => _activeOnly = value ?? true);
-              },
-            ),
           ],
         ),
       ),
@@ -231,11 +248,32 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
 
   Widget _buildPlayerCard(ScoutingResult result) {
     final player = result.player;
+    final allowHubInvites =
+        player.privacySettings['allowHubInvites'] ?? true;
 
     return PremiumCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: PlayerAvatar(user: player, radius: 28),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.person_add_alt_1),
+              color: allowHubInvites && _canManageRecruiting
+                  ? PremiumColors.primary
+                  : PremiumColors.textSecondary,
+              tooltip: allowHubInvites
+                  ? (_canManageRecruiting
+                      ? 'הזמן ל-Hub'
+                      : 'רק מנהלים/מודרטורים יכולים להזמין')
+                  : 'השחקן בחר שלא לקבל הזמנות',
+              onPressed: allowHubInvites && _canManageRecruiting
+                  ? () => _inviteToHub(player.uid)
+                  : null,
+            ),
+            PlayerAvatar(user: player, radius: 28),
+          ],
+        ),
         title: Row(
           children: [
             Expanded(
@@ -343,7 +381,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
         trailing: PopupMenuButton(
           icon: const Icon(Icons.more_vert),
           itemBuilder: (context) => [
-            if (widget.gameId != null)
+            if (widget.gameId != null && _canManageRecruiting)
               const PopupMenuItem(
                 value: 'invite_game',
                 child: Row(
@@ -354,13 +392,27 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
                   ],
                 ),
               ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'invite_hub',
+              enabled: allowHubInvites && _canManageRecruiting,
               child: Row(
                 children: [
-                  Icon(Icons.group_add, size: 20),
-                  SizedBox(width: 8),
-                  Text('הזמן ל-Hub'),
+                  Icon(Icons.group_add,
+                      size: 20,
+                      color: allowHubInvites && _canManageRecruiting
+                          ? null
+                          : PremiumColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Text(
+                    allowHubInvites && _canManageRecruiting
+                        ? 'הזמן ל-Hub'
+                        : (!allowHubInvites
+                            ? 'לא מקבל הזמנות'
+                            : 'רק מנהלים/מודרטורים'),
+                    style: allowHubInvites && _canManageRecruiting
+                        ? null
+                        : TextStyle(color: PremiumColors.textSecondary),
+                  ),
                 ],
               ),
             ),
@@ -378,10 +430,14 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
           onSelected: (value) {
             switch (value) {
               case 'invite_game':
-                _inviteToGame(player.uid);
+                if (_canManageRecruiting) {
+                  _inviteToGame(player.uid);
+                }
                 break;
               case 'invite_hub':
-                _inviteToHub(player.uid);
+                if (allowHubInvites && _canManageRecruiting) {
+                  _inviteToHub(player.uid);
+                }
                 break;
               case 'view_player_card':
                 _showPlayerCard(context, player);
@@ -415,7 +471,6 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
         maxAge: _selectedAgeGroup == null ? _maxAge : null,
         ageGroup: _selectedAgeGroup, // ✅ Pass age group filter
         region: _selectedRegion,
-        activeOnly: _activeOnly,
         limit: 50,
       );
 
@@ -524,6 +579,19 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('שגיאה: לא נמצאו פרטים')),
+          );
+        }
+        return;
+      }
+
+      final allowInvites =
+          invitedPlayer.privacySettings['allowHubInvites'] ?? true;
+      if (!allowInvites) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('השחקן בחר שלא לקבל הזמנות להאבים'),
+            ),
           );
         }
         return;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
@@ -231,7 +232,9 @@ class _HubPlayersListScreenV2State
 
       for (final entry in _tempRatings.entries) {
         try {
-          await hubsRepo.setPlayerRating(widget.hubId, entry.key, entry.value);
+          // Persist rounded to nearest 0.5 for consistency
+          final rounded = _roundToNearestHalf(entry.value);
+          await hubsRepo.setPlayerRating(widget.hubId, entry.key, rounded);
           successCount++;
         } catch (e) {
           debugPrint('Error setting rating for ${entry.key}: $e');
@@ -302,14 +305,30 @@ class _HubPlayersListScreenV2State
             return const Center(child: Text('Hub לא נמצא'));
           }
 
-          final isHubManager = currentUserId == hub.createdBy;
           final hubPermissionsAsync = currentUserId != null
               ? ref.watch(hubPermissionsProvider(
                   (hubId: widget.hubId, userId: currentUserId)))
               : null;
           final hubPermissions = hubPermissionsAsync?.valueOrNull;
-          final canManageRatings = (hubPermissions?.isManager ?? false) ||
-              (hubPermissions?.isModerator ?? false);
+          final isManagerRole =
+              (hubPermissions?.isManager ?? false) || currentUserId == hub.createdBy;
+          final isModeratorRole = hubPermissions?.isModerator ?? false;
+          final isHubManager = isManagerRole;
+          final canEditRatings = isManagerRole;
+          final canViewRatings = isManagerRole || isModeratorRole;
+          final canInvitePlayers =
+              hubPermissions?.canInvitePlayers ?? isManagerRole;
+
+          if (!canEditRatings && _isRatingMode) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _isRatingMode = false;
+                  _tempRatings.clear();
+                });
+              }
+            });
+          }
 
           // Load ratings when entering rating mode
           if (_isRatingMode && _tempRatings.isEmpty && _members.isNotEmpty) {
@@ -330,6 +349,12 @@ class _HubPlayersListScreenV2State
           }
 
           final filteredMembers = _filterAndSort(_members, hub);
+
+          if (!canViewRatings && _sortBy == 'rating') {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _sortBy = 'name');
+            });
+          }
 
           return Column(
             children: [
@@ -370,19 +395,20 @@ class _HubPlayersListScreenV2State
                         const SizedBox(width: 12),
                         Expanded(
                           child: SegmentedButton<String>(
-                            segments: const [
-                              ButtonSegment(
-                                value: 'rating',
-                                label: Text('דירוג'),
-                                icon: Icon(Icons.star),
-                              ),
-                              ButtonSegment(
+                            segments: [
+                              if (canViewRatings)
+                                const ButtonSegment(
+                                  value: 'rating',
+                                  label: Text('דירוג'),
+                                  icon: Icon(Icons.star),
+                                ),
+                              const ButtonSegment(
                                 value: 'name',
                                 label: Text('שם'),
                                 icon: Icon(Icons.sort_by_alpha),
                               ),
                             ],
-                            selected: {_sortBy},
+                            selected: {_sortBy == 'rating' && canViewRatings ? 'rating' : 'name'},
                             onSelectionChanged: (Set<String> newSelection) =>
                                 setState(() => _sortBy = newSelection.first),
                           ),
@@ -390,21 +416,15 @@ class _HubPlayersListScreenV2State
                       ],
                     ),
 
-                    // Rating mode toggle (managers only)
-                    if (canManageRatings) ...[
+                    if (canInvitePlayers) ...[
                       const SizedBox(height: 12),
-                      SwitchListTile(
-                        title: const Text('מצב דירוג שחקנים'),
-                        subtitle: const Text('דרג שחקנים 1-7 לאיזון קבוצות'),
-                        value: _isRatingMode,
-                        onChanged: (value) {
-                          setState(() {
-                            _isRatingMode = value;
-                            if (!value) _tempRatings.clear();
-                          });
-                        },
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                      _buildScoutingButton(context),
+                    ],
+
+                    // Rating mode toggle (managers only)
+                    if (canEditRatings) ...[
+                      const SizedBox(height: 12),
+                      _buildRatingModeButton(),
 
                       // Save button in rating mode
                       if (_isRatingMode) ...[
@@ -475,7 +495,7 @@ class _HubPlayersListScreenV2State
                               child: _isRatingMode
                                   ? _buildRatingTile(user, currentRating)
                                   : _buildNormalTile(
-                                      member, isHubManager, canManageRatings),
+                                      member, canViewRatings, canEditRatings),
                             ),
                           );
                         },
@@ -488,10 +508,110 @@ class _HubPlayersListScreenV2State
     );
   }
 
+  Widget _buildRatingModeButton() {
+    return GestureDetector(
+      onTap: _isSavingRatings
+          ? null
+          : () {
+              setState(() {
+                _isRatingMode = !_isRatingMode;
+                if (!_isRatingMode) _tempRatings.clear();
+              });
+            },
+      child: PremiumCard(
+        showGlow: _isRatingMode,
+        glassmorphism: true,
+        glowColor: _isRatingMode ? PremiumColors.accent : null,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: 52,
+              height: 32,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: _isRatingMode
+                    ? PremiumColors.primary
+                    : PremiumColors.borderStrong,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: _isRatingMode
+                    ? [
+                        BoxShadow(
+                          color: PremiumColors.primary.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 250),
+                alignment:
+                    _isRatingMode ? Alignment.centerRight : Alignment.centerLeft,
+                child: const Icon(
+                  Icons.bolt,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'מצב דירוג שחקנים',
+                    style: PremiumTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'דרג שחקנים 1-7 לאיזון כוחות',
+                    style: PremiumTypography.bodySmall.copyWith(
+                      color: PremiumColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _isRatingMode
+                  ? const Icon(Icons.check_circle, color: PremiumColors.primary)
+                  : const Icon(Icons.touch_app_outlined,
+                      color: PremiumColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScoutingButton(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: () =>
+          context.push('/hubs/${widget.hubId}/scouting'),
+      icon: const Icon(Icons.search),
+      label: const Text('חיפוש והזמנת שחקנים'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: PremiumColors.accent,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 52),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        elevation: 2,
+      ),
+    );
+  }
+
   Widget _buildNormalTile(
-      HubMemberWithUser member, bool isHubManager, bool canManageRatings) {
+      HubMemberWithUser member, bool canViewRatings, bool canManageRatings) {
     final user = member.user;
-    final managerRating = canManageRatings ? member.managerRating : null;
+    final managerRating = canViewRatings ? member.managerRating : null;
     final displayRating = managerRating ?? user.currentRankScore;
     final isManagerRole = member.role == 'manager' || member.role == 'admin';
 
@@ -540,115 +660,141 @@ class _HubPlayersListScreenV2State
               ],
             ),
           const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(Icons.star,
-                  size: 16,
-                  color: managerRating != null
-                      ? Colors.orange
-                      : PremiumColors.warning),
-              const SizedBox(width: 4),
-              Text(
-                displayRating.toStringAsFixed(1),
-                style: PremiumTypography.labelMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: managerRating != null
-                      ? Colors.orange
-                      : PremiumColors.warning,
-                ),
-              ),
-              if (canManageRatings && managerRating != null) ...[
+          if (canViewRatings)
+            Row(
+              children: [
+                Icon(Icons.star,
+                    size: 16,
+                    color: managerRating != null
+                        ? Colors.orange
+                        : PremiumColors.warning),
                 const SizedBox(width: 4),
-                Icon(Icons.verified, size: 14, color: Colors.orange),
+                Text(
+                  displayRating.toStringAsFixed(1),
+                  style: PremiumTypography.labelMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: managerRating != null
+                        ? Colors.orange
+                        : PremiumColors.warning,
+                  ),
+                ),
+                if (canManageRatings && managerRating != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.verified, size: 14, color: Colors.orange),
+                ],
               ],
-            ],
-          ),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildRatingTile(User user, double currentRating) {
-    // Round to nearest 0.5 to ensure it's a valid dropdown value
-    final roundedRating = _roundToNearestHalf(currentRating);
+    // Keep dragging silky smooth by containing state per-tile.
+    return StatefulBuilder(
+      builder: (context, innerSetState) {
+        double localValue =
+            _tempRatings[user.uid] ?? _roundToNearestHalf(currentRating);
+        final displayValue = _roundToNearestHalf(localValue);
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        void updateValue(double value) {
+          final clamped = value.clamp(1.0, 7.0);
+          innerSetState(() => localValue = clamped);
+          _tempRatings[user.uid] = clamped;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor:
-                    PremiumColors.primary.withValues(alpha: 0.1),
-                backgroundImage: user.photoUrl != null
-                    ? CachedNetworkImageProvider(user.photoUrl!)
-                    : null,
-                child: user.photoUrl == null
-                    ? Icon(Icons.person,
-                        size: 24, color: PremiumColors.primary)
-                    : null,
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor:
+                        PremiumColors.primary.withValues(alpha: 0.1),
+                    backgroundImage: user.photoUrl != null
+                        ? CachedNetworkImageProvider(user.photoUrl!)
+                        : null,
+                    child: user.photoUrl == null
+                        ? Icon(Icons.person,
+                            size: 24, color: PremiumColors.primary)
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.name, style: PremiumTypography.labelLarge),
+                        if (user.preferredPosition.isNotEmpty)
+                          Text(user.preferredPosition,
+                              style: PremiumTypography.bodySmall),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    displayValue.toStringAsFixed(1),
+                    style: PremiumTypography.heading3
+                        .copyWith(color: PremiumColors.primary),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(user.name, style: PremiumTypography.labelLarge),
-                    if (user.preferredPosition.isNotEmpty)
-                      Text(user.preferredPosition,
-                          style: PremiumTypography.bodySmall),
-                  ],
-                ),
-              ),
-              Text(
-                roundedRating.toStringAsFixed(1),
-                style: PremiumTypography.heading3
-                    .copyWith(color: PremiumColors.primary),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 10,
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 12),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 22),
+                        activeTrackColor: PremiumColors.primary,
+                        inactiveTrackColor:
+                            PremiumColors.surfaceVariant.withValues(alpha: 0.6),
+                      ),
+                      child: Slider(
+                        value: localValue,
+                        min: 1.0,
+                        max: 7.0,
+                        // Fine divisions for smooth drag (then rounded for display/save).
+                        divisions: 60,
+                        label: displayValue.toStringAsFixed(1),
+                        onChanged: (value) => updateValue(value),
+                        onChangeEnd: (_) =>
+                            HapticFeedback.selectionClick(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 60,
+                    child: DropdownButton<double>(
+                      value: displayValue,
+                      isExpanded: true,
+                      items: List.generate(13, (i) {
+                        final value = 1.0 + (i * 0.5);
+                        return DropdownMenuItem(
+                          value: value,
+                          child: Text(value.toStringAsFixed(1)),
+                        );
+                      }),
+                      onChanged: (value) {
+                        if (value != null) {
+                          updateValue(value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: roundedRating,
-                  min: 1.0,
-                  max: 7.0,
-                  divisions: 12,
-                  label: roundedRating.toStringAsFixed(1),
-                  onChanged: (value) {
-                    setState(() => _tempRatings[user.uid] = value);
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 60,
-                child: DropdownButton<double>(
-                  value: roundedRating,
-                  isExpanded: true,
-                  items: List.generate(13, (i) {
-                    final value = 1.0 + (i * 0.5);
-                    return DropdownMenuItem(
-                      value: value,
-                      child: Text(value.toStringAsFixed(1)),
-                    );
-                  }),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _tempRatings[user.uid] = value);
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

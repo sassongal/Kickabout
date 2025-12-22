@@ -5,6 +5,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -130,10 +131,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+        leading: AppBarHomeLogo(showBackButton: canPop),
         title: const Text('Kattrick'),
         centerTitle: true,
+        automaticallyImplyLeading: false,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [

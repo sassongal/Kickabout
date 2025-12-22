@@ -1053,18 +1053,6 @@ abstract class AppLocalizations {
   /// **'הצטרף להוב'**
   String get joinHubButton;
 
-  /// Snackbar message when user sets availability to available
-  ///
-  /// In he, this message translates to:
-  /// **'סטטוס עודכן: זמין למשחקים'**
-  String get statusUpdatedAvailable;
-
-  /// Snackbar message when user sets availability to not available
-  ///
-  /// In he, this message translates to:
-  /// **'סטטוס עודכן: לא זמין למשחקים'**
-  String get statusUpdatedNotAvailable;
-
   /// Error message when status update fails
   ///
   /// In he, this message translates to:

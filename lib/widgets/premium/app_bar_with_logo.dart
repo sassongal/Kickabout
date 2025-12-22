@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kattrick/widgets/premium/offline_indicator.dart';
 import 'package:kattrick/widgets/notifications_badge_button.dart';
 import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// AppBar with KICKA BALL logo
@@ -23,6 +24,32 @@ class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     // Figma design: White AppBar with border-bottom, uppercase title
+    final backButton = showBackButton
+        ? IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              }
+            },
+            tooltip: 'חזור',
+            color: PremiumColors.textPrimary,
+          )
+        : null;
+
+    final leading = showLogo
+        ? AppBarHomeLogo(
+            showBackButton: showBackButton,
+            backIcon: Icons.arrow_back_ios_new,
+            backTooltip: 'חזור',
+            onBack: () {
+              if (context.canPop()) {
+                context.pop();
+              }
+            },
+          )
+        : backButton;
+
     return Container(
       decoration: BoxDecoration(
         color: PremiumColors.surface,
@@ -47,18 +74,10 @@ class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
                 overflow: TextOverflow.ellipsis,
               )
             : null,
-        leading: showBackButton
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  }
-                },
-                tooltip: 'חזור',
-                color: PremiumColors.textPrimary,
-              )
-            : null,
+        leading: leading,
+        leadingWidth: showLogo
+            ? AppBarHomeLogo.leadingWidth(showBackButton: showBackButton)
+            : (showBackButton ? kToolbarHeight : null),
         actions: [
           const OfflineIndicatorIcon(),
           const NotificationsBadgeButton(),
@@ -76,4 +95,3 @@ class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
-

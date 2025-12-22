@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/data/proteams_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
@@ -26,10 +28,10 @@ class PlayersListScreen extends ConsumerStatefulWidget {
 class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
   String _searchQuery = '';
   String _sortBy = 'name'; // distance, name
-  bool _showAvailableOnly = false;
   String? _selectedCity;
   String? _selectedPosition;
   AgeGroup? _selectedAgeGroup; // ✅ Filter by age group
+  String? _selectedProTeamId; // Filter by favorite team
 
   final Map<String, double> _playerDistances = {};
   final ScrollController _scrollController = ScrollController();
@@ -93,19 +95,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
 
     return PremiumScaffold(
       title: 'לוח שחקנים',
-      actions: [
-        IconButton(
-          icon: Icon(_showAvailableOnly
-              ? Icons.check_circle
-              : Icons.check_circle_outline),
-          onPressed: () {
-            setState(() {
-              _showAvailableOnly = !_showAvailableOnly;
-            });
-          },
-          tooltip: 'הצג רק זמינים',
-        ),
-      ],
       body: Column(
         children: [
           Padding(
@@ -575,11 +564,6 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
         }).toList();
       }
 
-      if (_showAvailableOnly) {
-        players =
-            players.where((p) => p.availabilityStatus == 'available').toList();
-      }
-
       if (_selectedCity != null && _selectedCity!.isNotEmpty) {
         players = players.where((p) => p.city == _selectedCity).toList();
       }
@@ -594,6 +578,13 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       if (_selectedAgeGroup != null) {
         players =
             players.where((p) => p.ageGroup == _selectedAgeGroup).toList();
+      }
+
+      // Filter by favorite ProTeam
+      if (_selectedProTeamId != null && _selectedProTeamId!.isNotEmpty) {
+        players = players
+            .where((p) => p.favoriteProTeamId == _selectedProTeamId)
+            .toList();
       }
 
       _playerDistances.clear();
@@ -742,6 +733,46 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                       });
                     },
                   ),
+                  const SizedBox(height: 16),
+                  // Favorite ProTeam Filter
+                  FutureBuilder<List<ProTeam>>(
+                    future: ref.read(proTeamsRepositoryProvider).getAllTeams(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const SizedBox.shrink();
+                      }
+                      final teams = snapshot.data!;
+                      return DropdownButtonFormField<String>(
+                        initialValue: _selectedProTeamId,
+                        decoration: const InputDecoration(
+                          labelText: 'קבוצה אהודה',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.sports_soccer),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('כל הקבוצות'),
+                          ),
+                          ...teams.map((team) => DropdownMenuItem(
+                                value: team.teamId,
+                                child: Row(
+                                  children: [
+                                    _buildTeamLogo(team.logoUrl, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(team.name),
+                                  ],
+                                ),
+                              )),
+                        ],
+                        onChanged: (value) {
+                          setDialogState(() {
+                            _selectedProTeamId = value;
+                          });
+                        },
+                      );
+                    },
+                  ),
                 ],
               ),
             );
@@ -754,6 +785,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                 _selectedCity = null;
                 _selectedPosition = null;
                 _selectedAgeGroup = null; // ✅ Reset age group filter
+                _selectedProTeamId = null; // Reset favorite team filter
               });
               Navigator.pop(context);
             },
@@ -788,5 +820,27 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
       default:
         return position;
     }
+  }
+
+  Widget _buildTeamLogo(String logoUrl, {double size = 24}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: CachedNetworkImage(
+        imageUrl: logoUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        placeholder: (context, url) => Container(
+          width: size,
+          height: size,
+          color: Colors.grey[200],
+        ),
+        errorWidget: (context, url, error) => const Icon(
+          Icons.sports_soccer,
+          size: 18,
+          color: PremiumColors.textSecondary,
+        ),
+      ),
+    );
   }
 }

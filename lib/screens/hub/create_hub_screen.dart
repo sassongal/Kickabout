@@ -17,6 +17,7 @@ import 'dart:typed_data';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/widgets/input/city_autocomplete_field.dart';
 import 'package:kattrick/utils/city_utils.dart';
+import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -40,6 +41,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
   List<Venue> _selectedVenues = [];
   String? _mainVenueId;
+  Venue? _homeVenue;
 
   @override
   void initState() {
@@ -88,6 +90,44 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
     }
   }
 
+  void _setHomeVenue(Venue venue) {
+    if (venue.venueId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('שגיאה: למגרש אין מזהה תקין')),
+      );
+      return;
+    }
+
+    // Respect max 3 venues list; ensure home is part of the list
+    final alreadyInList =
+        _selectedVenues.any((v) => v.venueId == venue.venueId);
+    if (!alreadyInList && _selectedVenues.length >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ניתן להוסיף עד 3 מגרשים. הסר אחד כדי לבחור חדש.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _homeVenue = venue;
+      _mainVenueId = venue.venueId;
+
+      if (!alreadyInList) {
+        _selectedVenues = [..._selectedVenues, venue];
+      }
+
+      // If city not chosen yet, fill from venue.city and derive region
+      if (_cityController.text.isEmpty &&
+          venue.city != null &&
+          venue.city!.isNotEmpty) {
+        _cityController.text = venue.city!;
+        _selectedRegion = CityUtils.getRegionForCity(venue.city!);
+      }
+    });
+  }
+
   Future<void> _createHub() async {
     final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
@@ -121,6 +161,15 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
+
+      // If home venue selected, ensure it is part of the venues list and set as main
+      if (_homeVenue != null &&
+          !_selectedVenues.any((v) => v.venueId == _homeVenue!.venueId)) {
+        _selectedVenues = [..._selectedVenues, _homeVenue!];
+      }
+      if (_homeVenue != null) {
+        _mainVenueId = _homeVenue!.venueId;
+      }
 
       // Determine main venue and its location (optional)
       Venue? mainVenue;
@@ -412,6 +461,43 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                 ),
               const SizedBox(height: 24),
 
+              // Home venue selector
+              Text(
+                'מגרש בית',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              SmartVenueSearchField(
+                onVenueSelected: _setHomeVenue,
+                label: 'בחר מגרש בית',
+                hint: 'חפש מגרש בית ופתח מפה...',
+                initialValue: _homeVenue?.name,
+                hubId: null,
+                filterCity: _cityController.text.isNotEmpty
+                    ? _cityController.text
+                    : null,
+              ),
+              if (_homeVenue != null) ...[
+                const SizedBox(height: 8),
+                Card(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  child: ListTile(
+                    leading: const Icon(Icons.home_work),
+                    title: Text(_homeVenue!.name),
+                    subtitle: _homeVenue!.address != null
+                        ? Text(_homeVenue!.address!)
+                        : null,
+                    trailing: TextButton(
+                      onPressed: () => setState(() => _homeVenue = null),
+                      child: const Text('נקה'),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+
               // Hub Venues Manager (optional)
               Text(
                 'מגרשים (אופציונלי)',
@@ -460,6 +546,15 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
                       // No venues selected - clear main venue
                       _mainVenueId = null;
                       debugPrint('ℹ️ No venues selected, clearing main venue');
+                    }
+
+                    if (_mainVenueId != null) {
+                      try {
+                        _homeVenue = _selectedVenues
+                            .firstWhere((v) => v.venueId == _mainVenueId);
+                      } catch (_) {
+                        // keep existing home venue if not in list
+                      }
                     }
                   });
                 },

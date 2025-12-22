@@ -53,6 +53,8 @@ class HubVenuesList extends ConsumerWidget {
         }
 
         final venues = snapshot.data ?? [];
+        final remainingSlots =
+            (3 - venues.length).clamp(0, 3); // Prevent negative display
 
         if (venues.isEmpty) {
           return Padding(
@@ -94,7 +96,9 @@ class HubVenuesList extends ConsumerWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'מגרשים (${venues.length})',
+                  venues.length == 1
+                      ? 'מגרש 1 רשום | ניתן להוסיף עוד $remainingSlots'
+                      : 'מגרשים (${venues.length}) | ניתן להוסיף עוד $remainingSlots',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

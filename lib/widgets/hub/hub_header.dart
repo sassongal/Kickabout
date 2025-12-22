@@ -84,32 +84,9 @@ class HubHeader extends ConsumerWidget {
             Positioned(
               left: 16,
               bottom: 16,
-              child: Hero(
-                tag: 'hub_avatar_${hub.hubId}',
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundImage: hub.profileImageUrl != null
-                        ? NetworkImage(hub.profileImageUrl!)
-                        : null,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: hub.profileImageUrl == null
-                        ? const Icon(Icons.group, size: 40, color: Colors.white)
-                        : null,
-                  ),
-                ),
+              child: _HubActionsButton(
+                hub: hub,
+                hubPermissions: hubPermissions,
               ),
             ),
             // Hub Name & Summary (Overlapping)
@@ -165,6 +142,14 @@ class HubHeader extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (hubPermissions != null) ...[
+                    HubCommandCenter(
+                      hubId: hubId,
+                      hub: hub,
+                      hubPermissions: hubPermissions!,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   // User role badge & Date
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -242,22 +227,24 @@ class HubHeader extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Member count
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.groups_outlined,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/hubs/${hub.hubId}/players'),
+                    icon: const Icon(Icons.groups_3, size: 18),
+                    label: Text(
+                      'חברי ההאב (${hub.memberCount})',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${hub.memberCount} משתתפים פעילים',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                    ),
                   ),
                   if (hub.description != null &&
                       hub.description!.isNotEmpty) ...[
@@ -273,35 +260,20 @@ class HubHeader extends ConsumerWidget {
                   const SizedBox(height: 12),
 
                   // Command Center
-                  if (hubPermissions != null)
-                    HubCommandCenter(
-                      hubId: hubId,
-                      hub: hub,
-                      hubPermissions: hubPermissions!,
-                    ),
-
                   if (hubPermissions != null &&
                           (hubPermissions!.isManager ||
                               hubPermissions!.isModerator) ||
                       isAdminRole) ...[
                     const SizedBox(height: 12),
-                    // City and Home Venue in one row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: HubCitySelector(
-                            hubId: hubId,
-                            hub: hub,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: HubHomeVenueSelector(
-                            hubId: hubId,
-                            venuesRepo: venuesRepo,
-                          ),
-                        ),
-                      ],
+                    // City and Home Venue stacked vertically
+                    HubCitySelector(
+                      hubId: hubId,
+                      hub: hub,
+                    ),
+                    const SizedBox(height: 8),
+                    HubHomeVenueSelector(
+                      hubId: hubId,
+                      venuesRepo: venuesRepo,
                     ),
                   ],
                 ],
@@ -312,38 +284,15 @@ class HubHeader extends ConsumerWidget {
         // Venues list (compact) - outside Card
         HubVenuesList(hubId: hubId, venuesRepo: venuesRepo),
 
-        // Regular member actions
+        // Regular member actions -> settings sheet
         if (!isAdminRole && currentUserId != null && isMember) ...[
           const SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: () => _toggleMembership(context, ref, hub, isMember),
-            icon: const Icon(Icons.exit_to_app, size: 18),
-            label: const Text('עזוב Hub'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-            ),
+          OutlinedButton.icon(
+            onPressed: () => _openMemberSettings(context, ref, hub),
+            icon: const Icon(Icons.settings),
+            label: const Text('הגדרות חבר'),
           ),
         ],
-
-        // Hub Members button (compact)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: ElevatedButton.icon(
-            onPressed: () => context.push('/hubs/${hub.hubId}/players'),
-            icon: const Icon(Icons.groups_3, size: 20),
-            label: Text(
-              'חברי ההאב (${hub.memberCount})',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-        ),
 
         // Share and Rules buttons (compact)
         Padding(
@@ -424,5 +373,142 @@ class HubHeader extends ConsumerWidget {
         );
       }
     }
+  }
+
+  Future<void> _openMemberSettings(
+    BuildContext context,
+    WidgetRef ref,
+    Hub hub,
+  ) async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: const Text('הגדרות התראות'),
+                  subtitle: const Text(
+                    'שליטה בהתראות על אירועים, צ\'אט, סקרים ותיוגים',
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/settings/notifications/$currentUserId');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.exit_to_app, color: Colors.red),
+                  title: const Text('עזוב ההאב'),
+                  subtitle: const Text('הסר את עצמך מחברי ההאב'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _toggleMembership(context, ref, hub, true);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HubActionsButton extends StatelessWidget {
+  final Hub hub;
+  final HubPermissions? hubPermissions;
+
+  const _HubActionsButton({
+    required this.hub,
+    required this.hubPermissions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // If no permissions data, fall back to simple avatar (no menu)
+    final canShowMenu =
+        hubPermissions != null && (hubPermissions!.isManager || hubPermissions!.isModerator);
+
+    return Hero(
+      tag: 'hub_avatar_${hub.hubId}',
+      child: InkWell(
+        onTap: canShowMenu ? () => _openActions(context) : null,
+        borderRadius: BorderRadius.circular(44),
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: CircleAvatar(
+            radius: 40,
+            backgroundImage: hub.profileImageUrl != null
+                ? NetworkImage(hub.profileImageUrl!)
+                : null,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: Icon(
+              Icons.bolt,
+              size: 36,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openActions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.person_search),
+                title: const Text('מחפש שחקנים'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/hubs/${hub.hubId}/create-recruiting-post');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.visibility),
+                title: const Text('סקאוט / גיוס שחקנים'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/hubs/${hub.hubId}/scouting');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.analytics_outlined),
+                title: const Text('אנליזה'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/hubs/${hub.hubId}/analytics');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

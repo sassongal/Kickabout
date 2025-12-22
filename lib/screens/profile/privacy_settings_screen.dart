@@ -204,6 +204,16 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                     'hideRatings',
                     Icons.trending_up_outlined,
                   ),
+
+                  const Divider(),
+
+                  // Allow hub invites
+                  _buildPrivacySwitch(
+                    'אפשר לקבל הזמנות להאבים',
+                    'אם מכובה, עדיין יראו אותך בחיפוש אבל לא יוכלו לשלוח לך הזמנת הצטרפות',
+                    'allowHubInvites',
+                    Icons.group_add_outlined,
+                  ),
                 ],
               ),
             ),
@@ -266,4 +276,3 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     );
   }
 }
-

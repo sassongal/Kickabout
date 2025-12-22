@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/image_picker_button.dart';
 import 'package:kattrick/widgets/loading_widget.dart';
+import 'package:kattrick/widgets/input/proteam_selector.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/storage_service.dart';
@@ -41,6 +42,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String? _selectedAvatarColor;
   DateTime? _selectedBirthDate;
   bool _showSocialLinks = false;
+  String? _selectedProTeamId;
 
   XFile? _selectedImage;
   bool _isLoading = false;
@@ -113,6 +115,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           _selectedRegion = user.region;
           _selectedAvatarColor = user.avatarColor;
           _selectedBirthDate = user.birthDate;
+          _selectedProTeamId = user.favoriteProTeamId;
           _facebookController.text = user.facebookProfileUrl ?? '';
           _instagramController.text = user.instagramProfileUrl ?? '';
           _showSocialLinks = user.showSocialLinks;
@@ -187,6 +190,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         photoUrl: photoUrl,
         avatarColor: _selectedAvatarColor,
         birthDate: _selectedBirthDate ?? _currentUser?.birthDate ?? DateTime(2000, 1, 1),
+        favoriteProTeamId: _selectedProTeamId,
         facebookProfileUrl: _facebookController.text.trim().isEmpty
             ? null
             : UrlValidator.validateAndCleanFacebookUrl(_facebookController.text.trim()),
@@ -468,6 +472,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       .toList(),
                   onChanged: (value) =>
                       setState(() => _selectedPosition = value),
+                ),
+                const SizedBox(height: 16),
+
+                // Favorite ProTeam
+                ProTeamSelector(
+                  selectedTeamId: _selectedProTeamId,
+                  onTeamSelected: (teamId) {
+                    setState(() {
+                      _selectedProTeamId = teamId;
+                    });
+                  },
+                  label: 'קבוצה אהודה',
+                  showNoneOption: true,
                 ),
                 const SizedBox(height: 16),
 

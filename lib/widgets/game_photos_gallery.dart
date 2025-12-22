@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Widget for displaying game photos in a grid gallery
 class GamePhotosGallery extends StatelessWidget {
@@ -181,11 +182,16 @@ class _PhotoViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
+        leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+        leading: AppBarHomeLogo(showBackButton: canPop),
+        automaticallyImplyLeading: false,
         title: Text(
           '${initialIndex + 1} / ${photoUrls.length}',
           style: const TextStyle(color: Colors.white),

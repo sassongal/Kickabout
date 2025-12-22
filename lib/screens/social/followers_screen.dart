@@ -5,6 +5,7 @@ import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/theme/premium_theme.dart';
 
 /// Followers screen - shows users that follow a user
 class FollowersScreen extends ConsumerWidget {
@@ -49,17 +50,57 @@ class FollowersScreen extends ConsumerWidget {
 
           return ListView.builder(
             itemCount: users.length,
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(16),
             itemBuilder: (context, index) {
               final user = users[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  leading: PlayerAvatar(user: user, radius: 24),
-                  title: Text(user.name),
-                  subtitle: Text(user.email),
-                  trailing: const Icon(Icons.chevron_left),
-                  onTap: () => context.push('/profile/${user.uid}'),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: PremiumColors.border),
+                  boxShadow: PremiumShadows.sm,
+                ),
+                child: Row(
+                  children: [
+                    PlayerAvatar(user: user, radius: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.name,
+                            style: PremiumTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (user.city != null && user.city!.isNotEmpty)
+                            Text(
+                              user.city!,
+                              style: PremiumTypography.bodySmall
+                                  .copyWith(color: PremiumColors.textSecondary),
+                            )
+                          else
+                            Text(
+                              user.email,
+                              style: PremiumTypography.bodySmall
+                                  .copyWith(color: PremiumColors.textSecondary),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.message_outlined),
+                      tooltip: 'שלח הודעה',
+                      onPressed: () => _startChat(context, ref, user),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new),
+                      onPressed: () => context.push('/profile/${user.uid}'),
+                    ),
+                  ],
                 ),
               );
             },
@@ -70,3 +111,38 @@ class FollowersScreen extends ConsumerWidget {
   }
 }
 
+Future<void> _startChat(
+  BuildContext context,
+  WidgetRef ref,
+  User target,
+) async {
+  final currentUserId = ref.read(currentUserIdProvider);
+  if (currentUserId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('נא להתחבר כדי לשלוח הודעה')),
+    );
+    return;
+  }
+
+  if (currentUserId == target.uid) {
+    return;
+  }
+
+  try {
+    final privateMessagesRepo = ref.read(privateMessagesRepositoryProvider);
+    final conversationId =
+        await privateMessagesRepo.getOrCreateConversation(
+      currentUserId,
+      target.uid,
+    );
+    if (context.mounted) {
+      context.go('/messages/$conversationId');
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('שגיאה בפתיחת שיחה: $e')),
+      );
+    }
+  }
+}

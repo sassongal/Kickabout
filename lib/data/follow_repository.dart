@@ -113,9 +113,9 @@ class FollowRepository {
     }
 
     return _firestore
-        .collection(FirestorePaths.user(userId))
-        .doc('following')
         .collection('users')
+        .doc(userId)
+        .collection('following')
         .snapshots()
         .asyncMap((snapshot) async {
           final userIds = snapshot.docs.map((doc) => doc.id).toList();
@@ -174,4 +174,3 @@ class FollowRepository {
         .map((snapshot) => snapshot.docs.length);
   }
 }
-

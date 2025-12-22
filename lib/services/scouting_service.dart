@@ -13,7 +13,6 @@ class ScoutingCriteria {
   final AgeGroup?
       ageGroup; // ✅ Filter by age group (alternative to minAge/maxAge)
   final String? region; // איזור מגורים: צפון, מרכז, דרום, ירושלים
-  final bool activeOnly; // Only active players (isActive = true)
   final int? limit;
 
   const ScoutingCriteria({
@@ -22,7 +21,6 @@ class ScoutingCriteria {
     this.maxAge,
     this.ageGroup, // ✅ Age group filter
     this.region,
-    this.activeOnly = true,
     this.limit,
   });
 }
@@ -76,11 +74,6 @@ class ScoutingService {
       final candidates = allUsers.where((User user) {
         // Exclude hub members via user profile hubIds
         if (user.hubIds.contains(hub.hubId)) {
-          return false;
-        }
-
-        // Filter by active status
-        if (criteria.activeOnly && !user.isActive) {
           return false;
         }
 
