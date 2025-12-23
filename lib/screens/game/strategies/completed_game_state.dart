@@ -93,6 +93,10 @@ class _SessionSummaryWidget extends StatelessWidget {
     if (!isSessionMode) {
       return const SizedBox.shrink();
     }
+    if (game.teams.isEmpty) {
+      // No teams to render stats against; avoid crashes on empty lists
+      return const SizedBox.shrink();
+    }
 
     final teamStats = SessionLogic.getAllTeamStats(game);
     final seriesScore = SessionLogic.getSeriesScoreDisplay(game);

@@ -795,6 +795,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String get confirm => 'אישור';
 
   @override
+  String get recruitingUrgentLabel => 'דחוף';
+
+  @override
+  String recruitingNeededPlayers(int count) {
+    return 'מחפשים $count שחקנים';
+  }
+
+  @override
+  String recruitingUntilLabel(Object date) {
+    return 'עד: $date';
+  }
+
+  @override
   String recruitingFeedContent(Object hubName, Object count, Object gameDate) {
     return 'האב $hubName צריך $count שחקנים למשחק ב-$gameDate';
   }

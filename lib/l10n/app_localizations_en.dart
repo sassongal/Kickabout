@@ -803,6 +803,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirm => 'Confirm';
 
   @override
+  String get recruitingUrgentLabel => 'Urgent';
+
+  @override
+  String recruitingNeededPlayers(int count) {
+    return 'Looking for $count players';
+  }
+
+  @override
+  String recruitingUntilLabel(Object date) {
+    return 'Until: $date';
+  }
+
+  @override
   String recruitingFeedContent(Object hubName, Object count, Object gameDate) {
     return 'Hub $hubName needs $count players for a game on $gameDate';
   }

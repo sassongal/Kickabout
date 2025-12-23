@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,7 +8,6 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/services/error_handler_service.dart';
-import 'package:kattrick/services/cache_service.dart';
 
 /// Community Activity Feed Screen
 /// Displays public games and events from all hubs
@@ -33,14 +33,20 @@ class _CommunityActivityFeedScreenState
   final ScrollController _scrollController = ScrollController();
   final int _pageSize = 20; // Load 20 items at a time
   bool _isLoadingMore = false;
+  bool _isInitialGamesLoading = true;
   bool _hasMoreGames = true;
+  DocumentSnapshot? _lastGameCursor;
+  String? _gamesError;
   List<Game> _loadedGames = [];
+  final Map<String, String> _hubNameCache = {};
+  final Map<String, Future<String?>> _hubNameRequests = {};
 
   @override
   void initState() {
     super.initState();
     // Listen to scroll position for pagination
     _scrollController.addListener(_onScroll);
+    Future.microtask(_loadInitialGames);
   }
 
   @override
@@ -50,6 +56,7 @@ class _CommunityActivityFeedScreenState
   }
 
   void _onScroll() {
+    if (_contentType == 'events') return;
     // Load more when user scrolls to 80% of the list
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent * 0.8) {
@@ -58,21 +65,8 @@ class _CommunityActivityFeedScreenState
   }
 
   void _loadMore() {
-    if (_isLoadingMore) return;
-
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    // Load more will be handled in the stream builders
-    // This is just a trigger
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) {
-        setState(() {
-          _isLoadingMore = false;
-        });
-      }
-    });
+    if (_isLoadingMore || !_hasMoreGames) return;
+    _fetchGamesPage();
   }
 
   void _resetPagination() {
@@ -80,24 +74,112 @@ class _CommunityActivityFeedScreenState
       setState(() {
         _loadedGames = [];
         _hasMoreGames = true;
+        _lastGameCursor = null;
+        _gamesError = null;
       });
     }
   }
 
+  Future<void> _loadInitialGames() async {
+    _resetPagination();
+    setState(() {
+      _isInitialGamesLoading = true;
+    });
+    await _fetchGamesPage(reset: true);
+  }
+
+  Future<void> _fetchGamesPage({bool reset = false}) async {
+    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final startAfter = reset ? null : _lastGameCursor;
+
+    if (!reset) {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
+
+    try {
+      final result = await gamesRepo.fetchPublicCompletedGamesPage(
+        limit: _pageSize,
+        hubId: _selectedHubId,
+        region: _selectedRegion,
+        startDate: _startDate,
+        endDate: _endDate,
+        startAfter: startAfter,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _loadedGames = reset
+            ? result.games
+            : [
+                ..._loadedGames,
+                ...result.games,
+              ];
+        _lastGameCursor = result.lastDocument;
+        _hasMoreGames =
+            result.games.length == _pageSize && result.lastDocument != null;
+        _gamesError = null;
+        _isInitialGamesLoading = false;
+        _isLoadingMore = false;
+      });
+
+      _prefetchHubNamesForGames(result.games);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _gamesError = e.toString();
+        _isInitialGamesLoading = false;
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  void _prefetchHubNamesForGames(List<Game> games) {
+    final hubIds = games
+        .map((g) => g.hubId)
+        .whereType<String>()
+        .where((id) => !_hubNameCache.containsKey(id))
+        .toSet();
+    _prefetchHubNamesForHubIds(hubIds);
+  }
+
+  void _prefetchHubNamesForHubIds(Iterable<String> hubIds) {
+    for (final hubId in hubIds) {
+      _ensureHubNameLoaded(hubId);
+    }
+  }
+
+  Future<void> _ensureHubNameLoaded(String hubId) async {
+    if (_hubNameCache.containsKey(hubId) ||
+        _hubNameRequests.containsKey(hubId)) {
+      return;
+    }
+
+    final future = ref
+        .read(hubsRepositoryProvider)
+        .getHub(hubId)
+        .then((hub) => hub?.name);
+    _hubNameRequests[hubId] = future;
+
+    final name = await future;
+    if (!mounted) return;
+    if (name != null) {
+      setState(() {
+        _hubNameCache[hubId] = name;
+      });
+    }
+  }
+
+  String? _hubNameFor(String? hubId) {
+    if (hubId == null) return null;
+    return _hubNameCache[hubId];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
     final eventsRepo = ref.watch(hubEventsRepositoryProvider);
-
-    // OPTIMIZED: Use pagination - load 20 items at a time
-    // Get games stream with pagination
-    final gamesStream = gamesRepo.watchPublicCompletedGames(
-      limit: _pageSize,
-      hubId: _selectedHubId,
-      region: _selectedRegion,
-      startDate: _startDate,
-      endDate: _endDate,
-    );
 
     // Get events stream with pagination
     final eventsStream = eventsRepo.watchPublicEvents(
@@ -172,93 +254,62 @@ class _CommunityActivityFeedScreenState
           // Feed content
           Expanded(
             child: _contentType == 'games'
-                ? _buildGamesFeed(gamesStream)
+                ? _buildGamesFeed()
                 : _contentType == 'events'
                     ? _buildEventsFeed(eventsStream)
-                    : _buildCombinedFeed(gamesStream, eventsStream),
+                    : _buildCombinedFeed(eventsStream),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGamesFeed(Stream<List<Game>> gamesStream) {
-    // Try to load from cache first
-    final cacheKey = CacheKeys.publicGames(region: _selectedRegion);
-    final cachedGames = CacheService().get<List<Game>>(cacheKey);
+  Widget _buildGamesFeed() {
+    if (_isInitialGamesLoading) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 5,
+        itemBuilder: (context, index) => const SkeletonGameCard(),
+      );
+    }
 
-    return StreamBuilder<List<Game>>(
-      stream: gamesStream,
-      initialData: cachedGames, // Use cached data as initial data
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            snapshot.data == null) {
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: 5,
-            itemBuilder: (context, index) => const SkeletonGameCard(),
-          );
-        }
+    if (_gamesError != null) {
+      return PremiumEmptyState(
+        icon: Icons.error_outline,
+        title: 'שגיאה בטעינת משחקים',
+        message: ErrorHandlerService().handleException(
+          _gamesError!,
+          context: 'Community activity feed',
+        ),
+      );
+    }
 
-        if (snapshot.hasError) {
-          return PremiumEmptyState(
-            icon: Icons.error_outline,
-            title: 'שגיאה בטעינת משחקים',
-            message: ErrorHandlerService().handleException(
-              snapshot.error,
-              context: 'Community activity feed',
+    if (_loadedGames.isEmpty) {
+      return PremiumEmptyState(
+        icon: Icons.sports_soccer_outlined,
+        title: 'אין משחקים',
+        message: 'לא נמצאו משחקים ציבוריים',
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount:
+          _loadedGames.length + (_hasMoreGames && _isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == _loadedGames.length) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
             ),
           );
         }
-
-        final games = snapshot.data ?? [];
-
-        if (games.isEmpty) {
-          return PremiumEmptyState(
-            icon: Icons.sports_soccer_outlined,
-            title: 'אין משחקים',
-            message: 'לא נמצאו משחקים ציבוריים',
-          );
-        }
-
-        // Update loaded games directly (no postFrameCallback to avoid infinite loops)
-        // Only update if data actually changed
-        if (games.isNotEmpty) {
-          final firstGameId = games.first.gameId;
-          if (_loadedGames.isEmpty ||
-              _loadedGames.first.gameId != firstGameId) {
-            // Use Future.microtask to update state after current build
-            Future.microtask(() {
-              if (mounted) {
-                setState(() {
-                  _loadedGames = games;
-                  _hasMoreGames = games.length >= _pageSize;
-                });
-              }
-            });
-          }
-        }
-
-        // Use games directly if _loadedGames is empty (initial load)
-        final displayGames = _loadedGames.isEmpty ? games : _loadedGames;
-
-        return ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemCount:
-              displayGames.length + (_hasMoreGames && _isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == displayGames.length) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-            final game = displayGames[index];
-            return _GameFeedCard(game: game);
-          },
+        final game = _loadedGames[index];
+        return _GameFeedCard(
+          game: game,
+          hubName: _hubNameFor(game.hubId) ?? game.denormalized.hubName,
         );
       },
     );
@@ -288,6 +339,7 @@ class _CommunityActivityFeedScreenState
         }
 
         final events = snapshot.data ?? [];
+        _prefetchHubNamesForHubIds(events.map((e) => e.hubId));
 
         if (events.isEmpty) {
           return PremiumEmptyState(
@@ -302,7 +354,10 @@ class _CommunityActivityFeedScreenState
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
-            return _EventFeedCard(event: event);
+            return _EventFeedCard(
+              event: event,
+              hubName: _hubNameFor(event.hubId),
+            );
           },
         );
       },
@@ -310,57 +365,67 @@ class _CommunityActivityFeedScreenState
   }
 
   Widget _buildCombinedFeed(
-    Stream<List<Game>> gamesStream,
     Stream<List<HubEvent>> eventsStream,
   ) {
-    return StreamBuilder<List<Game>>(
-      stream: gamesStream,
-      builder: (context, gamesSnapshot) {
-        return StreamBuilder<List<HubEvent>>(
-          stream: eventsStream,
-          builder: (context, eventsSnapshot) {
-            if (gamesSnapshot.connectionState == ConnectionState.waiting ||
-                eventsSnapshot.connectionState == ConnectionState.waiting) {
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: 5,
-                itemBuilder: (context, index) => const SkeletonGameCard(),
+    return StreamBuilder<List<HubEvent>>(
+      stream: eventsStream,
+      builder: (context, eventsSnapshot) {
+        if (eventsSnapshot.connectionState == ConnectionState.waiting &&
+            _isInitialGamesLoading) {
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 5,
+            itemBuilder: (context, index) => const SkeletonGameCard(),
+          );
+        }
+
+        final events = eventsSnapshot.data ?? [];
+        _prefetchHubNamesForHubIds(events.map((e) => e.hubId));
+
+        final items = <_FeedItem>[];
+        items.addAll(_loadedGames.map((g) => _FeedItem.game(g)));
+        items.addAll(events.map((e) => _FeedItem.event(e)));
+        items.sort((a, b) {
+          final aDate = a.isGame ? a.game!.gameDate : a.event!.eventDate;
+          final bDate = b.isGame ? b.game!.gameDate : b.event!.eventDate;
+          return bDate.compareTo(aDate); // Newest first
+        });
+
+        if (items.isEmpty) {
+          return PremiumEmptyState(
+            icon: Icons.timeline_outlined,
+            title: 'אין פעילות',
+            message: 'לא נמצאה פעילות ציבורית',
+          );
+        }
+
+        return ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(16),
+          itemCount:
+              items.length + (_hasMoreGames && _isLoadingMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == items.length) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
               );
             }
-
-            final games = gamesSnapshot.data ?? [];
-            final events = eventsSnapshot.data ?? [];
-
-            // Combine and sort by date
-            final items = <_FeedItem>[];
-            items.addAll(games.map((g) => _FeedItem.game(g)));
-            items.addAll(events.map((e) => _FeedItem.event(e)));
-            items.sort((a, b) {
-              final aDate = a.isGame ? a.game!.gameDate : a.event!.eventDate;
-              final bDate = b.isGame ? b.game!.gameDate : b.event!.eventDate;
-              return bDate.compareTo(aDate); // Newest first
-            });
-
-            if (items.isEmpty) {
-              return PremiumEmptyState(
-                icon: Icons.timeline_outlined,
-                title: 'אין פעילות',
-                message: 'לא נמצאה פעילות ציבורית',
+            final item = items[index];
+            if (item.isGame) {
+              return _GameFeedCard(
+                game: item.game!,
+                hubName: _hubNameFor(item.game!.hubId) ??
+                    item.game!.denormalized.hubName,
+              );
+            } else {
+              return _EventFeedCard(
+                event: item.event!,
+                hubName: _hubNameFor(item.event!.hubId),
               );
             }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                if (item.isGame) {
-                  return _GameFeedCard(game: item.game!);
-                } else {
-                  return _EventFeedCard(event: item.event!);
-                }
-              },
-            );
           },
         );
       },
@@ -385,6 +450,7 @@ class _CommunityActivityFeedScreenState
             _startDate = startDate;
             _endDate = endDate;
           });
+          _loadInitialGames();
           Navigator.pop(context);
         },
       ),
@@ -404,15 +470,14 @@ class _FeedItem {
 }
 
 /// Game feed card with unique design
-class _GameFeedCard extends ConsumerWidget {
+class _GameFeedCard extends StatelessWidget {
   final Game game;
+  final String? hubName;
 
-  const _GameFeedCard({required this.game});
+  const _GameFeedCard({required this.game, this.hubName});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hubsRepo = ref.read(hubsRepositoryProvider);
-
+  Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -461,23 +526,15 @@ class _GameFeedCard extends ConsumerWidget {
               const SizedBox(height: 16),
 
             // Hub name - medium size
-            FutureBuilder<Hub?>(
-              future: game.hubId != null
-                  ? hubsRepo.getHub(game.hubId!)
-                  : Future.value(null),
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  return Text(
-                    snapshot.data!.name,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-            const SizedBox(height: 8),
+            if (hubName != null && hubName!.isNotEmpty) ...[
+              Text(
+                hubName!,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Date - small
             Text(
@@ -613,15 +670,14 @@ class _GameFeedCard extends ConsumerWidget {
 }
 
 /// Event feed card
-class _EventFeedCard extends ConsumerWidget {
+class _EventFeedCard extends StatelessWidget {
   final HubEvent event;
+  final String? hubName;
 
-  const _EventFeedCard({required this.event});
+  const _EventFeedCard({required this.event, this.hubName});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hubsRepo = ref.read(hubsRepositoryProvider);
-
+  Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -643,21 +699,15 @@ class _EventFeedCard extends ConsumerWidget {
             const SizedBox(height: 8),
 
             // Hub name - medium
-            FutureBuilder<Hub?>(
-              future: hubsRepo.getHub(event.hubId),
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  return Text(
-                    snapshot.data!.name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-            const SizedBox(height: 8),
+            if (hubName != null && hubName!.isNotEmpty) ...[
+              Text(
+                hubName!,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Date and time - small
             Text(

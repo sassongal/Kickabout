@@ -1558,6 +1558,24 @@ abstract class AppLocalizations {
   /// **'אישור'**
   String get confirm;
 
+  /// Label for urgent recruiting posts
+  ///
+  /// In he, this message translates to:
+  /// **'דחוף'**
+  String get recruitingUrgentLabel;
+
+  /// Label showing how many players are still needed in a recruiting post
+  ///
+  /// In he, this message translates to:
+  /// **'מחפשים {count} שחקנים'**
+  String recruitingNeededPlayers(int count);
+
+  /// Label prefix for recruiting deadline date
+  ///
+  /// In he, this message translates to:
+  /// **'עד: {date}'**
+  String recruitingUntilLabel(Object date);
+
   /// No description provided for @recruitingFeedContent.
   ///
   /// In he, this message translates to:

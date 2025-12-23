@@ -665,6 +665,26 @@
     }
   },
   "confirm": "אישור",
+  "recruitingUrgentLabel": "דחוף",
+  "@recruitingUrgentLabel": {
+    "description": "Label for urgent recruiting posts"
+  },
+  "recruitingNeededPlayers": "מחפשים {count} שחקנים",
+  "@recruitingNeededPlayers": {
+    "description": "Label showing how many players are still needed in a recruiting post",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recruitingUntilLabel": "עד: {date}",
+  "@recruitingUntilLabel": {
+    "description": "Label prefix for recruiting deadline date",
+    "placeholders": {
+      "date": {}
+    }
+  },
   "recruitingFeedContent": "האב {hubName} צריך {count} שחקנים למשחק ב-{gameDate}",
   "@recruitingFeedContent": {
     "placeholders": {

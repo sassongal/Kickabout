@@ -18,6 +18,13 @@ import 'package:kattrick/logic/session_rotation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:rxdart/rxdart.dart';
 
+class PaginatedGamesResult {
+  final List<Game> games;
+  final DocumentSnapshot? lastDocument;
+
+  PaginatedGamesResult({required this.games, required this.lastDocument});
+}
+
 /// Repository for Game operations
 class GamesRepository {
   final FirebaseFirestore _firestore;
@@ -461,6 +468,106 @@ class GamesRepository {
       ErrorHandlerService()
           .logError(e, reason: 'watchPublicCompletedGames failed');
       return Stream.error(e);
+    }
+  }
+
+  /// Paged fetch for public completed games (non-streaming) to support infinite scroll
+  Future<PaginatedGamesResult> fetchPublicCompletedGamesPage({
+    int limit = 50,
+    String? hubId,
+    String? region,
+    String? city,
+    DateTime? startDate,
+    DateTime? endDate,
+    DocumentSnapshot? startAfter,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      return PaginatedGamesResult(games: const [], lastDocument: null);
+    }
+
+    try {
+      Query query = _firestore
+          .collection(FirestorePaths.games())
+          .where('showInCommunityFeed', isEqualTo: true)
+          .where('status', isEqualTo: 'completed');
+
+      if (hubId != null) {
+        query = query.where('hubId', isEqualTo: hubId);
+      } else {
+        if (region != null) {
+          query = query.where('region', isEqualTo: region);
+        }
+        if (city != null) {
+          query = query.where('city', isEqualTo: city);
+        }
+      }
+
+      if (startDate != null &&
+          hubId == null &&
+          region == null &&
+          city == null) {
+        query = query.where('gameDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      }
+      if (endDate != null &&
+          hubId == null &&
+          region == null &&
+          city == null &&
+          startDate == null) {
+        query = query.where('gameDate',
+            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+
+      query = query.orderBy('gameDate', descending: true);
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final snapshot = await query.limit(limit).get();
+
+      var games = snapshot.docs
+          .map((doc) =>
+              Game.fromJson({...doc.data() as Map<String, dynamic>, 'gameId': doc.id}))
+          .toList();
+
+      games = games
+          .where((game) =>
+              game.session.legacyTeamAScore != null &&
+              game.session.legacyTeamBScore != null)
+          .toList();
+
+      if (startDate != null &&
+          (hubId != null || region != null || city != null)) {
+        games = games
+            .where((g) =>
+                g.gameDate.isAfter(startDate) ||
+                g.gameDate.isAtSameMomentAs(startDate))
+            .toList();
+      }
+      if (endDate != null &&
+          (hubId != null || region != null || city != null || startDate != null)) {
+        games = games
+            .where((g) =>
+                g.gameDate.isBefore(endDate) ||
+                g.gameDate.isAtSameMomentAs(endDate))
+            .toList();
+      }
+
+      final cacheKey = CacheKeys.publicGames(region: region, city: city);
+      CacheService().set(cacheKey, games, ttl: CacheService.gamesTtl);
+
+      final lastDoc =
+          snapshot.docs.isNotEmpty ? snapshot.docs.last : startAfter;
+
+      return PaginatedGamesResult(
+        games: games,
+        lastDocument: lastDoc,
+      );
+    } catch (e, stackTrace) {
+      ErrorHandlerService()
+          .logError(e, reason: 'fetchPublicCompletedGamesPage failed');
+      debugPrint('Error in fetchPublicCompletedGamesPage: $e\n$stackTrace');
+      rethrow;
     }
   }
 
@@ -1061,18 +1168,11 @@ class GamesRepository {
         // Parse game and calculate updates
         final gameData = gameDoc.data()!;
         final currentGame = Game.fromJson({...gameData, 'gameId': gameId});
-        final currentMatches = currentGame.session.matches;
-
         // Add new match
-        final updatedMatches = [...currentMatches, match];
+        final updatedMatches = [...currentGame.session.matches, match];
         final matchesJson = updatedMatches.map((m) => m.toJson()).toList();
 
-        // Calculate aggregate wins
-        final Map<String, int> aggregateWins = Map<String, int>.from(
-          currentGame.session.aggregateWins,
-        );
-
-        // Determine winner
+        // Determine winner for aggregate wins/rotation
         String? winnerColor;
         if (match.scoreA > match.scoreB) {
           winnerColor = match.teamAColor;
@@ -1080,44 +1180,34 @@ class GamesRepository {
           winnerColor = match.teamBColor;
         }
 
-        // Update aggregate wins (only for approved matches)
-        if (winnerColor != null &&
-            match.approvalStatus == MatchApprovalStatus.approved) {
-          aggregateWins[winnerColor] = (aggregateWins[winnerColor] ?? 0) + 1;
-        }
-
-        // Calculate next rotation state (if session is active)
         final Map<String, dynamic> updateData = {
           'session.matches': matchesJson,
-          'session.aggregateWins': aggregateWins,
           'updatedAt': FieldValue.serverTimestamp(),
         };
 
-        // Update rotation state for active sessions with approved matches
+        // Apply aggregate win increment inside the transaction so retries use fresh state
+        if (winnerColor != null &&
+            match.approvalStatus == MatchApprovalStatus.approved) {
+          updateData['session.aggregateWins.$winnerColor'] =
+              FieldValue.increment(1);
+        }
+
+        // Update rotation state for active sessions with approved matches using fresh snapshot data
         if (currentGame.session.isActive &&
             currentGame.session.currentRotation != null &&
             match.approvalStatus == MatchApprovalStatus.approved) {
-          try {
-            // Calculate next rotation
-            // Note: For ties, managerSelectedStayingTeam should be set in the match
-            // before calling addMatchToSession (handled by UI layer)
-            final nextRotation = SessionRotationLogic.calculateNextRotation(
-              current: currentGame.session.currentRotation!,
-              completedMatch: match,
-              // If tie and no winner selected yet, rotation will throw error
-              // This is intentional - UI must handle tie selection first
-            );
+          // Note: For ties, managerSelectedStayingTeam should be set in the match
+          // before calling addMatchToSession (handled by UI layer)
+          final nextRotation = SessionRotationLogic.calculateNextRotation(
+            current: currentGame.session.currentRotation!,
+            completedMatch: match,
+            // If tie and no winner selected yet, rotation will throw error
+            // This is intentional - UI must handle tie selection first
+          );
 
-            updateData['session.currentRotation'] = nextRotation.toJson();
-            debugPrint(
-                '✅ Rotation updated: ${nextRotation.teamAColor} vs ${nextRotation.teamBColor}');
-          } catch (e) {
-            // If rotation calculation fails (e.g., tie without selection),
-            // still save the match but log the error
-            debugPrint('⚠️ Rotation not updated: $e');
-            // For ties, UI will need to handle manager selection
-            // and update rotation separately
-          }
+          updateData['session.currentRotation'] = nextRotation.toJson();
+          debugPrint(
+              '✅ Rotation updated: ${nextRotation.teamAColor} vs ${nextRotation.teamBColor}');
         }
 
         // Update game document (atomic)

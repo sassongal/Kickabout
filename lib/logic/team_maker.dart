@@ -148,18 +148,19 @@ class TeamMaker {
       );
     }
 
-    // Create a random instance if seed provided
-    final random = seed != null ? Random(seed) : null;
+    // Derive a deterministic seed when none is provided so the same player set
+    // yields repeatable teams (e.g., user reopens the screen)
+    final effectiveSeed =
+        seed ?? _deriveDeterministicSeed(players, teamCount, playersPerSide);
+    final random = Random(effectiveSeed);
 
     // Separate goalkeepers and field players
     final goalkeepers = players.where((p) => p.isGoalkeeper).toList();
     final fieldPlayers = players.where((p) => !p.isGoalkeeper).toList();
 
     // Shuffle players to ensure variety between generations with same seed/state
-    if (random != null) {
-      goalkeepers.shuffle(random);
-      fieldPlayers.shuffle(random);
-    }
+    goalkeepers.shuffle(random);
+    fieldPlayers.shuffle(random);
 
     // Distribute goalkeepers evenly
     final teams = _distributeGoalkeepers(goalkeepers, teamCount);
@@ -207,6 +208,28 @@ class TeamMaker {
     lastBalanceScore = score;
 
     return TeamCreationResult(teams: finalTeams, balanceScore: score);
+  }
+
+  // Build a deterministic seed from player IDs/ratings and input parameters so
+  // reshuffles with the same inputs are stable across sessions.
+  static int _deriveDeterministicSeed(
+    List<PlayerForTeam> players,
+    int teamCount,
+    int? playersPerSide,
+  ) {
+    final sorted = [...players]..sort((a, b) => a.uid.compareTo(b.uid));
+    int hash = 17;
+    for (final p in sorted) {
+      for (final codeUnit in p.uid.codeUnits) {
+        hash = (hash * 31 + codeUnit) & 0x7fffffff;
+      }
+      final ratingComponent = (p.rating * 1000).round();
+      hash = (hash * 31 + ratingComponent) & 0x7fffffff;
+      hash = (hash * 31 + p.role.index) & 0x7fffffff;
+    }
+    hash = (hash * 31 + teamCount) & 0x7fffffff;
+    hash = (hash * 31 + (playersPerSide ?? 0)) & 0x7fffffff;
+    return hash;
   }
 
   /// Suggest a team for a new player without reshuffling existing teams.
@@ -485,10 +508,11 @@ class TeamMaker {
 
     // Calculate current balance score (combines rating and position balance)
     double currentScore = _calculateBalanceScore(teams);
+    final visitedStates = <String>{_stateSignature(teams)};
 
     // Try pairwise swaps
     bool improved = true;
-    int maxIterations = 100; // Increased for better optimization
+    const int maxIterations = 20; // Keep mobile-friendly upper bound
     int iterations = 0;
 
     while (improved && iterations < maxIterations) {
@@ -522,12 +546,23 @@ class TeamMaker {
               teams[i].add(playerJ);
               teams[j].add(playerI);
 
+              final stateKey = _stateSignature(teams);
+              if (visitedStates.contains(stateKey)) {
+                // Revert to avoid cycling between identical states
+                teams[i].remove(playerJ);
+                teams[j].remove(playerI);
+                teams[i].add(playerI);
+                teams[j].add(playerJ);
+                continue;
+              }
+
               // Check if balance improved
               final newScore = _calculateBalanceScore(teams);
               if (newScore > currentScore) {
                 // Keep swap
                 currentScore = newScore;
                 improved = true;
+                visitedStates.add(stateKey);
                 // Break inner loops to restart optimization with new state
                 break;
               } else {
@@ -547,6 +582,17 @@ class TeamMaker {
     }
 
     return teams;
+  }
+
+  // Signature for the current team composition to detect cycles in swaps
+  static String _stateSignature(List<List<PlayerForTeam>> teams) {
+    final buffer = StringBuffer();
+    for (int t = 0; t < teams.length; t++) {
+      final ids = teams[t].map((p) => p.uid).toList()..sort();
+      buffer.write(ids.join(','));
+      if (t < teams.length - 1) buffer.write('||');
+    }
+    return buffer.toString();
   }
 
   /// Calculate overall balance score considering rating and position distribution

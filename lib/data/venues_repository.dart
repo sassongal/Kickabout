@@ -164,22 +164,28 @@ class VenuesRepository {
           GeohashUtils.encode(latitude, longitude, precision: 7);
       final neighbors = GeohashUtils.neighbors(centerGeohash);
 
-      // Query venues in the geohash area
+      // Query venues in the geohash area concurrently
+      final geohashes = <String>{centerGeohash, ...neighbors};
+      final snapshots = await Future.wait(
+        geohashes.map(
+          (geohash) => _firestore
+              .collection(FirestorePaths.venues())
+              .where('geohash', isGreaterThanOrEqualTo: geohash)
+              .where('geohash', isLessThanOrEqualTo: '${geohash}z')
+              .where('isActive', isEqualTo: true)
+              .get(),
+        ),
+      );
+
       final venues = <Venue>[];
+      final distances = <String, double>{};
 
-      for (final geohash in [centerGeohash, ...neighbors]) {
-        final snapshot = await _firestore
-            .collection(FirestorePaths.venues())
-            .where('geohash', isGreaterThanOrEqualTo: geohash)
-            .where('geohash', isLessThanOrEqualTo: '${geohash}z')
-            .where('isActive', isEqualTo: true)
-            .get();
-
+      for (final snapshot in snapshots) {
         for (final doc in snapshot.docs) {
+          if (distances.containsKey(doc.id)) continue;
           final venue = Venue.fromJson({...doc.data(), 'venueId': doc.id});
 
-          // Calculate distance
-          final distance = Geolocator.distanceBetween(
+          final distanceKm = Geolocator.distanceBetween(
                 latitude,
                 longitude,
                 venue.location.latitude,
@@ -187,28 +193,16 @@ class VenuesRepository {
               ) /
               1000; // Convert to km
 
-          if (distance <= radiusKm) {
+          if (distanceKm <= radiusKm) {
+            distances[doc.id] = distanceKm;
             venues.add(venue);
           }
         }
       }
 
       // Sort by distance
-      venues.sort((a, b) {
-        final distA = Geolocator.distanceBetween(
-          latitude,
-          longitude,
-          a.location.latitude,
-          a.location.longitude,
-        );
-        final distB = Geolocator.distanceBetween(
-          latitude,
-          longitude,
-          b.location.latitude,
-          b.location.longitude,
-        );
-        return distA.compareTo(distB);
-      });
+      venues.sort((a, b) =>
+          distances[a.venueId]!.compareTo(distances[b.venueId]!));
 
       return venues;
     } catch (e) {

@@ -43,7 +43,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       );
 
       if (image != null) {
-        setState(() => _isUploading = true);
         try {
           final storageService = ref.read(storageServiceProvider);
           final currentUserId = ref.read(currentUserIdProvider);
@@ -52,9 +51,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             if (mounted) {
               SnackbarHelper.showError(context, 'נא להתחבר');
             }
+            setState(() => _isUploading = false);
             return;
           }
 
+          setState(() => _isUploading = true);
           // Upload to feed photos path
           final photoUrl = await storageService.uploadFeedPhoto(
             widget.hubId,
@@ -89,7 +90,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       );
 
       if (image != null) {
-        setState(() => _isUploading = true);
         try {
           final storageService = ref.read(storageServiceProvider);
           final currentUserId = ref.read(currentUserIdProvider);
@@ -98,9 +98,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             if (mounted) {
               SnackbarHelper.showError(context, 'נא להתחבר');
             }
+            setState(() => _isUploading = false);
             return;
           }
 
+          setState(() => _isUploading = true);
           final photoUrl = await storageService.uploadFeedPhoto(
             widget.hubId,
             currentUserId,

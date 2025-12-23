@@ -176,7 +176,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Weather strip at top
+                        // Profile summary row at top (name, avatar, performance)
+                        if (user != null) ...[
+                          _ProfileSummaryCard(
+                            user: user,
+                            currentUserId: currentUserId,
+                            gamificationStream: gamificationStream,
+                            onPerformanceTap: () => context
+                                .push('/profile/$currentUserId/performance'),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Weather strip
                         const HomeWeatherVibeWidget(),
                         const SizedBox(height: 16),
 
@@ -203,18 +215,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // Admin Tasks Card (if user is admin)
                         _buildAdminTasksCard(context, currentUserId),
                         const SizedBox(height: 16),
-
-                        // User Profile Card (compact with inline performance)
-                        if (user != null) ...[
-                          _ProfileSummaryCard(
-                            user: user,
-                            currentUserId: currentUserId,
-                            gamificationStream: gamificationStream,
-                            onPerformanceTap: () => context
-                                .push('/profile/$currentUserId/performance'),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
 
                         // My Hubs Carousel (Unified) + Upcoming Games
                         // OPTIMIZED: Single stream query for both carousel and games

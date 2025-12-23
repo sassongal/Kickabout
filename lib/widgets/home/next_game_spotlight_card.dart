@@ -216,7 +216,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
           child: RepaintBoundary(
             // RepaintBoundary מבודד את הכרטיס - מפחית הבהובים!
             child: Container(
-              height: 220,
+              height: 232,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
@@ -267,7 +267,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
 
                     // Content
                     Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -437,7 +437,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 14,
-                                      vertical: 10,
+                                      vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
@@ -488,7 +488,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
-                                  vertical: 10,
+                                  vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.white,

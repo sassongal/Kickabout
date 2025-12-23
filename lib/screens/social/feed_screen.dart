@@ -11,6 +11,7 @@ import 'package:kattrick/widgets/game_photos_gallery.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/screens/social/feed_controller.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
 
 /// Feed screen - shows activity feed for a hub
 class FeedScreen extends ConsumerStatefulWidget {
@@ -23,6 +24,7 @@ class FeedScreen extends ConsumerStatefulWidget {
 }
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
+  static final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy', 'he');
   late ScrollController _scrollController;
   String _selectedFilter = 'all';
 
@@ -249,6 +251,7 @@ class _PostCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final authorName = (post.authorName ?? '').trim().isNotEmpty
         ? post.authorName!.trim()
         : 'משתמש';
@@ -320,6 +323,9 @@ class _PostCard extends ConsumerWidget {
                     color: Colors.grey[600],
                     fontSize: 12,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
                 ),
               ],
             ),
@@ -362,9 +368,9 @@ class _PostCard extends ConsumerWidget {
                               const Icon(Icons.warning_amber,
                                   size: 16, color: Colors.red),
                               const SizedBox(width: 4),
-                              const Text(
-                                'דחוף',
-                                style: TextStyle(
+                              Text(
+                                l10n.recruitingUrgentLabel,
+                                style: const TextStyle(
                                   color: Colors.red,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
@@ -382,10 +388,15 @@ class _PostCard extends ConsumerWidget {
                               const Icon(Icons.group,
                                   size: 18, color: Colors.orange),
                               const SizedBox(width: 6),
-                              Text(
-                                'מחפשים ${post.neededPlayers} שחקנים',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
+                              Flexible(
+                                child: Text(
+                                  l10n.recruitingNeededPlayers(
+                                      post.neededPlayers),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),
@@ -399,10 +410,16 @@ class _PostCard extends ConsumerWidget {
                               const Icon(Icons.schedule,
                                   size: 16, color: Colors.grey),
                               const SizedBox(width: 4),
-                              Text(
-                                'עד: ${DateFormat('dd/MM/yyyy', 'he').format(post.recruitingUntil!)}',
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 12),
+                              Flexible(
+                                child: Text(
+                                  l10n.recruitingUntilLabel(
+                                      _FeedScreenState._dateFormatter
+                                          .format(post.recruitingUntil!)),
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 12),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),
@@ -526,7 +543,7 @@ class _PostCard extends ConsumerWidget {
     } else if (difference.inDays < 7) {
       return 'לפני ${difference.inDays} ימים';
     } else {
-      return DateFormat('dd/MM/yyyy').format(time);
+      return _FeedScreenState._dateFormatter.format(time);
     }
   }
 
@@ -608,69 +625,77 @@ class _PostCard extends ConsumerWidget {
 
     final messageController = TextEditingController();
 
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      messageController.dispose();
+      return;
+    }
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('שלח הודעה למנהל'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'תוכל לשלוח הודעה אחת בלבד למנהל ${post.hubName ?? 'ההאב'}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: messageController,
-              decoration: const InputDecoration(
-                labelText: 'הודעה',
-                hintText: 'הי! אשמח להצטרף...',
-                border: OutlineInputBorder(),
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('שלח הודעה למנהל'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'תוכל לשלוח הודעה אחת בלבד למנהל ${post.hubName ?? 'ההאב'}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
-              maxLines: 4,
-              maxLength: 300,
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'הודעה',
+                  hintText: 'הי! אשמח להצטרף...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 4,
+                maxLength: 300,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (messageController.text.trim().isEmpty) {
+                  SnackbarHelper.showError(context, 'נא להזין הודעה');
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
+              child: const Text('שלח'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('ביטול'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (messageController.text.trim().isEmpty) {
-                SnackbarHelper.showError(context, 'נא להזין הודעה');
-                return;
-              }
-              Navigator.pop(context, true);
-            },
-            child: const Text('שלח'),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (result == true && messageController.text.trim().isNotEmpty) {
-      try {
-        await ref.read(hubsRepositoryProvider).sendContactMessage(
-              hubId: post.hubId,
-              postId: post.postId,
-              senderId: currentUserId!,
-              message: messageController.text.trim(),
-            );
+      final message = messageController.text.trim();
+      if (result == true && message.isNotEmpty) {
+        try {
+          await ref.read(hubsRepositoryProvider).sendContactMessage(
+                hubId: post.hubId,
+                postId: post.postId,
+                senderId: currentUserId!,
+                message: message,
+              );
 
-        if (context.mounted) {
-          SnackbarHelper.showSuccess(context, 'ההודעה נשלחה בהצлחה!');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          SnackbarHelper.showError(context, 'שגיאה בשליחת הודעה: $e');
+          if (context.mounted) {
+            SnackbarHelper.showSuccess(context, 'ההודעה נשלחה בהצлחה!');
+          }
+        } catch (e) {
+          if (context.mounted) {
+            SnackbarHelper.showError(context, 'שגיאה בשליחת הודעה: $e');
+          }
         }
       }
+    } finally {
+      messageController.dispose();
     }
   }
 

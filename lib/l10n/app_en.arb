@@ -572,6 +572,26 @@
   "requestRejectedSuccess": "Request rejected",
   "findMissingPlayersDescription": "The game will switch to \"recruiting\" and appear in the regional feed.\\n{count} more players needed.",
   "confirm": "Confirm",
+  "recruitingUrgentLabel": "Urgent",
+  "@recruitingUrgentLabel": {
+    "description": "Label for urgent recruiting posts"
+  },
+  "recruitingNeededPlayers": "Looking for {count} players",
+  "@recruitingNeededPlayers": {
+    "description": "Label showing how many players are still needed in a recruiting post",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recruitingUntilLabel": "Until: {date}",
+  "@recruitingUntilLabel": {
+    "description": "Label prefix for recruiting deadline date",
+    "placeholders": {
+      "date": {}
+    }
+  },
   "recruitingFeedContent": "Hub {hubName} needs {count} players for a game on {gameDate}",
   "gamePromotedToRegionalFeed": "The game was promoted to the regional feed to find players",
   "gameOpenForRecruiting": "The game is now open for recruiting players",

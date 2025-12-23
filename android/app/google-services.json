@@ -14,41 +14,21 @@
       },
       "oauth_client": [
         {
-          "client_id": "731836758075-7n7toprsfivmbrlmgf12af4bcb1j128h.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
+          "client_id": "731836758075-95itg9630ss2gvm6pjc19akrahccdga5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.joyatech.kattrick",
+            "certificate_hash": "4205e4db647d2bd06e278bf42f7ec288de56014c"
+          }
+        },
         {
-          "current_key": "AIzaSyDzz0lNtzpqFPcZalk3OIxjdsSuq-F8dFI"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "731836758075-7n7toprsfivmbrlmgf12af4bcb1j128h.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.mycompany.CounterApp"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:731836758075:android:0dde0fad28e8c51003441e",
-        "android_client_info": {
-          "package_name": "com.mycompany.CounterApp"
-        }
-      },
-      "oauth_client": [
+          "client_id": "731836758075-gciifq2a8v2prrhr322cf67omjovt8a8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.joyatech.kattrick",
+            "certificate_hash": "4d0710cfb9a7aaa49a2a99a4142f9ddeef184815"
+          }
+        },
         {
           "client_id": "731836758075-7n7toprsfivmbrlmgf12af4bcb1j128h.apps.googleusercontent.com",
           "client_type": 3
@@ -67,10 +47,10 @@
               "client_type": 3
             },
             {
-              "client_id": "731836758075-qa8aofinufoogggaijcjr3kn3h2mln5j.apps.googleusercontent.com",
+              "client_id": "731836758075-jctc0uafq59bbh72ihlmvmmo4qtvhh9l.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.mycompany.CounterApp"
+                "bundle_id": "com.joyatech.kattrick"
               }
             }
           ]

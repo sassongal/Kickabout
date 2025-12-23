@@ -80,13 +80,13 @@ class GameSignupsSection extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          ...confirmedSignups.map((signup) => GameSignupTile(
-                signup: signup,
-                usersRepo: usersRepo,
-                isConfirmed: true,
-                isAdmin: isAdmin,
-                onRejectPlayer: onRejectPlayer,
-              )),
+          _SignupList(
+            signups: confirmedSignups,
+            usersRepo: usersRepo,
+            isConfirmed: true,
+            isAdmin: isAdmin,
+            onRejectPlayer: onRejectPlayer,
+          ),
           const SizedBox(height: 16),
         ],
         if (pendingSignups.isNotEmpty) ...[
@@ -95,13 +95,13 @@ class GameSignupsSection extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          ...pendingSignups.map((signup) => GameSignupTile(
-                signup: signup,
-                usersRepo: usersRepo,
-                isConfirmed: false,
-                isAdmin: isAdmin,
-                onRejectPlayer: onRejectPlayer,
-              )),
+          _SignupList(
+            signups: pendingSignups,
+            usersRepo: usersRepo,
+            isConfirmed: false,
+            isAdmin: isAdmin,
+            onRejectPlayer: onRejectPlayer,
+          ),
         ],
         if (confirmedSignups.isEmpty && pendingSignups.isEmpty)
           AppEmptyWidget(
@@ -109,6 +109,39 @@ class GameSignupsSection extends StatelessWidget {
             icon: Icons.people_outline,
           ),
       ],
+    );
+  }
+}
+
+class _SignupList extends StatelessWidget {
+  final List<GameSignup> signups;
+  final UsersRepository usersRepo;
+  final bool isConfirmed;
+  final bool isAdmin;
+  final void Function(String playerId)? onRejectPlayer;
+
+  const _SignupList({
+    required this.signups,
+    required this.usersRepo,
+    required this.isConfirmed,
+    required this.isAdmin,
+    this.onRejectPlayer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: signups.length,
+      itemBuilder: (context, index) => GameSignupTile(
+        signup: signups[index],
+        usersRepo: usersRepo,
+        isConfirmed: isConfirmed,
+        isAdmin: isAdmin,
+        onRejectPlayer: onRejectPlayer,
+      ),
+      separatorBuilder: (context, index) => const SizedBox(height: 4),
     );
   }
 }

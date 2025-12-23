@@ -67,6 +67,9 @@ class GameDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
+  static final DateFormat _gameDateFormat =
+      DateFormat('dd/MM/yyyy HH:mm', 'he');
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -106,7 +109,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           }
 
           final isCreator = currentUserId == game.createdBy;
-          final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
 
           // ✅ Show attendance monitoring button for organizers
           final showAttendanceButton = isCreator &&
@@ -148,238 +150,261 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                     _teamUsersProvider(_buildTeamUsersRequest(game)),
                   );
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ✅ Attendance Monitoring Button (for organizers)
-                        if (showAttendanceButton)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                context
-                                    .push('/games/${widget.gameId}/attendance');
-                              },
-                              icon: const Icon(Icons.people),
-                              label: Text(l10n.attendanceMonitoring),
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                            ),
-                          ),
-                        // Game info card
-                        Hero(
-                          tag: 'game_card_${game.gameId}',
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    dateFormat.format(game.gameDate),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                  return CustomScrollView(
+                    slivers: [
+                      SliverPadding(
+                        padding:
+                            const EdgeInsets.all(AppConstants.defaultPadding),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate(
+                            [
+                              // ✅ Attendance Monitoring Button (for organizers)
+                              if (showAttendanceButton)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      context.push(
+                                          '/games/${widget.gameId}/attendance');
+                                    },
+                                    icon: const Icon(Icons.people),
+                                    label: Text(l10n.attendanceMonitoring),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                    ),
                                   ),
-                                  // Load and display venue if venueId exists, otherwise show text location
-                                  if (game.venueId != null &&
-                                      game.venueId!.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    StreamBuilder<Venue?>(
-                                      stream: ref
-                                          .read(venuesRepositoryProvider)
-                                          .watchVenue(game.venueId!),
-                                      builder: (context, venueSnapshot) {
-                                        final l10n =
-                                            AppLocalizations.of(context)!;
-                                        final venue = venueSnapshot.data;
-                                        final locationText = venue?.name ??
-                                            game.location ??
-                                            l10n.locationNotSpecified;
+                                ),
+                              // Game info card
+                              Hero(
+                                tag: 'game_card_${game.gameId}',
+                                child: Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _gameDateFormat.format(game.gameDate),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        // Load and display venue if venueId exists, otherwise show text location
+                                        if (game.venueId != null &&
+                                            game.venueId!.isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          StreamBuilder<Venue?>(
+                                            stream: ref
+                                                .read(venuesRepositoryProvider)
+                                                .watchVenue(game.venueId!),
+                                            builder: (context, venueSnapshot) {
+                                              final l10n =
+                                                  AppLocalizations.of(
+                                                      context)!;
+                                              final venue =
+                                                  venueSnapshot.data;
+                                              final locationText =
+                                                  venue?.name ??
+                                                      game.location ??
+                                                      l10n
+                                                          .locationNotSpecified;
 
-                                        if (locationText.isEmpty ||
-                                            locationText ==
-                                                l10n.locationNotSpecified) {
-                                          return const SizedBox.shrink();
-                                        }
+                                              if (locationText.isEmpty ||
+                                                  locationText ==
+                                                      l10n
+                                                          .locationNotSpecified) {
+                                                return const SizedBox.shrink();
+                                              }
 
-                                        return Row(
+                                              return Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.location_on,
+                                                    size: 20,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(
+                                                            alpha: 0.6),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          locationText,
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .bodyMedium,
+                                                        ),
+                                                        if (venue?.address !=
+                                                                null &&
+                                                            venue!.address !=
+                                                                locationText)
+                                                          Text(
+                                                            venue.address!,
+                                                            style: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .bodySmall
+                                                                ?.copyWith(
+                                                                  color: Theme.of(
+                                                                          context)
+                                                                      .colorScheme
+                                                                      .onSurface
+                                                                      .withValues(
+                                                                          alpha:
+                                                                              0.6),
+                                                                ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ] else if (game.location?.isNotEmpty ??
+                                            false) ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.location_on,
+                                                size: 20,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child:
+                                                    Text(game.location ?? ''),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                        const SizedBox(height: 16),
+                                        Row(
                                           children: [
-                                            Icon(
-                                              Icons.location_on,
-                                              size: 20,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.6),
+                                            Chip(
+                                              label: Text(_getStatusText(
+                                                  game.status, l10n)),
+                                              backgroundColor: _getStatusColor(
+                                                      game.status, context)
+                                                  .withValues(alpha: 0.1),
                                             ),
                                             const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    locationText,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyMedium,
-                                                  ),
-                                                  if (venue?.address != null &&
-                                                      venue!.address !=
-                                                          locationText)
-                                                    Text(
-                                                      venue.address!,
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodySmall
-                                                          ?.copyWith(
-                                                            color: Theme.of(
-                                                                    context)
-                                                                .colorScheme
-                                                                .onSurface
-                                                                .withValues(
-                                                                    alpha: 0.6),
-                                                          ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
+                                            Text(l10n
+                                                .teamCountLabel(game.teamCount)),
                                           ],
-                                        );
-                                      },
-                                    ),
-                                  ] else if (game.location?.isNotEmpty ??
-                                      false) ...[
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.location_on,
-                                          size: 20,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
                                         ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(game.location ?? ''),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          isGameFull
+                                              ? l10n.signupsCountFull(
+                                                  signups.length)
+                                              : l10n.signupsCount(
+                                                  signups.length),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
                                         ),
-                                      ],
-                                    ),
-                                  ],
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Chip(
-                                        label: Text(
-                                            _getStatusText(game.status, l10n)),
-                                        backgroundColor: _getStatusColor(
-                                                game.status, context)
-                                            .withValues(alpha: 0.1),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                          l10n.teamCountLabel(game.teamCount)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    isGameFull
-                                        ? l10n.signupsCountFull(
-                                            signups.length)
-                                        : l10n.signupsCount(signups.length),
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  // Game rules (if defined)
-                                  if (game.durationInMinutes != null ||
-                                      game.gameEndCondition != null) ...[
-                                    const SizedBox(height: 16),
-                                    const Divider(),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      l10n.gameRulesTitle,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                    if (game.durationInMinutes != null) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.timer,
-                                            size: 16,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                          const SizedBox(width: 4),
+                                        // Game rules (if defined)
+                                        if (game.durationInMinutes != null ||
+                                            game.gameEndCondition != null) ...[
+                                          const SizedBox(height: 16),
+                                          const Divider(),
+                                          const SizedBox(height: 8),
                                           Text(
-                                            l10n.gameDurationLabel(
-                                                game.durationInMinutes!),
+                                            l10n.gameRulesTitle,
                                             style: Theme.of(context)
                                                 .textTheme
-                                                .bodySmall,
+                                                .titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
-                                        ],
-                                      ),
-                                    ],
-                                    if (game.gameEndCondition != null) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Icon(
-                                            Icons.flag,
-                                            size: 16,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              l10n.gameEndConditionLabel(
-                                                  game.gameEndCondition!),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall,
+                                          if (game.durationInMinutes != null) ...[
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.timer,
+                                                  size: 16,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.6),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  l10n.gameDurationLabel(
+                                                      game.durationInMinutes!),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall,
+                                                ),
+                                              ],
                                             ),
-                                          ),
+                                          ],
+                                          if (game.gameEndCondition != null) ...[
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(
+                                                  Icons.flag,
+                                                  size: 16,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.6),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    l10n.gameEndConditionLabel(
+                                                        game.gameEndCondition!),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ],
-                                      ),
-                                    ],
-                                  ],
-                                ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 16),
+
+                              // Weather for game date and location
+                              if (game.locationPoint != null)
+                                _buildGameWeatherWidget(game),
+                              const SizedBox(height: 24),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-
-                        // Weather for game date and location
-                        if (game.locationPoint != null)
-                          _buildGameWeatherWidget(game),
-                        const SizedBox(height: 24),
-
-                        // State-aware content based on game status
-                        _buildStateAwareContent(
+                      ),
+                      SliverPadding(
+                        padding:
+                            const EdgeInsets.all(AppConstants.defaultPadding),
+                        sliver: _buildStateAwareContent(
                           context,
                           game,
                           role,
@@ -392,8 +417,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           usersRepo,
                           teamUsersAsync,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   );
                 },
               );
@@ -565,12 +590,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     UsersRepository usersRepo,
     AsyncValue<Map<String, User>> teamUsersAsync,
   ) {
+    final Widget child;
     switch (game.status) {
       case GameStatus.draft:
       case GameStatus.scheduled:
       case GameStatus.recruiting:
       case GameStatus.teamSelection:
-        return PendingGameState(
+        child = PendingGameState(
           game: game,
           gameId: widget.gameId,
           role: role,
@@ -590,7 +616,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       case GameStatus.teamsFormed:
       case GameStatus.inProgress:
       case GameStatus.statsInput:
-        return ActiveGameState(
+        child = ActiveGameState(
           game: game,
           gameId: widget.gameId,
           status: game.status,
@@ -611,7 +637,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       case GameStatus.completed:
       case GameStatus.cancelled:
       case GameStatus.archivedNotPlayed:
-        return CompletedGameState(
+        child = CompletedGameState(
           game: game,
           gameId: widget.gameId,
           role: role,
@@ -622,6 +648,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               _showEditResultDialog(context, game, usersRepo),
         );
     }
+    return SliverToBoxAdapter(child: child);
   }
 
   Future<void> _approvePlayer(String playerId) async {
@@ -643,46 +670,51 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   Future<void> _rejectPlayer(String playerId) async {
     final reasonController = TextEditingController();
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.rejectRequestTitle),
-        content: TextField(
-          controller: reasonController,
-          decoration: InputDecoration(
-            labelText: l10n.rejectionReasonLabel,
-            hintText: l10n.rejectionReasonHint,
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.rejectRequestTitle),
+          content: TextField(
+            controller: reasonController,
+            decoration: InputDecoration(
+              labelText: l10n.rejectionReasonLabel,
+              hintText: l10n.rejectionReasonHint,
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l10n.cancel)),
+            ElevatedButton(
+              onPressed: () {
+                if (reasonController.text.trim().isEmpty) return;
+                Navigator.pop(context, true);
+              },
+              child: Text(l10n.rejectRequestButton),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.cancel)),
-          ElevatedButton(
-            onPressed: () {
-              if (reasonController.text.trim().isEmpty) return;
-              Navigator.pop(context, true);
-            },
-            child: Text(l10n.rejectRequestButton),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (confirmed == true) {
-      try {
-        final service = GameManagementService();
-        await service.kickPlayer(
-          gameId: widget.gameId,
-          userId: playerId,
-          reason: reasonController.text.trim(),
-        );
-        if (mounted) {
-          SnackbarHelper.showSuccess(context, l10n.requestRejectedSuccess);
+      final reason = reasonController.text.trim();
+      if (confirmed == true && reason.isNotEmpty) {
+        try {
+          final service = GameManagementService();
+          await service.kickPlayer(
+            gameId: widget.gameId,
+            userId: playerId,
+            reason: reason,
+          );
+          if (mounted) {
+            SnackbarHelper.showSuccess(context, l10n.requestRejectedSuccess);
+          }
+        } catch (e) {
+          if (mounted) SnackbarHelper.showErrorFromException(context, e);
         }
-      } catch (e) {
-        if (mounted) SnackbarHelper.showErrorFromException(context, e);
       }
+    } finally {
+      reasonController.dispose();
     }
   }
 
@@ -694,89 +726,114 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     int maxPlayers,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    var isLoading = false;
+
+    await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.findMissingPlayers),
-        content: Text(
-          l10n.findMissingPlayersDescription(
-            maxPlayers - currentPlayers,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setState) {
+            return AlertDialog(
+              title: Text(l10n.findMissingPlayers),
+              content: Text(
+                l10n.findMissingPlayersDescription(
+                  maxPlayers - currentPlayers,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.pop(dialogContext, false),
+                  child: Text(l10n.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setState(() => isLoading = true);
+                          try {
+                            final gamesRepo =
+                                ref.read(gamesRepositoryProvider);
+                            final hubsRepo = ref.read(hubsRepositoryProvider);
+                            final feedRepo = ref.read(feedRepositoryProvider);
+                            final usersRepo = ref.read(usersRepositoryProvider);
 
-    if (confirmed != true) return;
+                            // Update game visibility to recruiting
+                            await gamesRepo.updateGame(widget.gameId, {
+                              'visibility':
+                                  GameVisibility.recruiting.toFirestore(),
+                            });
 
-    try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
-      final hubsRepo = ref.read(hubsRepositoryProvider);
-      final feedRepo = ref.read(feedRepositoryProvider);
-      final usersRepo = ref.read(usersRepositoryProvider);
+                            // Create feed post only if game belongs to a hub
+                            if (game.hubId != null) {
+                              // Get hub name
+                              final hub = await hubsRepo.getHub(game.hubId!);
+                              final hubName =
+                                  hub?.name ?? l10n.hubFallbackName;
 
-      // Update game visibility to recruiting
-      await gamesRepo.updateGame(widget.gameId, {
-        'visibility': GameVisibility.recruiting.toFirestore(),
-      });
+                              final currentUserId =
+                                  ref.read(currentUserIdProvider);
+                              if (currentUserId != null) {
+                                final currentUser =
+                                    await usersRepo.getUser(currentUserId);
+                                final gameDateLabel =
+                                    _gameDateFormat.format(game.gameDate);
+                                final post = FeedPost(
+                                  postId: '', // Will be generated by repository
+                                  hubId: game.hubId!,
+                                  authorId: currentUserId,
+                                  type: 'game_recruitment',
+                                  content: l10n.recruitingFeedContent(
+                                    hubName,
+                                    maxPlayers - currentPlayers,
+                                    gameDateLabel,
+                                  ),
+                                  createdAt: DateTime.now(),
+                                  gameId: widget.gameId,
+                                  region: game.region ?? hub?.region,
+                                  city: hub?.city,
+                                  hubName: hub?.name,
+                                  hubLogoUrl: hub?.logoUrl,
+                                  authorName: currentUser?.name,
+                                  authorPhotoUrl: currentUser?.photoUrl,
+                                );
 
-      // Create feed post only if game belongs to a hub
-      if (game.hubId != null) {
-        // Get hub name
-        final hub = await hubsRepo.getHub(game.hubId!);
-        final hubName = hub?.name ?? l10n.hubFallbackName;
+                                await feedRepo.createPost(post);
+                              }
+                            }
 
-        final currentUserId = ref.read(currentUserIdProvider);
-        if (currentUserId != null) {
-          final currentUser = await usersRepo.getUser(currentUserId);
-          final gameDateLabel =
-              DateFormat('dd/MM/yyyy HH:mm', 'he').format(game.gameDate);
-          final post = FeedPost(
-            postId: '', // Will be generated by repository
-            hubId: game.hubId!,
-            authorId: currentUserId,
-            type: 'game_recruitment',
-            content: l10n.recruitingFeedContent(
-              hubName,
-              maxPlayers - currentPlayers,
-              gameDateLabel,
-            ),
-            createdAt: DateTime.now(),
-            gameId: widget.gameId,
-            region: game.region ?? hub?.region,
-            city: hub?.city,
-            hubName: hub?.name,
-            hubLogoUrl: hub?.logoUrl,
-            authorName: currentUser?.name,
-            authorPhotoUrl: currentUser?.photoUrl,
-          );
-
-          await feedRepo.createPost(post);
-        }
-      }
-
-      if (context.mounted) {
-        SnackbarHelper.showSuccess(
-          context,
-          game.hubId != null
-              ? l10n.gamePromotedToRegionalFeed
-              : l10n.gameOpenForRecruiting,
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext, true);
+                              SnackbarHelper.showSuccess(
+                                dialogContext,
+                                game.hubId != null
+                                    ? l10n.gamePromotedToRegionalFeed
+                                    : l10n.gameOpenForRecruiting,
+                              );
+                            }
+                          } catch (e) {
+                            if (dialogContext.mounted) {
+                              setState(() => isLoading = false);
+                              SnackbarHelper.showErrorFromException(
+                                  dialogContext, e);
+                            }
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.confirm),
+                ),
+              ],
+            );
+          },
         );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        SnackbarHelper.showErrorFromException(context, e);
-      }
-    }
+      },
+    );
   }
 
   /// Build weather widget for game date and location
