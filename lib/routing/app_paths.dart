@@ -36,6 +36,7 @@ class AppPaths {
   static const String editHubEvent = '/hubs/:id/events/:eventId/edit';
   static const String logGame = '/hubs/:id/events/:eventId/log-game';
   static const String eventTeamMaker = '/hubs/:id/events/:eventId/team-maker';
+  static const String liveMatch = '/hubs/:id/events/:eventId/live';
   static const String gameDetail = '/games/:id';
   static const String teamMaker = '/games/:id/team-maker';
   static const String gameChat = '/games/:id/chat';

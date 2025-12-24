@@ -34,8 +34,78 @@
   <!-- SECURITY: This key should be restricted in Google Cloud Console -->
   <!-- Application restrictions: Add your Web domain -->
   <!-- API restrictions: Only Maps JavaScript API, Places API -->
-  <!-- TODO: Replace with environment variable or build-time injection -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAtGhXyexqP8bYiH2nqaTxeECtvENWqPPU"></script>
+  <!-- 
+    The API key is injected dynamically via JavaScript to avoid hardcoding.
+    Set GOOGLE_MAPS_API_KEY via dart-define: flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY
+    Or set it in your deployment environment.
+  -->
+  <script>
+    // Inject Google Maps API key from Flutter environment
+    // The key can be set via:
+    // 1. Build-time: Replace {{GOOGLE_MAPS_API_KEY}} with actual key during build
+    // 2. Runtime: Flutter app sets window.GOOGLE_MAPS_API_KEY
+    // 3. Meta tag: Flutter app injects meta tag with the key
+    (function() {
+      function loadGoogleMaps() {
+        var apiKey = null;
+        
+        // Method 1: Check if Flutter app set it on window
+        if (window.GOOGLE_MAPS_API_KEY) {
+          apiKey = window.GOOGLE_MAPS_API_KEY;
+        }
+        
+        // Method 2: Check meta tag (injected by Flutter app)
+        if (!apiKey) {
+          var metaTag = document.querySelector('meta[name="google-maps-api-key"]');
+          if (metaTag) {
+            apiKey = metaTag.getAttribute('content');
+          }
+        }
+        
+        // Method 3: Build-time replacement (if build script replaces {{GOOGLE_MAPS_API_KEY}})
+        // This would be handled by your build process
+        
+        // Load Google Maps script if key is available
+        if (apiKey && apiKey.trim() !== '') {
+          // Check if already loaded
+          if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+            return;
+          }
+          
+          var script = document.createElement('script');
+          script.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey;
+          script.async = true;
+          script.defer = true;
+          document.head.appendChild(script);
+          console.log('✅ Google Maps API loaded');
+        } else {
+          // Retry after a short delay (Flutter app might inject it later)
+          setTimeout(function() {
+            if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
+              console.warn('⚠️ GOOGLE_MAPS_API_KEY not set. Google Maps will not work.');
+              console.warn('⚠️ Set it via: flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY');
+            }
+          }, 2000);
+        }
+      }
+      
+      // Try to load immediately
+      loadGoogleMaps();
+      
+      // Listen for custom event from Flutter app (when it injects the key)
+      window.addEventListener('googleMapsApiKeyReady', function(event) {
+        if (event.detail) {
+          window.GOOGLE_MAPS_API_KEY = event.detail;
+        }
+        loadGoogleMaps();
+      });
+      
+      // Also listen for Flutter app ready (Flutter might set window.GOOGLE_MAPS_API_KEY directly)
+      window.addEventListener('flutter-first-frame', function() {
+        loadGoogleMaps();
+      });
+    })();
+  </script>
   <style id="splash-screen-style">
     html {
       height: 100%

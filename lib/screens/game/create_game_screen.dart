@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -111,28 +113,47 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
 
       if (position != null) {
         final geoPoint = locationService.positionToGeoPoint(position);
-        final address = await locationService.coordinatesToAddress(
-          position.latitude,
-          position.longitude,
-        );
+        String? address;
+        try {
+          address = await locationService.coordinatesToAddress(
+            position.latitude,
+            position.longitude,
+          );
+        } catch (e) {
+          debugPrint('Error getting address: $e');
+          // Continue with coordinates as address
+        }
 
         setState(() {
           _selectedLocation = geoPoint;
           _locationAddress = address ??
               '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
-          _locationController.text = address ?? '';
+          _locationController.text = address ?? _locationAddress!;
         });
       } else {
         if (mounted) {
           SnackbarHelper.showError(
             context,
-            'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
+            'לא ניתן לקבל מיקום. אנא בחר מיקום במפה או הזן כתובת ידנית.',
+            action: SnackBarAction(
+              label: 'פתח הגדרות',
+              onPressed: () => Geolocator.openAppSettings(),
+              textColor: Colors.white,
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
+        SnackbarHelper.showError(
+          context,
+          'שגיאה בקבלת מיקום: $e',
+          action: SnackBarAction(
+            label: 'נסה שוב',
+            onPressed: _getCurrentLocation,
+            textColor: Colors.white,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -230,6 +251,21 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         _selectedTime.hour,
         _selectedTime.minute,
       );
+
+      // Validate location/venue for public games (required)
+      if (_isPublicGame) {
+        if (_selectedLocation == null &&
+            (_selectedVenueId == null || _selectedVenueId!.isEmpty)) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            SnackbarHelper.showError(
+              context,
+              'חובה לבחור מיקום או מגרש למשחק ציבורי. אנא בחר מיקום או מגרש.',
+            );
+          }
+          return;
+        }
+      }
 
       // Generate geohash if location is provided
       String? geohash;

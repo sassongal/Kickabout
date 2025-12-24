@@ -13,6 +13,46 @@ import 'package:kattrick/services/retry_service.dart';
 import 'package:kattrick/services/monitoring_service.dart';
 import 'package:kattrick/services/push_notification_service.dart';
 
+/// Result of hub creation limit check
+class HubCreationCheckResult {
+  final bool canCreate;
+  final HubCreationLimitReason? reason;
+  final String? message;
+  final int? currentCount;
+  final int? maxCount;
+
+  HubCreationCheckResult({
+    required this.canCreate,
+    this.reason,
+    this.message,
+    this.currentCount,
+    this.maxCount,
+  });
+}
+
+/// Reasons why hub creation might be limited
+enum HubCreationLimitReason {
+  limitReached,
+  transientError,
+  firebaseUnavailable,
+}
+
+/// Exception thrown when hub creation limit is reached
+class HubCreationLimitException implements Exception {
+  final String message;
+  final int currentCount;
+  final int maxCount;
+
+  HubCreationLimitException({
+    required this.message,
+    required this.currentCount,
+    required this.maxCount,
+  });
+
+  @override
+  String toString() => message;
+}
+
 /// Repository for Hub operations
 class HubsRepository {
   final FirebaseFirestore _firestore;
@@ -67,18 +107,21 @@ class HubsRepository {
     }
 
     try {
-      // Validate user hub limit (Max 3 hubs created/managed)
-      final userDoc =
-          await _firestore.doc(FirestorePaths.user(hub.createdBy)).get();
-      if (!userDoc.exists) throw Exception('User not found');
-
-      final userData = userDoc.data();
-      final userHubIds = List<String>.from(userData?['hubIds'] ?? []);
-
-      // Check how many hubs this user created
-      final createdHubs = await getHubsByCreator(hub.createdBy);
-      if (createdHubs.length >= 3) {
-        throw Exception('Max hubs limit reached (3)');
+      // Pre-check hub creation limit with friendly error messages
+      final checkResult = await canCreateHub(hub.createdBy);
+      if (!checkResult.canCreate) {
+        if (checkResult.reason == HubCreationLimitReason.limitReached) {
+          throw HubCreationLimitException(
+            message: checkResult.message ?? 
+                'הגעת למגבלת יצירת הובים (${checkResult.maxCount}). '
+                'אפשר לעזוב או להעביר בעלות על הוב קיים כדי ליצור חדש.',
+            currentCount: checkResult.currentCount ?? 0,
+            maxCount: checkResult.maxCount ?? 3,
+          );
+        } else {
+          throw Exception(checkResult.message ?? 
+              'לא ניתן לבדוק את מגבלת יצירת הובים. נסה שוב בעוד רגע.');
+        }
       }
 
       final docRef = hub.hubId.isNotEmpty
@@ -121,8 +164,12 @@ class HubsRepository {
       });
 
       // Update user's hubIds
+      final userRef = _firestore.doc(FirestorePaths.user(hub.createdBy));
+      final userDoc = await userRef.get();
+      final userData = userDoc.data();
+      final userHubIds = List<String>.from(userData?['hubIds'] ?? []);
+      
       if (!userHubIds.contains(docRef.id)) {
-        final userRef = _firestore.doc(FirestorePaths.user(hub.createdBy));
         batch.update(userRef, {
           'hubIds': FieldValue.arrayUnion([docRef.id]),
         });
@@ -137,6 +184,8 @@ class HubsRepository {
       CacheService().clear(CacheKeys.hub(docRef.id));
 
       return docRef.id;
+    } on HubCreationLimitException {
+      rethrow; // Re-throw limit exceptions as-is
     } catch (e, stackTrace) {
       ErrorHandlerService().logError(
         e,
@@ -901,16 +950,18 @@ class HubsRepository {
       final results = await Future.wait(queries);
 
       // Filter by actual distance
+      // Use primaryVenueLocation (preferred) or fallback to location (deprecated)
       final hubs = results
           .expand((snapshot) => snapshot.docs)
           .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
           .where((hub) {
-        if (hub.location == null) return false;
+        final hubLocation = hub.primaryVenueLocation ?? hub.location;
+        if (hubLocation == null) return false;
         final distance = Geolocator.distanceBetween(
               latitude,
               longitude,
-              hub.location!.latitude,
-              hub.location!.longitude,
+              hubLocation.latitude,
+              hubLocation.longitude,
             ) /
             1000; // Convert to km
         return distance <= radiusKm;
@@ -918,17 +969,21 @@ class HubsRepository {
 
       // Sort by distance
       hubs.sort((a, b) {
+        final locA = a.primaryVenueLocation ?? a.location;
+        final locB = b.primaryVenueLocation ?? b.location;
+        if (locA == null || locB == null) return 0;
+
         final distA = Geolocator.distanceBetween(
           latitude,
           longitude,
-          a.location!.latitude,
-          a.location!.longitude,
+          locA.latitude,
+          locA.longitude,
         );
         final distB = Geolocator.distanceBetween(
           latitude,
           longitude,
-          b.location!.latitude,
-          b.location!.longitude,
+          locB.latitude,
+          locB.longitude,
         );
         return distA.compareTo(distB);
       });
@@ -1026,6 +1081,58 @@ class HubsRepository {
           .toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Check if user can create a new hub (based on ownership, not membership)
+  /// Returns true if user has created fewer than 3 hubs
+  /// Check if user can create a hub
+  /// Returns a result object with status and message
+  Future<HubCreationCheckResult> canCreateHub(String userId) async {
+    if (!Env.isFirebaseAvailable) {
+      return HubCreationCheckResult(
+        canCreate: false,
+        reason: HubCreationLimitReason.firebaseUnavailable,
+        message: 'Firebase לא זמין',
+      );
+    }
+
+    try {
+      const maxHubsAsOwner = 3;
+      // OPTIMIZATION: Use count() instead of fetching all documents
+      final countQuery = await _firestore
+          .collection(FirestorePaths.hubs())
+          .where('createdBy', isEqualTo: userId)
+          .count()
+          .get();
+
+      final count = countQuery.count ?? 0;
+      
+      if (count >= maxHubsAsOwner) {
+        return HubCreationCheckResult(
+          canCreate: false,
+          reason: HubCreationLimitReason.limitReached,
+          message: 'הגעת למגבלת יצירת הובים (${maxHubsAsOwner}). '
+              'אפשר לעזוב או להעביר בעלות על הוב קיים כדי ליצור חדש.',
+          currentCount: count,
+          maxCount: maxHubsAsOwner,
+        );
+      }
+      
+      return HubCreationCheckResult(
+        canCreate: true,
+        reason: null,
+        message: null,
+        currentCount: count,
+        maxCount: maxHubsAsOwner,
+      );
+    } catch (e) {
+      debugPrint('Error checking hub creation limit: $e');
+      return HubCreationCheckResult(
+        canCreate: false,
+        reason: HubCreationLimitReason.transientError,
+        message: 'שגיאה זמנית בבדיקת המגבלה. נסה שוב בעוד רגע.',
+      );
     }
   }
 
@@ -1409,6 +1516,53 @@ class HubsRepository {
       return bannedUsers;
     } catch (e) {
       throw Exception('Failed to load banned users: $e');
+    }
+  }
+
+  /// Find hub by invitation code
+  ///
+  /// Note: Firestore doesn't support queries on nested map fields like settings.invitationCode.
+  /// This method queries a limited set of hubs and filters client-side.
+  /// For better scalability, consider denormalizing invitationCode to a top-level field.
+  ///
+  /// [invitationCode] - The invitation code to search for (case-insensitive)
+  /// Returns the matching hub or null if not found
+  Future<Hub?> getHubByInvitationCode(String invitationCode) async {
+    if (!Env.isFirebaseAvailable) return null;
+
+    try {
+      // Query with reasonable limit (much better than 1000)
+      // In the future, consider adding invitationCode as a top-level field for direct querying
+      final snapshot = await _firestore
+          .collection(FirestorePaths.hubs())
+          .limit(
+              200) // Reasonable limit - most hubs won't have invitation codes
+          .get();
+
+      final normalizedCode = invitationCode.toUpperCase().trim();
+
+      // Search in settings.invitationCode
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final settings = data['settings'] as Map<String, dynamic>?;
+        if (settings != null) {
+          final code = settings['invitationCode'] as String?;
+          if (code != null && code.toUpperCase().trim() == normalizedCode) {
+            return Hub.fromJson({...data, 'hubId': doc.id});
+          }
+        }
+
+        // Fallback: check if hubId prefix matches (for backward compatibility)
+        if (doc.id.length >= 8 &&
+            doc.id.substring(0, 8).toUpperCase() == normalizedCode) {
+          return Hub.fromJson({...data, 'hubId': doc.id});
+        }
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Error in getHubByInvitationCode: $e');
+      return null;
     }
   }
 }

@@ -52,14 +52,27 @@ class TeamCard extends StatelessWidget {
               borderColor: isHovering ? PremiumColors.primary : null,
               child: Column(
                 children: [
-                  // Team Header (Compact)
+                  // Team Header (Compact Premium)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                        horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: teamColor.withValues(alpha: 0.1),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          teamColor.withValues(alpha: 0.15),
+                          teamColor.withValues(alpha: 0.08),
+                        ],
+                      ),
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(16)),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: teamColor.withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -67,30 +80,42 @@ class TeamCard extends StatelessWidget {
                         Row(
                           children: [
                             Container(
-                              width: 32,
-                              height: 32,
+                              width: 28,
+                              height: 28,
                               decoration: BoxDecoration(
                                 color: teamColor,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: teamColor.withValues(alpha: 0.3),
+                                    color: teamColor.withValues(alpha: 0.4),
                                     blurRadius: 8,
+                                    spreadRadius: 1,
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                             Text(
                               team.name,
-                              style: PremiumTypography.heading3,
+                              style: PremiumTypography.heading3.copyWith(
+                                fontSize: 18,
+                              ),
                             ),
                           ],
                         ),
-                        Text(
-                          'AVG: ${avgRating.toStringAsFixed(1)}',
-                          style: PremiumTypography.labelLarge.copyWith(
-                            color: teamColor,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: teamColor.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'AVG: ${avgRating.toStringAsFixed(1)}',
+                            style: PremiumTypography.labelMedium.copyWith(
+                              color: teamColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],

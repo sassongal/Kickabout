@@ -22,7 +22,11 @@ class SnackbarHelper {
   }
 
   /// Show error snackbar
-  static void showError(BuildContext context, String message) {
+  static void showError(
+    BuildContext context,
+    String message, {
+    SnackBarAction? action,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -35,6 +39,7 @@ class SnackbarHelper {
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
+        action: action,
       ),
     );
   }

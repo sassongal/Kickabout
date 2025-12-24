@@ -135,16 +135,23 @@ class _TeamGeneratorResultScreenState
 
     try {
       final eventsRepo = ref.read(hubEventsRepositoryProvider);
+      final currentUserId = ref.read(currentUserIdProvider);
 
-      // Update event with teams
+      // Update event with teams and set status to 'active' (ready to start)
       await eventsRepo.updateHubEvent(
         widget.hubId,
         widget.eventId,
         {
           'teams': _teams.map((t) => t.toJson()).toList(),
+          'status': 'active', // Mark as active (teams ready, waiting to start)
           'updatedAt': FieldValue.serverTimestamp(),
         },
       );
+
+      // Send notifications to registered players
+      if (_event != null && currentUserId != null) {
+        await _notifyPlayersTeamsReady();
+      }
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'הכוחות נשמרו בהצלחה!');
@@ -158,6 +165,35 @@ class _TeamGeneratorResultScreenState
       if (mounted) {
         setState(() => _isSaving = false);
       }
+    }
+  }
+
+  /// Send push notifications to all registered players that teams are ready
+  /// 
+  /// Note: The actual notification sending should be done via Cloud Function
+  /// triggered by the event status change. This method just sets a flag
+  /// that the Cloud Function can check.
+  Future<void> _notifyPlayersTeamsReady() async {
+    if (_event == null) return;
+
+    try {
+      // Set a flag that teams are ready - Cloud Function will pick this up
+      // and send notifications to all registered players
+      final eventsRepo = ref.read(hubEventsRepositoryProvider);
+      await eventsRepo.updateHubEvent(
+        widget.hubId,
+        widget.eventId,
+        {
+          'teamsReadyAt': FieldValue.serverTimestamp(),
+          'shouldNotifyTeamsReady': true,
+        },
+      );
+      
+      // Note: Cloud Function should listen to events with teamsReadyAt != null
+      // and send notifications to registeredPlayerIds
+    } catch (e) {
+      // Don't fail the save operation if notification flag fails
+      debugPrint('Failed to set teams ready notification flag: $e');
     }
   }
 

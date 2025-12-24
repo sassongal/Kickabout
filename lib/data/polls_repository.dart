@@ -209,6 +209,7 @@ class PollsRepository {
   }
 
   /// Update poll (only allowed fields)
+  /// Uses transaction to ensure atomic updates and prevent race conditions
   Future<void> updatePoll({
     required String pollId,
     String? question,
@@ -235,7 +236,27 @@ class PollsRepository {
 
       if (updates.isEmpty) return;
 
-      await _firestore.collection('polls').doc(pollId).update(updates);
+      // Use transaction to ensure atomic updates
+      await _firestore.runTransaction((transaction) async {
+        final pollRef = _firestore.collection('polls').doc(pollId);
+        final pollDoc = await transaction.get(pollRef);
+
+        if (!pollDoc.exists) {
+          throw Exception('Poll not found');
+        }
+
+        // Validate updates against current state if needed
+        // (e.g., prevent closing a poll that's already closed)
+        final currentData = pollDoc.data()!;
+        if (status != null && status == PollStatus.closed) {
+          final currentStatus = currentData['status'] as String?;
+          if (currentStatus == PollStatus.closed.name) {
+            throw Exception('Poll is already closed');
+          }
+        }
+
+        transaction.update(pollRef, updates);
+      });
 
       debugPrint('✅ Poll updated: $pollId');
     } catch (e) {

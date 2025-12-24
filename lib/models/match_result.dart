@@ -11,7 +11,7 @@ enum MatchApprovalStatus {
   rejected; // Rejected by manager
 
   /// Convert from JSON string
-  factory MatchApprovalStatus.fromJson(String value) {
+  static MatchApprovalStatus fromJson(String value) {
     return MatchApprovalStatus.values.firstWhere(
       (e) => e.name == value,
       orElse: () => MatchApprovalStatus.approved,
@@ -20,6 +20,21 @@ enum MatchApprovalStatus {
 
   /// Convert to JSON string
   String toJson() => name;
+}
+
+/// JsonConverter for MatchApprovalStatus enum
+class MatchApprovalStatusConverter implements JsonConverter<MatchApprovalStatus, String> {
+  const MatchApprovalStatusConverter();
+
+  @override
+  MatchApprovalStatus fromJson(String json) {
+    return MatchApprovalStatus.fromJson(json);
+  }
+
+  @override
+  String toJson(MatchApprovalStatus object) {
+    return object.toJson();
+  }
 }
 
 /// MatchResult model - represents a single match outcome within a Session/Event
@@ -35,11 +50,13 @@ class MatchResult with _$MatchResult {
     required int scoreB, // Score for team B
     @Default([]) List<String> scorerIds, // User IDs of goal scorers (for team A + B combined)
     @Default([]) List<String> assistIds, // User IDs of assisters (for team A + B combined)
+    String? mvpId, // User ID of MVP (Most Valuable Player)
     @TimestampConverter() required DateTime createdAt, // When this match was logged
     String? loggedBy, // User ID who logged this match (manager or moderator)
     @Default(12) int matchDurationMinutes, // Duration of this specific match in minutes
 
     // Moderator approval workflow fields
+    @MatchApprovalStatusConverter()
     @Default(MatchApprovalStatus.approved) MatchApprovalStatus approvalStatus,
     String? approvedBy, // User ID of manager who approved (if moderator submitted)
     @TimestampConverter() DateTime? approvedAt, // When manager approved

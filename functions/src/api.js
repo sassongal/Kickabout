@@ -63,7 +63,7 @@ exports.searchVenues = onCall(
       if (response.data && response.data.error_message) {
         const errorMsg = response.data.error_message;
         info(`Google Places API error: ${errorMsg}`);
-
+        console.log(response.data);
         // Check for REQUEST_DENIED error
         if (response.data.status === 'REQUEST_DENIED') {
           throw new HttpsError(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
@@ -18,11 +19,20 @@ class DiscoverHubsScreen extends ConsumerStatefulWidget {
   ConsumerState<DiscoverHubsScreen> createState() => _DiscoverHubsScreenState();
 }
 
+enum LocationStatus {
+  loading,
+  success,
+  denied,
+  error,
+  defaultFallback, // User explicitly chose to use default location
+}
+
 class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
   Position? _currentPosition;
   List<Hub> _nearbyHubs = [];
   bool _isLoading = false;
   bool _isLoadingLocation = false;
+  LocationStatus _locationStatus = LocationStatus.loading;
   double _radiusKm = 5.0; // Default 5km radius
   bool _isMapView = false; // Toggle between List and Map
   GoogleMapController? _mapController;
@@ -37,6 +47,7 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
   Future<void> _loadCurrentLocation() async {
     setState(() {
       _isLoadingLocation = true;
+      _locationStatus = LocationStatus.loading;
     });
 
     try {
@@ -46,20 +57,23 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
       if (position != null) {
         setState(() {
           _currentPosition = position;
+          _locationStatus = LocationStatus.success;
         });
         await _searchNearbyHubs();
       } else {
-        if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            'לא ניתן לקבל מיקום. אנא בדוק את ההרשאות.',
-          );
-        }
+        // Permission denied - don't auto-search, show banner instead
+        setState(() {
+          _currentPosition = null;
+          _locationStatus = LocationStatus.denied;
+        });
       }
     } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'שגיאה בקבלת מיקום: $e');
-      }
+      // On error - don't auto-search, show banner instead
+      debugPrint('Error getting location: $e');
+      setState(() {
+        _currentPosition = null;
+        _locationStatus = LocationStatus.error;
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -67,6 +81,27 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
         });
       }
     }
+  }
+
+  /// User explicitly opts in to use default location (Tel Aviv)
+  Future<void> _useDefaultLocation() async {
+    final defaultLocation = Position(
+        longitude: 34.7818,
+        latitude: 32.0853,
+        timestamp: DateTime.now(),
+        accuracy: 0,
+        altitude: 0,
+        heading: 0,
+        speed: 0,
+        speedAccuracy: 0,
+        altitudeAccuracy: 0,
+        headingAccuracy: 0);
+
+    setState(() {
+      _currentPosition = defaultLocation;
+      _locationStatus = LocationStatus.defaultFallback;
+    });
+    await _searchNearbyHubs();
   }
 
   Future<void> _searchNearbyHubs() async {
@@ -79,37 +114,12 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
 
-      // Get all hubs and sort by distance from user location
-      final allHubs = await hubsRepo.getAllHubs(limit: 1000);
-
-      // Calculate distances and filter by radius
-      final hubsWithDistance = allHubs
-          .map((hub) {
-            double? distance;
-            if (hub.location != null) {
-              distance = Geolocator.distanceBetween(
-                    _currentPosition!.latitude,
-                    _currentPosition!.longitude,
-                    hub.location!.latitude,
-                    hub.location!.longitude,
-                  ) /
-                  1000; // Convert to km
-            } else if (hub.mainVenueId != null) {
-              // If hub has main venue, we'll need to fetch it
-              // For now, we'll use a large distance
-              distance = 999999;
-            } else {
-              distance = 999999;
-            }
-            return MapEntry(hub, distance);
-          })
-          .where((entry) => entry.value <= _radiusKm)
-          .toList();
-
-      // Sort by distance (closest first)
-      hubsWithDistance.sort((a, b) => a.value.compareTo(b.value));
-
-      final hubs = hubsWithDistance.map((entry) => entry.key).toList();
+      // Use optimized geohash-based query for server-side filtering
+      final hubs = await hubsRepo.findHubsNearby(
+        latitude: _currentPosition!.latitude,
+        longitude: _currentPosition!.longitude,
+        radiusKm: _radiusKm,
+      );
 
       setState(() {
         _nearbyHubs = hubs;
@@ -143,13 +153,15 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
     final markers = <Marker>{};
 
     for (final hub in _nearbyHubs) {
-      if (hub.location != null) {
+      // Use primaryVenueLocation (preferred) or fallback to location
+      final hubLocation = hub.primaryVenueLocation ?? hub.location;
+      if (hubLocation != null) {
         final distance = _currentPosition != null
             ? Geolocator.distanceBetween(
                   _currentPosition!.latitude,
                   _currentPosition!.longitude,
-                  hub.location!.latitude,
-                  hub.location!.longitude,
+                  hubLocation.latitude,
+                  hubLocation.longitude,
                 ) /
                 1000
             : 0.0;
@@ -158,8 +170,8 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
           Marker(
             markerId: MarkerId(hub.hubId),
             position: LatLng(
-              hub.location!.latitude,
-              hub.location!.longitude,
+              hubLocation.latitude,
+              hubLocation.longitude,
             ),
             infoWindow: InfoWindow(
               title: hub.name,
@@ -198,9 +210,11 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
     double maxLng = _currentPosition!.longitude;
 
     for (final hub in _nearbyHubs) {
-      if (hub.location != null) {
-        final lat = hub.location!.latitude;
-        final lng = hub.location!.longitude;
+      // Use primaryVenueLocation (preferred) or fallback to location
+      final hubLocation = hub.primaryVenueLocation ?? hub.location;
+      if (hubLocation != null) {
+        final lat = hubLocation.latitude;
+        final lng = hubLocation.longitude;
         minLat = minLat < lat ? minLat : lat;
         maxLat = maxLat > lat ? maxLat : lat;
         minLng = minLng < lng ? minLng : lng;
@@ -222,28 +236,17 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
         IconButton(
           icon: const Icon(Icons.refresh),
           tooltip: 'רענן',
-          onPressed: _currentPosition != null ? _searchNearbyHubs : null,
+          onPressed: (_currentPosition != null &&
+                  _locationStatus != LocationStatus.denied &&
+                  _locationStatus != LocationStatus.error)
+              ? _searchNearbyHubs
+              : null,
         ),
       ],
       body: _isLoadingLocation
           ? const PremiumLoadingState(message: 'מאתר את המיקום שלך...')
           : _currentPosition == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.location_off,
-                          size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('לא ניתן לקבל מיקום'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadCurrentLocation,
-                        child: const Text('נסה שוב'),
-                      ),
-                    ],
-                  ),
-                )
+              ? _buildLocationErrorState()
               : Column(
                   children: [
                     // View Toggle (List/Map)
@@ -300,11 +303,13 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
                         ],
                       ),
                     ),
+                    // Location status banner (if using default or had error)
+                    if (_locationStatus == LocationStatus.defaultFallback)
+                      _buildLocationBanner(),
                     // Results (List or Map)
                     Expanded(
                       child: _isLoading
-                          ? const PremiumLoadingState(
-                              message: 'מחפש הובים...')
+                          ? const PremiumLoadingState(message: 'מחפש הובים...')
                           : _nearbyHubs.isEmpty
                               ? PremiumEmptyState(
                                   icon: Icons.search_off,
@@ -331,13 +336,15 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
       itemCount: _nearbyHubs.length,
       itemBuilder: (context, index) {
         final hub = _nearbyHubs[index];
+        // Use primaryVenueLocation (preferred) or fallback to location
+        final hubLocation = hub.primaryVenueLocation ?? hub.location;
         double distance = 0;
-        if (hub.location != null && _currentPosition != null) {
+        if (hubLocation != null && _currentPosition != null) {
           distance = Geolocator.distanceBetween(
                 _currentPosition!.latitude,
                 _currentPosition!.longitude,
-                hub.location!.latitude,
-                hub.location!.longitude,
+                hubLocation.latitude,
+                hubLocation.longitude,
               ) /
               1000;
         }
@@ -386,24 +393,170 @@ class _DiscoverHubsScreenState extends ConsumerState<DiscoverHubsScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: LatLng(
-              _currentPosition!.latitude,
-              _currentPosition!.longitude,
+        try {
+          return GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: LatLng(
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+              ),
+              zoom: 13.0,
             ),
-            zoom: 13.0,
-          ),
-          markers: _markers,
-          myLocationEnabled: true,
-          myLocationButtonEnabled: true,
-          mapType: MapType.normal,
-          onMapCreated: (controller) {
-            _mapController = controller;
-            _updateMapMarkers();
-          },
-        );
+            markers: _markers,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            mapType: MapType.normal,
+            onMapCreated: (controller) {
+              _mapController = controller;
+              _updateMapMarkers();
+            },
+          );
+        } catch (e) {
+          // Handle API key errors gracefully
+          debugPrint('Error initializing Google Map: $e');
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'שגיאה בטעינת המפה',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'ייתכן שמפתח Google Maps API חסר או לא תקין',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _loadCurrentLocation,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('נסה שוב'),
+                ),
+              ],
+            ),
+          );
+        }
       },
+    );
+  }
+
+  Widget _buildLocationErrorState() {
+    final isDenied = _locationStatus == LocationStatus.denied;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isDenied ? Icons.location_disabled : Icons.location_off,
+              size: 80,
+              color: Colors.orange,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              isDenied ? 'הרשאת מיקום נדחתה' : 'שגיאה באיתור המיקום',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isDenied
+                  ? 'אנחנו לא יכולים למצוא הובים בקרבתך ללא הרשאת מיקום.\n'
+                      'אפשר לחפש בתל אביב כברירת מחדל או לפתוח הגדרות כדי לאפשר מיקום.'
+                  : 'לא הצלחנו לאתר את המיקום שלך.\n'
+                      'אפשר לחפש בתל אביב כברירת מחדל או לנסות שוב.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isDenied)
+                  ElevatedButton.icon(
+                    onPressed: () => Geolocator.openAppSettings(),
+                    icon: const Icon(Icons.settings),
+                    label: const Text('פתח הגדרות'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                if (isDenied) const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _useDefaultLocation,
+                  icon: const Icon(Icons.location_city),
+                  label: const Text('חפש בתל אביב'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                TextButton.icon(
+                  onPressed: _loadCurrentLocation,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('נסה שוב'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.orange.shade700),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'מציג תוצאות בתל אביב כברירת מחדל. לחץ על "רענן" כדי לנסות לאתר את המיקום שלך.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.orange.shade900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _loadCurrentLocation,
+            child: Text(
+              'נסה שוב',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.orange.shade700,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

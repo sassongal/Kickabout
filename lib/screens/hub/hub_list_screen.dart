@@ -9,6 +9,8 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/data/hubs_repository.dart' show HubCreationCheckResult;
 
 /// Hub list screen - lists hubs of user
 class HubListScreen extends ConsumerStatefulWidget {
@@ -71,10 +73,26 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
           onPressed: () => context.go('/'),
         ),
       ],
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/hubs/create'),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.createHub),
+      floatingActionButton: FutureBuilder<HubCreationCheckResult>(
+        future: hubsRepo.canCreateHub(currentUserId),
+        builder: (context, snapshot) {
+          final checkResult = snapshot.data;
+          final canCreate = checkResult?.canCreate ?? false;
+          return FloatingActionButton.extended(
+            onPressed: canCreate
+                ? () => context.push('/hubs/create')
+                : () {
+                    final message = checkResult?.message ?? 
+                        'הגעת למגבלה של 3 הובים שנוצרו על ידך. מחק הוב קיים כדי ליצור חדש.';
+                    SnackbarHelper.showError(context, message);
+                  },
+            icon: const Icon(Icons.add),
+            label: Text(l10n.createHub),
+            tooltip: canCreate
+                ? null
+                : 'הגעת למגבלה של 3 הובים שנוצרו על ידך',
+          );
+        },
       ),
       body: StreamBuilder<List<Hub>>(
         stream: hubsStream,

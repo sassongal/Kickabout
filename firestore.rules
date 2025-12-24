@@ -388,11 +388,24 @@ service cloud.firestore {
           isValidHubEvent(request.resource.data) &&
           request.resource.data.eventId == eventId &&
           request.resource.data.hubId == hubId) || isSuperAdmin();
-        allow update, delete: if (isHubAdmin(hubId) &&
-          isValidHubEvent(request.resource.data) &&
+        // UPDATE: Allow managers/moderators to update events (for match results, live state, etc.)
+        allow update: if (
+          (isHubModerator(hubId) &&
+           request.resource.data.eventId == resource.data.eventId &&
+           request.resource.data.hubId == resource.data.hubId &&
+           request.resource.data.createdBy == resource.data.createdBy) ||
+          isSuperAdmin()
+        );
+        allow delete: if (isHubAdmin(hubId) &&
           request.resource.data.eventId == resource.data.eventId &&
           request.resource.data.hubId == resource.data.hubId &&
           request.resource.data.createdBy == resource.data.createdBy) || isSuperAdmin();
+
+        // Live State subcollection for real-time match updates
+        match /liveState/{stateId} {
+          allow read: if isHubMember(hubId) || isSuperAdmin();
+          allow write: if isHubModerator(hubId) || isSuperAdmin();
+        }
 
         match /games/{gameId} {
           allow read: if isAuthenticated();

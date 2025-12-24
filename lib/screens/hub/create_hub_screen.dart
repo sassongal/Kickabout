@@ -18,6 +18,8 @@ import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/widgets/input/city_autocomplete_field.dart';
 import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
+import 'package:kattrick/data/hubs_repository.dart' show HubCreationLimitException, HubCreationLimitReason;
+import 'package:kattrick/utils/snackbar_helper.dart';
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -160,6 +162,57 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
+      
+      // Pre-check hub creation limit with friendly error messages
+      final checkResult = await hubsRepo.canCreateHub(currentUserId);
+      if (!checkResult.canCreate) {
+        if (checkResult.reason == HubCreationLimitReason.limitReached) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            // Show friendly dialog with options
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('מגבלת יצירת הובים'),
+                content: Text(
+                  checkResult.message ?? 
+                      'הגעת למגבלת יצירת הובים (${checkResult.maxCount}).\n\n'
+                      'אפשרויות:\n'
+                      '• לעזוב הוב קיים\n'
+                      '• להעביר בעלות על הוב קיים למשתמש אחר',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('הבנתי'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // Navigate to user's hubs list
+                      context.push('/hubs');
+                    },
+                    child: const Text('צפה בהובים שלי'),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        } else {
+          // Transient error - show snackbar and allow retry
+          if (mounted) {
+            setState(() => _isLoading = false);
+            SnackbarHelper.showError(
+              context,
+              checkResult.message ?? 
+                  'לא ניתן לבדוק את מגבלת יצירת הובים. נסה שוב בעוד רגע.',
+            );
+          }
+          return;
+        }
+      }
+      
       final locationService = ref.read(locationServiceProvider);
 
       // If home venue selected, ensure it is part of the venues list and set as main
@@ -263,7 +316,36 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
       debugPrint('   hub.primaryVenueId: ${hub.primaryVenueId}');
       debugPrint('   hub.venueIds: ${hub.venueIds}');
 
-      final hubId = await hubsRepo.createHub(hub);
+      String hubId;
+      try {
+        hubId = await hubsRepo.createHub(hub);
+      } on HubCreationLimitException catch (e) {
+        // Handle limit exception with friendly message
+        if (mounted) {
+          setState(() => _isLoading = false);
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('מגבלת יצירת הובים'),
+              content: Text(e.message),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('הבנתי'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/hubs');
+                  },
+                  child: const Text('צפה בהובים שלי'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
       debugPrint('✅ Hub created with ID: $hubId');
       debugPrint('   Verifying hub data...');
 

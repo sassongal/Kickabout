@@ -9,6 +9,9 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/logic/event_action_controller.dart';
+import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Next Game Spotlight Card - Shows the user's next upcoming game/event
 ///
@@ -67,6 +70,48 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
     });
   }
 
+  Widget _buildManagerButtons(
+      BuildContext context, _NextGameData gameData, HubEvent event) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Create Teams button (if no teams exist)
+          if (event.teams.isEmpty)
+            SizedBox(
+              width: double.infinity,
+              child: _PremiumCreateTeamsButton(
+                onPressed: () {
+                  context.push(
+                      '/hubs/${gameData.hubId}/events/${gameData.id}/team-generator');
+                },
+              ),
+            ),
+          // Start Event button (if teams exist and valid)
+          if (event.teams.isNotEmpty &&
+              event.teams.every((t) => t.playerIds.isNotEmpty)) ...[
+            SizedBox(
+              width: double.infinity,
+              child: _PremiumStartEventButton(
+                onPressed: () async {
+                  final actionController = ref
+                      .read(eventActionControllerProvider);
+                  await actionController.handleStartEvent(
+                    context: context,
+                    hubId: gameData.hubId,
+                    eventId: gameData.id,
+                    event: event,
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   void _updateCountdown(DateTime gameDate) {
     final now = DateTime.now();
     final difference = gameDate.difference(now);
@@ -116,7 +161,35 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
 
             _maybeScheduleCountdown(nextGame);
 
-            return _buildGameCard(context, nextGame);
+            // Check if user is manager for this event
+            final currentUserId = ref.watch(currentUserIdProvider);
+            final hub = hubs.firstWhere(
+              (h) => h.hubId == nextGame.hubId,
+              orElse: () => Hub(
+                hubId: nextGame.hubId,
+                name: nextGame.hubName ?? '',
+                createdBy: '',
+                createdAt: DateTime.now(),
+              ),
+            );
+            final isManager = currentUserId != null &&
+                (hub.createdBy == currentUserId ||
+                    hub.managerIds.contains(currentUserId));
+            
+            // Check if event is within 1 hour before start (for manager actions)
+            final now = DateTime.now();
+            final oneHourBeforeEvent = nextGame.dateTime.subtract(const Duration(hours: 1));
+            final canShowManagerActions = isManager && 
+                nextGame.isEvent &&
+                !nextGame.dateTime.isBefore(now) && // Event hasn't started yet
+                now.isAfter(oneHourBeforeEvent); // Within 1 hour before event
+
+            return _buildGameCard(
+              context, 
+              nextGame,
+              isManager: isManager,
+              canShowManagerActions: canShowManagerActions,
+            );
           },
         );
       },
@@ -197,42 +270,69 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
     );
   }
 
-  Widget _buildGameCard(BuildContext context, _NextGameData gameData) {
+  Widget _buildGameCard(
+    BuildContext context, 
+    _NextGameData gameData, {
+    bool isManager = false,
+    bool canShowManagerActions = false,
+  }) {
     return ValueListenableBuilder<Duration?>(
       valueListenable: _timeUntilGame,
       builder: (context, countdown, _) {
         final safeCountdown = countdown ?? Duration.zero;
         final isUrgent = safeCountdown.inHours < 24;
 
-        return GestureDetector(
-          onTap: () {
-            if (gameData.isEvent) {
-              context
-                  .push('/hubs/${gameData.hubId}/events/${gameData.id}/manage');
-            } else {
-              context.push('/games/${gameData.id}');
-            }
-          },
-          child: RepaintBoundary(
-            // RepaintBoundary מבודד את הכרטיס - מפחית הבהובים!
-            child: Container(
-              height: 232,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: isUrgent
-                        ? Colors.orange.withValues(alpha: 0.3)
-                        : PremiumColors.primary.withValues(alpha: 0.2),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 8),
+        // Check if event is ongoing for navigation
+        return StreamBuilder<HubEvent?>(
+          stream: gameData.isEvent
+              ? ref
+                  .read(hubEventsRepositoryProvider)
+                  .watchHubEvent(gameData.hubId, gameData.id)
+              : null,
+          builder: (context, eventSnapshot) {
+            final event = eventSnapshot.data;
+            final isEventOngoing = gameData.isEvent &&
+                event != null &&
+                (event.isStarted || event.status == 'ongoing');
+
+            return GestureDetector(
+              onTap: () {
+                if (gameData.isEvent) {
+                  // If event is ongoing, navigate to live match screen
+                  if (isEventOngoing) {
+                    context.push(
+                        '/hubs/${gameData.hubId}/events/${gameData.id}/live');
+                  } else {
+                    context.push(
+                        '/hubs/${gameData.hubId}/events/${gameData.id}/manage');
+                  }
+                } else {
+                  context.push('/games/${gameData.id}');
+                }
+              },
+              child: RepaintBoundary(
+                // RepaintBoundary מבודד את הכרטיס - מפחית הבהובים!
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minHeight: 232,
+                    maxHeight: 320, // Allow expansion for manager buttons
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Stack(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isUrgent
+                            ? Colors.orange.withValues(alpha: 0.3)
+                            : PremiumColors.primary.withValues(alpha: 0.2),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Stack(
                   children: [
                     // Animated gradient background
                     AnimatedContainer(
@@ -270,7 +370,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                       padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           // Header: Type badge + Hub/Creator
@@ -351,70 +451,48 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                           ),
 
                           // Main content: Title + Date + Location
-                          const SizedBox(height: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (gameData.title != null) ...[
-                                Text(
-                                  gameData.title!,
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color:
-                                            Colors.black.withValues(alpha: 0.3),
-                                        offset: const Offset(0, 2),
-                                        blurRadius: 4,
-                                      ),
-                                    ],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                              ],
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 14,
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                  ),
-                                  const SizedBox(width: 6),
+                                if (gameData.title != null) ...[
                                   Text(
-                                    DateFormat('dd/MM/yyyy · HH:mm')
-                                        .format(gameData.dateTime),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color:
-                                          Colors.white.withValues(alpha: 0.9),
+                                    gameData.title!,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      shadows: [
+                                        Shadow(
+                                          color:
+                                              Colors.black.withValues(alpha: 0.3),
+                                          offset: const Offset(0, 2),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
+                                  const SizedBox(height: 4),
                                 ],
-                              ),
-                              if (gameData.location != null) ...[
-                                const SizedBox(height: 3),
                                 Row(
                                   children: [
                                     Icon(
-                                      Icons.location_on,
+                                      Icons.calendar_today,
                                       size: 14,
-                                      color:
-                                          Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withValues(alpha: 0.9),
                                     ),
                                     const SizedBox(width: 6),
-                                    Expanded(
+                                    Flexible(
                                       child: Text(
-                                        gameData.location!,
+                                        DateFormat('dd/MM/yyyy · HH:mm')
+                                            .format(gameData.dateTime),
                                         style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w400,
-                                          color: Colors.white
-                                              .withValues(alpha: 0.85),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              Colors.white.withValues(alpha: 0.9),
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -422,15 +500,104 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                                     ),
                                   ],
                                 ),
+                                if (gameData.location != null) ...[
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: 14,
+                                        color:
+                                            Colors.white.withValues(alpha: 0.9),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          gameData.location!,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.white
+                                                .withValues(alpha: 0.85),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      // Navigation icon
+                                      if (gameData.isEvent && event != null && event.locationPoint != null)
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.navigation,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () async {
+                                            final lat = event.locationPoint!.latitude;
+                                            final lng = event.locationPoint!.longitude;
+                                            final url = Uri.parse(
+                                              'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                                            );
+                                            try {
+                                              if (await canLaunchUrl(url)) {
+                                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                                              }
+                                            } catch (e) {
+                                              // Ignore errors
+                                            }
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
+                            ),
 
-                          const SizedBox(height: 8),
+                          // LIVE Event Button (if event is ongoing and teams are saved)
+                          if (gameData.isEvent && isEventOngoing && event.teams.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: RepaintBoundary(
+                                child: PremiumLiveEventButton(
+                                  onPressed: () {
+                                    context.push(
+                                        '/hubs/${gameData.hubId}/events/${gameData.id}/live');
+                                  },
+                                ),
+                              ),
+                            ),
+
+                          // Manager Action Buttons (only for events, managers, and 1 hour before event)
+                          if (gameData.isEvent && canShowManagerActions && !isEventOngoing)
+                            RepaintBoundary(
+                              child: StreamBuilder<HubEvent?>(
+                                stream: ref
+                                    .read(hubEventsRepositoryProvider)
+                                    .watchHubEvent(gameData.hubId, gameData.id),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting ||
+                                      !snapshot.hasData) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  
+                                  final event = snapshot.data;
+                                  if (event == null || 
+                                      event.isStarted ||
+                                      event.status != 'upcoming' ||
+                                      !canShowManagerActions) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  
+                                  return _buildManagerButtons(context, gameData, event);
+                                },
+                              ),
+                            ),
 
                           // Footer: Countdown + Participants
                           Row(
-                            children: [
+                              children: [
                               // Countdown - עטוף ב-RepaintBoundary נוסף!
                               Expanded(
                                 child: RepaintBoundary(
@@ -536,6 +703,8 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
             ),
           ),
         );
+          },
+        );
       },
     );
   }
@@ -589,8 +758,24 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
           final hub = hubsMap[hubId];
 
           for (final event in events) {
-            if (event.eventDate.isAfter(now) &&
-                event.eventDate.isBefore(futureLimit)) {
+            // Check if event is live/ongoing
+            final isLive = event.isStarted || event.status == 'ongoing' || event.status == 'live';
+            
+            // Check if event is within duration window (5 hours after start)
+            final startTime = event.startedAt ?? event.eventDate;
+            final happeningWindowEnd = startTime.add(const Duration(hours: 5));
+            final isWithinDurationWindow = now.isBefore(happeningWindowEnd) && 
+                (event.isStarted || now.isAfter(startTime.subtract(const Duration(minutes: 30))));
+            
+            // Include event if:
+            // 1. It's live/ongoing, OR
+            // 2. It's within the duration window, OR
+            // 3. It's upcoming (future event)
+            final shouldInclude = isLive || 
+                isWithinDurationWindow || 
+                (event.eventDate.isAfter(now) && event.eventDate.isBefore(futureLimit));
+            
+            if (shouldInclude) {
               final isRegistered = event.registeredPlayerIds.contains(userId);
               if (isRegistered) {
                 allItems.add(_NextGameData(
@@ -698,4 +883,269 @@ class _SpotlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Premium Create Teams Button with animation
+class _PremiumCreateTeamsButton extends StatefulWidget {
+  final VoidCallback? onPressed;
+
+  const _PremiumCreateTeamsButton({
+    required this.onPressed,
+  });
+
+  @override
+  State<_PremiumCreateTeamsButton> createState() => _PremiumCreateTeamsButtonState();
+}
+
+class _PremiumCreateTeamsButtonState extends State<_PremiumCreateTeamsButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _glowAnimation;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.1).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.onPressed != null ? _scaleAnimation.value : 1.0,
+          child: Transform.rotate(
+            angle: widget.onPressed != null ? _rotationAnimation.value : 0.0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF667eea), // Purple
+                    Color(0xFF764ba2), // Dark Purple
+                    Color(0xFFf093fb), // Pink
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: widget.onPressed != null
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF667eea).withValues(
+                            alpha: _glowAnimation.value * 0.7,
+                          ),
+                          blurRadius: 20,
+                          spreadRadius: 3,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFFf093fb).withValues(
+                            alpha: _glowAnimation.value * 0.5,
+                          ),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: widget.onPressed,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Transform.rotate(
+                          angle: _rotationAnimation.value * 2,
+                          child: const Icon(
+                            Icons.auto_awesome,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'צור כוחות',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Premium Start Event Button with animation
+class _PremiumStartEventButton extends StatefulWidget {
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  const _PremiumStartEventButton({
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
+  @override
+  State<_PremiumStartEventButton> createState() => _PremiumStartEventButtonState();
+}
+
+class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.onPressed != null && !widget.isLoading
+              ? _scaleAnimation.value
+              : 1.0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF00C853), // Green
+                  Color(0xFF00E676), // Light Green
+                  Color(0xFF69F0AE), // Lighter Green
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: widget.onPressed != null && !widget.isLoading
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF00C853).withValues(
+                          alpha: _glowAnimation.value * 0.6,
+                        ),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFF00E676).withValues(
+                          alpha: _glowAnimation.value * 0.4,
+                        ),
+                        blurRadius: 24,
+                        spreadRadius: 4,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.isLoading ? null : widget.onPressed,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.isLoading)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      else ...[
+                        const Icon(
+                          Icons.play_arrow_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'התחל אירוע',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

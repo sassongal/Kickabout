@@ -22,6 +22,7 @@ import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 // Conditional import for Crashlytics (not available on Web)
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'
     if (dart.library.html) 'package:kattrick/services/crashlytics_stub.dart';
+import 'package:kattrick/services/web_maps_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
@@ -50,6 +51,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
+  // Inject Google Maps API key to window for web platform
+  // This allows index.html to access it via JavaScript
+  injectGoogleMapsApiKeyForWeb();
+
   final bool servicesInitialized = await _initializeAppServices();
 
   if (servicesInitialized) {
@@ -68,6 +73,7 @@ Future<void> main() async {
     );
   }
 }
+
 
 /// Initializes all essential app services and returns true on success.
 Future<bool> _initializeAppServices() async {

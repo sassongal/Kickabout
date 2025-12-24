@@ -36,25 +36,19 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
 
-      // Try to find hub by invitation code in settings
-      // For now, we'll search all hubs (in production, you'd use a better query)
-      final allHubs = await hubsRepo.getAllHubs(limit: 1000);
-
-      final matchingHub = allHubs.firstWhere(
-        (hub) {
-          final code = hub.settings['invitationCode'] as String?;
-          return code != null &&
-              code.toUpperCase() == widget.invitationCode.toUpperCase();
-        },
-        orElse: () => allHubs.firstWhere(
-          (hub) =>
-              hub.hubId.substring(0, 8).toUpperCase() ==
-              widget.invitationCode.toUpperCase(),
-          orElse: () => throw Exception('Hub not found'),
-        ),
-      );
+      // Use optimized query instead of fetching 1000+ hubs
+      final matchingHub = await hubsRepo.getHubByInvitationCode(widget.invitationCode);
 
       if (!mounted) return;
+      
+      if (matchingHub == null) {
+        setState(() {
+          _error = l10n.hubNotFoundWithInviteCode;
+          _isLoading = false;
+        });
+        return;
+      }
+
       setState(() {
         _hub = matchingHub;
         _isLoading = false;

@@ -106,6 +106,29 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
 
     return PremiumScaffold(
       title: 'ניהול אירוע',
+      actions: [
+        // Add button to navigate to live match if event is ongoing
+        StreamBuilder<HubEvent?>(
+          stream: eventsRepo.watchHubEvent(widget.hubId, widget.eventId),
+          builder: (context, snapshot) {
+            final event = snapshot.data;
+            final isEventOngoing = event != null &&
+                (event.isStarted || event.status == 'ongoing');
+            
+            if (isEventOngoing) {
+              return IconButton(
+                icon: const Icon(Icons.sports_soccer),
+                tooltip: 'מסך המשחק החי',
+                onPressed: () {
+                  context.push(
+                      '/hubs/${widget.hubId}/events/${widget.eventId}/live');
+                },
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
       body: StreamBuilder<HubEvent?>(
         stream: eventsRepo.watchHubEvent(widget.hubId, widget.eventId),
         builder: (context, eventSnapshot) {
@@ -167,32 +190,35 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.event, color: PremiumColors.primary),
-                const SizedBox(width: 12),
+                Icon(Icons.event, color: PremiumColors.primary, size: 20),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     event.title,
-                    style: PremiumTypography.heading2,
+                    style: PremiumTypography.heading3,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit),
+                  icon: const Icon(Icons.edit, size: 20),
                   onPressed: () {
-                    // Navigate to edit event screen
                     context.push(
                         '/hubs/${widget.hubId}/events/${widget.eventId}/edit');
                   },
                   tooltip: 'ערוך אירוע',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // Date & Time
             Row(
@@ -480,7 +506,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
   Widget _buildTeamsCard(HubEvent event, List<User> players, Hub? hub) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -491,8 +517,9 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                   color: event.teams.isNotEmpty
                       ? PremiumColors.success
                       : PremiumColors.primary,
+                  size: 20,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'כוחות',
@@ -501,7 +528,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // Show "Start Session" or "Enter Session" button if teams exist and game created
             if (event.teams.isNotEmpty && event.gameId != null) ...[
@@ -558,60 +585,89 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
               ),
             ],
 
-            // Show teams if they exist
+            // Show teams if they exist - Compact display with player names
             if (event.teams.isNotEmpty) ...[
               ...event.teams.asMap().entries.map((entry) {
                 final index = entry.key;
                 final team = entry.value;
+                final teamColor = _getTeamColor(team.name);
+                
+                // Get player names from the players list
+                final teamPlayers = players.where((p) => team.playerIds.contains(p.uid)).toList();
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _getTeamColor(team.name).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              team.name,
-                              style: PremiumTypography.labelMedium.copyWith(
-                                color: _getTeamColor(team.name),
-                                fontWeight: FontWeight.bold,
+                return Padding(
+                  padding: EdgeInsets.only(bottom: index < event.teams.length - 1 ? 16 : 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Team header with color indicator
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: teamColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: teamColor.withValues(alpha: 0.5),
+                            width: 2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: teamColor,
+                                shape: BoxShape.circle,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '(${team.playerIds.length} שחקנים)',
-                            style: PremiumTypography.bodySmall,
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                team.name,
+                                style: PremiumTypography.labelLarge.copyWith(
+                                  color: teamColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${team.playerIds.length} שחקנים',
+                              style: PremiumTypography.bodySmall.copyWith(
+                                color: PremiumColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: team.playerIds.map((playerId) {
-                        return Chip(
-                          label: Text(
-                            playerId, // In real implementation, fetch player name
-                            style: PremiumTypography.bodySmall,
+                      const SizedBox(height: 8),
+                      // Player names list
+                      ...teamPlayers.map((player) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: teamColor,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  player.name,
+                                  style: PremiumTypography.bodyMedium,
+                                ),
+                              ),
+                            ],
                           ),
-                          backgroundColor:
-                              _getTeamColor(team.name).withValues(alpha: 0.1),
                         );
-                      }).toList(),
-                    ),
-                    if (index < event.teams.length - 1) const Divider(height: 24),
-                  ],
+                      }),
+                    ],
+                  ),
                 );
               }),
             ]

@@ -57,7 +57,8 @@ class StopwatchUtility extends ChangeNotifier {
 
     _isRunning = true;
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+    // Update every 10ms for centisecond precision
+    _timer = Timer.periodic(const Duration(milliseconds: 10), (_) {
       if (_startTime != null) {
         _elapsed = DateTime.now().difference(_startTime!) - _pausedDuration;
         notifyListeners();

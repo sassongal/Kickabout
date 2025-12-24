@@ -250,16 +250,48 @@ class _EditHubEventScreenState extends ConsumerState<EditHubEventScreen> {
 
       // Check if date is in the past
       if (eventDate.isBefore(DateTime.now())) {
-        SnackbarHelper.showError(context, 'לא ניתן לבחור תאריך שכבר עבר');
+        SnackbarHelper.showError(
+          context,
+          'לא ניתן לבחור תאריך ושעה שכבר עברו',
+        );
         setState(() => _isLoading = false);
         return;
       }
 
-      // Check if moving time backward (only forward allowed)
-      if (_event != null && eventDate.isBefore(_event!.eventDate)) {
-        SnackbarHelper.showError(context, 'ניתן לשנות את שעת האירוע רק קדימה');
-        setState(() => _isLoading = false);
-        return;
+      // Check if moving time more than 1 hour before original event time
+      if (_event != null) {
+        final originalEventDate = _event!.eventDate;
+        final oneHourBeforeOriginal = originalEventDate.subtract(const Duration(hours: 1));
+        
+        if (eventDate.isBefore(oneHourBeforeOriginal)) {
+          // Show detailed explanation dialog
+          if (mounted) {
+            final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
+            final originalDateStr = dateFormat.format(originalEventDate);
+            final oneHourBeforeStr = dateFormat.format(oneHourBeforeOriginal);
+            
+            await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('לא ניתן לשנות את השעה'),
+                content: Text(
+                  'ניתן לשנות את שעת האירוע עד שעה לפני השעה המקורית.\n\n'
+                  'שעת האירוע המקורית: $originalDateStr\n'
+                  'השעה המוקדמת ביותר שניתן לבחור: $oneHourBeforeStr\n\n'
+                  'אם אתה צריך לשנות את השעה ליותר משעה אחורה, אנא צור אירוע חדש.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('הבנתי'),
+                  ),
+                ],
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
+        }
       }
 
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);

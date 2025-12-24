@@ -32,6 +32,8 @@ mixin _$MatchResult {
       throw _privateConstructorUsedError; // User IDs of goal scorers (for team A + B combined)
   List<String> get assistIds =>
       throw _privateConstructorUsedError; // User IDs of assisters (for team A + B combined)
+  String? get mvpId =>
+      throw _privateConstructorUsedError; // User ID of MVP (Most Valuable Player)
   @TimestampConverter()
   DateTime get createdAt =>
       throw _privateConstructorUsedError; // When this match was logged
@@ -40,6 +42,7 @@ mixin _$MatchResult {
   int get matchDurationMinutes =>
       throw _privateConstructorUsedError; // Duration of this specific match in minutes
 // Moderator approval workflow fields
+  @MatchApprovalStatusConverter()
   MatchApprovalStatus get approvalStatus => throw _privateConstructorUsedError;
   String? get approvedBy =>
       throw _privateConstructorUsedError; // User ID of manager who approved (if moderator submitted)
@@ -72,10 +75,11 @@ abstract class $MatchResultCopyWith<$Res> {
       int scoreB,
       List<String> scorerIds,
       List<String> assistIds,
+      String? mvpId,
       @TimestampConverter() DateTime createdAt,
       String? loggedBy,
       int matchDurationMinutes,
-      MatchApprovalStatus approvalStatus,
+      @MatchApprovalStatusConverter() MatchApprovalStatus approvalStatus,
       String? approvedBy,
       @TimestampConverter() DateTime? approvedAt,
       String? rejectionReason});
@@ -103,6 +107,7 @@ class _$MatchResultCopyWithImpl<$Res, $Val extends MatchResult>
     Object? scoreB = null,
     Object? scorerIds = null,
     Object? assistIds = null,
+    Object? mvpId = freezed,
     Object? createdAt = null,
     Object? loggedBy = freezed,
     Object? matchDurationMinutes = null,
@@ -140,6 +145,10 @@ class _$MatchResultCopyWithImpl<$Res, $Val extends MatchResult>
           ? _value.assistIds
           : assistIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      mvpId: freezed == mvpId
+          ? _value.mvpId
+          : mvpId // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -188,10 +197,11 @@ abstract class _$$MatchResultImplCopyWith<$Res>
       int scoreB,
       List<String> scorerIds,
       List<String> assistIds,
+      String? mvpId,
       @TimestampConverter() DateTime createdAt,
       String? loggedBy,
       int matchDurationMinutes,
-      MatchApprovalStatus approvalStatus,
+      @MatchApprovalStatusConverter() MatchApprovalStatus approvalStatus,
       String? approvedBy,
       @TimestampConverter() DateTime? approvedAt,
       String? rejectionReason});
@@ -217,6 +227,7 @@ class __$$MatchResultImplCopyWithImpl<$Res>
     Object? scoreB = null,
     Object? scorerIds = null,
     Object? assistIds = null,
+    Object? mvpId = freezed,
     Object? createdAt = null,
     Object? loggedBy = freezed,
     Object? matchDurationMinutes = null,
@@ -254,6 +265,10 @@ class __$$MatchResultImplCopyWithImpl<$Res>
           ? _value._assistIds
           : assistIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      mvpId: freezed == mvpId
+          ? _value.mvpId
+          : mvpId // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -297,9 +312,11 @@ class _$MatchResultImpl implements _MatchResult {
       required this.scoreB,
       final List<String> scorerIds = const [],
       final List<String> assistIds = const [],
+      this.mvpId,
       @TimestampConverter() required this.createdAt,
       this.loggedBy,
       this.matchDurationMinutes = 12,
+      @MatchApprovalStatusConverter()
       this.approvalStatus = MatchApprovalStatus.approved,
       this.approvedBy,
       @TimestampConverter() this.approvedAt,
@@ -348,6 +365,9 @@ class _$MatchResultImpl implements _MatchResult {
 
 // User IDs of assisters (for team A + B combined)
   @override
+  final String? mvpId;
+// User ID of MVP (Most Valuable Player)
+  @override
   @TimestampConverter()
   final DateTime createdAt;
 // When this match was logged
@@ -361,6 +381,7 @@ class _$MatchResultImpl implements _MatchResult {
 // Moderator approval workflow fields
   @override
   @JsonKey()
+  @MatchApprovalStatusConverter()
   final MatchApprovalStatus approvalStatus;
   @override
   final String? approvedBy;
@@ -374,7 +395,7 @@ class _$MatchResultImpl implements _MatchResult {
 
   @override
   String toString() {
-    return 'MatchResult(matchId: $matchId, teamAColor: $teamAColor, teamBColor: $teamBColor, scoreA: $scoreA, scoreB: $scoreB, scorerIds: $scorerIds, assistIds: $assistIds, createdAt: $createdAt, loggedBy: $loggedBy, matchDurationMinutes: $matchDurationMinutes, approvalStatus: $approvalStatus, approvedBy: $approvedBy, approvedAt: $approvedAt, rejectionReason: $rejectionReason)';
+    return 'MatchResult(matchId: $matchId, teamAColor: $teamAColor, teamBColor: $teamBColor, scoreA: $scoreA, scoreB: $scoreB, scorerIds: $scorerIds, assistIds: $assistIds, mvpId: $mvpId, createdAt: $createdAt, loggedBy: $loggedBy, matchDurationMinutes: $matchDurationMinutes, approvalStatus: $approvalStatus, approvedBy: $approvedBy, approvedAt: $approvedAt, rejectionReason: $rejectionReason)';
   }
 
   @override
@@ -393,6 +414,7 @@ class _$MatchResultImpl implements _MatchResult {
                 .equals(other._scorerIds, _scorerIds) &&
             const DeepCollectionEquality()
                 .equals(other._assistIds, _assistIds) &&
+            (identical(other.mvpId, mvpId) || other.mvpId == mvpId) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.loggedBy, loggedBy) ||
@@ -420,6 +442,7 @@ class _$MatchResultImpl implements _MatchResult {
       scoreB,
       const DeepCollectionEquality().hash(_scorerIds),
       const DeepCollectionEquality().hash(_assistIds),
+      mvpId,
       createdAt,
       loggedBy,
       matchDurationMinutes,
@@ -453,10 +476,11 @@ abstract class _MatchResult implements MatchResult {
       required final int scoreB,
       final List<String> scorerIds,
       final List<String> assistIds,
+      final String? mvpId,
       @TimestampConverter() required final DateTime createdAt,
       final String? loggedBy,
       final int matchDurationMinutes,
-      final MatchApprovalStatus approvalStatus,
+      @MatchApprovalStatusConverter() final MatchApprovalStatus approvalStatus,
       final String? approvedBy,
       @TimestampConverter() final DateTime? approvedAt,
       final String? rejectionReason}) = _$MatchResultImpl;
@@ -480,6 +504,8 @@ abstract class _MatchResult implements MatchResult {
   @override
   List<String> get assistIds; // User IDs of assisters (for team A + B combined)
   @override
+  String? get mvpId; // User ID of MVP (Most Valuable Player)
+  @override
   @TimestampConverter()
   DateTime get createdAt; // When this match was logged
   @override
@@ -488,6 +514,7 @@ abstract class _MatchResult implements MatchResult {
   int get matchDurationMinutes; // Duration of this specific match in minutes
 // Moderator approval workflow fields
   @override
+  @MatchApprovalStatusConverter()
   MatchApprovalStatus get approvalStatus;
   @override
   String?

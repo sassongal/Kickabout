@@ -113,8 +113,17 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen> {
       );
       Navigator.of(context).pop({
         'location': geoPoint,
-        'address': _selectedAddress,
+        'address': _selectedAddress ??
+            '${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
       });
+    } else {
+      // Show error if no location selected
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('אנא בחר מיקום במפה'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 

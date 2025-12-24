@@ -6,10 +6,15 @@ import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/models/models.dart' as model;
 import 'package:kattrick/models/age_group.dart';
+import 'package:kattrick/logic/team_maker.dart';
 import 'package:kattrick/widgets/common/home_logo_button.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 class ProfileSetupWizard extends ConsumerStatefulWidget {
   const ProfileSetupWizard({super.key});
@@ -22,7 +27,7 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
   int _step = 0;
   final _phoneController = TextEditingController();
   final _cityController = TextEditingController();
-  String _position = 'Defender'; // שינוי ברירת מחדל מ-Midfielder ל-Defender
+  PlayerRole _position = PlayerRole.defender;
   bool _allowNotifications = true;
   bool _allowLocation = true;
   bool _saving = false;
@@ -60,7 +65,8 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           birthDate: _birthDate!, // ✅ Required - validated in _next()
           city: _cityController.text.trim(),
           region: CityUtils.getRegionForCity(_cityController.text.trim()),
-          preferredPosition: _position,
+          preferredPosition:
+              _position.toFirestoreString(), // Ensure consistent casing
           isProfileComplete: true,
           createdAt: DateTime.now(),
         );
@@ -75,10 +81,23 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
               _birthDate != null ? Timestamp.fromDate(_birthDate!) : null,
           'city': _cityController.text.trim(),
           'region': CityUtils.getRegionForCity(_cityController.text.trim()),
-          'preferredPosition': _position,
+          'preferredPosition': _position.toFirestoreString(),
           'isProfileComplete': true,
         });
       }
+      // Save permission preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('allow_notifications', _allowNotifications);
+      await prefs.setBool('allow_location', _allowLocation);
+      
+      // Request permissions if user opted in
+      if (_allowNotifications) {
+        await _requestNotificationPermission();
+      }
+      if (_allowLocation) {
+        await _requestLocationPermission();
+      }
+      
       if (mounted) context.go('/');
     } catch (e) {
       if (mounted) {
@@ -86,6 +105,104 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Request notification permission
+  Future<void> _requestNotificationPermission() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        await _saveNotificationPreference(true);
+        debugPrint('✅ Notification permission granted');
+      } else {
+        await _saveNotificationPreference(false);
+        debugPrint('⚠️ Notification permission denied');
+      }
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
+    }
+  }
+
+  /// Request location permission
+  Future<void> _requestLocationPermission() async {
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'שירותי המיקום מושבתים. אנא הפעל אותם בהגדרות המכשיר.',
+          );
+        }
+        await _saveLocationPreference(false);
+        return;
+      }
+
+      // Check current permission status
+      LocationPermission permission = await Geolocator.checkPermission();
+      
+      if (permission == LocationPermission.denied) {
+        // Request permission
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          SnackbarHelper.showError(
+            context,
+            'הרשאת מיקום נדחתה לצמיתות. אפשר לפתוח את הגדרות האפליקציה.',
+            action: SnackBarAction(
+              label: 'פתח הגדרות',
+              onPressed: () => Geolocator.openAppSettings(),
+              textColor: Colors.white,
+            ),
+          );
+        }
+        await _saveLocationPreference(false);
+        return;
+      }
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        await _saveLocationPreference(true);
+        debugPrint('✅ Location permission granted');
+      } else {
+        await _saveLocationPreference(false);
+        debugPrint('⚠️ Location permission denied');
+      }
+    } catch (e) {
+      debugPrint('Error requesting location permission: $e');
+      await _saveLocationPreference(false);
+    }
+  }
+
+  /// Save notification preference
+  Future<void> _saveNotificationPreference(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('allow_notifications', value);
+    } catch (e) {
+      debugPrint('Error saving notification preference: $e');
+    }
+  }
+
+  /// Save location preference
+  Future<void> _saveLocationPreference(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('allow_location', value);
+    } catch (e) {
+      debugPrint('Error saving location preference: $e');
     }
   }
 
@@ -210,8 +327,10 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -238,8 +357,10 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -266,8 +387,10 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -294,8 +417,10 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -352,7 +477,10 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
           if (user.birthDate != null) {
             _birthDate = user.birthDate;
           }
-          _position = _position.isEmpty ? user.preferredPosition : _position;
+          // Convert user's preferredPosition string to enum if available
+          if (user.preferredPosition.isNotEmpty) {
+            _position = PlayerRole.fromFirestoreString(user.preferredPosition);
+          }
         }
         final steps = [
           _StepData(
@@ -541,9 +669,9 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
             description: 'אופציונלי – בחר עמדה מועדפת',
             content: Wrap(
               spacing: 8,
-              children: ['Goalkeeper', 'Defender', 'Attacker']
+              children: PlayerRole.wizardPositions
                   .map((pos) => ChoiceChip(
-                        label: Text(_positionLabel(pos)),
+                        label: Text(pos.hebrewLabel),
                         selected: _position == pos,
                         onSelected: (_) => setState(() => _position = pos),
                       ))
@@ -558,13 +686,33 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
               children: [
                 SwitchListTile(
                   title: const Text('התראות'),
+                  subtitle: const Text('קבל התראות על משחקים ואירועים'),
                   value: _allowNotifications,
-                  onChanged: (v) => setState(() => _allowNotifications = v),
+                  onChanged: (v) async {
+                    setState(() => _allowNotifications = v);
+                    if (v) {
+                      // Request notification permission
+                      await _requestNotificationPermission();
+                    } else {
+                      // Save preference to disable notifications
+                      await _saveNotificationPreference(false);
+                    }
+                  },
                 ),
                 SwitchListTile(
                   title: const Text('מיקום'),
+                  subtitle: const Text('מצא משחקים והאבים בקרבתך'),
                   value: _allowLocation,
-                  onChanged: (v) => setState(() => _allowLocation = v),
+                  onChanged: (v) async {
+                    setState(() => _allowLocation = v);
+                    if (v) {
+                      // Request location permission
+                      await _requestLocationPermission();
+                    } else {
+                      // Save preference to disable location
+                      await _saveLocationPreference(false);
+                    }
+                  },
                 ),
               ],
             ),
@@ -646,19 +794,6 @@ class _ProfileSetupWizardState extends ConsumerState<ProfileSetupWizard> {
         );
       },
     );
-  }
-
-  String _positionLabel(String key) {
-    switch (key) {
-      case 'Goalkeeper':
-        return 'שוער';
-      case 'Defender':
-        return 'הגנה';
-      case 'Attacker':
-        return 'התקפה';
-      default:
-        return key;
-    }
   }
 }
 

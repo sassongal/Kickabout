@@ -39,6 +39,7 @@ class SignupsRepository {
 
   /// Set signup (create or update)
   /// 
+  /// Uses transaction to ensure atomic updates and prevent race conditions
   /// Throws an exception if the game is full (playerCount >= maxPlayers)
   Future<void> setSignup(
     String gameId,
@@ -50,41 +51,52 @@ class SignupsRepository {
     }
 
     try {
-      // Check if game is full (only for confirmed signups)
-      if (status == SignupStatus.confirmed) {
-        // Get game to check maxPlayers
-        final gameDoc = await _firestore.doc(FirestorePaths.game(gameId)).get();
+      // Use transaction to ensure atomic capacity check and signup update
+      await _firestore.runTransaction((transaction) async {
+        final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+        final signupRef = _firestore.doc(FirestorePaths.gameSignup(gameId, uid));
+
+        // Read both game and existing signup within transaction
+        final gameDoc = await transaction.get(gameRef);
+        final signupDoc = await transaction.get(signupRef);
+
         if (!gameDoc.exists) {
           throw Exception('Game not found');
         }
-        
+
         final gameData = gameDoc.data()!;
-        final maxPlayers = gameData['maxParticipants'] as int? ?? 
-                          (gameData['teamCount'] as int? ?? 2) * 3; // Default: 3 per team
-        
-        // OPTIMIZED: Use denormalized confirmedPlayerCount (updated by Cloud Function)
-        // This avoids querying all signups - 90% faster!
-        final currentPlayerCount = (gameData['confirmedPlayerCount'] as int?) ?? 0;
-        final isFull = gameData['isFull'] as bool? ?? false;
-        
-        // Check if user is already signed up (to allow updates)
-        final existingSignup = await getSignup(gameId, uid);
-        final isNewSignup = existingSignup == null || existingSignup.status != SignupStatus.confirmed;
-        
-        if (isNewSignup && (isFull || currentPlayerCount >= maxPlayers)) {
-          throw Exception('המשחק מלא. אין מקום לשחקנים נוספים.');
+
+        // Check if game is full (only for confirmed signups)
+        if (status == SignupStatus.confirmed) {
+          final maxPlayers = gameData['maxParticipants'] as int? ??
+              (gameData['teamCount'] as int? ?? 2) * 3; // Default: 3 per team
+
+          // OPTIMIZED: Use denormalized confirmedPlayerCount (updated by Cloud Function)
+          // This avoids querying all signups - 90% faster!
+          final currentPlayerCount = (gameData['confirmedPlayerCount'] as int?) ?? 0;
+          final isFull = gameData['isFull'] as bool? ?? false;
+
+          // Check if user is already signed up (to allow updates)
+          final existingSignup = signupDoc.exists
+              ? GameSignup.fromJson(signupDoc.data()!)
+              : null;
+          final isNewSignup = existingSignup == null ||
+              existingSignup.status != SignupStatus.confirmed;
+
+          if (isNewSignup && (isFull || currentPlayerCount >= maxPlayers)) {
+            throw Exception('המשחק מלא. אין מקום לשחקנים נוספים.');
+          }
         }
-      }
-      
-      final signup = GameSignup(
-        playerId: uid,
-        signedUpAt: DateTime.now(),
-        status: status,
-      );
-      
-      await _firestore
-          .doc(FirestorePaths.gameSignup(gameId, uid))
-          .set(signup.toJson());
+
+        // Create or update signup atomically
+        final signup = GameSignup(
+          playerId: uid,
+          signedUpAt: DateTime.now(),
+          status: status,
+        );
+
+        transaction.set(signupRef, signup.toJson());
+      });
     } catch (e) {
       throw Exception('Failed to set signup: $e');
     }

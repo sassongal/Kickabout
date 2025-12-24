@@ -15,10 +15,12 @@ import 'package:kattrick/widgets/premium/empty_state_illustrations.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/services/location_service.dart';
 import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/widgets/animations/scan_in_animation.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/data/hubs_repository.dart' show HubCreationCheckResult;
 
 /// Hubs Board Screen - לוח הובים עם מפה
 class HubsBoardScreen extends ConsumerStatefulWidget {
@@ -139,12 +141,28 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
       title: 'לוח הובים',
       showBottomNav: true,
       floatingActionButton: currentUserId != null
-          ? FloatingActionButton.extended(
-              onPressed: () => context.push('/hubs/create'),
-              icon: const Icon(Icons.add),
-              label: const Text('צור הוב'),
-              backgroundColor: PremiumColors.primary,
-              foregroundColor: Colors.white,
+          ? FutureBuilder<HubCreationCheckResult>(
+              future: hubsRepo.canCreateHub(currentUserId),
+              builder: (context, snapshot) {
+                final checkResult = snapshot.data;
+                final canCreate = checkResult?.canCreate ?? false;
+                return FloatingActionButton.extended(
+                  onPressed: canCreate
+                      ? () => context.push('/hubs/create')
+                      : () {
+                          final message = checkResult?.message ?? 
+                              'הגעת למגבלה של 3 הובים שנוצרו על ידך. מחק הוב קיים כדי ליצור חדש.';
+                          SnackbarHelper.showError(context, message);
+                        },
+                  icon: const Icon(Icons.add),
+                  label: const Text('צור הוב'),
+                  backgroundColor: PremiumColors.primary,
+                  foregroundColor: Colors.white,
+                  tooltip: canCreate
+                      ? null
+                      : 'הגעת למגבלה של 3 הובים שנוצרו על ידך',
+                );
+              },
             )
           : null,
       body: Column(
@@ -539,8 +557,8 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
       );
 
       if (position == null) {
-        // Fallback: get all hubs (limited)
-        return await hubsRepo.getAllHubs(limit: 100).timeout(
+        // Fallback: get all hubs (limited to reduce load)
+        return await hubsRepo.getAllHubs(limit: 50).timeout(
           const Duration(seconds: 10),
           onTimeout: () {
             debugPrint('⚠️ Timeout loading all hubs');

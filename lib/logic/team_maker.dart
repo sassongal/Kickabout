@@ -32,6 +32,40 @@ enum PlayerRole {
       _ => PlayerRole.midfielder, // Default (includes cm, cdm, cam, lm, rm)
     };
   }
+
+  /// Convert to Firestore string format (capitalized, e.g., 'Goalkeeper', 'Defender')
+  String toFirestoreString() {
+    return switch (this) {
+      PlayerRole.goalkeeper => 'Goalkeeper',
+      PlayerRole.defender => 'Defender',
+      PlayerRole.midfielder => 'Midfielder',
+      PlayerRole.attacker => 'Attacker',
+    };
+  }
+
+  /// Get Hebrew label for UI display
+  String get hebrewLabel {
+    return switch (this) {
+      PlayerRole.goalkeeper => 'שוער',
+      PlayerRole.defender => 'הגנה',
+      PlayerRole.midfielder => 'קשר',
+      PlayerRole.attacker => 'התקפה',
+    };
+  }
+
+  /// Create from Firestore string (capitalized format)
+  static PlayerRole fromFirestoreString(String? value) {
+    if (value == null) return PlayerRole.midfielder;
+    return fromPosition(value); // Reuse existing logic
+  }
+
+  /// Get positions for Profile Wizard (includes all positions)
+  static List<PlayerRole> get wizardPositions => [
+        PlayerRole.goalkeeper,
+        PlayerRole.defender,
+        PlayerRole.midfielder,
+        PlayerRole.attacker,
+      ];
 }
 
 /// Minimal player data for team making
@@ -61,7 +95,9 @@ class PlayerForTeam {
             managerRatings != null &&
             managerRatings.containsKey(user.uid))
         ? managerRatings[user.uid]!
-        : 4.0; // Default middle rating
+        : 4.0 +
+            (Random().nextDouble() *
+                0.1); // Add tiny jitter to prevent identical sorting
 
     return PlayerForTeam(
       uid: user.uid,
@@ -740,5 +776,51 @@ class TeamMaker {
         values.fold<double>(0.0, (sum, val) => sum + val) / values.length;
     return values.fold<double>(0.0, (sum, val) => sum + pow(val - mean, 2)) /
         values.length;
+  }
+
+  /// Validate teams before starting a game/event
+  /// Returns a list of validation errors (empty if valid)
+  static List<String> validateTeamsForGameStart(
+    List<Team> teams,
+    int teamCount,
+    int minPlayersPerTeam,
+  ) {
+    final errors = <String>[];
+
+    // Check if teams exist
+    if (teams.isEmpty) {
+      errors.add('לא נוצרו כוחות. אנא צור כוחות לפני התחלת המשחק.');
+      return errors;
+    }
+
+    // Check if we have the correct number of teams
+    if (teams.length != teamCount) {
+      errors.add(
+          'מספר הכוחות ($teamCount) לא תואם למספר הכוחות שנוצרו (${teams.length}).');
+    }
+
+    // Check minimum players per team
+    for (int i = 0; i < teams.length; i++) {
+      final team = teams[i];
+      if (team.playerIds.isEmpty) {
+        errors.add('כוח ${team.name} ריק. כל כוח חייב לכלול לפחות שחקן אחד.');
+      } else if (team.playerIds.length < minPlayersPerTeam) {
+        errors.add(
+            'כוח ${team.name} כולל רק ${team.playerIds.length} שחקנים. נדרשים לפחות $minPlayersPerTeam שחקנים לכוח.');
+      }
+    }
+
+    // Check for duplicate players across teams
+    final allPlayerIds = <String>[];
+    for (final team in teams) {
+      for (final playerId in team.playerIds) {
+        if (allPlayerIds.contains(playerId)) {
+          errors.add('השחקן $playerId מופיע ביותר מכוח אחד.');
+        }
+        allPlayerIds.add(playerId);
+      }
+    }
+
+    return errors;
   }
 }

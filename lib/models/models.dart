@@ -26,6 +26,7 @@ export 'enums/game_status.dart';
 export 'enums/game_visibility.dart';
 export 'enums/signup_status.dart';
 export 'enums/event_type.dart';
+export 'enums/player_position.dart';
 export 'converters/timestamp_converter.dart';
 export 'converters/geopoint_converter.dart';
 export 'contact_message.dart';

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Environment configuration flags
 ///
 /// Controls app behavior based on Firebase availability and development mode
@@ -14,10 +16,22 @@ class Env {
   /// Set via environment variable: GOOGLE_MAPS_API_KEY
   /// For production, use: flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY
   /// Or create .env file (NOT committed to git!)
-  static const String googleMapsApiKey = String.fromEnvironment(
-    'GOOGLE_MAPS_API_KEY',
-    defaultValue: '', // Empty in production - must be set via environment!
-  );
+  static String get googleMapsApiKey {
+    final key = String.fromEnvironment(
+      'GOOGLE_MAPS_API_KEY',
+      defaultValue: '', // Empty in production - must be set via environment!
+    );
+    
+    // Validation: Warn if key is empty (but don't fail in debug mode)
+    if (key.isEmpty) {
+      debugPrint('⚠️ WARNING: GOOGLE_MAPS_API_KEY is not set!');
+      debugPrint('⚠️ Google Maps will not work. Set it via:');
+      debugPrint('⚠️   flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_KEY');
+      debugPrint('⚠️   Or add to android/local.properties: google.maps.api.key=YOUR_KEY');
+    }
+    
+    return key;
+  }
 
   /// Custom API base URL (for your custom API integration)
   static String? customApiBaseUrl;

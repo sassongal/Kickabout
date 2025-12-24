@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
@@ -61,6 +64,16 @@ class _TeamMakerScreenState extends ConsumerState<TeamMakerScreen> {
     // Use a key to ensure this builder is identified
     return PremiumScaffold(
       title: 'יוצר כוחות',
+      actions: [
+        // Button to navigate to player ratings screen filtered by event
+        IconButton(
+          icon: const Icon(Icons.star_rate),
+          tooltip: 'דירוג שחקנים',
+          onPressed: () {
+            context.push('/hubs/${widget.hubId}/players?eventId=${widget.gameId}');
+          },
+        ),
+      ],
       body: FutureBuilder<HubEvent?>(
         // Create a memoized future or rely on repo caching.
         // We rely on the repo's internal caching for now.
@@ -275,7 +288,8 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
 
     if (success && mounted) {
       SnackbarHelper.showSuccess(context, 'הכוחות נשמרו בהצלחה! 🎉');
-      context.pop();
+      // Navigate to home screen instead of just popping
+      context.go('/');
     } else if (mounted) {
       final state = ref.read(teamMakerControllerProvider(widget.args));
       if (state.errorMessage != null) {
@@ -304,98 +318,192 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
 
     return Column(
       children: [
-        // Balance Score Card (only show after generation)
+        // Balance Score Card (only show after generation) - Compact Premium Design
         if (state.hasGenerated) ...[
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: PremiumCard(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    PremiumColors.primary.withValues(alpha: 0.1),
+                    PremiumColors.secondary.withValues(alpha: 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: PremiumColors.primary.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: PremiumColors.primary.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
+                padding: const EdgeInsets.all(16),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.analytics_outlined,
-                            color: PremiumColors.primary),
-                        const SizedBox(width: 8),
-                        Text(
-                          'ניקוד איזון',
-                          style: PremiumTypography.heading3,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          state.balanceScore.toStringAsFixed(1),
-                          style: PremiumTypography.heading1.copyWith(
-                            fontSize: 56,
-                            color: _getBalanceColor(state.balanceScore),
-                            fontWeight: FontWeight.bold,
+                    // Balance Score (Compact)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ניקוד איזון',
+                            style: PremiumTypography.labelMedium.copyWith(
+                              color: PremiumColors.textSecondary,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '/100',
-                          style: PremiumTypography.heading2.copyWith(
-                            color: PremiumColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: state.balanceScore / 100,
-                        minHeight: 12,
-                        backgroundColor: PremiumColors.surfaceVariant,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          _getBalanceColor(state.balanceScore),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _getBalanceMessage(state.balanceScore),
-                      style: PremiumTypography.bodyMedium.copyWith(
-                        color: _getBalanceColor(state.balanceScore),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    // Warning if balance is below 80%
-                    if (state.balanceScore < 80) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange, width: 1.5),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning_amber, color: Colors.orange),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'הכוחות לא שווים, כדאי לאזן או לנסות שוב',
-                                style: PremiumTypography.bodySmall.copyWith(
-                                  color: Colors.orange.shade900,
-                                  fontWeight: FontWeight.w600,
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                state.balanceScore.toStringAsFixed(1),
+                                style: PremiumTypography.heading1.copyWith(
+                                  fontSize: 36,
+                                  color: _getBalanceColor(state.balanceScore),
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4, left: 4),
+                                child: Text(
+                                  '/100',
+                                  style: PremiumTypography.bodyMedium.copyWith(
+                                    color: PremiumColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: state.balanceScore / 100,
+                              minHeight: 8,
+                              backgroundColor: PremiumColors.surfaceVariant,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _getBalanceColor(state.balanceScore),
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 16),
+                    // Action Buttons (Compact)
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Magic Wand button (Optimize)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            controller.optimizeTeams();
+                            SnackbarHelper.showSuccess(
+                              context,
+                              'הכוחות עודכנו לשיפור האיזון! ✨',
+                            );
+                          },
+                          icon: const Icon(Icons.auto_awesome, size: 16),
+                          label: const Text('שיפור', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            foregroundColor: PremiumColors.primary,
+                            minimumSize: const Size(0, 36),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Share to WhatsApp button
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final teamsText = controller.generateTeamsText();
+                            if (teamsText.isEmpty) {
+                              SnackbarHelper.showError(
+                                context,
+                                'אין כוחות לשתף',
+                              );
+                              return;
+                            }
+
+                            try {
+                              final whatsappUrl = Uri.parse(
+                                'https://wa.me/?text=${Uri.encodeComponent(teamsText)}',
+                              );
+                              if (await canLaunchUrl(whatsappUrl)) {
+                                await launchUrl(
+                                  whatsappUrl,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              } else {
+                                await Share.share(
+                                  teamsText,
+                                  subject: 'Kattrick - כוחות המשחק',
+                                );
+                              }
+                            } catch (e) {
+                              await Clipboard.setData(ClipboardData(text: teamsText));
+                              if (mounted) {
+                                SnackbarHelper.showSuccess(
+                                  context,
+                                  'הכוחות הועתקו ללוח',
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.share, size: 16),
+                          label: const Text('שתף', style: TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 36),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ),
           ),
+          // Warning if balance is below 80% (Compact)
+          if (state.balanceScore < 80)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange, width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'הכוחות לא שווים, כדאי לאזן או לנסות שוב',
+                        style: PremiumTypography.bodySmall.copyWith(
+                          color: Colors.orange.shade900,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
 
         // Teams or Generate Button

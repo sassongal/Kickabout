@@ -11,8 +11,10 @@ import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/logic/event_action_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
 
 /// Hub Events Tab - shows events and allows registration
 class HubEventsTab extends ConsumerStatefulWidget {
@@ -149,13 +151,31 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                   final isRegistered = currentUserId != null &&
                       event.registeredPlayerIds.contains(currentUserId);
                   final isPast = DateTime.now().isAfter(happeningWindowEnd);
+                  
+                  // Check if event is within 1 hour before start (for manager actions)
+                  final now = DateTime.now();
+                  final oneHourBeforeEvent = event.eventDate.subtract(const Duration(hours: 1));
+                  final canShowManagerActions = widget.isManager && 
+                      !isPast && 
+                      !event.isStarted &&
+                      now.isAfter(oneHourBeforeEvent);
 
+                  // Check if event is ongoing
+                  final isEventOngoing = event.isStarted || event.status == 'ongoing';
+                  
                   return SpotlightCard(
                     margin: const EdgeInsets.only(bottom: 12),
-                    onTap: widget.isManager
-                        ? () => context.push(
-                            '/hubs/${widget.hubId}/events/${event.eventId}/manage')
-                        : null,
+                    onTap: () {
+                      if (isEventOngoing) {
+                        // Navigate to live match screen if event is ongoing
+                        context.push(
+                            '/hubs/${widget.hubId}/events/${event.eventId}/live');
+                      } else if (widget.isManager) {
+                        // Navigate to manage screen if manager and not ongoing
+                        context.push(
+                            '/hubs/${widget.hubId}/events/${event.eventId}/manage');
+                      }
+                    },
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,6 +243,36 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Manager Action Buttons inside card (if 1 hour before event)
+                        if (widget.isManager && canShowManagerActions) ...[
+                          if (event.teams.isEmpty)
+                            SizedBox(
+                              width: double.infinity,
+                              child: _PremiumCreateTeamsButton(
+                                onPressed: () => context.push(
+                                    '/hubs/${widget.hubId}/events/${event.eventId}/team-generator'),
+                              ),
+                            )
+                          else if (event.teams.isNotEmpty &&
+                              event.teams.every((t) => t.playerIds.isNotEmpty))
+                            SizedBox(
+                              width: double.infinity,
+                              child: _PremiumStartEventButton(
+                                onPressed: () async {
+                                  final actionController =
+                                      ref.read(eventActionControllerProvider);
+                                  await actionController.handleStartEvent(
+                                    context: context,
+                                    hubId: widget.hubId,
+                                    eventId: event.eventId,
+                                    event: event,
+                                  );
+                                },
+                                isLoading: false,
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                        ],
                         // Description
                         if (event.description != null &&
                             event.description!.isNotEmpty) ...[
@@ -348,6 +398,38 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                             ],
                           ),
                         ],
+                        // LIVE Event Button (if event is ongoing and teams are saved)
+                        if (isEventOngoing && event.teams.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          PremiumLiveEventButton(
+                            onPressed: () {
+                              context.push(
+                                  '/hubs/${widget.hubId}/events/${event.eventId}/live');
+                            },
+                          ),
+                        ],
+                        // Info/Manage button (if not ongoing)
+                        if (!isEventOngoing) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    context.push(
+                                        '/hubs/${widget.hubId}/events/${event.eventId}/manage');
+                                  },
+                                  icon: const Icon(Icons.info_outline, size: 18),
+                                  label: const Text('פרטי אירוע'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: PremiumColors.primary,
+                                    side: BorderSide(color: PremiumColors.primary),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         // Registered count with max participants
                         Row(
@@ -427,87 +509,6 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                           ),
                         ],
                         const SizedBox(height: 16),
-                        // Event Started Logic (Manager Only)
-                        if (widget.isManager && !isPast) ...[
-                          SwitchListTile(
-                            title: const Text('האירוע התחיל'),
-                            value: event.isStarted,
-                            onChanged: (value) async {
-                              if (value == event.isStarted) return;
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('אישור התחלת אירוע'),
-                                  content:
-                                      const Text('האם אתה בטוח שהאירוע התחיל?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('ביטול'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text('אישור'),
-                                    ),
-                                  ],
-                                ),
-                              );
-
-                              if (confirm != true) return;
-
-                              try {
-                                final eventsRepo =
-                                    ref.read(hubEventsRepositoryProvider);
-                                await eventsRepo.updateHubEvent(
-                                  widget.hubId,
-                                  event.eventId,
-                                  {
-                                    'isStarted': value,
-                                    'status': value ? 'ongoing' : 'upcoming',
-                                    if (value)
-                                      'startedAt': FieldValue.serverTimestamp(),
-                                  },
-                                );
-                              } catch (e) {
-                                if (mounted) {
-                                  final messenger =
-                                      ScaffoldMessenger.maybeOf(context);
-                                  if (messenger != null) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                          content:
-                                              Text('שגיאה בעדכון אירוע: $e')),
-                                    );
-                                  }
-                                }
-                              }
-                            },
-                            secondary: const Icon(Icons.timer),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          if (event.isStarted) ...[
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () => context.push(
-                                  '/hubs/${widget.hubId}/events/${event.eventId}/team-maker',
-                                ),
-                                icon: const Icon(Icons.groups),
-                                label: const Text('יוצר כוחות'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: PremiumColors.accent,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                        ],
                         // Actions
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
@@ -546,23 +547,41 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 ),
                               ),
                             ] else if (widget.isManager) ...[
-                              // Generate Teams button (if event hasn't passed and no teams exist)
-                              if (!isPast && event.teams.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => context.push(
-                                        '/hubs/${widget.hubId}/events/${event.eventId}/team-maker'),
-                                    icon: const Icon(Icons.group, size: 18),
-                                    label: const Text('צור קבוצות'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: PremiumColors.primary,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 8),
+                              // Manager actions - only show 1 hour before event
+                              if (canShowManagerActions) ...[
+                                // Generate Teams button (if no teams exist) - Premium with animation
+                                if (event.teams.isEmpty)
+                                  RepaintBoundary(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: _PremiumCreateTeamsButton(
+                                        onPressed: () => context.push(
+                                            '/hubs/${widget.hubId}/events/${event.eventId}/team-generator'),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                // Start Event button (if teams exist and valid)
+                                if (event.teams.isNotEmpty &&
+                                    event.teams
+                                        .every((t) => t.playerIds.isNotEmpty))
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: _PremiumStartEventButton(
+                                      onPressed: () async {
+                                        // Use EventActionController for smart logic with confirmation
+                                        final actionController =
+                                            ref.read(eventActionControllerProvider);
+                                        await actionController.handleStartEvent(
+                                          context: context,
+                                          hubId: widget.hubId,
+                                          eventId: event.eventId,
+                                          event: event,
+                                        );
+                                      },
+                                      isLoading: false,
+                                    ),
+                                  ),
+                              ],
                               // Log Game button (if event has passed and no game exists)
                               if (isPast &&
                                   (event.gameId == null ||
@@ -990,6 +1009,271 @@ class _RegisteredParticipantsListState
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Premium Create Teams Button with animation
+class _PremiumCreateTeamsButton extends StatefulWidget {
+  final VoidCallback? onPressed;
+
+  const _PremiumCreateTeamsButton({
+    required this.onPressed,
+  });
+
+  @override
+  State<_PremiumCreateTeamsButton> createState() => _PremiumCreateTeamsButtonState();
+}
+
+class _PremiumCreateTeamsButtonState extends State<_PremiumCreateTeamsButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _glowAnimation;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.1).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.onPressed != null ? _scaleAnimation.value : 1.0,
+          child: Transform.rotate(
+            angle: widget.onPressed != null ? _rotationAnimation.value : 0.0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF667eea), // Purple
+                    Color(0xFF764ba2), // Dark Purple
+                    Color(0xFFf093fb), // Pink
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: widget.onPressed != null
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF667eea).withValues(
+                            alpha: _glowAnimation.value * 0.7,
+                          ),
+                          blurRadius: 20,
+                          spreadRadius: 3,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFFf093fb).withValues(
+                            alpha: _glowAnimation.value * 0.5,
+                          ),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: widget.onPressed,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Transform.rotate(
+                          angle: _rotationAnimation.value * 2,
+                          child: const Icon(
+                            Icons.auto_awesome,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'צור כוחות',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Premium Start Event Button with animation
+class _PremiumStartEventButton extends StatefulWidget {
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  const _PremiumStartEventButton({
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
+  @override
+  State<_PremiumStartEventButton> createState() => _PremiumStartEventButtonState();
+}
+
+class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.onPressed != null && !widget.isLoading
+              ? _scaleAnimation.value
+              : 1.0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF00C853), // Green
+                  Color(0xFF00E676), // Light Green
+                  Color(0xFF69F0AE), // Lighter Green
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: widget.onPressed != null && !widget.isLoading
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF00C853).withValues(
+                          alpha: _glowAnimation.value * 0.6,
+                        ),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFF00E676).withValues(
+                          alpha: _glowAnimation.value * 0.4,
+                        ),
+                        blurRadius: 24,
+                        spreadRadius: 4,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.isLoading ? null : widget.onPressed,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.isLoading)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      else ...[
+                        const Icon(
+                          Icons.play_arrow_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'התחל אירוע',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

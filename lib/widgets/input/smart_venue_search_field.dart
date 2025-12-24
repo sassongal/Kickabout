@@ -417,12 +417,21 @@ class _SmartVenueSearchFieldState extends ConsumerState<SmartVenueSearchField> {
                       } catch (e, stackTrace) {
                         debugPrint('❌ Error creating venue: $e');
                         debugPrint('Stack trace: $stackTrace');
-                        // Show error to user but still allow selection
+                        // Show error to user with clear message
                         if (mounted && messenger != null) {
                           messenger.showSnackBar(
                             SnackBar(
                               content: Text('שגיאה בשמירת המגרש: $e'),
-                              duration: const Duration(seconds: 3),
+                              duration: const Duration(seconds: 5),
+                              action: SnackBarAction(
+                                label: 'נסה שוב',
+                                onPressed: () {
+                                  // User can manually retry by selecting the venue again
+                                  // Clear the selection to allow retry
+                                  _controller.clear();
+                                },
+                                textColor: Colors.white,
+                              ),
                             ),
                           );
                         }

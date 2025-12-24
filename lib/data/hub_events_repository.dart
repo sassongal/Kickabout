@@ -6,6 +6,8 @@ import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/cache_service.dart';
 import 'package:kattrick/services/retry_service.dart';
 import 'package:kattrick/services/monitoring_service.dart';
+import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/logic/live_match_permissions.dart';
 
 /// Repository for managing Hub events
 class HubEventsRepository {
@@ -35,11 +37,30 @@ class HubEventsRepository {
                   data['hubId'] = hubId;
                 }
                 // Ensure array fields have default values for old documents
-                data['registeredPlayerIds'] ??= [];
-                data['waitingListPlayerIds'] ??= [];
-                data['teams'] ??= [];
-                data['matches'] ??= [];
-                data['aggregateWins'] ??= {};
+                // Handle null values explicitly - freezed expects non-null for default values
+                if (data['registeredPlayerIds'] == null) {
+                  data['registeredPlayerIds'] = [];
+                }
+                if (data['waitingListPlayerIds'] == null) {
+                  data['waitingListPlayerIds'] = [];
+                }
+                if (data['teams'] == null) {
+                  data['teams'] = [];
+                } else if (data['teams'] is! List) {
+                  // Handle case where teams might be stored as something else
+                  data['teams'] = [];
+                }
+                if (data['matches'] == null) {
+                  data['matches'] = [];
+                } else if (data['matches'] is! List) {
+                  data['matches'] = [];
+                }
+                if (data['aggregateWins'] == null) {
+                  data['aggregateWins'] = <String, int>{};
+                } else if (data['aggregateWins'] is! Map) {
+                  // Handle case where aggregateWins might be stored as something else
+                  data['aggregateWins'] = <String, int>{};
+                }
 
                 return HubEvent.fromJson({...data, 'eventId': doc.id});
               } catch (e) {
@@ -75,6 +96,28 @@ class HubEventsRepository {
                     final data = doc.data();
                     if (!data.containsKey('hubId')) {
                       data['hubId'] = hubId;
+                    }
+                    // Ensure array fields have default values for old documents
+                    if (data['registeredPlayerIds'] == null) {
+                      data['registeredPlayerIds'] = [];
+                    }
+                    if (data['waitingListPlayerIds'] == null) {
+                      data['waitingListPlayerIds'] = [];
+                    }
+                    if (data['teams'] == null) {
+                      data['teams'] = [];
+                    } else if (data['teams'] is! List) {
+                      data['teams'] = [];
+                    }
+                    if (data['matches'] == null) {
+                      data['matches'] = [];
+                    } else if (data['matches'] is! List) {
+                      data['matches'] = [];
+                    }
+                    if (data['aggregateWins'] == null) {
+                      data['aggregateWins'] = <String, int>{};
+                    } else if (data['aggregateWins'] is! Map) {
+                      data['aggregateWins'] = <String, int>{};
                     }
                     return HubEvent.fromJson({...data, 'eventId': doc.id});
                   } catch (e) {
@@ -159,7 +202,31 @@ class HubEventsRepository {
               return null;
             }
 
-            return HubEvent.fromJson({...doc.data()!, 'eventId': doc.id});
+            final data = doc.data()!;
+            // Ensure array fields have default values for old documents
+            if (data['registeredPlayerIds'] == null) {
+              data['registeredPlayerIds'] = [];
+            }
+            if (data['waitingListPlayerIds'] == null) {
+              data['waitingListPlayerIds'] = [];
+            }
+            if (data['teams'] == null) {
+              data['teams'] = [];
+            } else if (data['teams'] is! List) {
+              data['teams'] = [];
+            }
+            if (data['matches'] == null) {
+              data['matches'] = [];
+            } else if (data['matches'] is! List) {
+              data['matches'] = [];
+            }
+            if (data['aggregateWins'] == null) {
+              data['aggregateWins'] = <String, int>{};
+            } else if (data['aggregateWins'] is! Map) {
+              data['aggregateWins'] = <String, int>{};
+            }
+
+            return HubEvent.fromJson({...data, 'eventId': doc.id});
           },
           config: RetryConfig.network,
           operationName: 'getHubEvent',
@@ -187,6 +254,30 @@ class HubEventsRepository {
       if (!doc.exists) return null;
       final data = doc.data();
       if (data == null) return null;
+      
+      // Ensure array fields have default values for old documents
+      if (data['registeredPlayerIds'] == null) {
+        data['registeredPlayerIds'] = [];
+      }
+      if (data['waitingListPlayerIds'] == null) {
+        data['waitingListPlayerIds'] = [];
+      }
+      if (data['teams'] == null) {
+        data['teams'] = [];
+      } else if (data['teams'] is! List) {
+        data['teams'] = [];
+      }
+      if (data['matches'] == null) {
+        data['matches'] = [];
+      } else if (data['matches'] is! List) {
+        data['matches'] = [];
+      }
+      if (data['aggregateWins'] == null) {
+        data['aggregateWins'] = <String, int>{};
+      } else if (data['aggregateWins'] is! Map) {
+        data['aggregateWins'] = <String, int>{};
+      }
+      
       return HubEvent.fromJson({...data, 'eventId': doc.id});
     });
   }
@@ -219,6 +310,57 @@ class HubEventsRepository {
       CacheService().clear(CacheKeys.eventsByHub(hubId));
     } catch (e) {
       throw Exception('Failed to save teams for event: $e');
+    }
+  }
+
+  /// Save teams and start event (atomic operation)
+  /// Validates teams before starting
+  Future<void> saveTeamsAndStartEvent(
+    String hubId,
+    String eventId,
+    List<Team> teams,
+    int teamCount,
+    int minPlayersPerTeam,
+  ) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    // Validate teams before starting
+    final validationErrors = TeamMaker.validateTeamsForGameStart(
+      teams,
+      teamCount,
+      minPlayersPerTeam,
+    );
+
+    if (validationErrors.isNotEmpty) {
+      throw Exception(validationErrors.join('\n'));
+    }
+
+    try {
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+
+      // Convert teams to JSON
+      final teamsJson = teams.map((team) => team.toJson()).toList();
+
+      // Update event with teams and start it
+      await eventRef.update({
+        'teams': teamsJson,
+        'isStarted': true,
+        'status': 'ongoing',
+        'startedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+    } catch (e) {
+      throw Exception('Failed to save teams and start event: $e');
     }
   }
 
@@ -509,6 +651,288 @@ class HubEventsRepository {
     } catch (e) {
       debugPrint('Error in watchPublicEvents: $e');
       return Stream.value([]);
+    }
+  }
+
+  /// Save live match state (stopwatch, scores, teams)
+  /// This persists the current state so it can be restored after app restart
+  Future<void> saveLiveState({
+    required String hubId,
+    required String eventId,
+    required DateTime? startTimestamp,
+    required bool isRunning,
+    required int elapsedOffsetSeconds,
+    required int scoreA,
+    required int scoreB,
+    required String? selectedTeamAId,
+    required String? selectedTeamBId,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final liveStateRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId)
+          .collection('liveState')
+          .doc('current');
+
+      await liveStateRef.set({
+        'startTimestamp': startTimestamp != null
+            ? Timestamp.fromDate(startTimestamp)
+            : null,
+        'isRunning': isRunning,
+        'elapsedOffsetSeconds': elapsedOffsetSeconds,
+        'scoreA': scoreA,
+        'scoreB': scoreB,
+        'selectedTeamAId': selectedTeamAId,
+        'selectedTeamBId': selectedTeamBId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to save live state: $e');
+    }
+  }
+
+  /// Get live match state
+  Future<Map<String, dynamic>?> getLiveState(
+      String hubId, String eventId) async {
+    if (!Env.isFirebaseAvailable) {
+      return null;
+    }
+
+    try {
+      final liveStateDoc = await _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId)
+          .collection('liveState')
+          .doc('current')
+          .get();
+
+      if (!liveStateDoc.exists) {
+        return null;
+      }
+
+      final data = liveStateDoc.data()!;
+      return {
+        'startTimestamp': data['startTimestamp'] as Timestamp?,
+        'isRunning': data['isRunning'] as bool? ?? false,
+        'elapsedOffsetSeconds': data['elapsedOffsetSeconds'] as int? ?? 0,
+        'scoreA': data['scoreA'] as int? ?? 0,
+        'scoreB': data['scoreB'] as int? ?? 0,
+        'selectedTeamAId': data['selectedTeamAId'] as String?,
+        'selectedTeamBId': data['selectedTeamBId'] as String?,
+      };
+    } catch (e) {
+      debugPrint('Error getting live state: $e');
+      return null;
+    }
+  }
+
+  /// Stream live match state for real-time updates
+  Stream<Map<String, dynamic>?> watchLiveState(
+      String hubId, String eventId) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value(null);
+    }
+
+    return _firestore
+        .collection(FirestorePaths.hubs())
+        .doc(hubId)
+        .collection('events')
+        .doc(eventId)
+        .collection('liveState')
+        .doc('current')
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) {
+        return null;
+      }
+
+      final data = snapshot.data()!;
+      return {
+        'startTimestamp': data['startTimestamp'] as Timestamp?,
+        'isRunning': data['isRunning'] as bool? ?? false,
+        'elapsedOffsetSeconds': data['elapsedOffsetSeconds'] as int? ?? 0,
+        'scoreA': data['scoreA'] as int? ?? 0,
+        'scoreB': data['scoreB'] as int? ?? 0,
+        'selectedTeamAId': data['selectedTeamAId'] as String?,
+        'selectedTeamBId': data['selectedTeamBId'] as String?,
+      };
+    });
+  }
+
+  /// Save match result with transaction to prevent race conditions
+  /// Also enforces permissions before saving
+  Future<void> saveMatchResult({
+    required String hubId,
+    required String eventId,
+    required MatchResult matchResult,
+    required String userId,
+    required Hub hub,
+    required HubEvent event,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    // Permission check - enforce in repository
+    if (!LiveMatchPermissions.canLogMatch(
+        userId: userId, hub: hub, event: event)) {
+      throw Exception('Permission denied: User cannot log matches');
+    }
+
+    try {
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+
+      // Use transaction to ensure atomic update
+      await _firestore.runTransaction((transaction) async {
+        final eventDoc = await transaction.get(eventRef);
+        if (!eventDoc.exists) {
+          throw Exception('Event not found');
+        }
+
+        final currentEvent = HubEvent.fromJson({
+          ...eventDoc.data()!,
+          'eventId': eventDoc.id,
+          'hubId': hubId,
+        });
+
+        // Add new match to matches array
+        final updatedMatches = [...currentEvent.matches, matchResult];
+
+        // Update aggregate wins using FieldValue.increment for atomicity
+        final updatedAggregateWins =
+            Map<String, int>.from(currentEvent.aggregateWins);
+        final winnerColor = matchResult.scoreA > matchResult.scoreB
+            ? matchResult.teamAColor
+            : (matchResult.scoreB > matchResult.scoreA
+                ? matchResult.teamBColor
+                : null);
+        if (winnerColor != null) {
+          // Use increment for atomic update
+          updatedAggregateWins[winnerColor] =
+              (updatedAggregateWins[winnerColor] ?? 0) + 1;
+        }
+
+        // Update event with new match and aggregate wins
+        transaction.update(eventRef, {
+          'matches': updatedMatches.map((m) => m.toJson()).toList(),
+          'aggregateWins': updatedAggregateWins,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+    } catch (e) {
+      throw Exception('Failed to save match result: $e');
+    }
+  }
+
+  /// Update an existing match result
+  Future<void> updateMatchResult({
+    required String hubId,
+    required String eventId,
+    required String matchId,
+    required MatchResult updatedMatch,
+    required String userId,
+    required Hub hub,
+    required HubEvent event,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    // Permission check
+    if (!LiveMatchPermissions.canLogMatch(
+        userId: userId, hub: hub, event: event)) {
+      throw Exception('Permission denied: User cannot edit matches');
+    }
+
+    try {
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+
+      // Use transaction to ensure atomic update
+      await _firestore.runTransaction((transaction) async {
+        final eventDoc = await transaction.get(eventRef);
+        if (!eventDoc.exists) {
+          throw Exception('Event not found');
+        }
+
+        final currentEvent = HubEvent.fromJson({
+          ...eventDoc.data()!,
+          'eventId': eventDoc.id,
+          'hubId': hubId,
+        });
+
+        // Find and update the match
+        final matches = List<MatchResult>.from(currentEvent.matches);
+        final matchIndex = matches.indexWhere((m) => m.matchId == matchId);
+        if (matchIndex == -1) {
+          throw Exception('Match not found: $matchId');
+        }
+
+        // Get old match for aggregate wins recalculation
+        final oldMatch = matches[matchIndex];
+        
+        // Update the match
+        matches[matchIndex] = updatedMatch;
+
+        // Recalculate aggregate wins
+        final updatedAggregateWins = Map<String, int>.from(currentEvent.aggregateWins);
+        
+        // Remove old win if it existed
+        final oldWinnerColor = oldMatch.scoreA > oldMatch.scoreB
+            ? oldMatch.teamAColor
+            : (oldMatch.scoreB > oldMatch.scoreA ? oldMatch.teamBColor : null);
+        if (oldWinnerColor != null && updatedAggregateWins[oldWinnerColor] != null) {
+          updatedAggregateWins[oldWinnerColor] = 
+              (updatedAggregateWins[oldWinnerColor] ?? 1) - 1;
+          if (updatedAggregateWins[oldWinnerColor]! <= 0) {
+            updatedAggregateWins.remove(oldWinnerColor);
+          }
+        }
+        
+        // Add new win
+        final newWinnerColor = updatedMatch.scoreA > updatedMatch.scoreB
+            ? updatedMatch.teamAColor
+            : (updatedMatch.scoreB > updatedMatch.scoreA
+                ? updatedMatch.teamBColor
+                : null);
+        if (newWinnerColor != null) {
+          updatedAggregateWins[newWinnerColor] =
+              (updatedAggregateWins[newWinnerColor] ?? 0) + 1;
+        }
+
+        // Update event with updated match and recalculated aggregate wins
+        transaction.update(eventRef, {
+          'matches': matches.map((m) => m.toJson()).toList(),
+          'aggregateWins': updatedAggregateWins,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+    } catch (e) {
+      debugPrint('Error updating match result: $e');
+      rethrow;
     }
   }
 }

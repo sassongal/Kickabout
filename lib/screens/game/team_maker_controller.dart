@@ -291,6 +291,70 @@ class TeamMakerController extends StateNotifier<TeamMakerState> {
       return false;
     }
   }
+
+  /// Apply optimization suggestions (Magic Wand)
+  void optimizeTeams() {
+    if (!state.hasGenerated || state.teams.isEmpty) return;
+
+    final suggestions = TeamMaker.getOptimizationSuggestions(
+      state.teams,
+      state.players,
+    );
+
+    if (suggestions.isEmpty) {
+      // No suggestions available
+      return;
+    }
+
+    // Apply the best suggestion (first one)
+    final bestSuggestion = suggestions.first;
+
+    // Find team indices
+    final teamAIndex = state.teams
+        .indexWhere((t) => t.teamId == bestSuggestion.teamAId);
+    final teamBIndex = state.teams
+        .indexWhere((t) => t.teamId == bestSuggestion.teamBId);
+
+    if (teamAIndex == -1 || teamBIndex == -1) return;
+
+    // Swap players: Move playerA from teamA to teamB, then playerB from teamB to teamA
+    movePlayer(bestSuggestion.playerAId, teamAIndex, teamBIndex);
+    
+    // After the first move, re-find indices (they might have changed)
+    final updatedTeams = [...state.teams];
+    final newTeamAIndex = updatedTeams
+        .indexWhere((t) => t.teamId == bestSuggestion.teamAId);
+    final newTeamBIndex = updatedTeams
+        .indexWhere((t) => t.teamId == bestSuggestion.teamBId);
+    if (newTeamAIndex != -1 && newTeamBIndex != -1) {
+      movePlayer(bestSuggestion.playerBId, newTeamBIndex, newTeamAIndex);
+    }
+
+    HapticFeedback.mediumImpact();
+  }
+
+  /// Generate shareable text for teams
+  String generateTeamsText() {
+    if (state.teams.isEmpty) return '';
+
+    final buffer = StringBuffer();
+    buffer.writeln('🏆 *כוחות המשחק* 🏆\n');
+
+    for (int i = 0; i < state.teams.length; i++) {
+      final team = state.teams[i];
+      buffer.writeln('*${team.name}* (${team.playerIds.length} שחקנים):');
+
+      for (final playerId in team.playerIds) {
+        final user = state.userMap[playerId];
+        if (user != null) {
+          buffer.writeln('• ${user.displayName ?? user.name}');
+        }
+      }
+      buffer.writeln('');
+    }
+
+    return buffer.toString();
+  }
 }
 
 final teamMakerControllerProvider = StateNotifierProvider.family

@@ -87,6 +87,7 @@ import 'package:kattrick/screens/admin/generate_dummy_data_screen.dart'
     deferred as generate_dummy_data_screen;
 import 'package:kattrick/screens/hub/manage_roles_screen.dart'
     deferred as manage_roles_screen;
+import 'package:kattrick/screens/hub/hub_roles_screen.dart';
 import 'package:kattrick/screens/hub/hub_settings_screen.dart';
 import 'package:kattrick/screens/hub/custom_permissions_screen.dart'
     deferred as custom_permissions_screen;
@@ -132,6 +133,7 @@ import 'package:kattrick/screens/event/team_generator_result_screen.dart'
     deferred as team_generator_result_screen;
 import 'package:kattrick/screens/event/game_session_screen.dart'
     deferred as game_session_screen;
+import 'package:kattrick/logic/live_match_screen.dart';
 import 'package:kattrick/screens/debug/create_dummy_players_screen.dart'
     deferred as create_dummy_players_screen;
 import 'package:kattrick/screens/debug/auth_status_screen.dart';
@@ -514,6 +516,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // Live Match route (must be before eventManagement to avoid duplicate eventId)
+      GoRoute(
+        path: '/hubs/:hubId/events/:eventId/live',
+        name: 'liveMatch',
+        builder: (context, state) {
+          final hubId = state.pathParameters['hubId']!;
+          final eventId = state.pathParameters['eventId']!;
+          return LiveMatchScreen(hubId: hubId, eventId: eventId);
+        },
+      ),
+
       // Event Management routes
       GoRoute(
         path: '/hubs/:hubId/events/:eventId/manage',
@@ -633,13 +646,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'manage-roles',
                 name: 'manageHubRoles',
-                builder: (context, state) => LazyRouteLoader(
-                    loader: manage_roles_screen.loadLibrary(),
-                    builder: () {
-                      final hubId = state.pathParameters['id']!;
-                      return manage_roles_screen.ManageRolesScreen(
-                          hubId: hubId);
-                    }),
+                builder: (context, state) {
+                  final hubId = state.pathParameters['id']!;
+                  return HubRolesScreen(hubId: hubId);
+                },
               ),
               GoRoute(
                 path: 'custom-permissions',
@@ -766,6 +776,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                       final eventId = state.pathParameters['eventId']!;
                       return team_maker_screen.TeamMakerScreen(
                           gameId: eventId, isEvent: true, hubId: hubId);
+                    }),
+              ),
+              GoRoute(
+                path: 'events/:eventId/team-generator',
+                name: 'eventTeamGenerator',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: team_generator_config_screen.loadLibrary(),
+                    builder: () {
+                      final hubId = state.pathParameters['id']!;
+                      final eventId = state.pathParameters['eventId']!;
+                      return team_generator_config_screen.TeamGeneratorConfigScreen(
+                        hubId: hubId,
+                        eventId: eventId,
+                      );
                     }),
               ),
               GoRoute(
