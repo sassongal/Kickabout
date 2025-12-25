@@ -10,7 +10,7 @@ import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/screens/hub/hub_invitations_screen.dart';
+import 'package:kattrick/features/hubs/presentation/screens/hub_invitations_screen.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
 import 'package:kattrick/widgets/hub/hub_banner_picker.dart';
 import 'package:image_picker/image_picker.dart';

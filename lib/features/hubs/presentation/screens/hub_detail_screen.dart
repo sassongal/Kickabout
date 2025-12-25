@@ -7,7 +7,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/models/models.dart' hide Notification;
 import 'package:kattrick/screens/social/hub_chat_screen.dart';
-import 'package:kattrick/screens/hub/hub_events_tab.dart';
+import 'package:kattrick/features/hubs/presentation/widgets/hub_events_tab.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/widgets/hub/hub_header.dart';
