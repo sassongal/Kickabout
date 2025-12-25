@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kattrick/services/game_management_service.dart';
 import 'package:kattrick/data/games_repository.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/data/signups_repository.dart';
 import 'package:kattrick/data/notifications_repository.dart';
 import '../../helpers/mock_firestore.dart';

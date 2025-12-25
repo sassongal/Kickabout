@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/config/env.dart';
 import '../../helpers/mock_firestore.dart';
