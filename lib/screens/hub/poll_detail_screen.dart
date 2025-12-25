@@ -1,7 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/data/polls_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/polls_repository.dart';
 import 'package:kattrick/models/poll.dart';
 import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';

@@ -18,7 +18,7 @@ import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/widgets/input/city_autocomplete_field.dart';
 import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
-import 'package:kattrick/data/hubs_repository.dart' show HubCreationLimitException, HubCreationLimitReason;
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart' show HubCreationLimitException, HubCreationLimitReason;
 import 'package:kattrick/utils/snackbar_helper.dart';
 
 /// Create hub screen

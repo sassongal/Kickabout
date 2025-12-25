@@ -14,7 +14,7 @@ library;
 import 'package:kattrick/models/hub_member.dart';
 import 'package:kattrick/models/hub.dart';
 import 'package:kattrick/models/hub_role.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 
 /// Permission capabilities mapped to roles
 ///

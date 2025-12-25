@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 
 /// Validation script to test Issues 7-12 fixes
 ///

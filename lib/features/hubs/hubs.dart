@@ -4,15 +4,15 @@
 // This file will be populated as files are migrated to the feature structure.
 // Phase 1: Foundation - Empty barrel file created
 
-// Repositories (will be moved in Phase 4)
-// export 'data/repositories/hubs_repository.dart';
-// export 'data/repositories/hub_events_repository.dart';
-// export 'data/repositories/polls_repository.dart';
+// Repositories (Phase 4 - migrated)
+export 'data/repositories/hubs_repository.dart';
+export 'data/repositories/hub_events_repository.dart';
+export 'data/repositories/polls_repository.dart';
 
-// Domain Services (some exist, some will be moved)
+// Domain Services (Phase 4 - migrated)
 export 'domain/services/hub_creation_service.dart';
 export 'domain/services/hub_permissions_service.dart';
-// export 'domain/services/hub_analytics_service.dart';
+export 'domain/services/hub_analytics_service.dart';
 
 // Notifiers (will be created in Phase 5)
 // export 'presentation/notifiers/hub_events_tab_notifier.dart';

@@ -9,7 +9,7 @@ import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/games_repository.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 

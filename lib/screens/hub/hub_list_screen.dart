@@ -10,7 +10,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/data/hubs_repository.dart' show HubCreationCheckResult;
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart' show HubCreationCheckResult;
 
 /// Hub list screen - lists hubs of user
 class HubListScreen extends ConsumerStatefulWidget {

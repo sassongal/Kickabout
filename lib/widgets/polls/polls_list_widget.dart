@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/data/polls_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/polls_repository.dart';
 import 'package:kattrick/models/poll.dart';
 import 'package:kattrick/screens/hub/create_poll_screen.dart';
 import 'package:kattrick/screens/hub/poll_detail_screen.dart';

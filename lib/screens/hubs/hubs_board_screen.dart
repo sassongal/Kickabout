@@ -20,7 +20,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/widgets/animations/scan_in_animation.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/data/hubs_repository.dart' show HubCreationCheckResult;
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart' show HubCreationCheckResult;
 
 /// Hubs Board Screen - לוח הובים עם מפה
 class HubsBoardScreen extends ConsumerStatefulWidget {

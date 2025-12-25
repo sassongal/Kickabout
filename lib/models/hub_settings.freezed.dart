@@ -45,7 +45,9 @@ mixin _$HubSettings {
   /// Enable events feature for this hub
   bool get enableEvents => throw _privateConstructorUsedError;
 
-  /// Maximum number of members allowed in the hub (0 = unlimited)
+  /// Maximum number of members allowed in the hub
+  /// Default: 50 (standard hub size)
+  /// Set to 0 for unlimited (not recommended for community management)
   int get maxMembers => throw _privateConstructorUsedError;
 
   /// Minimum number of games played to be considered a veteran
@@ -253,7 +255,7 @@ class _$HubSettingsImpl extends _HubSettings {
       this.enablePolls = true,
       this.enableChat = true,
       this.enableEvents = true,
-      this.maxMembers = 0,
+      this.maxMembers = 50,
       this.veteranGamesThreshold = 10})
       : super._();
 
@@ -301,7 +303,9 @@ class _$HubSettingsImpl extends _HubSettings {
   @JsonKey()
   final bool enableEvents;
 
-  /// Maximum number of members allowed in the hub (0 = unlimited)
+  /// Maximum number of members allowed in the hub
+  /// Default: 50 (standard hub size)
+  /// Set to 0 for unlimited (not recommended for community management)
   @override
   @JsonKey()
   final int maxMembers;
@@ -426,7 +430,9 @@ abstract class _HubSettings extends HubSettings {
   @override
   bool get enableEvents;
 
-  /// Maximum number of members allowed in the hub (0 = unlimited)
+  /// Maximum number of members allowed in the hub
+  /// Default: 50 (standard hub size)
+  /// Set to 0 for unlimited (not recommended for community management)
   @override
   int get maxMembers;
 

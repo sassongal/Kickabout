@@ -17,7 +17,7 @@ _$HubSettingsImpl _$$HubSettingsImplFromJson(Map<String, dynamic> json) =>
       enablePolls: json['enablePolls'] as bool? ?? true,
       enableChat: json['enableChat'] as bool? ?? true,
       enableEvents: json['enableEvents'] as bool? ?? true,
-      maxMembers: (json['maxMembers'] as num?)?.toInt() ?? 0,
+      maxMembers: (json['maxMembers'] as num?)?.toInt() ?? 50,
       veteranGamesThreshold:
           (json['veteranGamesThreshold'] as num?)?.toInt() ?? 10,
     );

@@ -4,7 +4,7 @@ import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/cache_invalidation_service.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/data/games_repository.dart';
 import 'package:kattrick/features/games/data/repositories/session_repository.dart';

@@ -6,7 +6,7 @@ import 'package:kattrick/models/game_result.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 
 import 'package:kattrick/data/games_repository.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/data/users_repository.dart';
 import 'package:kattrick/features/games/domain/services/game_finalization_service.dart';
 import 'package:kattrick/data/signups_repository.dart';

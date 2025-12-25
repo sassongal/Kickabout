@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/services/hub_analytics_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_analytics_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/widgets/common/home_logo_button.dart';

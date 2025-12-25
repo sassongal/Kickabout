@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
-import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 
 /// Enhanced dummy players creator that respects hub settings

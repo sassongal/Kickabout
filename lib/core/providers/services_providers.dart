@@ -13,7 +13,7 @@ import 'package:kattrick/services/scouting_service.dart';
 import 'package:kattrick/services/google_places_service.dart';
 import 'package:kattrick/services/custom_api_service.dart';
 import 'package:kattrick/services/weather_service.dart';
-import 'package:kattrick/services/hub_analytics_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_analytics_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 
 part 'services_providers.g.dart';

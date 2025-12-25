@@ -6,7 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/data/hub_events_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hub_events_repository.dart';
 import 'package:kattrick/models/models.dart';
 
 import 'package:kattrick/utils/snackbar_helper.dart';
