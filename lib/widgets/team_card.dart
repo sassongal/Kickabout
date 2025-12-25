@@ -4,7 +4,7 @@ import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/game/tactical_pitch_background.dart';
 import 'package:kattrick/widgets/game/tactical_player_chip.dart';
-import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:kattrick/widgets/animations/scan_in_animation.dart';
 
 class TeamCard extends StatelessWidget {

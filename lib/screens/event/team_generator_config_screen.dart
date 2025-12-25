@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';

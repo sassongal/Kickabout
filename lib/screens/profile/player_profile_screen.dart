@@ -12,6 +12,7 @@ import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
 import 'package:kattrick/data/proteams_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
@@ -157,7 +158,6 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     final isAnonymous = ref.watch(isAnonymousUserProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
     // Removed: ratingsRepo - no longer needed (ratings tab removed)
-    final gamesRepo = ref.read(gamesRepositoryProvider);
     final hubsRepo = ref.read(hubsRepositoryProvider);
     final followRepo = ref.read(followRepositoryProvider);
     final gamificationRepo = ref.read(gamificationRepositoryProvider);
@@ -306,7 +306,7 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
                     _buildGamesTab(
                       context,
                       user,
-                      gamesRepo,
+                      ref.read(gameQueriesRepositoryProvider),
                     ),
                     _buildHubsTab(
                       context,
@@ -1374,9 +1374,9 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
   Widget _buildGamesTab(
     BuildContext context,
     User user,
-    GamesRepository gamesRepo,
+    GameQueriesRepository gameQueriesRepo,
   ) {
-    final gamesStream = gamesRepo.watchGamesByCreator(user.uid);
+    final gamesStream = gameQueriesRepo.watchGamesByCreator(user.uid);
 
     return StreamBuilder<List<Game>>(
       stream: gamesStream,

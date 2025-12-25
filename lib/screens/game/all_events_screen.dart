@@ -21,7 +21,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
     final hubsRepo = ref.read(hubsRepositoryProvider);
 
     if (currentUserId == null) {
@@ -52,7 +52,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
           // or use a stream if available. Let's try to fetch all relevant games.
 
           return FutureBuilder<List<Game>>(
-            future: gamesRepo.getUpcomingGames(
+            future: gameQueriesRepo.getUpcomingGames(
               hubIds: hubIds,
               limit: 50, // Reasonable limit
             ),

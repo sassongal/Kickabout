@@ -226,7 +226,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
 
   Future<void> _finishGame() async {
     try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
+      final finalizationService = ref.read(gameFinalizationServiceProvider);
       final eventsRepo = ref.read(eventsRepositoryProvider);
 
       // Get final score
@@ -241,7 +241,7 @@ class _GameRecordingScreenState extends ConsumerState<GameRecordingScreen> {
       final gameEvents = _gameStopwatch.exportAsGameEvents();
 
       // Create game from event
-      final gameId = await gamesRepo.convertEventToGame(
+      final gameId = await finalizationService.convertEventToGame(
         eventId: widget.event.eventId,
         hubId: widget.hubId,
         teamAScore: teamAScore,

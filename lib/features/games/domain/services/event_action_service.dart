@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Controller for handling "Start Event" actions with smart navigation logic

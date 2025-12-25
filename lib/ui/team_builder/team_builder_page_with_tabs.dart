@@ -175,8 +175,9 @@ class _TeamBuilderPageWithTabsState
 
         try {
           // Add signups for selected players
+          final signupService = ref.read(gameSignupServiceProvider);
           for (final playerId in result) {
-            await signupsRepo.setSignup(
+            await signupService.setSignup(
               widget.gameId,
               playerId,
               SignupStatus.confirmed,

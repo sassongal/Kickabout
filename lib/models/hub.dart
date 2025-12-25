@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/converters/timestamp_converter.dart';
 import 'package:kattrick/models/converters/geopoint_converter.dart';
+import 'package:kattrick/models/hub_settings.dart';
 
 part 'hub.freezed.dart';
 part 'hub.g.dart';
@@ -43,14 +44,12 @@ class Hub with _$Hub {
     @Default([]) List<String> managerIds, // User IDs with 'manager' role
     @Default([]) List<String> moderatorIds, // User IDs with 'moderator' role
 
-    // Settings
-    @Default({
-      'showManagerContactInfo': true,
-      'allowJoinRequests': true,
-      'allowModeratorsToCreateGames':
-          false, // Allow moderators to open games from events
-    })
-    Map<String, dynamic> settings,
+    // Settings (typed for compile-time safety)
+    @HubSettingsConverter() @Default(HubSettings()) HubSettings settings,
+
+    // @deprecated Legacy settings map - kept for backward compatibility during migration
+    // Use `settings` field instead. Will be removed after all data is migrated.
+    @Deprecated('Use settings field instead') Map<String, dynamic>? legacySettings,
 
     // Custom permissions (RARE overrides only)
     // Example: Allow specific user to create events even if not moderator

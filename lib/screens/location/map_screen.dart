@@ -633,7 +633,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // Load games
       if (_selectedFilter == 'all' || _selectedFilter == 'games') {
         if (!mounted) return; // Check before using ref
-        final gamesRepo = ref.read(gamesRepositoryProvider);
+        final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
         // Games logic currently loads by USER hubs. Maybe we should load by LOCATION?
         // Existing logic was "Get games from user's hubs" AND filter by location.
         // We will keep that logic for now as fetching ALL games by location might not exist in repo yet.
@@ -645,7 +645,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           final userHubs = await hubsRepo.getHubsByMember(currentUserId);
           if (!mounted) return; // Check after await
           for (final hub in userHubs) {
-            final games = await gamesRepo.getGamesByHub(hub.hubId);
+            final games = await gameQueriesRepo.getGamesByHub(hub.hubId);
             if (!mounted) return; // Check after await
             for (final game in games) {
               if (game.locationPoint != null) {

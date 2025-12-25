@@ -7,7 +7,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/analytics_service.dart';
-import 'package:kattrick/services/hub_permissions_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/utils/hub_sharing_utils.dart';
 import 'package:kattrick/widgets/hub/hub_command_center.dart';
 import 'package:kattrick/widgets/hub/hub_home_venue_selector.dart';

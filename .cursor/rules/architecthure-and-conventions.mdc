@@ -1,0 +1,22 @@
+The project follows a strict modular architecture.
+
+Core principles:
+1. Every logical area must be separated into modules with clear responsibility.
+2. Use the following structure convention:
+   /src
+     /modules
+       /<moduleName>
+         ├─ controllers/
+         ├─ services/
+         ├─ models/
+         ├─ routes/
+         └─ utils/
+3. All new code must keep this structure.
+4. No business logic is allowed inside controllers. Controllers only orchestrate input/output.
+5. All logic must be placed inside services with dependency injection patterns.
+6. All environment variables must be typed in a dedicated config file.
+7. All common utilities go to /src/common/utils.
+8. API routes must be explicit, typed, and documented with clear naming.
+---
+alwaysApply: false
+---

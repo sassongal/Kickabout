@@ -1,0 +1,8 @@
+- No secrets inside the code.
+- Always sanitize input.
+- Always validate schema using Zod or equivalent.
+- Always escape user-generated data.
+- All external calls must be wrapped in a single communication layer.
+---
+alwaysApply: true
+---

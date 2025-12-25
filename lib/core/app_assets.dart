@@ -7,9 +7,11 @@ class AppAssets {
 
   // Logo
   static const String logo = 'assets/logo/kickadoor_logo.png';
+  static const String logoFull = 'assets/logo/KattruckLOGOFULL.png';
 
-  // Splash Screen
-  static const String splashLoading = 'assets/images/splash/loading_screen.png';
+  // Floating Action Button Icon
+  static const String fabIcon = 'assets/icons/1762984105222.png';
+  static const String fabIconSvg = 'assets/icons/fab_icon.svg';
 
   // Navigation Icons (Bar - 9 icons)
   static const String iconHomeDashboard = 'assets/icons/icon_home_dashboard.png';

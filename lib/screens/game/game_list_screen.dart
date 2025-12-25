@@ -29,6 +29,11 @@ class GameListScreen extends ConsumerStatefulWidget {
 
 class _GameListScreenState extends ConsumerState<GameListScreen> {
   GeoPoint? _userLocation;
+  Stream<Game?>? _cachedNextMatchStream;
+  Stream<List<Game>>? _cachedDiscoveryStream;
+  Stream<List<Hub>>? _cachedUserHubsStream;
+  String? _cachedUserId;
+  GeoPoint? _cachedLocation;
 
   @override
   void initState() {
@@ -66,23 +71,36 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
+    final gameQueriesRepo = ref.watch(gameQueriesRepositoryProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
 
-    if (currentUserId == null) return const SizedBox.shrink();
+    if (currentUserId == null) {
+      // Clear cached streams when user logs out
+      _cachedNextMatchStream = null;
+      _cachedDiscoveryStream = null;
+      _cachedUserHubsStream = null;
+      _cachedUserId = null;
+      return const SizedBox.shrink();
+    }
 
-    // Stream 1: My Next Match
-    final nextMatchStream = gamesRepo.watchNextMatch(currentUserId);
+    // OPTIMIZATION: Only recreate streams if userId or location changed
+    // This prevents stream recreation on every rebuild, eliminating flickering
+    final locationChanged = _cachedLocation != _userLocation;
+    if (_cachedUserId != currentUserId || locationChanged) {
+      _cachedUserId = currentUserId;
+      _cachedLocation = _userLocation;
+      _cachedNextMatchStream = gameQueriesRepo.watchNextMatch(currentUserId);
+      _cachedDiscoveryStream = gameQueriesRepo.watchDiscoveryFeed(
+        userLocation: _userLocation,
+        radiusKm: 10.0,
+      );
+      _cachedUserHubsStream = hubsRepo.watchHubsByMember(currentUserId);
+    }
 
-    // Stream 2: Discovery Feed with geo-location
-    final discoveryStream = gamesRepo.watchDiscoveryFeed(
-      userLocation: _userLocation,
-      radiusKm: 10.0,
-    );
-
-    // User Hubs (for determining isMyHub/isLocked)
-    final userHubsStream = hubsRepo.watchHubsByMember(currentUserId);
+    final nextMatchStream = _cachedNextMatchStream!;
+    final discoveryStream = _cachedDiscoveryStream!;
+    final userHubsStream = _cachedUserHubsStream!;
 
     return AppScaffold(
       title: 'לוח משחקים',

@@ -125,6 +125,49 @@ enum HubMemberRole {
     ];
     return hierarchy.indexOf(this) >= hierarchy.indexOf(minRole);
   }
+
+  // Permission Matrix - SINGLE SOURCE OF TRUTH
+  // Migrated from HubRole to consolidate role systems
+
+  /// Can manage hub members (approve/kick/ban)
+  bool get canManageMembers =>
+      this == HubMemberRole.manager || this == HubMemberRole.moderator;
+
+  /// Can change member roles
+  bool get canManageRoles => this == HubMemberRole.manager;
+
+  /// Can change hub settings
+  bool get canManageSettings => this == HubMemberRole.manager;
+
+  /// Can delete the hub
+  bool get canDeleteHub => this == HubMemberRole.manager;
+
+  /// Can create games
+  bool get canCreateGames => this != HubMemberRole.member || isAtLeast(HubMemberRole.member);
+
+  /// Can create events
+  bool get canCreateEvents => isAtLeast(HubMemberRole.moderator);
+
+  /// Can moderate content (delete posts/comments)
+  bool get canModerateContent => isAtLeast(HubMemberRole.moderator);
+
+  /// Can invite players
+  bool get canInvitePlayers => isAtLeast(HubMemberRole.veteran);
+
+  /// Can view analytics
+  bool get canViewAnalytics => isAtLeast(HubMemberRole.veteran);
+
+  /// Can record game results
+  bool get canRecordGame => isAtLeast(HubMemberRole.veteran);
+
+  /// Can edit hub info (name, description, branding)
+  bool get canEditHubInfo => this == HubMemberRole.manager;
+
+  /// Can delete posts
+  bool get canDeletePosts => isAtLeast(HubMemberRole.moderator);
+
+  /// Can delete comments
+  bool get canDeleteComments => isAtLeast(HubMemberRole.moderator);
 }
 
 /// Membership status - replaces implicit "not in memberIds" logic

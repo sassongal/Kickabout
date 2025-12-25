@@ -89,7 +89,7 @@ class _CommunityActivityFeedScreenState
   }
 
   Future<void> _fetchGamesPage({bool reset = false}) async {
-    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
     final startAfter = reset ? null : _lastGameCursor;
 
     if (!reset) {
@@ -99,7 +99,7 @@ class _CommunityActivityFeedScreenState
     }
 
     try {
-      final result = await gamesRepo.fetchPublicCompletedGamesPage(
+      final result = await gameQueriesRepo.fetchPublicCompletedGamesPage(
         limit: _pageSize,
         hubId: _selectedHubId,
         region: _selectedRegion,

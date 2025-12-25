@@ -6,6 +6,7 @@ import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
@@ -79,8 +80,6 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
-    final hubStream = hubsRepo.watchHub(widget.hubId);
 
     // Check admin permissions
     final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
@@ -112,27 +111,21 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
           );
         }
 
-        return StreamBuilder<Hub?>(
-          stream: hubStream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return PremiumScaffold(
-                title: l10n.hubSettingsTitle,
-                body: PremiumLoadingState(message: l10n.loadingSettings),
-              );
-            }
+        // Use unified hub state provider
+        final hubAsync = ref.watch(hubStreamProvider(widget.hubId));
 
-            if (snapshot.hasError || snapshot.data == null) {
+        return hubAsync.when(
+          data: (hub) {
+            if (hub == null) {
               return PremiumScaffold(
                 title: l10n.hubSettingsTitle,
                 body: PremiumEmptyState(
                   icon: Icons.error_outline,
                   title: l10n.error,
-                  message: snapshot.error?.toString() ?? l10n.hubNotFound,
+                  message: l10n.hubNotFound,
                   action: ElevatedButton.icon(
                     onPressed: () {
-                      // Retry by rebuilding
-                      setState(() {});
+                      ref.invalidate(hubStreamProvider(widget.hubId));
                     },
                     icon: const Icon(Icons.refresh),
                     label: Text(l10n.tryAgain),
@@ -141,8 +134,8 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
               );
             }
 
-            final hub = snapshot.data!;
-            final settings = hub.settings;
+            // ignore: deprecated_member_use
+            final settings = hub.legacySettings ?? {};
 
             return PremiumScaffold(
               title: l10n.hubSettingsTitle,
@@ -488,6 +481,25 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
               ),
             );
           },
+          loading: () => PremiumScaffold(
+            title: l10n.hubSettingsTitle,
+            body: PremiumLoadingState(message: l10n.loadingSettings),
+          ),
+          error: (error, stack) => PremiumScaffold(
+            title: l10n.hubSettingsTitle,
+            body: PremiumEmptyState(
+              icon: Icons.error_outline,
+              title: l10n.error,
+              message: error.toString(),
+              action: ElevatedButton.icon(
+                onPressed: () {
+                  ref.invalidate(hubStreamProvider(widget.hubId));
+                },
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.tryAgain),
+              ),
+            ),
+          ),
         );
       },
       loading: () => PremiumScaffold(
@@ -516,7 +528,8 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
         return;
       }
 
-      final updatedSettings = Map<String, dynamic>.from(hub.settings);
+      // ignore: deprecated_member_use
+      final updatedSettings = Map<String, dynamic>.from(hub.legacySettings ?? {});
       updatedSettings[key] = value;
 
       await hubsRepo.updateHub(widget.hubId, {

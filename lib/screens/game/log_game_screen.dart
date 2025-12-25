@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/theme/premium_theme.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/features/games/presentation/notifiers/log_game_notifier.dart';
 
 /// Log Game Screen - "The Session Dashboard" (Manager only)
 ///
@@ -39,170 +38,14 @@ class LogGameScreen extends ConsumerStatefulWidget {
 }
 
 class _LogGameScreenState extends ConsumerState<LogGameScreen> {
-  int _teamAScore = 0;
-  int _teamBScore = 0;
-  final Map<String, bool> _presentPlayers = {}; // playerId -> isPresent
-  final Map<String, Set<String>> _playerHighlights =
-      {}; // playerId -> {goal, assist, mvp}
-  final Map<String, bool> _paidPlayers =
-      {}; // playerId -> isPaid (for payment tracking)
-  bool _isLoading = false;
-  bool _isSubmitting = false;
-  HubEvent? _event;
-  List<User> _registeredPlayers = [];
-  Hub? _hub; // For payment link
-
-  @override
-  void initState() {
-    super.initState();
-    _loadEvent();
-  }
-
-  Future<void> _loadEvent() async {
-    setState(() => _isLoading = true);
-    try {
-      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-      final usersRepo = ref.read(usersRepositoryProvider);
-
-      final event =
-          await hubEventsRepo.getHubEvent(widget.hubId, widget.eventId);
-      if (event == null) {
-        if (mounted) {
-          SnackbarHelper.showError(context, 'אירוע לא נמצא');
-          context.pop();
-        }
-        return;
-      }
-
-      // Check if event already has a game
-      if (event.gameId != null && event.gameId!.isNotEmpty) {
-        if (mounted) {
-          SnackbarHelper.showError(context, 'המשחק כבר נרשם');
-          context.pop();
-        }
-        return;
-      }
-
-      // Load registered players
-      final players = await usersRepo.getUsers(event.registeredPlayerIds);
-
-      // Load hub for payment link
-      final hubsRepo = ref.read(hubsRepositoryProvider);
-      final hub = await hubsRepo.getHub(widget.hubId);
-
-      // Initialize present players (default: all checked)
-      final presentMap = <String, bool>{};
-      final paidMap = <String, bool>{};
-      for (final player in players) {
-        presentMap[player.uid] = true; // Default: all present
-        paidMap[player.uid] = false; // Default: not paid
-      }
-
-      if (mounted) {
-        setState(() {
-          _event = event;
-          _hub = hub;
-          _registeredPlayers = players;
-          _presentPlayers.addAll(presentMap);
-          _paidPlayers.addAll(paidMap);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        SnackbarHelper.showErrorFromException(context, e);
-      }
-    }
-  }
-
-  void _togglePlayerPresence(String playerId) {
-    setState(() {
-      _presentPlayers[playerId] = !(_presentPlayers[playerId] ?? false);
-    });
-  }
-
-  void _toggleHighlight(String playerId, String highlight) {
-    setState(() {
-      _playerHighlights.putIfAbsent(playerId, () => <String>{});
-      if (_playerHighlights[playerId]!.contains(highlight)) {
-        _playerHighlights[playerId]!.remove(highlight);
-      } else {
-        _playerHighlights[playerId]!.add(highlight);
-      }
-    });
-  }
-
-  bool _hasHighlight(String playerId, String highlight) {
-    return _playerHighlights[playerId]?.contains(highlight) ?? false;
-  }
+  // All state is now managed by LogGameNotifier
+  // Access via: ref.watch(logGameNotifierProvider(widget.hubId, widget.eventId))
 
   Future<void> _submitGame() async {
-    if (_event == null) return;
-
-    // Validate: at least one team must have players
-    final presentPlayerIds = _presentPlayers.entries
-        .where((e) => e.value)
-        .map((e) => e.key)
-        .toList();
-
-    if (presentPlayerIds.isEmpty) {
-      SnackbarHelper.showError(context, 'יש לבחור לפחות שחקן אחד נוכח');
-      return;
-    }
-
-    setState(() => _isSubmitting = true);
-
+    final notifier = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier);
+    
     try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
-
-      // Extract goal scorers and MVP
-      final goalScorerIds = _playerHighlights.entries
-          .where((e) =>
-              e.value.contains('goal') && presentPlayerIds.contains(e.key))
-          .map((e) => e.key)
-          .toList();
-
-      final mvpPlayerId = _playerHighlights.entries
-          .where((e) =>
-              e.value.contains('mvp') && presentPlayerIds.contains(e.key))
-          .map((e) => e.key)
-          .firstOrNull;
-
-      // Convert event to game
-      // In Session Mode, we need to pass aggregateWins and matches
-      if (_isSessionMode) {
-        // For Session Mode, we'll need to update convertEventToGame to accept these
-        // For now, we'll use a workaround: update the game after creation
-        final gameId = await gamesRepo.convertEventToGame(
-          eventId: widget.eventId,
-          hubId: widget.hubId,
-          teamAScore:
-              _teamAScore, // Final score (can be 0-0 if using aggregateWins)
-          teamBScore: _teamBScore,
-          presentPlayerIds: presentPlayerIds,
-          goalScorerIds: goalScorerIds.isNotEmpty ? goalScorerIds : null,
-          mvpPlayerId: mvpPlayerId,
-        );
-
-        // Update game with session data
-        await gamesRepo.updateGame(gameId, {
-          'aggregateWins': _event!.aggregateWins,
-          'matches': _event!.matches.map((m) => m.toJson()).toList(),
-        });
-      } else {
-        // Single Game Mode - normal flow
-        await gamesRepo.convertEventToGame(
-          eventId: widget.eventId,
-          hubId: widget.hubId,
-          teamAScore: _teamAScore,
-          teamBScore: _teamBScore,
-          presentPlayerIds: presentPlayerIds,
-          goalScorerIds: goalScorerIds.isNotEmpty ? goalScorerIds : null,
-          mvpPlayerId: mvpPlayerId,
-        );
-      }
-
+      await notifier.submitGame();
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'המשחק נרשם בהצלחה!');
         context.pop(); // Return to events tab
@@ -210,91 +53,59 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showErrorFromException(context, e);
-        setState(() => _isSubmitting = false);
       }
     }
   }
 
-  // Check if event has teams with colors (Session Mode)
-  bool get _isSessionMode {
-    if (_event == null) return false;
-    return _event!.teams.isNotEmpty &&
-        _event!.teams
-            .any((team) => team.color != null && team.color!.isNotEmpty);
+  // Helper methods that use the notifier
+  void _togglePlayerPresence(String playerId) {
+    ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier)
+        .togglePlayerPresence(playerId);
+  }
+
+  void _toggleHighlight(String playerId, String highlight) {
+    ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier)
+        .togglePlayerHighlight(playerId, highlight);
+  }
+
+  bool _hasHighlight(String playerId, String highlight) {
+    final state = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId));
+    return state.playerHighlights[playerId]?.contains(highlight) ?? false;
+  }
+
+  void _togglePlayerPayment(String playerId) {
+    ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier)
+        .togglePlayerPayment(playerId);
   }
 
   Future<void> _logMatchResult() async {
-    if (_event == null || _event!.teams.isEmpty) {
+    final state = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId));
+    final notifier = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier);
+    
+    if (state.event == null || state.event!.teams.isEmpty) {
       SnackbarHelper.showError(context, 'אין קבוצות מוגדרות לאירוע');
       return;
     }
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => _LogMatchDialog(event: _event!),
+      builder: (context) => _LogMatchDialog(event: state.event!),
     );
 
     if (result == null) return;
 
-    setState(() => _isSubmitting = true);
-
     try {
-      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-      final firestore = FirebaseFirestore.instance;
-      final currentUserId = ref.read(currentUserIdProvider);
-
-      if (currentUserId == null) {
-        throw Exception('משתמש לא מחובר');
-      }
-
       final teamAColor = result['teamAColor'] as String;
       final teamBColor = result['teamBColor'] as String;
       final scoreA = result['scoreA'] as int;
       final scoreB = result['scoreB'] as int;
 
-      // Determine winner
-      String? winnerColor;
-      if (scoreA > scoreB) {
-        winnerColor = teamAColor;
-      } else if (scoreB > scoreA) {
-        winnerColor = teamBColor;
-      }
-
-      // Create match result
-      final matchId = firestore.collection('temp').doc().id;
-      final matchResult = MatchResult(
-        matchId: matchId,
+      await notifier.logMatchResult(
         teamAColor: teamAColor,
         teamBColor: teamBColor,
         scoreA: scoreA,
         scoreB: scoreB,
-        createdAt: DateTime.now(),
-        loggedBy: currentUserId,
       );
-
-      // Update aggregate wins
-      final currentWins = Map<String, int>.from(_event!.aggregateWins);
-      if (winnerColor != null) {
-        currentWins[winnerColor] = (currentWins[winnerColor] ?? 0) + 1;
-      }
-
-      // Add match to list
-      final updatedMatches = List<MatchResult>.from(_event!.matches)
-        ..add(matchResult);
-
-      // Update event
-      await hubEventsRepo.updateHubEvent(
-        widget.hubId,
-        widget.eventId,
-        {
-          'matches': updatedMatches.map((m) => m.toJson()).toList(),
-          'aggregateWins': currentWins,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      // Reload event
-      await _loadEvent();
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'תוצאה נרשמה בהצלחה!');
@@ -303,23 +114,21 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
       if (mounted) {
         SnackbarHelper.showErrorFromException(context, e);
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    final state = ref.watch(logGameNotifierProvider(widget.hubId, widget.eventId));
+    
+    if (state.isLoading) {
       return AppScaffold(
         title: 'רישום משחק',
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    if (_event == null) {
+    if (state.event == null) {
       return AppScaffold(
         title: 'רישום משחק',
         body: const Center(child: Text('אירוע לא נמצא')),
@@ -327,19 +136,19 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
     }
 
     // If Session Mode, show Session Dashboard
-    if (_isSessionMode) {
-      return _buildSessionDashboard(context);
+    if (state.isSessionMode) {
+      return _buildSessionDashboard(context, state);
     }
 
     // Otherwise, show Single Game Mode
-    return _buildSingleGameMode(context);
+    return _buildSingleGameMode(context, state);
   }
 
-  Widget _buildSessionDashboard(BuildContext context) {
+  Widget _buildSessionDashboard(BuildContext context, LogGameState state) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
 
     return AppScaffold(
-      title: _event!.title,
+      title: state.event!.title,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -357,7 +166,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            _event!.title,
+                            state.event!.title,
                             style: PremiumTypography.techHeadline.copyWith(
                               fontSize: 20,
                             ),
@@ -389,7 +198,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          dateFormat.format(_event!.eventDate),
+                          dateFormat.format(state.event!.eventDate),
                           style: PremiumTypography.bodyMedium,
                         ),
                       ],
@@ -414,7 +223,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (_event!.aggregateWins.isEmpty)
+                    if (state.event!.aggregateWins.isEmpty)
                       const Center(
                         child: Padding(
                           padding: EdgeInsets.all(24),
@@ -422,13 +231,13 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         ),
                       )
                     else
-                      ..._event!.teams.map((team) {
+                      ...state.event!.teams.map((team) {
                         final wins =
-                            _event!.aggregateWins[team.color ?? ''] ?? 0;
+                            state.event!.aggregateWins[team.color ?? ''] ?? 0;
                         final colorValue = team.colorValue ?? 0xFF2196F3;
-                        final maxWins = _event!.aggregateWins.values.isEmpty
+                        final maxWins = state.event!.aggregateWins.values.isEmpty
                             ? 1
-                            : _event!.aggregateWins.values
+                            : state.event!.aggregateWins.values
                                 .reduce((a, b) => a > b ? a : b);
                         final percentage = maxWins > 0 ? (wins / maxWins) : 0.0;
 
@@ -498,15 +307,15 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isSubmitting ? null : _logMatchResult,
-                icon: _isSubmitting
+                onPressed: state.isSubmitting ? null : _logMatchResult,
+                icon: state.isSubmitting
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.add),
-                label: Text(_isSubmitting ? 'שומר...' : 'רישום תוצאה'),
+                label: Text(state.isSubmitting ? 'שומר...' : 'רישום תוצאה'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: PremiumColors.primary,
@@ -517,7 +326,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             const SizedBox(height: 24),
 
             // Recent Matches
-            if (_event!.matches.isNotEmpty) ...[
+            if (state.event!.matches.isNotEmpty) ...[
               PremiumCard(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -531,7 +340,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      ..._event!.matches.reversed.take(10).map((match) {
+                      ...state.event!.matches.reversed.take(10).map((match) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Row(
@@ -618,9 +427,9 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ..._registeredPlayers.map((player) {
-                      final isPresent = _presentPlayers[player.uid] ?? false;
-                      final isPaid = _paidPlayers[player.uid] ?? false;
+                    ...state.registeredPlayers.map((player) {
+                      final isPresent = state.presentPlayers[player.uid] ?? false;
+                      final isPaid = state.paidPlayers[player.uid] ?? false;
                       return CheckboxListTile(
                         value: isPresent,
                         onChanged: (value) => _togglePlayerPresence(player.uid),
@@ -638,13 +447,11 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               ),
                             ),
                             // Payment toggle (only if hub has payment link)
-                            if (_hub?.paymentLink != null &&
-                                _hub!.paymentLink!.isNotEmpty)
+                            if (state.hub?.paymentLink != null &&
+                                state.hub!.paymentLink!.isNotEmpty)
                               InkWell(
                                 onTap: () {
-                                  setState(() {
-                                    _paidPlayers[player.uid] = !isPaid;
-                                  });
+                                  _togglePlayerPayment(player.uid);
                                 },
                                 child: Container(
                                   width: 32,
@@ -677,15 +484,15 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isSubmitting ? null : _submitGame,
-                icon: _isSubmitting
+                onPressed: state.isSubmitting ? null : _submitGame,
+                icon: state.isSubmitting
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check_circle),
-                label: Text(_isSubmitting ? 'שומר...' : 'סיים מפגש'),
+                label: Text(state.isSubmitting ? 'שומר...' : 'סיים מפגש'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: Colors.green,
@@ -702,7 +509,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
   Color _getColorForTeam(String? colorName) {
     if (colorName == null) return Colors.grey;
 
-    final team = _event?.teams.firstWhere(
+    final state = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId));
+    final team = state.event?.teams.firstWhere(
       (t) => t.color == colorName,
       orElse: () => Team(teamId: '', name: '', colorValue: 0xFF2196F3),
     );
@@ -710,7 +518,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
     return Color(team?.colorValue ?? 0xFF2196F3);
   }
 
-  Widget _buildSingleGameMode(BuildContext context) {
+  Widget _buildSingleGameMode(BuildContext context, LogGameState state) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
 
     return AppScaffold(
@@ -728,7 +536,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _event!.title,
+                      state.event!.title,
                       style: PremiumTypography.techHeadline.copyWith(
                         fontSize: 20,
                       ),
@@ -743,12 +551,12 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          dateFormat.format(_event!.eventDate),
+                          dateFormat.format(state.event!.eventDate),
                           style: PremiumTypography.bodyMedium,
                         ),
                       ],
                     ),
-                    if (_event!.location != null) ...[
+                    if (state.event!.location != null) ...[
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -760,7 +568,7 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _event!.location!,
+                              state.event!.location!,
                               style: PremiumTypography.bodyMedium,
                             ),
                           ),
@@ -802,8 +610,11 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.remove_circle_outline),
-                                  onPressed: _teamAScore > 0
-                                      ? () => setState(() => _teamAScore--)
+                                  onPressed: state.teamAScore > 0
+                                      ? () {
+                                          final notifier = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier);
+                                          notifier.updateScores(teamAScore: state.teamAScore - 1);
+                                        }
                                       : null,
                                   color: PremiumColors.primary,
                                 ),
@@ -816,15 +627,17 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    '$_teamAScore',
+                                    '${state.teamAScore}',
                                     textAlign: TextAlign.center,
                                     style: PremiumTypography.heading2,
                                   ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline),
-                                  onPressed: () =>
-                                      setState(() => _teamAScore++),
+                                  onPressed: () {
+                                      final notifier = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier);
+                                      notifier.updateScores(teamAScore: state.teamAScore + 1);
+                                    },
                                   color: PremiumColors.primary,
                                 ),
                               ],
@@ -850,8 +663,11 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.remove_circle_outline),
-                                  onPressed: _teamBScore > 0
-                                      ? () => setState(() => _teamBScore--)
+                                  onPressed: state.teamBScore > 0
+                                      ? () {
+                                          final notifier = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier);
+                                          notifier.updateScores(teamBScore: state.teamBScore - 1);
+                                        }
                                       : null,
                                   color: PremiumColors.primary,
                                 ),
@@ -864,15 +680,17 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    '$_teamBScore',
+                                    '${state.teamBScore}',
                                     textAlign: TextAlign.center,
                                     style: PremiumTypography.heading2,
                                   ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline),
-                                  onPressed: () =>
-                                      setState(() => _teamBScore++),
+                                  onPressed: () {
+                                      final notifier = ref.read(logGameNotifierProvider(widget.hubId, widget.eventId).notifier);
+                                      notifier.updateScores(teamBScore: state.teamBScore + 1);
+                                    },
                                   color: PremiumColors.primary,
                                 ),
                               ],
@@ -901,9 +719,9 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ..._registeredPlayers.map((player) {
-                      final isPresent = _presentPlayers[player.uid] ?? false;
-                      final isPaid = _paidPlayers[player.uid] ?? false;
+                    ...state.registeredPlayers.map((player) {
+                      final isPresent = state.presentPlayers[player.uid] ?? false;
+                      final isPaid = state.paidPlayers[player.uid] ?? false;
                       return CheckboxListTile(
                         value: isPresent,
                         onChanged: (value) => _togglePlayerPresence(player.uid),
@@ -921,13 +739,11 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                               ),
                             ),
                             // Payment toggle (only if hub has payment link)
-                            if (_hub?.paymentLink != null &&
-                                _hub!.paymentLink!.isNotEmpty)
+                            if (state.hub?.paymentLink != null &&
+                                state.hub!.paymentLink!.isNotEmpty)
                               InkWell(
                                 onTap: () {
-                                  setState(() {
-                                    _paidPlayers[player.uid] = !isPaid;
-                                  });
+                                  _togglePlayerPayment(player.uid);
                                 },
                                 child: Container(
                                   width: 32,
@@ -970,8 +786,8 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ..._registeredPlayers
-                        .where((p) => _presentPlayers[p.uid] == true)
+                    ...state.registeredPlayers
+                        .where((p) => state.presentPlayers[p.uid] == true)
                         .map((player) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -1031,15 +847,15 @@ class _LogGameScreenState extends ConsumerState<LogGameScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isSubmitting ? null : _submitGame,
-                icon: _isSubmitting
+                onPressed: state.isSubmitting ? null : _submitGame,
+                icon: state.isSubmitting
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check_circle),
-                label: Text(_isSubmitting ? 'שומר...' : 'סיים ורשום משחק'),
+                label: Text(state.isSubmitting ? 'שומר...' : 'סיים ורשום משחק'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: PremiumColors.primary,

@@ -131,6 +131,24 @@ class UsersRepository {
     }
   }
 
+  /// Get DocumentReference for a user (for transactions)
+  DocumentReference getUserRef(String uid) {
+    return _firestore.doc(FirestorePaths.user(uid));
+  }
+
+  /// Update user within a transaction
+  /// 
+  /// This is a helper for services that need to update users in transactions.
+  /// The service should handle business logic, this just performs the data update.
+  void updateUserInTransaction(
+    Transaction transaction,
+    String uid,
+    Map<String, dynamic> data,
+  ) {
+    final userRef = getUserRef(uid);
+    transaction.update(userRef, data);
+  }
+
   /// Get multiple users by IDs
   Future<List<User>> getUsers(List<String> uids) async {
     if (!Env.isFirebaseAvailable) return [];

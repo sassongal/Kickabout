@@ -1,0 +1,13 @@
+Use TypeScript – always strictly typed.
+Use ESLint + Prettier conventions with no overrides.
+Follow these conventions:
+- No default exports.
+- No unused imports.
+- Always provide return types.
+- Prefer pure functions.
+- Always add input validation for API endpoints.
+- Always use try/catch inside services, never inside controllers.
+- All errors must use a unified Error class.
+---
+alwaysApply: true
+---

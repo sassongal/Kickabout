@@ -318,7 +318,9 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
       String hubId;
       try {
-        hubId = await hubsRepo.createHub(hub);
+        // Use service for business logic (validation, orchestration)
+        final hubCreationService = ref.read(hubCreationServiceProvider);
+        hubId = await hubCreationService.createHub(hub);
       } on HubCreationLimitException catch (e) {
         // Handle limit exception with friendly message
         if (mounted) {

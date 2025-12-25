@@ -1,0 +1,12 @@
+File naming conventions:
+- services → <name>.service.ts
+- controllers → <name>.controller.ts
+- routes → <name>.routes.ts
+- models → <name>.model.ts
+- utils → <name>.utils.ts
+- general helper modules → <name>.helper.ts
+
+Use only lowercase with dots. Never use camelCase for filenames.
+---
+alwaysApply: true
+---

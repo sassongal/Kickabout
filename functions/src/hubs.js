@@ -3,6 +3,50 @@ const { onDocumentCreated, onDocumentDeleted, onDocumentWritten } = require('fir
 const { info } = require('firebase-functions/logger');
 const { db, admin, FieldValue } = require('./utils');
 
+/**
+ * Sync denormalized member arrays for a hub
+ * This rebuilds activeMemberIds, managerIds, and moderatorIds arrays
+ */
+async function syncHubMemberArraysForHub(hubId) {
+  try {
+    const membersSnap = await db
+      .collection(`hubs/${hubId}/members`)
+      .where('status', '==', 'active')
+      .get();
+
+    const activeMemberIds = [];
+    const managerIds = [];
+    const moderatorIds = [];
+
+    membersSnap.forEach((doc) => {
+      const data = doc.data();
+      const userId = doc.id;
+      const role = data.role || 'member';
+
+      activeMemberIds.push(userId);
+
+      if (role === 'manager') {
+        managerIds.push(userId);
+      } else if (role === 'moderator') {
+        moderatorIds.push(userId);
+      }
+    });
+
+    // Update hub document with denormalized arrays
+    await db.doc(`hubs/${hubId}`).update({
+      activeMemberIds,
+      managerIds,
+      moderatorIds,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    info(`[syncArrays] Synced ${hubId}: ${activeMemberIds.length} active, ${managerIds.length} managers, ${moderatorIds.length} moderators`);
+  } catch (err) {
+    info(`[syncArrays] Error syncing ${hubId}:`, err);
+    // Non-fatal
+  }
+}
+
 exports.addSuperAdminToHub = onDocumentCreated('hubs/{hubId}', async (event) => {
   const hubId = event.params.hubId;
 
@@ -65,11 +109,26 @@ exports.addSuperAdminToHub = onDocumentCreated('hubs/{hubId}', async (event) => 
 
       await batch.commit();
       info(`✅ Added Super Admin (${superAdminUid}) to hub ${hubId} members subcollection.`);
+      
+      // Sync arrays after adding super admin
+      await syncHubMemberArraysForHub(hubId);
+      await syncUserHubIdsForUser(superAdminUid);
     }
 
   } catch (error) {
     // Log error but don't fail hub creation
     info(`⚠️ Error adding Super Admin to hub ${hubId}: ${error.message}`);
+  }
+  
+  // CRITICAL: Sync denormalized arrays when hub is created (e.g., from admin console)
+  // This ensures activeMemberIds, managerIds, moderatorIds are always in sync
+  // Even if super admin wasn't added, we still need to sync for the creator
+  await syncHubMemberArraysForHub(hubId);
+  
+  // Also sync user.hubIds for the creator (if hub was created from client, this is already done)
+  const hubData = event.data.data();
+  if (hubData?.createdBy) {
+    await syncUserHubIdsForUser(hubData.createdBy);
   }
 });
 
@@ -119,22 +178,64 @@ exports.onHubDeleted = onDocumentDeleted(
 
 // --- Custom Claims Update for Hub Members (Subcollection-aware) ---
 // Triggered when a member is added, updated, or removed in the subcollection
+/**
+ * Sync user.hubIds array based on active memberships
+ */
+async function syncUserHubIdsForUser(userId) {
+  try {
+    // Find all hubs where user is an active member
+    // Note: collectionGroup query can't use documentId in where clause
+    // So we query all active members and filter by userId from path
+    // Alternative: Query each hub's members subcollection (more efficient for small number of hubs)
+    // For now, use collectionGroup but this might be slow for large datasets
+    const membershipsSnap = await db
+      .collectionGroup('members')
+      .where('status', '==', 'active')
+      .get();
+
+    const hubIds = [];
+    membershipsSnap.forEach((doc) => {
+      // Extract hubId and userId from path: hubs/{hubId}/members/{userId}
+      const pathParts = doc.ref.path.split('/');
+      if (pathParts.length >= 4 && pathParts[0] === 'hubs' && pathParts[3] === userId) {
+        hubIds.push(pathParts[1]);
+      }
+    });
+
+    // Update user document
+    await db.collection('users').doc(userId).update({
+      hubIds,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    info(`[syncUserHubIds] Synced ${userId}: ${hubIds.length} hubs`);
+    return hubIds;
+  } catch (err) {
+    error(`[syncUserHubIds] Error syncing ${userId}:`, err);
+    // Return existing hubIds if sync fails
+    const userDoc = await db.collection('users').doc(userId).get();
+    return userDoc.exists ? (userDoc.data().hubIds || []) : [];
+  }
+}
+
 exports.onHubMembershipChanged = onDocumentWritten(
   'hubs/{hubId}/members/{userId}',
   async (event) => {
     const hubId = event.params.hubId;
     const userId = event.params.userId;
 
-    const beforeData = event.data.before.data();
-    const afterData = event.data.after.data();
+    const beforeData = event.data.before.exists ? event.data.before.data() : null;
+    const afterData = event.data.after.exists ? event.data.after.data() : null;
+
+    // CRITICAL: Sync user.hubIds first to ensure it's up to date
+    const userHubIds = await syncUserHubIdsForUser(userId);
 
     // Check if role actually changed
     const beforeRole = beforeData ? beforeData.role : null;
     const afterRole = afterData ? afterData.role : null;
 
     if (beforeRole === afterRole) {
-      // Role didn't change, no need to update claim (unless it's a deletion/creation that affects hubIds claims)
-      // But we always want to ensure claims are in sync with reality.
+      // Role didn't change, but we still updated hubIds above
       // If document deleted (afterData null), role is null.
       // If document created (beforeData null), role is new.
       return;
@@ -148,8 +249,6 @@ exports.onHubMembershipChanged = onDocumentWritten(
         info(`User ${userId} does not exist, skipping custom claims update`);
         return;
       }
-      const userData = userDoc.data();
-      const userHubIds = userData.hubIds || [];
 
       // Build custom claims object
       const customClaims = {

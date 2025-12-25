@@ -1,0 +1,11 @@
+Agent must always:
+- Analyze the existing project structure before generating code.
+- Follow all architecture rules strictly.
+- Propose improvements proactively when the requested change is sub-optimal.
+- Detect inconsistencies between code and project rules and fix them automatically.
+- Explain breaking changes before applying them.
+- Never introduce dependencies without confirmation.
+- Never rename files or folders unless explicitly instructed.
+---
+alwaysApply: true
+---

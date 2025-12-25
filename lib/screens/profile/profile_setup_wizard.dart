@@ -6,7 +6,7 @@ import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/models/models.dart' as model;
 import 'package:kattrick/models/age_group.dart';
-import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:kattrick/widgets/common/home_logo_button.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';

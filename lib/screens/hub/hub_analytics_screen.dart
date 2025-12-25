@@ -8,6 +8,8 @@ import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/data/games_repository.dart';
+import 'package:kattrick/data/hubs_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 
@@ -60,6 +62,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
     try {
       final hubsRepo = ref.read(hubsRepositoryProvider);
       final gamesRepo = ref.read(gamesRepositoryProvider);
+      final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
       final usersRepo = ref.read(usersRepositoryProvider);
 
       // 1. Fetch Hub
@@ -68,7 +71,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
       _hub = hub;
 
       // 2. Fetch Completed Games
-      _completedGames = await gamesRepo.getCompletedGamesForHub(widget.hubId);
+      _completedGames = await gameQueriesRepo.getCompletedGamesForHub(widget.hubId);
 
       // 3. Fetch Members (for names/avatars)
       // Optimization: fetch only if needed, but for now fetch all members to map names
@@ -96,7 +99,7 @@ class _HubAnalyticsScreenState extends ConsumerState<HubAnalyticsScreen> {
     }
   }
 
-  Future<void> _calculateHubStats(gamesRepo, hubsRepo) async {
+  Future<void> _calculateHubStats(GamesRepository gamesRepo, HubsRepository hubsRepo) async {
     _totalGames = _completedGames.length;
     _totalPlayers = _hub?.memberCount ?? 0;
 

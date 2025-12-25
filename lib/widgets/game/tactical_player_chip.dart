@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
-import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
 
 import 'package:kattrick/widgets/animations/scan_in_animation.dart';
 

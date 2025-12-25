@@ -56,10 +56,10 @@ class _CreateRecruitingPostScreenState
 
   Future<void> _loadUpcomingGamesAndEvents() async {
     try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
+      final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
 
       // Fetch upcoming games
-      final games = await gamesRepo.listGamesByHub(widget.hubId, limit: 20);
+      final games = await gameQueriesRepo.listGamesByHub(widget.hubId, limit: 20);
       final now = DateTime.now();
       final upcomingGames = games
           .where((g) =>

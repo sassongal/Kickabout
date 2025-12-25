@@ -6,7 +6,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/services/error_handler_service.dart';
-import 'package:kattrick/services/hub_permissions_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/screens/hub/add_manual_player_dialog.dart';

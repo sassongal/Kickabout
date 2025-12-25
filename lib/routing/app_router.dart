@@ -141,7 +141,7 @@ import 'package:kattrick/screens/debug/auth_status_screen.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
 
 /// Auth state stream provider
 final authStateProvider = StreamProvider<firebase_auth.User?>((ref) {

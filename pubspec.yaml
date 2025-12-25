@@ -43,6 +43,8 @@ dependencies:
   image_picker: ^1.1.2
   # Image Caching
   cached_network_image: ^3.3.1
+  # SVG Support
+  flutter_svg: ^2.0.10+1
   # Connectivity
   connectivity_plus: ^6.0.0
   # Shimmer effect for skeleton loaders
@@ -99,14 +101,13 @@ flutter:
     - assets/logo/
     - assets/images/
     - assets/icons/
-    - assets/splash.png
 
 flutter_native_splash:
   color: "#0B0C10"
-  image: assets/splash.png
+  image: assets/logo/KattruckLOGOFULL.png
   android_12:
     color: "#0B0C10"
-    image: assets/splash.png
+    image: assets/logo/KattruckLOGOFULL.png
 
 flutter_launcher_icons:
   android: true

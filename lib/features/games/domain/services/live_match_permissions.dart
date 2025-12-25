@@ -24,9 +24,9 @@ class LiveMatchPermissions {
     // if (event.authorizedScorers.contains(userId)) return true;
 
     // 4. בדיקה לפי מדיניות ההאב (Hub Settings)
-    final policyString =
-        hub.settings['matchLoggingPolicy'] as String? ?? 'managerOnly';
-    final policy = _parsePolicy(policyString);
+    // TODO: Add matchLoggingPolicy to HubSettings model
+    // For now, default to managerOnly policy
+    final policy = MatchLoggingPolicy.managerOnly;
 
     switch (policy) {
       case MatchLoggingPolicy.managerOnly:

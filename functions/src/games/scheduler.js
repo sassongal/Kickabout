@@ -4,8 +4,11 @@ const { info, error: logError } = require('firebase-functions/logger');
 const { db, messaging, FieldValue, getUserFCMTokens } = require('../utils');
 const { sentryDsn, captureException, flushSentry } = require('../monitoring');
 
+// Only include sentryDsn in secrets if it's defined and not a dummy object
+const secrets = sentryDsn && !sentryDsn._isDummy ? [sentryDsn] : [];
+
 exports.sendGameReminder = onSchedule(
-    { schedule: 'every 30 minutes', secrets: [sentryDsn] },
+    { schedule: 'every 30 minutes', secrets },
     async (event) => {
         const now = new Date();
         const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);

@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/services/hub_permissions_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
+import 'package:kattrick/models/models.dart';
 
 class HubAdminSpeedDial extends ConsumerWidget {
   final String hubId;
@@ -18,17 +19,22 @@ class HubAdminSpeedDial extends ConsumerWidget {
     final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
 
     // Watch for active sessions in this hub
-    final gamesStream = ref.watch(gamesRepositoryProvider).watchGamesByHub(hubId);
+    final gameQueriesRepo = ref.watch(gameQueriesRepositoryProvider);
+    final gamesStream = gameQueriesRepo.watchGamesByHub(hubId);
 
-    return StreamBuilder(
+    return StreamBuilder<List<Game>>(
       stream: gamesStream,
       builder: (context, snapshot) {
         // Find first active session (if any)
         final games = snapshot.data ?? [];
-        final activeGame = games.cast().firstWhere(
-          (game) => game?.session.isActive == true,
-          orElse: () => null,
-        );
+        Game? activeGame;
+        try {
+          activeGame = games.firstWhere(
+            (game) => game.session.isActive == true,
+          );
+        } catch (e) {
+          activeGame = null;
+        }
 
         return SpeedDial(
           icon: Icons.add,
@@ -53,9 +59,13 @@ class HubAdminSpeedDial extends ConsumerWidget {
                   color: Colors.white,
                 ),
                 labelBackgroundColor: Colors.black87,
-                onTap: () => context.push(
-                  '/hubs/$hubId/events/${activeGame.eventId}/game-session',
-                ),
+                onTap: () {
+                  if (activeGame?.eventId != null) {
+                    context.push(
+                      '/hubs/$hubId/events/${activeGame!.eventId}/game-session',
+                    );
+                  }
+                },
               ),
         if (permissions.canCreateGames)
           SpeedDialChild(

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:ui';
 import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/core/app_assets.dart';
 
 /// Bubble Menu Item - פריט בתפריט הבועות
 class BubbleMenuItem {
@@ -133,7 +136,7 @@ class _BubbleMenuState extends State<BubbleMenu>
             ),
           ),
 
-        // הכפתור הראשי - צף משמאל למטה
+        // הכפתור הראשי - צף משמאל למטה עם אפקט זכוכיתי
         Positioned(
           bottom: 16,
           left: 16,
@@ -148,29 +151,75 @@ class _BubbleMenuState extends State<BubbleMenu>
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
+                      // Glassmorphism effect
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          PremiumColors.primary,
-                          PremiumColors.primaryDark,
+                          PremiumColors.primary.withValues(alpha: 0.9),
+                          PremiumColors.primaryDark.withValues(alpha: 0.85),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              PremiumColors.primary.withValues(alpha: 0.4),
+                          color: PremiumColors.primary.withValues(alpha: 0.5),
                           blurRadius: 20,
                           spreadRadius: 2,
                           offset: const Offset(0, 4),
                         ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 10,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
-                    child: Icon(
-                      _isExpanded ? Icons.close : Icons.add,
-                      color: Colors.white,
-                      size: 32,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.2),
+                                Colors.white.withValues(alpha: 0.1),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(32),
+                          ),
+                          child: Center(
+                            child: _isExpanded
+                                ? const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 32,
+                                  )
+                                : SvgPicture.asset(
+                                    AppAssets.fabIconSvg,
+                                    width: 32,
+                                    height: 32,
+                                    colorFilter: const ColorFilter.mode(
+                                      Colors.white,
+                                      BlendMode.srcIn,
+                                    ),
+                                    placeholderBuilder: (context) => const Icon(
+                                      Icons.add,
+                                      color: Colors.white,
+                                      size: 32,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 );

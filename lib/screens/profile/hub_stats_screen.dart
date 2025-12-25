@@ -42,7 +42,7 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
       });
 
       final hubsRepo = ref.read(hubsRepositoryProvider);
-      final gamesRepo = ref.read(gamesRepositoryProvider);
+      final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
 
       // Fetch Hub
       final hub = await hubsRepo.getHub(widget.hubId);
@@ -52,7 +52,7 @@ class _HubStatsScreenState extends ConsumerState<HubStatsScreen> {
 
       // Fetch Games
       final games =
-          await gamesRepo.getPlayerGamesInHub(widget.hubId, widget.playerId);
+          await gameQueriesRepo.getPlayerGamesInHub(widget.hubId, widget.playerId);
 
       if (mounted) {
         setState(() {

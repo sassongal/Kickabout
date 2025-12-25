@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/logic/live_match_permissions.dart';
+import 'package:kattrick/features/games/domain/services/live_match_permissions.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:intl/intl.dart';

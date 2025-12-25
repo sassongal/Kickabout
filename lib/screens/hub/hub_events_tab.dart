@@ -12,7 +12,7 @@ import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/logic/event_action_controller.dart';
+import 'package:kattrick/features/games/domain/services/event_action_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
 

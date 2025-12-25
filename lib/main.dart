@@ -25,6 +25,8 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart'
 import 'package:kattrick/services/web_maps_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
+import 'package:kattrick/core/providers/auth_providers.dart';
+import 'package:kattrick/services/cache_service.dart';
 
 /// Initialize background services (non-blocking)
 Future<void> _initializeBackgroundServices() async {
@@ -306,11 +308,37 @@ class _LimitedModeScreenState extends State<LimitedModeScreen> {
   }
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Set up listener after first frame to avoid rebuild loops
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.listen(authStateForCacheProvider, (previous, next) {
+          if (next.hasValue) {
+            final firebaseUser = next.value;
+            final newUserId = firebaseUser?.uid;
+            if (newUserId != null) {
+              // Clear cache for new user (handled in login screen too, but this is a safety net)
+              CacheService().clear(CacheKeys.user(newUserId));
+              debugPrint('🧹 Cleared cache for user change: $newUserId');
+            }
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     // Initialize deep link service

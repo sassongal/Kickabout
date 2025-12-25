@@ -6,7 +6,7 @@ import 'package:kattrick/widgets/premium/bottom_navigation_bar.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/routing/app_paths.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
 
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
@@ -41,6 +41,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _hasPreloaded = false;
+  Stream<User?>? _userStream;
+  Stream<int>? _unreadCountStream;
+  Stream<Gamification?>? _gamificationStream;
+  String? _cachedUserId;
 
   @override
   void initState() {
@@ -78,12 +82,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
     final hubsRepo = ref.read(hubsRepositoryProvider);
-    final gamesRepo = ref.read(gamesRepositoryProvider);
     final notificationsRepo = ref.read(notificationsRepositoryProvider);
     final gamificationRepo = ref.read(gamificationRepositoryProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
 
     if (currentUserId == null) {
+      // Clear cached streams when user logs out
+      _userStream = null;
+      _unreadCountStream = null;
+      _gamificationStream = null;
+      _cachedUserId = null;
+      
       return Scaffold(
         backgroundColor: PremiumColors.background,
         appBar: AppBar(
@@ -122,10 +131,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
-    final unreadCountStream = notificationsRepo.watchUnreadCount(currentUserId);
-    final gamificationStream =
-        gamificationRepo.watchGamification(currentUserId);
-    final userStream = usersRepo.watchUser(currentUserId);
+    // OPTIMIZATION: Only recreate streams if userId changed
+    // This prevents stream recreation on every rebuild, eliminating flickering
+    if (_cachedUserId != currentUserId) {
+      _cachedUserId = currentUserId;
+      _userStream = usersRepo.watchUser(currentUserId);
+      _unreadCountStream = notificationsRepo.watchUnreadCount(currentUserId);
+      _gamificationStream = gamificationRepo.watchGamification(currentUserId);
+    }
+
+    final unreadCountStream = _unreadCountStream!;
+    final gamificationStream = _gamificationStream!;
+    final userStream = _userStream!;
 
     return StreamBuilder<User?>(
       stream: userStream,
@@ -247,7 +264,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 // Upcoming Games Section
                                 FutureBuilder<List<Game>>(
                                   future: _getUpcomingGames(
-                                      gamesRepo, hubIds, now, nextWeek),
+                                      ref.read(gameQueriesRepositoryProvider), hubIds, now, nextWeek),
                                   builder: (context, gamesSnapshot) {
                                     final games = gamesSnapshot.data ?? [];
                                     if (games.isEmpty) {
@@ -687,14 +704,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// Get upcoming games from user's hubs
   Future<List<Game>> _getUpcomingGames(
-    GamesRepository gamesRepo,
+    GameQueriesRepository gameQueriesRepo,
     List<String> hubIds,
     DateTime start,
     DateTime end,
   ) async {
     final allGames = <Game>[];
     for (final hubId in hubIds) {
-      final games = await gamesRepo.getGamesByHub(hubId);
+      final games = await gameQueriesRepo.getGamesByHub(hubId);
       allGames.addAll(games);
     }
 

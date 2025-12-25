@@ -26,12 +26,11 @@ _$HubImpl _$$HubImplFromJson(Map<String, dynamic> json) => _$HubImpl(
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      settings: json['settings'] as Map<String, dynamic>? ??
-          const {
-            'showManagerContactInfo': true,
-            'allowJoinRequests': true,
-            'allowModeratorsToCreateGames': false
-          },
+      settings: json['settings'] == null
+          ? const HubSettings()
+          : const HubSettingsConverter()
+              .fromJson(json['settings'] as Map<String, dynamic>),
+      legacySettings: json['legacySettings'] as Map<String, dynamic>?,
       permissions: json['permissions'] as Map<String, dynamic>? ?? const {},
       location: const NullableGeoPointConverter().fromJson(json['location']),
       geohash: json['geohash'] as String?,
@@ -68,7 +67,8 @@ Map<String, dynamic> _$$HubImplToJson(_$HubImpl instance) => <String, dynamic>{
       'activeMemberIds': instance.activeMemberIds,
       'managerIds': instance.managerIds,
       'moderatorIds': instance.moderatorIds,
-      'settings': instance.settings,
+      'settings': const HubSettingsConverter().toJson(instance.settings),
+      'legacySettings': instance.legacySettings,
       'permissions': instance.permissions,
       'location': const NullableGeoPointConverter().toJson(instance.location),
       'geohash': instance.geohash,

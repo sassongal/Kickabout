@@ -22,6 +22,10 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   String? _selectedRegion;
   String? _selectedCity;
   bool _initializedFromUser = false;
+  Stream<List<FeedPost>>? _cachedRecruitingStream;
+  Stream<List<Game>>? _cachedPublicGamesStream;
+  String? _cachedRegion;
+  String? _cachedCity;
 
   void _showFilters() {
     showModalBottomSheet(
@@ -44,7 +48,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final feedRepo = ref.watch(feedRepositoryProvider);
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
+    final gameQueriesRepo = ref.watch(gameQueriesRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
 
@@ -74,17 +78,25 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         final effectiveRegion = _selectedRegion ?? userRegion;
         final effectiveCity = _selectedCity;
 
-        final recruitingStream = feedRepo.streamRegionalFeed(
-          region: effectiveRegion,
-          city: effectiveCity,
-          postType: 'hub_recruiting',
-        );
+        // OPTIMIZATION: Only recreate streams if region/city changed
+        // This prevents stream recreation on every rebuild, eliminating flickering
+        if (_cachedRegion != effectiveRegion || _cachedCity != effectiveCity) {
+          _cachedRegion = effectiveRegion;
+          _cachedCity = effectiveCity;
+          _cachedRecruitingStream = feedRepo.streamRegionalFeed(
+            region: effectiveRegion,
+            city: effectiveCity,
+            postType: 'hub_recruiting',
+          );
+          _cachedPublicGamesStream = gameQueriesRepo.watchPublicCompletedGames(
+            limit: 50,
+            region: effectiveRegion,
+            city: effectiveCity,
+          );
+        }
 
-        final publicGamesStream = gamesRepo.watchPublicCompletedGames(
-          limit: 50,
-          region: effectiveRegion,
-          city: effectiveCity,
-        );
+        final recruitingStream = _cachedRecruitingStream!;
+        final publicGamesStream = _cachedPublicGamesStream!;
 
         final hasFilters = (_selectedRegion != null &&
                 _selectedRegion!.isNotEmpty) ||

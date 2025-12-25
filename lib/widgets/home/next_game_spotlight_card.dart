@@ -6,10 +6,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/logic/event_action_controller.dart';
+import 'package:kattrick/features/games/domain/services/event_action_service.dart';
 import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -134,7 +135,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
   @override
   Widget build(BuildContext context) {
     final hubsRepo = ref.watch(hubsRepositoryProvider);
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
+    final gameQueriesRepo = ref.watch(gameQueriesRepositoryProvider);
     final hubEventsRepo = ref.watch(hubEventsRepositoryProvider);
 
     return StreamBuilder<List<Hub>>(
@@ -144,7 +145,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
 
         return StreamBuilder<_NextGameData?>(
           stream: _getNextGameStream(
-            gamesRepo,
+            gameQueriesRepo,
             hubEventsRepo,
             hubs,
             widget.userId,
@@ -710,7 +711,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
   }
 
   Stream<_NextGameData?> _getNextGameStream(
-    GamesRepository gamesRepo,
+    GameQueriesRepository gameQueriesRepo,
     HubEventsRepository hubEventsRepo,
     List<Hub> hubs,
     String userId,
@@ -806,7 +807,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
     }
 
     // Subscribe to games
-    subscriptions.add(gamesRepo.streamMyUpcomingGames(userId).listen((games) {
+    subscriptions.add(gameQueriesRepo.streamMyUpcomingGames(userId).listen((games) {
       latestGames = games;
       update();
     }));

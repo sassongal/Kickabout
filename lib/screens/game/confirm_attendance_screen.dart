@@ -62,8 +62,8 @@ class _ConfirmAttendanceScreenState
     setState(() => _isLoading = true);
 
     try {
-      final signupsRepo = ref.read(signupsRepositoryProvider);
-      await signupsRepo.setSignup(
+      final signupService = ref.read(gameSignupServiceProvider);
+      await signupService.setSignup(
         widget.gameId,
         currentUserId,
         SignupStatus.confirmed,
@@ -120,8 +120,8 @@ class _ConfirmAttendanceScreenState
     setState(() => _isLoading = true);
 
     try {
-      final signupsRepo = ref.read(signupsRepositoryProvider);
-      await signupsRepo.setSignup(
+      final signupService = ref.read(gameSignupServiceProvider);
+      await signupService.setSignup(
         widget.gameId,
         currentUserId,
         SignupStatus.pending,

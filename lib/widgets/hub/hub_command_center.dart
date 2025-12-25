@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/services/hub_permissions_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
+import 'package:kattrick/data/repositories_providers.dart';
 
-class HubCommandCenter extends StatelessWidget {
+/// Hub Command Center - Manager/Moderator controls
+///
+/// Displays pending join requests badge and quick access buttons for:
+/// - Hub settings (managers only)
+/// - Role management (managers/moderators)
+///
+/// ARCHITECTURAL FIX: Now uses repository method instead of direct Firestore access
+class HubCommandCenter extends ConsumerWidget {
   final String hubId;
   final Hub hub;
   final HubPermissions hubPermissions;
@@ -17,24 +25,22 @@ class HubCommandCenter extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (!hubPermissions.isManager && !hubPermissions.isModerator) {
       return const SizedBox.shrink();
     }
+
+    // Watch pending join requests count from repository (not direct Firestore)
+    final hubsRepo = ref.watch(hubsRepositoryProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Pending join requests pill
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('hubs')
-              .doc(hubId)
-              .collection('requests')
-              .where('status', isEqualTo: 'pending')
-              .snapshots(),
+        StreamBuilder<int>(
+          stream: hubsRepo.watchPendingJoinRequestsCount(hubId),
           builder: (context, snapshot) {
-            final pendingCount = snapshot.data?.docs.length ?? 0;
+            final pendingCount = snapshot.data ?? 0;
             if (!hubPermissions.canManageMembers) {
               return const SizedBox.shrink();
             }

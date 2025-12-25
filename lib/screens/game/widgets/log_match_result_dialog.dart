@@ -2,13 +2,15 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/features/games/presentation/notifiers/log_match_result_dialog_notifier.dart';
 import 'package:uuid/uuid.dart';
 
-class LogMatchResultDialog extends StatefulWidget {
+class LogMatchResultDialog extends ConsumerStatefulWidget {
   final HubEvent event;
   final List<User> players;
   final String currentUserId;
@@ -21,48 +23,20 @@ class LogMatchResultDialog extends StatefulWidget {
   });
 
   @override
-  State<LogMatchResultDialog> createState() => _LogMatchResultDialogState();
+  ConsumerState<LogMatchResultDialog> createState() => _LogMatchResultDialogState();
 }
 
-class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
+class _LogMatchResultDialogState extends ConsumerState<LogMatchResultDialog> {
   final _pageController = PageController();
   final _uuid = const Uuid();
-  int _currentPage = 0;
-
-  // Step 1: Score & Teams
   late FixedExtentScrollController _teamAScrollController;
   late FixedExtentScrollController _teamBScrollController;
-  int _teamAScore = 0;
-  int _teamBScore = 0;
-  Team? _selectedTeamA;
-  Team? _selectedTeamB;
-
-  List<User> _teamAPlayers = [];
-  List<User> _teamBPlayers = [];
-  List<User> _winningTeamPlayers = [];
-  Team? _winningTeam;
-  Team? _losingTeam;
-
-  // Step 2: MVP
-  String? _mvpPlayerId;
-
-  // Step 3: Scorers
-  final Set<String> _scorerIds = {};
-
-  // Step 4: Assists
-  final Set<String> _assistIds = {};
 
   @override
   void initState() {
     super.initState();
     _teamAScrollController = FixedExtentScrollController(initialItem: 0);
     _teamBScrollController = FixedExtentScrollController(initialItem: 0);
-
-    if (widget.event.teams.length >= 2) {
-      _selectedTeamA = widget.event.teams[0];
-      _selectedTeamB = widget.event.teams[1];
-      _updatePlayerLists();
-    }
   }
 
   @override
@@ -73,56 +47,33 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
     super.dispose();
   }
 
-  void _updatePlayerLists() {
-    setState(() {
-      _teamAPlayers = widget.players
-          .where((p) => _selectedTeamA?.playerIds.contains(p.uid) ?? false)
-          .toList();
-      _teamBPlayers = widget.players
-          .where((p) => _selectedTeamB?.playerIds.contains(p.uid) ?? false)
-          .toList();
-    });
-  }
+  LogMatchResultDialogParams get _params => LogMatchResultDialogParams(
+        event: widget.event,
+        players: widget.players,
+      );
 
   void _onNext() {
+    final notifier = ref.read(logMatchResultDialogNotifierProvider(_params).notifier);
+    final state = ref.read(logMatchResultDialogNotifierProvider(_params));
+    
     // --- Step 1 Validation ---
-    if (_currentPage == 0) {
-      if (_selectedTeamA == null || _selectedTeamB == null) {
-        SnackbarHelper.showError(context, 'Please select both teams.');
+    if (state.currentPage == 0) {
+      final error = notifier.validateStep1();
+      if (error != null) {
+        SnackbarHelper.showError(context, error);
         return;
       }
-      if (_teamAScore == _teamBScore) {
-        SnackbarHelper.showError(context, 'Scores cannot be a draw.');
-        return;
-      }
-
-      final isTeamAWinner = _teamAScore > _teamBScore;
-      final winnerScore = isTeamAWinner ? _teamAScore : _teamBScore;
-      final loserScore = isTeamAWinner ? _teamBScore : _teamAScore;
-
-      if (winnerScore > 5) {
-        SnackbarHelper.showError(
-            context, 'Winning team score cannot exceed 5.');
-        return;
-      }
-      if (loserScore > 4) {
-        SnackbarHelper.showError(context, 'Losing team score cannot exceed 4.');
-        return;
-      }
-
-      // Set state for next steps
-      setState(() {
-        _winningTeam = isTeamAWinner ? _selectedTeamA : _selectedTeamB;
-        _losingTeam = isTeamAWinner ? _selectedTeamB : _selectedTeamA;
-        _winningTeamPlayers =
-            isTeamAWinner ? _teamAPlayers : _teamBPlayers;
-      });
+      
+      // Set winning/losing teams
+      notifier.setWinningLosingTeams();
     }
 
-    if (_currentPage < 4) {
+    if (state.currentPage < 4) {
       // 4 is the confirmation page
+      final nextPage = state.currentPage + 1;
+      notifier.setCurrentPage(nextPage);
       _pageController.animateToPage(
-        _currentPage + 1,
+        nextPage,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -132,9 +83,14 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
   }
 
   void _onBack() {
-    if (_currentPage > 0) {
+    final state = ref.read(logMatchResultDialogNotifierProvider(_params));
+    final notifier = ref.read(logMatchResultDialogNotifierProvider(_params).notifier);
+    
+    if (state.currentPage > 0) {
+      final prevPage = state.currentPage - 1;
+      notifier.setCurrentPage(prevPage);
       _pageController.animateToPage(
-        _currentPage - 1,
+        prevPage,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -144,30 +100,23 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
   }
 
   void _submit() {
-    if (_winningTeam == null || _losingTeam == null) return;
-
-    final winningScore =
-        _winningTeam == _selectedTeamA ? _teamAScore : _teamBScore;
-    final losingScore =
-        _losingTeam == _selectedTeamA ? _teamAScore : _teamBScore;
-
-    final result = MatchResult(
-      matchId: _uuid.v4(),
-      teamAColor: _winningTeam!.color ?? _winningTeam!.name,
-      teamBColor: _losingTeam!.color ?? _losingTeam!.name,
-      scoreA: winningScore,
-      scoreB: losingScore,
-      mvpId: _mvpPlayerId,
-      scorerIds: _scorerIds.toList(),
-      assistIds: _assistIds.toList(),
-      createdAt: DateTime.now(),
-      loggedBy: widget.currentUserId,
-    );
-    Navigator.pop(context, result);
+    final notifier = ref.read(logMatchResultDialogNotifierProvider(_params).notifier);
+    
+    try {
+      final result = notifier.createMatchResult(
+        _uuid.v4(),
+        widget.currentUserId,
+      );
+      Navigator.pop(context, result);
+    } catch (e) {
+      SnackbarHelper.showError(context, e.toString());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(logMatchResultDialogNotifierProvider(_params));
+    
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
       child: AlertDialog(
@@ -188,16 +137,15 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
             controller: _pageController,
             physics: const NeverScrollableScrollPhysics(),
             onPageChanged: (page) {
-              setState(() {
-                _currentPage = page;
-              });
+              ref.read(logMatchResultDialogNotifierProvider(_params).notifier)
+                  .setCurrentPage(page);
             },
             children: [
-              _buildScoreSelector(),
-              _buildMvpSelector(),
-              _buildScorersSelector(),
-              _buildAssistsSelector(),
-              _buildConfirmationView(),
+              _buildScoreSelector(state),
+              _buildMvpSelector(state),
+              _buildScorersSelector(state),
+              _buildAssistsSelector(state),
+              _buildConfirmationView(state),
             ],
           ),
         ),
@@ -213,16 +161,16 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
               backgroundColor: PremiumColors.primary,
               foregroundColor: Colors.white,
             ),
-            child: Text(_currentPage == 4 ? 'Confirm & Save' : 'Next'),
+            child: Text(state.currentPage == 4 ? 'Confirm & Save' : 'Next'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildScoreSelector() {
+  Widget _buildScoreSelector(LogMatchResultDialogState state) {
     final scores = List.generate(6, (i) => i); // 0-5
-    final teams = widget.event.teams;
+    final notifier = ref.read(logMatchResultDialogNotifierProvider(_params).notifier);
 
     return SingleChildScrollView(
       child: Column(
@@ -236,13 +184,13 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
             children: [
               Expanded(
                 child: _buildTeamDropdown(
-                  team: _selectedTeamA,
-                  otherSelectedTeam: _selectedTeamB,
+                  team: state.selectedTeamA,
+                  otherSelectedTeam: state.selectedTeamB,
                   onChanged: (team) {
-                    setState(() {
-                      _selectedTeamA = team;
-                      _updatePlayerLists();
-                    });
+                    final teamAPlayers = widget.players
+                        .where((p) => team?.playerIds.contains(p.uid) ?? false)
+                        .toList();
+                    notifier.setSelectedTeamA(team, teamAPlayers);
                   },
                 ),
               ),
@@ -253,13 +201,13 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
               ),
               Expanded(
                 child: _buildTeamDropdown(
-                  team: _selectedTeamB,
-                  otherSelectedTeam: _selectedTeamA,
+                  team: state.selectedTeamB,
+                  otherSelectedTeam: state.selectedTeamA,
                   onChanged: (team) {
-                    setState(() {
-                      _selectedTeamB = team;
-                      _updatePlayerLists();
-                    });
+                    final teamBPlayers = widget.players
+                        .where((p) => team?.playerIds.contains(p.uid) ?? false)
+                        .toList();
+                    notifier.setSelectedTeamB(team, teamBPlayers);
                   },
                 ),
               ),
@@ -271,9 +219,9 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildTeamColumn(
-                  _selectedTeamA?.name ?? 'Team A', _teamAScrollController, scores,
+                  state.selectedTeamA?.name ?? 'Team A', _teamAScrollController, scores,
                   (index) {
-                setState(() => _teamAScore = scores[index]);
+                notifier.setTeamAScore(scores[index]);
               }),
               const Padding(
                 padding: EdgeInsets.only(top: 100.0),
@@ -284,9 +232,9 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
                         fontWeight: FontWeight.bold)),
               ),
               _buildTeamColumn(
-                  _selectedTeamB?.name ?? 'Team B', _teamBScrollController, scores,
+                  state.selectedTeamB?.name ?? 'Team B', _teamBScrollController, scores,
                   (index) {
-                setState(() => _teamBScore = scores[index]);
+                notifier.setTeamBScore(scores[index]);
               }),
             ],
           ),
@@ -379,8 +327,10 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
     );
   }
 
-  Widget _buildMvpSelector() {
-    if (_winningTeamPlayers.isEmpty) {
+  Widget _buildMvpSelector(LogMatchResultDialogState state) {
+    final notifier = ref.read(logMatchResultDialogNotifierProvider(_params).notifier);
+    
+    if (state.winningTeamPlayers.isEmpty) {
       return Center(
         child: Text(
           'No players on the winning team to select MVP from.',
@@ -392,15 +342,15 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
     return Column(
       children: [
         Text(
-          'Step 2: Select MVP (from ${_winningTeam?.name ?? 'Winning Team'})',
+          'Step 2: Select MVP (from ${state.winningTeam?.name ?? 'Winning Team'})',
           style: PremiumTypography.labelLarge.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 16),
         Expanded(
           child: ListView.builder(
-            itemCount: _winningTeamPlayers.length,
+            itemCount: state.winningTeamPlayers.length,
             itemBuilder: (context, index) {
-              final player = _winningTeamPlayers[index];
+              final player = state.winningTeamPlayers[index];
               return RadioListTile<String>(
                 title: Row(children: [
                   PlayerAvatar(user: player, radius: 20),
@@ -408,11 +358,9 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
                   Text(player.name, style: const TextStyle(color: Colors.white)),
                 ]),
                 value: player.uid,
-                groupValue: _mvpPlayerId,
+                groupValue: state.mvpPlayerId,
                 onChanged: (value) {
-                  setState(() {
-                    _mvpPlayerId = value;
-                  });
+                  notifier.setMvpPlayerId(value);
                 },
                 activeColor: PremiumColors.primary,
               );
@@ -423,8 +371,10 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
     );
   }
 
-  Widget _buildScorersSelector() {
-    final allPlayers = [..._teamAPlayers, ..._teamBPlayers];
+  Widget _buildScorersSelector(LogMatchResultDialogState state) {
+    final notifier = ref.read(logMatchResultDialogNotifierProvider(_params).notifier);
+    final allPlayers = [...state.teamAPlayers, ...state.teamBPlayers];
+    
     return Column(
       children: [
         Text(
@@ -443,15 +393,9 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
                   const SizedBox(width: 12),
                   Text(player.name, style: const TextStyle(color: Colors.white)),
                 ]),
-                value: _scorerIds.contains(player.uid),
+                value: state.scorerIds.contains(player.uid),
                 onChanged: (selected) {
-                  setState(() {
-                    if (selected == true) {
-                      _scorerIds.add(player.uid);
-                    } else {
-                      _scorerIds.remove(player.uid);
-                    }
-                  });
+                  notifier.toggleScorer(player.uid);
                 },
                 activeColor: PremiumColors.primary,
                 checkColor: Colors.black,
@@ -463,8 +407,10 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
     );
   }
 
-  Widget _buildAssistsSelector() {
-    final allPlayers = [..._teamAPlayers, ..._teamBPlayers];
+  Widget _buildAssistsSelector(LogMatchResultDialogState state) {
+    final notifier = ref.read(logMatchResultDialogNotifierProvider(_params).notifier);
+    final allPlayers = [...state.teamAPlayers, ...state.teamBPlayers];
+    
     return Column(
       children: [
         Text(
@@ -483,15 +429,9 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
                   const SizedBox(width: 12),
                   Text(player.name, style: const TextStyle(color: Colors.white)),
                 ]),
-                value: _assistIds.contains(player.uid),
+                value: state.assistIds.contains(player.uid),
                 onChanged: (selected) {
-                  setState(() {
-                    if (selected == true) {
-                      _assistIds.add(player.uid);
-                    } else {
-                      _assistIds.remove(player.uid);
-                    }
-                  });
+                  notifier.toggleAssist(player.uid);
                 },
                 activeColor: PremiumColors.primary,
                 checkColor: Colors.black,
@@ -503,38 +443,62 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
     );
   }
 
-  String _generateConfirmationSummary() {
-    if (_winningTeam == null || _losingTeam == null) return "Confirm details.";
+  String _generateConfirmationSummary(LogMatchResultDialogState state) {
+    if (state.winningTeam == null || state.losingTeam == null) return "Confirm details.";
 
-    final winnerName = _winningTeam!.name;
-    final loserName = _losingTeam!.name;
+    final winnerName = state.winningTeam!.name;
+    final loserName = state.losingTeam!.name;
     final winnerScore =
-        _winningTeam == _selectedTeamA ? _teamAScore : _teamBScore;
+        state.winningTeam == state.selectedTeamA ? state.teamAScore : state.teamBScore;
     final loserScore =
-        _losingTeam == _selectedTeamA ? _teamAScore : _teamBScore;
+        state.losingTeam == state.selectedTeamA ? state.teamAScore : state.teamBScore;
 
     String summary = '$winnerName beat $loserName $winnerScore - $loserScore.';
 
-    if (_mvpPlayerId != null) {
-      final mvp = widget.players.firstWhere((p) => p.uid == _mvpPlayerId,
-          orElse: () => User(uid: '', name: 'Unknown'));
+    if (state.mvpPlayerId != null) {
+      final mvp = widget.players.firstWhere(
+        (p) => p.uid == state.mvpPlayerId,
+        orElse: () => User(
+          uid: '',
+          name: 'Unknown',
+          email: '',
+          birthDate: DateTime.now(),
+          createdAt: DateTime.now(),
+        ),
+      );
       summary += '\n${mvp.name} was the MVP.';
     }
 
-    if (_scorerIds.isNotEmpty) {
-      final scorerNames = _scorerIds.map((id) {
+    if (state.scorerIds.isNotEmpty) {
+      final scorerNames = state.scorerIds.map((id) {
         return widget.players
-            .firstWhere((p) => p.uid == id,
-                orElse: () => User(uid: '', name: 'Unknown'))
+            .firstWhere(
+              (p) => p.uid == id,
+              orElse: () => User(
+                uid: '',
+                name: 'Unknown',
+                email: '',
+                birthDate: DateTime.now(),
+                createdAt: DateTime.now(),
+              ),
+            )
             .name;
       }).join(', ');
       summary += '\nGoals by: $scorerNames.';
     }
-     if (_assistIds.isNotEmpty) {
-      final assistNames = _assistIds.map((id) {
+     if (state.assistIds.isNotEmpty) {
+      final assistNames = state.assistIds.map((id) {
         return widget.players
-            .firstWhere((p) => p.uid == id,
-                orElse: () => User(uid: '', name: 'Unknown'))
+            .firstWhere(
+              (p) => p.uid == id,
+              orElse: () => User(
+                uid: '',
+                name: 'Unknown',
+                email: '',
+                birthDate: DateTime.now(),
+                createdAt: DateTime.now(),
+              ),
+            )
             .name;
       }).join(', ');
       summary += '\nAssists by: $assistNames.';
@@ -543,7 +507,7 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
     return summary;
   }
 
-  Widget _buildConfirmationView() {
+  Widget _buildConfirmationView(LogMatchResultDialogState state) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,7 +524,7 @@ class _LogMatchResultDialogState extends State<LogMatchResultDialog> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              _generateConfirmationSummary(),
+              _generateConfirmationSummary(state),
               style: PremiumTypography.bodyLarge.copyWith(color: Colors.white, height: 1.5),
             ),
           )

@@ -1,3 +1,8 @@
+import 'package:kattrick/models/hub_member.dart';
+
+/// @deprecated Use HubMemberRole instead. This enum is maintained only for backward compatibility.
+/// Will be removed in future version.
+///
 /// Simple user role enum for permission checks
 enum UserRole {
   admin,
@@ -9,8 +14,23 @@ enum UserRole {
 
   /// Check if user is a member
   bool get isMember => this == UserRole.member || this == UserRole.admin;
+
+  /// Convert to HubMemberRole (migration utility)
+  HubMemberRole? toHubMemberRole() {
+    switch (this) {
+      case UserRole.admin:
+        return HubMemberRole.manager;
+      case UserRole.member:
+        return HubMemberRole.member;
+      case UserRole.none:
+        return null;
+    }
+  }
 }
 
+/// @deprecated Use HubMemberRole instead. This enum is maintained only for backward compatibility.
+/// Will be removed in future version. All permission logic has been moved to HubMemberRole.
+///
 /// Hub role enum
 enum HubRole {
   manager,
@@ -65,8 +85,22 @@ enum HubRole {
     }
   }
 
-  ///
+  /// Convert to canonical HubMemberRole (migration utility)
+  HubMemberRole toHubMemberRole() {
+    switch (this) {
+      case HubRole.manager:
+        return HubMemberRole.manager;
+      case HubRole.moderator:
+        return HubMemberRole.moderator;
+      case HubRole.veteran:
+        return HubMemberRole.veteran;
+      case HubRole.member:
+      case HubRole.guest:
+        return HubMemberRole.member;
+    }
+  }
 
+  /// @deprecated Use HubMemberRole permission methods instead
   /// Check if role has permission to perform action
   ///
   /// Permission Matrix (Gap Analysis #1):

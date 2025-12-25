@@ -1,0 +1,6 @@
+All variable/function/module names must be in English only.
+All comments and explanations may be provided in Hebrew if the user requests it.
+Never insert Chinese characters or any non-English letters into code.
+---
+alwaysApply: true
+---

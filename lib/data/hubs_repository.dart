@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/paginated_result.dart';
@@ -68,17 +69,32 @@ class HubsRepository {
       'getHub',
       () => CacheService().getOrFetch<Hub?>(
         CacheKeys.hub(hubId),
-        () => RetryService().execute(
-          () async {
-            final doc = await _firestore.doc(FirestorePaths.hub(hubId)).get();
-            if (!doc.exists) return null;
-            final data = doc.data();
-            if (data == null) return null;
-            return Hub.fromJson({...data, 'hubId': hubId});
-          },
-          config: RetryConfig.network,
-          operationName: 'getHub',
-        ),
+        () async {
+          try {
+            return await RetryService().execute(
+              () async {
+                final doc =
+                    await _firestore.doc(FirestorePaths.hub(hubId)).get();
+                if (!doc.exists) return null;
+                final data = doc.data();
+                if (data == null) return null;
+                return Hub.fromJson({...data, 'hubId': hubId});
+              },
+              config: RetryConfig.network,
+              operationName: 'getHub',
+            );
+          } catch (e) {
+            // If permission denied, log and return null instead of crashing
+            if (e.toString().contains('permission-denied')) {
+              debugPrint(
+                  '⚠️ Permission denied for hub $hubId. This may indicate sync issues with activeMemberIds or hubIds.');
+              debugPrint(
+                  '   Hub may need to sync denormalized arrays or user.hubIds may be out of sync.');
+              return null;
+            }
+            rethrow;
+          }
+        },
         ttl: CacheService.usersTtl, // 1 hour - hubs don't change often
         forceRefresh: forceRefresh,
       ),
@@ -97,95 +113,43 @@ class HubsRepository {
       final data = doc.data();
       if (data == null) return null;
       return Hub.fromJson({...data, 'hubId': hubId});
+    }).handleError((error) {
+      // If permission denied, log and return null instead of crashing
+      if (error.toString().contains('permission-denied')) {
+        debugPrint(
+            '⚠️ Permission denied for hub $hubId in watchHub. This may indicate sync issues.');
+        return null;
+      }
+      // Re-throw other errors
+      throw error;
     });
   }
 
-  /// Create hub
+  /// Create hub (pure data access - business logic moved to HubCreationService)
+  ///
+  /// This method only handles the data write operation.
+  /// For business logic (validation, orchestration), use HubCreationService.createHub()
   Future<String> createHub(Hub hub) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
     }
 
     try {
-      // Pre-check hub creation limit with friendly error messages
-      final checkResult = await canCreateHub(hub.createdBy);
-      if (!checkResult.canCreate) {
-        if (checkResult.reason == HubCreationLimitReason.limitReached) {
-          throw HubCreationLimitException(
-            message: checkResult.message ?? 
-                'הגעת למגבלת יצירת הובים (${checkResult.maxCount}). '
-                'אפשר לעזוב או להעביר בעלות על הוב קיים כדי ליצור חדש.',
-            currentCount: checkResult.currentCount ?? 0,
-            maxCount: checkResult.maxCount ?? 3,
-          );
-        } else {
-          throw Exception(checkResult.message ?? 
-              'לא ניתן לבדוק את מגבלת יצירת הובים. נסה שוב בעוד רגע.');
-        }
-      }
-
       final docRef = hub.hubId.isNotEmpty
           ? _firestore.doc(FirestorePaths.hub(hub.hubId))
           : _firestore.collection(FirestorePaths.hubs()).doc();
 
       final data = hub.toJson();
-      // Keep hubId in data for Firestore rules validation
       data['hubId'] = docRef.id;
+      data['createdAt'] = FieldValue.serverTimestamp();
+      data['updatedAt'] = FieldValue.serverTimestamp();
 
-      // Initialize memberCount to 1 (creator)
-      data['memberCount'] = 1;
-      data['activeMemberIds'] = [hub.createdBy];
-      data['memberIds'] = [hub.createdBy];
-      data['managerIds'] = [hub.createdBy];
-      data['moderatorIds'] = <String>[];
-
-      // Remove legacy 'roles' field - we now use HubMember subcollection exclusively
-      data.remove('roles');
-
-      // Use batch to write hub and add creator to members subcollection
-      final batch = _firestore.batch();
-
-      batch.set(docRef, data, SetOptions(merge: false));
-
-      // Add creator to members subcollection
-      final memberRef = docRef.collection('members').doc(hub.createdBy);
-      batch.set(memberRef, {
-        'hubId': docRef.id,
-        'userId': hub.createdBy,
-        'joinedAt': FieldValue.serverTimestamp(),
-        'role': 'manager',
-        'status': 'active',
-        'veteranSince': null,
-        'managerRating': 0.0,
-        'lastActiveAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'updatedBy': hub.createdBy,
-        'statusReason': null,
-      });
-
-      // Update user's hubIds
-      final userRef = _firestore.doc(FirestorePaths.user(hub.createdBy));
-      final userDoc = await userRef.get();
-      final userData = userDoc.data();
-      final userHubIds = List<String>.from(userData?['hubIds'] ?? []);
-      
-      if (!userHubIds.contains(docRef.id)) {
-        batch.update(userRef, {
-          'hubIds': FieldValue.arrayUnion([docRef.id]),
-        });
-      }
-
-      await batch.commit();
-
-      // Sync denormalized arrays to keep rules fast/safe
-      await _syncDenormalizedMemberArrays(docRef.id);
+      await docRef.set(data, SetOptions(merge: false));
 
       // Invalidate cache
       CacheService().clear(CacheKeys.hub(docRef.id));
 
       return docRef.id;
-    } on HubCreationLimitException {
-      rethrow; // Re-throw limit exceptions as-is
     } catch (e, stackTrace) {
       ErrorHandlerService().logError(
         e,
@@ -266,20 +230,46 @@ class HubsRepository {
         return;
       }
 
-      // Firestore 'in' query is limited to 10 (or 30). User limit is 10.
+      // FIX: Use individual document reads instead of whereIn query
+      // This prevents the entire query from failing if one hub has permission issues
+      // Firestore 'in' query fails if ANY document doesn't pass rules
       hubsSub?.cancel();
-      hubsSub = _firestore
-          .collection(FirestorePaths.hubs())
-          .where(FieldPath.documentId, whereIn: hubIds)
-          .snapshots()
-          .listen((snapshot) {
-        final hubs = snapshot.docs
-            .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
-            .toList();
-        // Manual sort by createdAt descending
-        hubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        controller.add(hubs);
-      }, onError: controller.addError);
+
+      // Create individual streams for each hub
+      final hubStreams = hubIds.map((hubId) {
+        return _firestore.doc(FirestorePaths.hub(hubId)).snapshots().map((doc) {
+          if (!doc.exists) return null;
+          try {
+            return Hub.fromJson({...doc.data()!, 'hubId': doc.id});
+          } catch (e) {
+            debugPrint('Error parsing hub $hubId: $e');
+            return null;
+          }
+        }).handleError((error) {
+          // Silently skip hubs that fail permission checks
+          debugPrint('⚠️ Cannot read hub $hubId: $error');
+          return null;
+        });
+      }).toList();
+
+      // Use RxDart to combine all streams
+      // This allows us to get all hubs that pass permission checks
+      // even if some fail
+      hubsSub = Rx.combineLatest(
+        hubStreams,
+        (List<Hub?> hubs) {
+          final validHubs = hubs.whereType<Hub>().toList();
+          // Manual sort by createdAt descending
+          validHubs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return validHubs;
+        },
+      ).listen(
+        (hubs) => controller.add(hubs),
+        onError: (error) {
+          debugPrint('Error in watchHubsByMember: $error');
+          controller.addError(error);
+        },
+      );
     }, onError: controller.addError);
 
     controller.onCancel = () {
@@ -359,10 +349,13 @@ class HubsRepository {
         final hubData = hubDoc.data()!;
         final userData = userDoc.data()!;
 
-        // Check Hub Capacity (Max 50 active members)
+        // Check Hub Capacity (respects hub.settings.maxMembers, default 50)
         final memberCount = hubData['memberCount'] as int? ?? 0;
-        if (memberCount >= 50) {
-          throw Exception('Hub is full (max 50 members)');
+        final settings = hubData['settings'] as Map<String, dynamic>? ?? {};
+        final maxMembers = settings['maxMembers'] as int? ?? 50;
+
+        if (maxMembers > 0 && memberCount >= maxMembers) {
+          throw Exception('Hub is full (max $maxMembers members)');
         }
 
         // Check User Hub Limit (Max 10)
@@ -437,8 +430,13 @@ class HubsRepository {
         // the count is correct, not set it. This transaction is the source of truth.
       });
 
-      // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
-      await _syncDenormalizedMemberArrays(hubId);
+      // ARCHITECTURAL FIX: Cloud Function now handles denormalized array sync automatically
+      // The onMembershipChange trigger (functions/src/triggers/membershipCounters.js)
+      // syncs activeMemberIds, managerIds, moderatorIds whenever a HubMember is written.
+      // This eliminates the race condition where client-side sync could fail after transaction.
+      //
+      // REMOVED: await syncDenormalizedMemberArrays(hubId);
+      // Cloud Function handles this atomically via triggers.
 
       // Subscribe to hub topic for optimized push notifications
       // This allows sending notifications to ALL hub members with a single API call
@@ -508,8 +506,8 @@ class HubsRepository {
         // the count is correct, not set it. This transaction is the source of truth.
       });
 
-      // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
-      await _syncDenormalizedMemberArrays(hubId);
+      // ARCHITECTURAL FIX: Cloud Function handles denormalized array sync
+      // REMOVED: await syncDenormalizedMemberArrays(hubId);
 
       // Unsubscribe from hub topic to stop receiving push notifications
       await PushNotificationService().unsubscribeFromHubTopic(hubId);
@@ -550,8 +548,8 @@ class HubsRepository {
         'updatedBy': updatedBy,
       });
 
-      // CRITICAL: Sync denormalized member arrays for Firestore Rules optimization
-      await _syncDenormalizedMemberArrays(hubId);
+      // ARCHITECTURAL FIX: Cloud Function handles denormalized array sync
+      // REMOVED: await syncDenormalizedMemberArrays(hubId);
     } catch (e) {
       throw Exception('Failed to update member role: $e');
     }
@@ -700,6 +698,49 @@ class HubsRepository {
     }
   }
 
+  /// Stream membership for a user in a hub (data access)
+  Stream<HubMember?> watchMembership(String hubId, String userId) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value(null);
+    }
+
+    return _firestore.doc('hubs/$hubId/members/$userId').snapshots().map((doc) {
+      if (!doc.exists) return null;
+
+      try {
+        final data = doc.data()!;
+        return HubMember.fromJson({
+          ...data,
+          'hubId': hubId,
+          'userId': userId,
+        });
+      } catch (e) {
+        debugPrint('Error parsing HubMember: $e');
+        return null;
+      }
+    });
+  }
+
+  /// Get membership once (data access)
+  Future<HubMember?> getMembership(String hubId, String userId) async {
+    if (!Env.isFirebaseAvailable) return null;
+
+    try {
+      final doc = await _firestore.doc('hubs/$hubId/members/$userId').get();
+      if (!doc.exists) return null;
+
+      final data = doc.data()!;
+      return HubMember.fromJson({
+        ...data,
+        'hubId': hubId,
+        'userId': userId,
+      });
+    } catch (e) {
+      debugPrint('Error getting HubMember: $e');
+      return null;
+    }
+  }
+
   /// CRITICAL: Sync denormalized member arrays (FIRESTORE RULES OPTIMIZATION)
   ///
   /// This method rebuilds the activeMemberIds, managerIds, and moderatorIds arrays
@@ -711,7 +752,8 @@ class HubsRepository {
   /// WHEN TO CALL: After any membership change (add, remove, role update)
   ///
   /// PERFORMANCE: Single collectionGroup() query + single document update
-  Future<void> _syncDenormalizedMemberArrays(String hubId) async {
+  /// Sync denormalized member arrays (public for services to use)
+  Future<void> syncDenormalizedMemberArrays(String hubId) async {
     if (!Env.isFirebaseAvailable) return;
 
     try {
@@ -940,19 +982,28 @@ class HubsRepository {
 
       // Query Firestore with geohash prefixes (limited to prevent massive loads)
       final allHashes = [centerHash, ...neighbors];
-      final queries = allHashes.map((hash) => _firestore
-          .collection(FirestorePaths.hubs())
-          .where('geohash', isGreaterThanOrEqualTo: hash)
-          .where('geohash', isLessThanOrEqualTo: '$hash~')
-          .limit(50) // Limit per hash query to prevent massive loads
-          .get());
+      final queries = allHashes.map((hash) async {
+        try {
+          final snapshot = await _firestore
+              .collection(FirestorePaths.hubs())
+              .where('geohash', isGreaterThanOrEqualTo: hash)
+              .where('geohash', isLessThanOrEqualTo: '$hash~')
+              .limit(50) // Limit per hash query to prevent massive loads
+              .get();
+          return snapshot.docs;
+        } catch (e) {
+          // If query fails (e.g., permission denied), return empty list
+          debugPrint('⚠️ Geohash query failed for $hash: $e');
+          return <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+        }
+      });
 
       final results = await Future.wait(queries);
 
       // Filter by actual distance
       // Use primaryVenueLocation (preferred) or fallback to location (deprecated)
       final hubs = results
-          .expand((snapshot) => snapshot.docs)
+          .expand((docs) => docs)
           .map((doc) => Hub.fromJson({...doc.data(), 'hubId': doc.id}))
           .where((hub) {
         final hubLocation = hub.primaryVenueLocation ?? hub.location;
@@ -1107,7 +1158,7 @@ class HubsRepository {
           .get();
 
       final count = countQuery.count ?? 0;
-      
+
       if (count >= maxHubsAsOwner) {
         return HubCreationCheckResult(
           canCreate: false,
@@ -1118,7 +1169,7 @@ class HubsRepository {
           maxCount: maxHubsAsOwner,
         );
       }
-      
+
       return HubCreationCheckResult(
         canCreate: true,
         reason: null,
@@ -1565,4 +1616,65 @@ class HubsRepository {
       return null;
     }
   }
+
+  /// Get DocumentReference for a hub (for transactions)
+  DocumentReference getHubRef(String hubId) {
+    return _firestore.doc(FirestorePaths.hub(hubId));
+  }
+
+  /// Get DocumentReference for a hub member (for transactions)
+  DocumentReference getHubMemberRef(String hubId, String userId) {
+    return _firestore.doc('hubs/$hubId/members/$userId');
+  }
+
+  /// Watch pending join requests count for a hub
+  ///
+  /// Returns a stream of the number of pending join requests.
+  /// Used by HubCommandCenter to display notification badge.
+  ///
+  /// Note: For detailed request data, use watchPendingJoinRequests() instead.
+  Stream<int> watchPendingJoinRequestsCount(String hubId) {
+    if (!Env.isFirebaseAvailable) return Stream.value(0);
+
+    return _firestore
+        .collection('hubs')
+        .doc(hubId)
+        .collection('requests')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length)
+        .handleError((error) {
+      debugPrint('Error watching pending join requests count: $error');
+      return 0;
+    });
+  }
+
+  /// Watch pending join requests for a hub (full data)
+  ///
+  /// Returns a stream of QuerySnapshot for all pending join requests.
+  /// Useful when you need full request documents, not just the count.
+  Stream<QuerySnapshot> watchPendingJoinRequests(String hubId) {
+    if (!Env.isFirebaseAvailable) {
+      return Stream.value(
+        _EmptyQuerySnapshot() as QuerySnapshot,
+      );
+    }
+
+    return _firestore
+        .collection('hubs')
+        .doc(hubId)
+        .collection('requests')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .handleError((error) {
+      debugPrint('Error watching pending join requests: $error');
+      return _EmptyQuerySnapshot() as QuerySnapshot;
+    });
+  }
+}
+
+/// Empty QuerySnapshot for error fallback
+class _EmptyQuerySnapshot {
+  List<QueryDocumentSnapshot> get docs => [];
+  int get size => 0;
 }

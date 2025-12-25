@@ -3,12 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/game_result.dart';
-import 'package:kattrick/services/hub_permissions_service.dart'; // Added import
+import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 
 import 'package:kattrick/data/games_repository.dart';
 import 'package:kattrick/data/hubs_repository.dart';
+import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/features/games/domain/services/game_finalization_service.dart';
 import 'package:kattrick/data/signups_repository.dart';
-import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/cache_service.dart';
 import 'package:kattrick/models/game_audit_event.dart';
 import 'package:kattrick/data/notifications_repository.dart';
@@ -24,18 +25,24 @@ import 'package:kattrick/services/logger.dart';
 class GameManagementService {
   final FirebaseFirestore _firestore;
   final GamesRepository _gamesRepo;
+  final GameFinalizationService _finalizationService;
   final HubsRepository _hubsRepo;
+  final UsersRepository _usersRepo;
   final SignupsRepository _signupsRepo;
   final NotificationsRepository _notificationsRepo;
 
   GameManagementService({
     GamesRepository? gamesRepo,
+    GameFinalizationService? finalizationService,
     HubsRepository? hubsRepo,
+    UsersRepository? usersRepo,
     SignupsRepository? signupsRepo,
     NotificationsRepository? notificationsRepo,
     FirebaseFirestore? firestore,
   })  : _gamesRepo = gamesRepo ?? GamesRepository(),
+        _finalizationService = finalizationService ?? GameFinalizationService(),
         _hubsRepo = hubsRepo ?? HubsRepository(),
+        _usersRepo = usersRepo ?? UsersRepository(),
         _signupsRepo = signupsRepo ?? SignupsRepository(),
         _notificationsRepo = notificationsRepo ?? NotificationsRepository(),
         _firestore = firestore ?? FirebaseFirestore.instance;
@@ -65,45 +72,46 @@ class GameManagementService {
     }
 
     return _firestore.runTransaction((transaction) async {
-      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
-      final signupRef =
-          _firestore.doc(FirestorePaths.gameSignup(gameId, userId));
+      // Use repository methods to get references
+      final gameRef = _gamesRepo.getGameRef(gameId);
 
       final gameDoc = await transaction.get(gameRef);
       if (!gameDoc.exists) {
         throw Exception('Game not found');
       }
 
-      final gameData = gameDoc.data()!;
+      final gameData = gameDoc.data() as Map<String, dynamic>;
       final game = Game.fromJson({...gameData, 'gameId': gameId});
 
-      // Check capacity
+      // BUSINESS LOGIC: Check capacity
       if (game.maxPlayers != null &&
           game.denormalized.confirmedPlayerCount >= game.maxPlayers!) {
         throw Exception(
             'Game is full (${game.denormalized.confirmedPlayerCount}/${game.maxPlayers})');
       }
 
-      // Approve player
-      transaction.update(signupRef, {
-        'status': SignupStatus.confirmed.toFirestore(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      // DATA ACCESS: Update signup via repository helper
+      _signupsRepo.updateSignupInTransaction(
+        transaction,
+        gameId,
+        userId,
+        {'status': SignupStatus.confirmed.toFirestore()},
+      );
 
-      transaction.update(gameRef, {
+      // DATA ACCESS: Update game via repository helper
+      final updateData = <String, dynamic>{
         'denormalized.confirmedPlayerCount': FieldValue.increment(1),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
 
-      // Check if now full
+      // BUSINESS LOGIC: Check if now full
       final newCount = game.denormalized.confirmedPlayerCount + 1;
       if (game.maxPlayers != null && newCount >= game.maxPlayers!) {
-        transaction.update(gameRef, {
-          'status': GameStatus.fullyBooked.toFirestore(),
-        });
+        updateData['status'] = GameStatus.fullyBooked.toFirestore();
       }
 
-      // Add audit log entry
+      _gamesRepo.updateGameInTransaction(transaction, gameId, updateData);
+
+      // DATA ACCESS: Add audit log via repository helper
       final auditEntry = GameAuditEvent(
         action: 'PLAYER_APPROVED',
         userId: currentUserId,
@@ -111,9 +119,7 @@ class GameManagementService {
         reason: 'Approved by admin',
       );
 
-      transaction.update(gameRef, {
-        'audit.auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
-      });
+      _gamesRepo.addAuditLogInTransaction(transaction, gameId, auditEntry);
     }).then((_) async {
       // Send notification (outside transaction)
       try {
@@ -170,39 +176,41 @@ class GameManagementService {
     }
 
     return _firestore.runTransaction((transaction) async {
-      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
-      final signupRef =
-          _firestore.doc(FirestorePaths.gameSignup(gameId, userId));
+      // Use repository methods to get references
+      final gameRef = _gamesRepo.getGameRef(gameId);
 
       final gameDoc = await transaction.get(gameRef);
       if (!gameDoc.exists) {
         throw Exception('Game not found');
       }
 
-      final gameData = gameDoc.data()!;
+      final gameData = gameDoc.data() as Map<String, dynamic>;
       final game = Game.fromJson({...gameData, 'gameId': gameId});
 
-      // Update signup to rejected with reason
-      transaction.update(signupRef, {
-        'status': SignupStatus.rejected.toFirestore(),
-        'adminActionReason': reason,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      // DATA ACCESS: Update signup via repository helper
+      _signupsRepo.updateSignupInTransaction(
+        transaction,
+        gameId,
+        userId,
+        {
+          'status': SignupStatus.rejected.toFirestore(),
+          'adminActionReason': reason,
+        },
+      );
 
-      // Decrement count
-      transaction.update(gameRef, {
+      // DATA ACCESS: Update game via repository helper
+      final updateData = <String, dynamic>{
         'denormalized.confirmedPlayerCount': FieldValue.increment(-1),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
 
-      // Reopen if was full
+      // BUSINESS LOGIC: Reopen if was full
       if (game.status == GameStatus.fullyBooked) {
-        transaction.update(gameRef, {
-          'status': GameStatus.recruiting.toFirestore(),
-        });
+        updateData['status'] = GameStatus.recruiting.toFirestore();
       }
 
-      // Add audit log entry
+      _gamesRepo.updateGameInTransaction(transaction, gameId, updateData);
+
+      // DATA ACCESS: Add audit log via repository helper
       final auditEntry = GameAuditEvent(
         action: 'PLAYER_KICKED',
         userId: currentUserId,
@@ -210,9 +218,7 @@ class GameManagementService {
         reason: reason,
       );
 
-      transaction.update(gameRef, {
-        'audit.auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
-      });
+      _gamesRepo.addAuditLogInTransaction(transaction, gameId, auditEntry);
     }).then((_) async {
       // Send notification (outside transaction)
       try {
@@ -284,17 +290,13 @@ class GameManagementService {
 
     // Date changed - need to reset signups
     // Get signup document references (not data) to use in transaction
-    final signupsSnapshot = await _firestore
-        .collection(FirestorePaths.gameSignups(gameId))
-        .get();
+    final signupsSnapshot = await _signupsRepo.getSignupsCollectionRef(gameId).get();
 
     // Track confirmed players for notifications (populated inside transaction)
     final List<String> confirmedPlayerIds = [];
 
     // Use transaction for atomic updates
     return _firestore.runTransaction((transaction) async {
-      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
-
       // CRITICAL: Read all signup documents INSIDE transaction
       // This ensures we see the current state, preventing race conditions
       for (final signupDoc in signupsSnapshot.docs) {
@@ -307,25 +309,28 @@ class GameManagementService {
         final data = signupData.data() as Map<String, dynamic>;
         final status = data['status'] as String?;
 
-        // Only reset if currently confirmed
+        // BUSINESS LOGIC: Only reset if currently confirmed
         if (status == SignupStatus.confirmed.toFirestore()) {
           confirmedPlayerIds.add(signupDoc.id);
 
-          // Reset to pending
-          transaction.update(signupDoc.reference, {
-            'status': SignupStatus.pending.toFirestore(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+          // DATA ACCESS: Reset to pending via repository helper
+          _signupsRepo.updateSignupInTransaction(
+            transaction,
+            gameId,
+            signupDoc.id,
+            {'status': SignupStatus.pending.toFirestore()},
+          );
         }
       }
 
-      // Update game date (after all reads complete)
-      transaction.update(gameRef, {
-        'gameDate': Timestamp.fromDate(newDate),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      // DATA ACCESS: Update game date via repository helper
+      _gamesRepo.updateGameInTransaction(
+        transaction,
+        gameId,
+        {'gameDate': Timestamp.fromDate(newDate)},
+      );
 
-      // Add audit log entry
+      // DATA ACCESS: Add audit log via repository helper
       final auditEntry = GameAuditEvent(
         action: 'GAME_RESCHEDULED',
         userId: currentUserId,
@@ -334,9 +339,7 @@ class GameManagementService {
             'Date changed from ${oldDate.toIso8601String()} to ${newDate.toIso8601String()}',
       );
 
-      transaction.update(gameRef, {
-        'audit.auditLog': FieldValue.arrayUnion([auditEntry.toJson()]),
-      });
+      _gamesRepo.addAuditLogInTransaction(transaction, gameId, auditEntry);
     }).then((_) async {
       // Notify all players (outside transaction)
       for (final playerId in confirmedPlayerIds) {
@@ -456,36 +459,35 @@ class GameManagementService {
 
       // Step 5: Atomic Transaction - Rollback
       await _firestore.runTransaction((transaction) async {
-        // Read game document
-        final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+        // DATA ACCESS: Read game document via repository
+        final gameRef = _gamesRepo.getGameRef(gameId);
         final gameDoc = await transaction.get(gameRef);
 
         if (!gameDoc.exists) {
           throw Exception('Game not found');
         }
 
-        final gameData = gameDoc.data()!;
+        final gameData = gameDoc.data() as Map<String, dynamic>;
         final gameHubId = gameData['hubId'] as String;
 
-        // Verify hub still exists and user is still manager
-        final hubRef = _firestore.doc(FirestorePaths.hub(gameHubId));
+        // BUSINESS LOGIC: Verify hub still exists and user is still manager
+        final hubRef = _hubsRepo.getHubRef(gameHubId);
         final hubDoc = await transaction.get(hubRef);
 
         if (!hubDoc.exists) {
           throw Exception('Hub not found');
         }
 
-        final hubData = hubDoc.data()!;
+        final hubData = hubDoc.data() as Map<String, dynamic>;
         bool isManager = hubData['createdBy'] == currentUserId;
 
         if (!isManager) {
-          // Check member role from subcollection
-          final memberRef =
-              _firestore.doc('hubs/$gameHubId/members/$currentUserId');
+          // Check member role from subcollection via repository
+          final memberRef = _hubsRepo.getHubMemberRef(gameHubId, currentUserId);
           final memberDoc = await transaction.get(memberRef);
 
           if (memberDoc.exists) {
-            final memberData = memberDoc.data()!;
+            final memberData = memberDoc.data() as Map<String, dynamic>;
             final role = memberData['role'] as String?;
             if (role == 'manager' || role == 'admin' || role == 'moderator') {
               isManager = true;
@@ -497,18 +499,17 @@ class GameManagementService {
           throw Exception('Unauthorized: Only Hub Managers can rollback games');
         }
 
-        // Parse teams from gameData
+        // BUSINESS LOGIC: Parse teams from gameData
         final teamsData = gameData['teams'] as List? ?? [];
         final teams = teamsData
             .map((t) => Team.fromJson(t as Map<String, dynamic>))
             .toList();
 
-        // Step 6: Reverse stats for all confirmed players
+        // BUSINESS LOGIC: Reverse stats for all confirmed players
         for (final signup in confirmedSignups) {
           final playerId = signup.playerId;
-          final userRef = _firestore.doc(FirestorePaths.user(playerId));
 
-          // Determine which team the player was on
+          // BUSINESS LOGIC: Determine which team the player was on
           final playerTeamId = teams.isNotEmpty
               ? teams
                   .firstWhere(
@@ -521,10 +522,10 @@ class GameManagementService {
           final wasWinner =
               winningTeamId != null && playerTeamId == winningTeamId;
 
-          // Get player's goals count
+          // BUSINESS LOGIC: Get player's goals count
           final playerGoals = goalScorerCounts[playerId] ?? 0;
 
-          // Prepare stat reversals (negative increments)
+          // BUSINESS LOGIC: Prepare stat reversals (negative increments)
           final userUpdates = <String, dynamic>{
             'gamesPlayed': FieldValue.increment(-1),
           };
@@ -540,11 +541,12 @@ class GameManagementService {
           // Note: We can't reverse assists as they're not stored in the game model
           // This is a known limitation
 
-          transaction.update(userRef, userUpdates);
+          // DATA ACCESS: Update user via repository helper
+          _usersRepo.updateUserInTransaction(transaction, playerId, userUpdates);
         }
 
-        // Step 7: Reset game status and remove scores
-        transaction.update(gameRef, {
+        // DATA ACCESS: Reset game status and remove scores via repository helper
+        _gamesRepo.updateGameInTransaction(transaction, gameId, {
           'status': GameStatus.teamsFormed.toFirestore(),
           'session.legacyTeamAScore': FieldValue.delete(),
           'session.legacyTeamBScore': FieldValue.delete(),
@@ -559,7 +561,6 @@ class GameManagementService {
           'goalScorerNames': FieldValue.delete(),
           'mvpPlayerId': FieldValue.delete(),
           'mvpPlayerName': FieldValue.delete(),
-          'updatedAt': FieldValue.serverTimestamp(),
         });
       });
 
@@ -623,7 +624,7 @@ class GameManagementService {
         mvpPlayerId: newMvpPlayerId,
       );
 
-      await _gamesRepo.finalizeGame(gameId, result);
+      await _finalizationService.finalizeGame(gameId, result);
 
       AppLogger.debug('Game result edited successfully: $gameId');
       AppLogger.debug(

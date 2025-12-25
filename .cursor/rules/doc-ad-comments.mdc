@@ -1,0 +1,12 @@
+All new modules must include:
+- A top-of-file comment explaining the purpose of the file.
+- Clear JSDoc for functions, classes, and services.
+- API endpoints must include:
+  - Description
+  - Params
+  - Response structure
+  - Error possibilities
+Documentation must be short, precise, and contain no redundancy.
+---
+alwaysApply: true
+---

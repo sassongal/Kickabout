@@ -459,7 +459,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           SnackbarHelper.showSuccess(context, l10n.signupRemovedSuccess);
         }
       } else {
-        await signupsRepo.setSignup(
+        final signupService = ref.read(gameSignupServiceProvider);
+        await signupService.setSignup(
             widget.gameId, currentUserId, SignupStatus.confirmed);
         // Increment participation counter
         await usersRepo.updateUser(currentUserId, {

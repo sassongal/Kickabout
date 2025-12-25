@@ -3,16 +3,95 @@ const admin = require('firebase-admin');
 const { info, error, warn } = require('firebase-functions/logger');
 
 /**
- * Trigger: Update hub.memberCount when membership status changes
+ * Sync denormalized member arrays for a hub
+ * This rebuilds activeMemberIds, managerIds, and moderatorIds arrays
+ */
+async function syncHubMemberArrays(hubId) {
+    try {
+        const membersSnap = await admin.firestore()
+            .collection(`hubs/${hubId}/members`)
+            .where('status', '==', 'active')
+            .get();
+
+        const activeMemberIds = [];
+        const managerIds = [];
+        const moderatorIds = [];
+
+        membersSnap.forEach((doc) => {
+            const data = doc.data();
+            const userId = doc.id;
+            const role = data.role || 'member';
+
+            activeMemberIds.push(userId);
+
+            if (role === 'manager') {
+                managerIds.push(userId);
+            } else if (role === 'moderator') {
+                moderatorIds.push(userId);
+            }
+        });
+
+        // Update hub document with denormalized arrays
+        await admin.firestore().doc(`hubs/${hubId}`).update({
+            activeMemberIds,
+            managerIds,
+            moderatorIds,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        info(`[syncArrays] Synced ${hubId}: ${activeMemberIds.length} active, ${managerIds.length} managers, ${moderatorIds.length} moderators`);
+    } catch (err) {
+        error(`[syncArrays] Error syncing ${hubId}:`, err);
+        throw err;
+    }
+}
+
+/**
+ * Sync user.hubIds array based on active memberships
+ */
+async function syncUserHubIds(userId) {
+    try {
+        // Find all hubs where user is an active member
+        // Note: collectionGroup query can't use documentId in where clause
+        // So we query all active members and filter by userId from path
+        const membershipsSnap = await admin.firestore()
+            .collectionGroup('members')
+            .where('status', '==', 'active')
+            .get();
+
+        const hubIds = [];
+        membershipsSnap.forEach((doc) => {
+            // Extract hubId and userId from path: hubs/{hubId}/members/{userId}
+            const pathParts = doc.ref.path.split('/');
+            if (pathParts.length >= 4 && pathParts[0] === 'hubs' && pathParts[3] === userId) {
+                hubIds.push(pathParts[1]);
+            }
+        });
+
+        // Update user document
+        await admin.firestore().doc(`users/${userId}`).update({
+            hubIds,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        info(`[syncUserHubIds] Synced ${userId}: ${hubIds.length} hubs`);
+    } catch (err) {
+        error(`[syncUserHubIds] Error syncing ${userId}:`, err);
+        // Non-fatal - don't throw
+    }
+}
+
+/**
+ * Trigger: Update hub.memberCount and sync arrays when membership status changes
  * Triggers on: hubs/{hubId}/members/{userId} write
  * 
- * This keeps the denormalized memberCount in sync with actual active members.
+ * This keeps the denormalized memberCount and arrays in sync with actual active members.
  * Only counts members with status='active'.
  */
 exports.onMembershipChange = onDocumentWritten('hubs/{hubId}/members/{userId}', async (event) => {
     const hubId = event.params.hubId;
     const userId = event.params.userId;
-    const hubRef = admin.firestore().doc(`hubs/${hubId}`);
+    const hubRef = admin.firestore().doc(`hubs/${hubId}`); // Using admin.firestore() directly (not db from utils)
 
     const before = event.data.before.exists ? event.data.before.data() : null;
     const after = event.data.after.exists ? event.data.after.data() : null;
@@ -39,6 +118,9 @@ exports.onMembershipChange = onDocumentWritten('hubs/{hubId}/members/{userId}', 
     } else {
         // No status change affecting count (e.g., role change, rating update)
         info(`[memberCount] ${userId} updated in ${hubId} (no count change)`);
+        // Still sync arrays in case role changed
+        await syncHubMemberArrays(hubId);
+        await syncUserHubIds(userId);
         return;
     }
 
@@ -54,6 +136,12 @@ exports.onMembershipChange = onDocumentWritten('hubs/{hubId}/members/{userId}', 
         error(`[memberCount] Error updating ${hubId}:`, err);
         throw err;
     }
+
+    // CRITICAL: Sync denormalized arrays after membership change
+    await syncHubMemberArrays(hubId);
+    
+    // CRITICAL: Sync user.hubIds array
+    await syncUserHubIds(userId);
 });
 
 /**

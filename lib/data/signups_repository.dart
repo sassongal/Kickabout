@@ -37,10 +37,12 @@ class SignupsRepository {
         .map((doc) => doc.exists ? GameSignup.fromJson(doc.data()!) : null);
   }
 
-  /// Set signup (create or update)
+  /// Set signup (create or update) - DATA ACCESS ONLY
   /// 
-  /// Uses transaction to ensure atomic updates and prevent race conditions
-  /// Throws an exception if the game is full (playerCount >= maxPlayers)
+  /// NOTE: For business logic (capacity validation), use GameSignupService.setSignup()
+  /// 
+  /// This method performs pure data access without business logic validation.
+  /// It should only be used when business logic has already been validated.
   Future<void> setSignup(
     String gameId,
     String uid,
@@ -51,52 +53,15 @@ class SignupsRepository {
     }
 
     try {
-      // Use transaction to ensure atomic capacity check and signup update
-      await _firestore.runTransaction((transaction) async {
-        final gameRef = _firestore.doc(FirestorePaths.game(gameId));
-        final signupRef = _firestore.doc(FirestorePaths.gameSignup(gameId, uid));
+      final signup = GameSignup(
+        playerId: uid,
+        signedUpAt: DateTime.now(),
+        status: status,
+      );
 
-        // Read both game and existing signup within transaction
-        final gameDoc = await transaction.get(gameRef);
-        final signupDoc = await transaction.get(signupRef);
-
-        if (!gameDoc.exists) {
-          throw Exception('Game not found');
-        }
-
-        final gameData = gameDoc.data()!;
-
-        // Check if game is full (only for confirmed signups)
-        if (status == SignupStatus.confirmed) {
-          final maxPlayers = gameData['maxParticipants'] as int? ??
-              (gameData['teamCount'] as int? ?? 2) * 3; // Default: 3 per team
-
-          // OPTIMIZED: Use denormalized confirmedPlayerCount (updated by Cloud Function)
-          // This avoids querying all signups - 90% faster!
-          final currentPlayerCount = (gameData['confirmedPlayerCount'] as int?) ?? 0;
-          final isFull = gameData['isFull'] as bool? ?? false;
-
-          // Check if user is already signed up (to allow updates)
-          final existingSignup = signupDoc.exists
-              ? GameSignup.fromJson(signupDoc.data()!)
-              : null;
-          final isNewSignup = existingSignup == null ||
-              existingSignup.status != SignupStatus.confirmed;
-
-          if (isNewSignup && (isFull || currentPlayerCount >= maxPlayers)) {
-            throw Exception('המשחק מלא. אין מקום לשחקנים נוספים.');
-          }
-        }
-
-        // Create or update signup atomically
-        final signup = GameSignup(
-          playerId: uid,
-          signedUpAt: DateTime.now(),
-          status: status,
-        );
-
-        transaction.set(signupRef, signup.toJson());
-      });
+      await _firestore
+          .doc(FirestorePaths.gameSignup(gameId, uid))
+          .set(signup.toJson());
     } catch (e) {
       throw Exception('Failed to set signup: $e');
     }
@@ -177,6 +142,31 @@ class SignupsRepository {
     } catch (e) {
       return false;
     }
+  }
+
+  /// Get DocumentReference for a signup (for transactions)
+  DocumentReference getSignupRef(String gameId, String userId) {
+    return _firestore.doc(FirestorePaths.gameSignup(gameId, userId));
+  }
+
+  /// Get DocumentReference for signups collection (for transactions)
+  CollectionReference getSignupsCollectionRef(String gameId) {
+    return _firestore.collection(FirestorePaths.gameSignups(gameId));
+  }
+
+  /// Update signup within a transaction
+  /// 
+  /// This is a helper for services that need to update signups in transactions.
+  /// The service should handle business logic, this just performs the data update.
+  void updateSignupInTransaction(
+    Transaction transaction,
+    String gameId,
+    String userId,
+    Map<String, dynamic> data,
+  ) {
+    final signupRef = getSignupRef(gameId, userId);
+    data['updatedAt'] = FieldValue.serverTimestamp();
+    transaction.update(signupRef, data);
   }
 }
 

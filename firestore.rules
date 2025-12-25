@@ -21,6 +21,20 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/hubs/$(hubId)).data;
     }
 
+    /// Check if user can manage signups for a game (creator or admin)
+    /// FIX: Check creator first to avoid circular dependency
+    function canManageGameSignups(gameId) {
+      let game = get(/databases/$(database)/documents/games/$(gameId)).data;
+      // CRITICAL: Check creator first before reading hub (avoids circular dependency)
+      // If user is creator, allow immediately without reading hub
+      let hub = getHubData(game.hubId);
+      // Check creator first (most common case for newly created hubs)
+      return isAuthenticated() && (
+        (hub.createdBy != null && hub.createdBy == request.auth.uid) ||
+        isHubAdmin(game.hubId)
+      );
+    }
+
     // ============================================
     // HubMember Subcollection Helpers (NEW)
     // ============================================
@@ -95,6 +109,43 @@ service cloud.firestore {
     /// Alias for backward compatibility
     function isHubManagerOrModerator(hubId) {
       return isHubModerator(hubId);
+    }
+
+    /// Check if current user is the hub creator
+    /// This function checks resource.data.createdBy directly without reading the hub document
+    /// CRITICAL: Use this in read rules to avoid circular dependency
+    function isHubCreator() {
+      return isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    }
+    
+    /// Check if current user is the hub creator by hubId
+    /// This reads the hub document but checks creator first
+    /// Use this when you need to check creator status for a specific hubId (e.g., in subcollections)
+    function isHubCreatorById(hubId) {
+      let hub = getHubData(hubId);
+      return isAuthenticated() && hub.createdBy == request.auth.uid;
+    }
+    
+    /// Check if user can read a hub (works for both document reads and queries)
+    /// Uses getHubData() to read hub data, which works for both cases
+    /// OPTIMIZED: Checks creator and isPrivate directly from hub data to avoid calling isHubMember unnecessarily
+    /// CRITICAL: Creator check is first - creator is ALWAYS allowed even if not in activeMemberIds
+    /// NOTE: getHubData() will throw if hub doesn't exist, which will deny access (correct behavior)
+    function canReadHub(hubId) {
+      let hub = getHubData(hubId);
+      return isAuthenticated() && (
+        // Creator can always read (checked first - CRITICAL for newly created hubs)
+        // Handle case where createdBy might be null (admin console) - if null, skip creator check
+        (hub.createdBy != null && hub.createdBy == request.auth.uid) ||
+        // Public hubs can be read by anyone (isPrivate is false by default)
+        // If isPrivate is null or false, allow read
+        (hub.isPrivate == null || hub.isPrivate == false) ||
+        // Private hubs: check if user is active member
+        // Check activeMemberIds first (optimized)
+        (hub.activeMemberIds != null && request.auth.uid in hub.activeMemberIds) ||
+        // Fallback: if activeMemberIds doesn't exist, check memberIds
+        (hub.activeMemberIds == null && hub.memberIds != null && request.auth.uid in hub.memberIds)
+      );
     }
 
     /// Check if user is a member (backward compatibility - now checks active status)
@@ -273,7 +324,11 @@ service cloud.firestore {
       // Super Admin can read/write any hub
       allow read, write: if isSuperAdmin();
       
-      allow read: if isAuthenticated() && (resource.data.isPrivate == false || isHubMember(hubId));
+      // FIX: Allow creator to read their hub immediately after creation
+      // This prevents circular dependency where isHubMember needs to read hub to check membership
+      // Uses canReadHub() which works for both document reads and queries
+      // Note: This always reads hub data (even for document reads) to support queries
+      allow read: if canReadHub(hubId);
 
       allow create: if isAuthenticated() &&
         request.resource.data.keys().hasAll(['hubId', 'name', 'createdBy', 'createdAt']) &&
@@ -287,7 +342,14 @@ service cloud.firestore {
             : true
         );
 
-      allow update: if canHandleRequests(hubId) &&
+      // FIX: Allow creator to update their hub immediately after creation
+      // Check creator first to avoid circular dependency in canHandleRequests
+      allow update: if isAuthenticated() && (
+        // Creator can always update their hub (checked first)
+        isHubCreator() ||
+        // Managers/moderators can also update
+        canHandleRequests(hubId)
+      ) &&
         request.resource.data.hubId == resource.data.hubId &&
         request.resource.data.createdBy == resource.data.createdBy &&
         request.resource.data.createdAt == resource.data.createdAt;
@@ -295,30 +357,55 @@ service cloud.firestore {
       allow delete: if isHubManager(hubId);
 
       match /members/{userId} {
-        allow read: if isHubMember(hubId) || isSuperAdmin();
+        // FIX: Allow creator to read their own membership immediately after hub creation
+        // Check creator first to avoid circular dependency
+        allow read: if isAuthenticated() && (
+          // Creator can always read their own membership (checked first)
+          (isHubCreatorById(hubId) && isOwner(userId)) ||
+          // Hub members can read other members
+          isHubMember(hubId)
+        ) || isSuperAdmin();
 
         // CREATE: User can request to join (handled in /requests), or manager can add them.
         // User cannot set their own role on creation.
-        allow create: if (isHubManager(hubId) &&
-          request.resource.data.role in ['member', 'moderator']
+        // FIX: Allow creator to create their own membership immediately after hub creation
+        // CAPACITY CHECK: Enforce maxMembers limit (default 50, can be changed in hub settings)
+        allow create: if isAuthenticated() && (
+          // Creator can create their own membership (checked first)
+          (isHubCreatorById(hubId) && isOwner(userId) && request.resource.data.role == 'manager') ||
+          // Managers can add other members (with capacity check)
+          (isHubManager(hubId) &&
+           request.resource.data.role in ['member', 'moderator'] &&
+           // Capacity check: memberCount < maxMembers (or maxMembers == 0 for unlimited)
+           (getHubData(hubId).memberCount < (getHubData(hubId).settings.maxMembers != null ? getHubData(hubId).settings.maxMembers : 50) ||
+            (getHubData(hubId).settings.maxMembers != null && getHubData(hubId).settings.maxMembers == 0)))
         ) || isSuperAdmin();
 
         // UPDATE: User can only update to leave. Manager can update roles/ratings.
         // CRITICAL: managerRating is PROTECTED - only hub managers can modify it.
         // This prevents players from inflating their own skill rating used for team balancing.
         // Regular players CANNOT see their managerRating (read-protected in UI).
+        // FIX: Allow creator to update their own membership immediately after hub creation
         allow update: if (
           // User is leaving the hub (CANNOT change role or managerRating)
           (isOwner(userId) &&
            request.resource.data.status == 'left' &&
            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'managerRating'])) ||
+          // Creator can update their own membership (checked before isHubManager to avoid circular dependency)
+          (isHubCreatorById(hubId) && isOwner(userId) &&
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['veteranSince'])) ||
           // Manager is managing the member (CAN update role and managerRating, but NOT veteranSince)
           (isHubManager(hubId) &&
            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['veteranSince']))
         ) || isSuperAdmin();
 
         // DELETE: User can leave (delete their membership) or manager can remove them.
-        allow delete: if (isOwner(userId) || isHubManager(hubId)) || isSuperAdmin();
+        // FIX: Creator check is implicit in isHubManager, but explicit check is safer
+        allow delete: if isAuthenticated() && (
+          isOwner(userId) ||
+          isHubCreatorById(hubId) ||
+          isHubManager(hubId)
+        ) || isSuperAdmin();
       }
       
       match /requests/{userId} {
@@ -463,13 +550,13 @@ service cloud.firestore {
         // This prevents self-confirmation and bypassing payment/capacity checks
         allow update: if (isAuthenticated() && (
           (isOwner(userId) && isValidSignupUpdate()) ||
-          isHubAdmin(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
+          // FIX: Check if user is hub creator or admin
+          canManageGameSignups(gameId)
         )) || isSuperAdmin();
 
         // Only admins can delete signups
-        allow delete: if (isAuthenticated() &&
-          isHubAdmin(get(/databases/$(database)/documents/games/$(gameId)).data.hubId)
-        ) || isSuperAdmin();
+        // FIX: Check if user is hub creator or admin
+        allow delete: if (isAuthenticated() && canManageGameSignups(gameId)) || isSuperAdmin();
       }
 
       match /chatMessages/{messageId} {

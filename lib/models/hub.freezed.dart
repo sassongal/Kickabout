@@ -39,8 +39,13 @@ mixin _$Hub {
       throw _privateConstructorUsedError; // User IDs with 'manager' role
   List<String> get moderatorIds =>
       throw _privateConstructorUsedError; // User IDs with 'moderator' role
-// Settings
-  Map<String, dynamic> get settings =>
+// Settings (typed for compile-time safety)
+  @HubSettingsConverter()
+  HubSettings get settings =>
+      throw _privateConstructorUsedError; // @deprecated Legacy settings map - kept for backward compatibility during migration
+// Use `settings` field instead. Will be removed after all data is migrated.
+  @Deprecated('Use settings field instead')
+  Map<String, dynamic>? get legacySettings =>
       throw _privateConstructorUsedError; // Custom permissions (RARE overrides only)
 // Example: Allow specific user to create events even if not moderator
 // Format: {'canCreateEvents': ['userId1', 'userId2']}
@@ -112,7 +117,9 @@ abstract class $HubCopyWith<$Res> {
       List<String> activeMemberIds,
       List<String> managerIds,
       List<String> moderatorIds,
-      Map<String, dynamic> settings,
+      @HubSettingsConverter() HubSettings settings,
+      @Deprecated('Use settings field instead')
+      Map<String, dynamic>? legacySettings,
       Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
@@ -132,6 +139,8 @@ abstract class $HubCopyWith<$Res> {
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity,
       double activityScore});
+
+  $HubSettingsCopyWith<$Res> get settings;
 }
 
 /// @nodoc
@@ -158,6 +167,7 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
     Object? managerIds = null,
     Object? moderatorIds = null,
     Object? settings = null,
+    Object? legacySettings = freezed,
     Object? permissions = null,
     Object? location = freezed,
     Object? geohash = freezed,
@@ -218,7 +228,11 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
       settings: null == settings
           ? _value.settings
           : settings // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
+              as HubSettings,
+      legacySettings: freezed == legacySettings
+          ? _value.legacySettings
+          : legacySettings // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>?,
       permissions: null == permissions
           ? _value.permissions
           : permissions // ignore: cast_nullable_to_non_nullable
@@ -297,6 +311,16 @@ class _$HubCopyWithImpl<$Res, $Val extends Hub> implements $HubCopyWith<$Res> {
               as double,
     ) as $Val);
   }
+
+  /// Create a copy of Hub
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $HubSettingsCopyWith<$Res> get settings {
+    return $HubSettingsCopyWith<$Res>(_value.settings, (value) {
+      return _then(_value.copyWith(settings: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -315,7 +339,9 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       List<String> activeMemberIds,
       List<String> managerIds,
       List<String> moderatorIds,
-      Map<String, dynamic> settings,
+      @HubSettingsConverter() HubSettings settings,
+      @Deprecated('Use settings field instead')
+      Map<String, dynamic>? legacySettings,
       Map<String, dynamic> permissions,
       @NullableGeoPointConverter() GeoPoint? location,
       String? geohash,
@@ -335,6 +361,9 @@ abstract class _$$HubImplCopyWith<$Res> implements $HubCopyWith<$Res> {
       int? gameCount,
       @TimestampConverter() DateTime? lastActivity,
       double activityScore});
+
+  @override
+  $HubSettingsCopyWith<$Res> get settings;
 }
 
 /// @nodoc
@@ -358,6 +387,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
     Object? managerIds = null,
     Object? moderatorIds = null,
     Object? settings = null,
+    Object? legacySettings = freezed,
     Object? permissions = null,
     Object? location = freezed,
     Object? geohash = freezed,
@@ -416,9 +446,13 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
           : moderatorIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
       settings: null == settings
-          ? _value._settings
+          ? _value.settings
           : settings // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
+              as HubSettings,
+      legacySettings: freezed == legacySettings
+          ? _value._legacySettings
+          : legacySettings // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>?,
       permissions: null == permissions
           ? _value._permissions
           : permissions // ignore: cast_nullable_to_non_nullable
@@ -512,11 +546,9 @@ class _$HubImpl implements _Hub {
       final List<String> activeMemberIds = const [],
       final List<String> managerIds = const [],
       final List<String> moderatorIds = const [],
-      final Map<String, dynamic> settings = const {
-        'showManagerContactInfo': true,
-        'allowJoinRequests': true,
-        'allowModeratorsToCreateGames': false
-      },
+      @HubSettingsConverter() this.settings = const HubSettings(),
+      @Deprecated('Use settings field instead')
+      final Map<String, dynamic>? legacySettings,
       final Map<String, dynamic> permissions = const {},
       @NullableGeoPointConverter() this.location,
       this.geohash,
@@ -539,7 +571,7 @@ class _$HubImpl implements _Hub {
       : _activeMemberIds = activeMemberIds,
         _managerIds = managerIds,
         _moderatorIds = moderatorIds,
-        _settings = settings,
+        _legacySettings = legacySettings,
         _permissions = permissions,
         _venueIds = venueIds;
 
@@ -602,16 +634,24 @@ class _$HubImpl implements _Hub {
   }
 
 // User IDs with 'moderator' role
-// Settings
-  final Map<String, dynamic> _settings;
-// User IDs with 'moderator' role
-// Settings
+// Settings (typed for compile-time safety)
   @override
   @JsonKey()
-  Map<String, dynamic> get settings {
-    if (_settings is EqualUnmodifiableMapView) return _settings;
+  @HubSettingsConverter()
+  final HubSettings settings;
+// @deprecated Legacy settings map - kept for backward compatibility during migration
+// Use `settings` field instead. Will be removed after all data is migrated.
+  final Map<String, dynamic>? _legacySettings;
+// @deprecated Legacy settings map - kept for backward compatibility during migration
+// Use `settings` field instead. Will be removed after all data is migrated.
+  @override
+  @Deprecated('Use settings field instead')
+  Map<String, dynamic>? get legacySettings {
+    final value = _legacySettings;
+    if (value == null) return null;
+    if (_legacySettings is EqualUnmodifiableMapView) return _legacySettings;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_settings);
+    return EqualUnmodifiableMapView(value);
   }
 
 // Custom permissions (RARE overrides only)
@@ -703,7 +743,7 @@ class _$HubImpl implements _Hub {
 
   @override
   String toString() {
-    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, activeMemberIds: $activeMemberIds, managerIds: $managerIds, moderatorIds: $moderatorIds, settings: $settings, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, profileImageUrl: $profileImageUrl, logoUrl: $logoUrl, bannerUrl: $bannerUrl, hubRules: $hubRules, region: $region, city: $city, isPrivate: $isPrivate, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, activityScore: $activityScore)';
+    return 'Hub(hubId: $hubId, name: $name, description: $description, createdBy: $createdBy, createdAt: $createdAt, memberCount: $memberCount, activeMemberIds: $activeMemberIds, managerIds: $managerIds, moderatorIds: $moderatorIds, settings: $settings, legacySettings: $legacySettings, permissions: $permissions, location: $location, geohash: $geohash, radius: $radius, venueIds: $venueIds, mainVenueId: $mainVenueId, primaryVenueId: $primaryVenueId, primaryVenueLocation: $primaryVenueLocation, profileImageUrl: $profileImageUrl, logoUrl: $logoUrl, bannerUrl: $bannerUrl, hubRules: $hubRules, region: $region, city: $city, isPrivate: $isPrivate, paymentLink: $paymentLink, gameCount: $gameCount, lastActivity: $lastActivity, activityScore: $activityScore)';
   }
 
   @override
@@ -727,7 +767,10 @@ class _$HubImpl implements _Hub {
                 .equals(other._managerIds, _managerIds) &&
             const DeepCollectionEquality()
                 .equals(other._moderatorIds, _moderatorIds) &&
-            const DeepCollectionEquality().equals(other._settings, _settings) &&
+            (identical(other.settings, settings) ||
+                other.settings == settings) &&
+            const DeepCollectionEquality()
+                .equals(other._legacySettings, _legacySettings) &&
             const DeepCollectionEquality()
                 .equals(other._permissions, _permissions) &&
             (identical(other.location, location) ||
@@ -775,7 +818,8 @@ class _$HubImpl implements _Hub {
         const DeepCollectionEquality().hash(_activeMemberIds),
         const DeepCollectionEquality().hash(_managerIds),
         const DeepCollectionEquality().hash(_moderatorIds),
-        const DeepCollectionEquality().hash(_settings),
+        settings,
+        const DeepCollectionEquality().hash(_legacySettings),
         const DeepCollectionEquality().hash(_permissions),
         location,
         geohash,
@@ -824,7 +868,9 @@ abstract class _Hub implements Hub {
       final List<String> activeMemberIds,
       final List<String> managerIds,
       final List<String> moderatorIds,
-      final Map<String, dynamic> settings,
+      @HubSettingsConverter() final HubSettings settings,
+      @Deprecated('Use settings field instead')
+      final Map<String, dynamic>? legacySettings,
       final Map<String, dynamic> permissions,
       @NullableGeoPointConverter() final GeoPoint? location,
       final String? geohash,
@@ -871,9 +917,16 @@ abstract class _Hub implements Hub {
   List<String> get managerIds; // User IDs with 'manager' role
   @override
   List<String> get moderatorIds; // User IDs with 'moderator' role
-// Settings
+// Settings (typed for compile-time safety)
   @override
-  Map<String, dynamic> get settings; // Custom permissions (RARE overrides only)
+  @HubSettingsConverter()
+  HubSettings
+      get settings; // @deprecated Legacy settings map - kept for backward compatibility during migration
+// Use `settings` field instead. Will be removed after all data is migrated.
+  @override
+  @Deprecated('Use settings field instead')
+  Map<String, dynamic>?
+      get legacySettings; // Custom permissions (RARE overrides only)
 // Example: Allow specific user to create events even if not moderator
 // Format: {'canCreateEvents': ['userId1', 'userId2']}
   @override

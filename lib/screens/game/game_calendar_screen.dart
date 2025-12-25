@@ -36,11 +36,11 @@ class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
+      final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
       List<Game> games;
 
       if (widget.hubId != null) {
-        games = await gamesRepo.getGamesByHub(widget.hubId!);
+        games = await gameQueriesRepo.getGamesByHub(widget.hubId!);
       } else {
         // Get all games for current user's hubs
         final currentUserId = ref.read(currentUserIdProvider);
@@ -51,7 +51,7 @@ class _GameCalendarScreenState extends ConsumerState<GameCalendarScreen> {
           final userHubs = await hubsRepo.getHubsByMember(currentUserId);
           final allGames = <Game>[];
           for (final hub in userHubs) {
-            final hubGames = await gamesRepo.getGamesByHub(hub.hubId);
+            final hubGames = await gameQueriesRepo.getGamesByHub(hub.hubId);
             allGames.addAll(hubGames);
           }
           games = allGames;

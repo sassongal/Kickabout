@@ -6,8 +6,8 @@ import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/services/cache_service.dart';
 import 'package:kattrick/services/retry_service.dart';
 import 'package:kattrick/services/monitoring_service.dart';
-import 'package:kattrick/logic/team_maker.dart';
-import 'package:kattrick/logic/live_match_permissions.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
+import 'package:kattrick/features/games/domain/services/live_match_permissions.dart';
 
 /// Repository for managing Hub events
 class HubEventsRepository {

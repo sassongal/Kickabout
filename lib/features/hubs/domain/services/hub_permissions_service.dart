@@ -14,7 +14,7 @@ library;
 import 'package:kattrick/models/hub_member.dart';
 import 'package:kattrick/models/hub.dart';
 import 'package:kattrick/models/hub_role.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/data/hubs_repository.dart';
 
 /// Permission capabilities mapped to roles
 ///
@@ -196,6 +196,7 @@ class HubPermissions {
 
   String get roleDisplayName => effectiveRole.displayName;
 
+  /// @deprecated Use effectiveRole instead. This backward compatibility shim will be removed.
   /// Backward compatibility: Map HubMemberRole to HubRole
   /// This allows existing UI code that uses HubRole to continue working
   HubRole get userRole {
@@ -228,44 +229,27 @@ class HubPermissions {
   }
 }
 
-/// Service for fetching and managing hub permissions
+/// Service for managing hub permissions (business logic)
+///
+/// This service encapsulates permission business logic and uses HubsRepository
+/// for data access. It should be placed in the domain layer.
 class HubPermissionsService {
-  final FirebaseFirestore _firestore;
+  final HubsRepository _hubsRepo;
 
-  HubPermissionsService([FirebaseFirestore? firestore])
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  HubPermissionsService({HubsRepository? hubsRepo})
+      : _hubsRepo = hubsRepo ?? HubsRepository();
 
-  /// Stream membership for a user in a hub
+  /// Stream membership for a user in a hub (delegates to repository)
   Stream<HubMember?> watchMembership(String hubId, String userId) {
-    return _firestore.doc('hubs/$hubId/members/$userId').snapshots().map((doc) {
-      if (!doc.exists) return null;
-
-      try {
-        return HubMember.fromJson({
-          ...doc.data()!,
-          'hubId': hubId,
-          'userId': userId,
-        });
-      } catch (e) {
-        print('Error parsing HubMember: $e');
-        return null;
-      }
-    });
+    return _hubsRepo.watchMembership(hubId, userId);
   }
 
-  /// Get membership once
+  /// Get membership once (delegates to repository)
   Future<HubMember?> getMembership(String hubId, String userId) async {
-    final doc = await _firestore.doc('hubs/$hubId/members/$userId').get();
-    if (!doc.exists) return null;
-
-    return HubMember.fromJson({
-      ...doc.data()!,
-      'hubId': hubId,
-      'userId': userId,
-    });
+    return _hubsRepo.getMembership(hubId, userId);
   }
 
-  /// Get permissions for a user in a hub
+  /// Get permissions for a user in a hub (business logic)
   Future<HubPermissions> getPermissions(
     Hub hub,
     String userId,
@@ -278,7 +262,7 @@ class HubPermissionsService {
     );
   }
 
-  /// Create permissions object from existing membership
+  /// Create permissions object from existing membership (business logic)
   HubPermissions createPermissions(
     Hub hub,
     HubMember? membership,
@@ -291,3 +275,4 @@ class HubPermissionsService {
     );
   }
 }
+

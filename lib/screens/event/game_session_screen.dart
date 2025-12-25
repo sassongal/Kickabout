@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/services/hub_permissions_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/screens/event/session_controller.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
@@ -96,8 +96,8 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
     if (currentUserId == null) return;
 
     try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
-      await gamesRepo.startSession(_game!.gameId, currentUserId);
+      final sessionRepo = ref.read(sessionRepositoryProvider);
+      await sessionRepo.startSession(_game!.gameId, currentUserId);
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'הסשן התחיל!');
@@ -140,8 +140,8 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
     if (confirm != true) return;
 
     try {
-      final gamesRepo = ref.read(gamesRepositoryProvider);
-      await gamesRepo.endSession(_game!.gameId, currentUserId);
+      final sessionRepo = ref.read(sessionRepositoryProvider);
+      await sessionRepo.endSession(_game!.gameId, currentUserId);
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'הסשן הסתיים!');
@@ -374,7 +374,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
         // Pending Approvals (Manager only)
         if (isManager) ...[
           StreamBuilder<List<MatchResult>>(
-            stream: ref.read(gamesRepositoryProvider).watchPendingMatches(_game!.gameId),
+            stream: ref.read(matchApprovalRepositoryProvider).watchPendingMatches(_game!.gameId),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const SizedBox.shrink();
 
@@ -384,7 +384,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                 teams: _game!.teams,
                 onApprove: (matchId) async {
                   try {
-                    await ref.read(gamesRepositoryProvider).approveMatch(
+                    await ref.read(matchApprovalRepositoryProvider).approveMatch(
                           _game!.gameId,
                           matchId,
                           currentUserId,
@@ -400,7 +400,7 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
                 },
                 onReject: (matchId, reason) async {
                   try {
-                    await ref.read(gamesRepositoryProvider).rejectMatch(
+                    await ref.read(matchApprovalRepositoryProvider).rejectMatch(
                           _game!.gameId,
                           matchId,
                           currentUserId,

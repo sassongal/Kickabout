@@ -52,10 +52,10 @@
 		<string>אנחנו זקוקים למיקום שלך כדי למצוא מגרשים ומשחקים קרובים</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
-        <!-- FIX: Ensure this matches your dart-define or replace with actual key for quick dev -->
+		<!-- FIX: Ensure this matches your dart-define or replace with actual key for quick dev -->
 		<key>GOOGLE_MAPS_API_KEY</key>
 		<string>$(GOOGLE_MAPS_API_KEY)</string>
-        <key>io.flutter.embedded_views_preview</key>
-        <true/>
+		<key>io.flutter.embedded_views_preview</key>
+		<true/>
 	</dict>
 </plist>

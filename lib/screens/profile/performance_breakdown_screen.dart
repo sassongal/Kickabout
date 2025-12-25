@@ -33,13 +33,13 @@ class _PerformanceBreakdownScreenState
 
   Future<List<_HubPerformance>> _loadData() async {
     final hubsRepo = ref.read(hubsRepositoryProvider);
-    final gamesRepo = ref.read(gamesRepositoryProvider);
+    final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
     final hubs = await hubsRepo.getHubsByMember(widget.userId);
 
     final List<_HubPerformance> results = [];
     for (final hub in hubs) {
       try {
-        final games = await gamesRepo.getGamesByHub(hub.hubId);
+        final games = await gameQueriesRepo.getGamesByHub(hub.hubId);
         final myGames = games
             .where((g) =>
                 g.denormalized.confirmedPlayerIds.contains(widget.userId))
@@ -66,10 +66,8 @@ class _PerformanceBreakdownScreenState
           if (myTeamColor != null) {
             for (final match in game.session.matches) {
               // Count goals and assists
-              goals +=
-                  match.scorerIds.where((id) => id == widget.userId).length;
-              assists +=
-                  match.assistIds.where((id) => id == widget.userId).length;
+              goals += match.scorerIds.where((id) => id == widget.userId).length;
+              assists += match.assistIds.where((id) => id == widget.userId).length;
 
               // Check for win
               if (match.scoreA > match.scoreB &&

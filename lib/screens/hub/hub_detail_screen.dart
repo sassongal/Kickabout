@@ -4,6 +4,7 @@ import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/models/models.dart' hide Notification;
 import 'package:kattrick/screens/social/hub_chat_screen.dart';
 import 'package:kattrick/screens/hub/hub_events_tab.dart';
@@ -55,45 +56,12 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
       );
     }
 
-    // ConsumerState provides 'ref' automatically
+    // ARCHITECTURAL FIX: Use unified hub state provider instead of direct repository call
     final currentUserId = ref.watch(currentUserIdProvider);
-    // Use ref.read for repositories - they don't change, so no need to watch
-    final hubsRepo = ref.read(hubsRepositoryProvider);
-    final usersRepo = ref.read(usersRepositoryProvider);
-    final venuesRepo = ref.read(venuesRepositoryProvider);
+    final hubAsync = ref.watch(hubStreamProvider(widget.hubId));
 
-    final hubStream = hubsRepo.watchHub(widget.hubId);
-
-    return StreamBuilder<Hub?>(
-      stream: hubStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _HubDetailSkeleton();
-        }
-
-        if (snapshot.hasError) {
-          return AppScaffold(
-            title: 'פרטי Hub',
-            body: PremiumEmptyState(
-              icon: Icons.error_outline,
-              title: 'שגיאה בטעינת Hub',
-              message: ErrorHandlerService().handleException(
-                snapshot.error,
-                context: 'Hub detail screen - hub loading',
-              ),
-              action: ElevatedButton.icon(
-                onPressed: () {
-                  // Retry by rebuilding - trigger rebuild via key change
-                  // For ConsumerWidget, we can't use setState, so we'll just show the error
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('נסה שוב'),
-              ),
-            ),
-          );
-        }
-
-        final hub = snapshot.data;
+    return hubAsync.when(
+      data: (hub) {
         if (hub == null) {
           return AppScaffold(
             title: 'פרטי Hub',
@@ -101,14 +69,17 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
           );
         }
 
+        // Repositories (only used for non-member view)
+        final venuesRepo = ref.read(venuesRepositoryProvider);
+        final usersRepo = ref.read(usersRepositoryProvider);
+
         // Check user role for admin permissions
         final roleAsync = ref.watch(hubRoleProvider(widget.hubId));
         final role = roleAsync.valueOrNull ?? UserRole.none;
         final isMember = role != UserRole.none;
 
-        // Check if join requests are enabled
-        final joinRequestsEnabled =
-            hub.settings['allowJoinRequests'] as bool? ?? true;
+        // Check if join requests are enabled (use typed settings)
+        final joinRequestsEnabled = hub.settings.allowJoinRequests;
 
         // If not a member, show non-member view
         if (!isMember && currentUserId != null) {
@@ -205,6 +176,23 @@ class _HubDetailScreenState extends ConsumerState<HubDetailScreen>
           ),
         );
       },
+      loading: () => const _HubDetailSkeleton(),
+      error: (error, stack) => AppScaffold(
+        title: 'פרטי Hub',
+        body: PremiumEmptyState(
+          icon: Icons.error_outline,
+          title: 'שגיאה בטעינת Hub',
+          message: ErrorHandlerService().handleException(
+            error,
+            context: 'Hub detail screen - hub loading',
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () => ref.invalidate(hubStreamProvider(widget.hubId)),
+            icon: const Icon(Icons.refresh),
+            label: const Text('נסה שוב'),
+          ),
+        ),
+      ),
     );
   }
 }

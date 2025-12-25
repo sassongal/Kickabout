@@ -20,8 +20,8 @@ class HubGamesTab extends ConsumerStatefulWidget {
 class _HubGamesTabState extends ConsumerState<HubGamesTab> {
   @override
   Widget build(BuildContext context) {
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
-    final gamesStream = gamesRepo.watchGamesByHub(widget.hubId);
+    final gameQueriesRepo = ref.watch(gameQueriesRepositoryProvider);
+    final gamesStream = gameQueriesRepo.watchGamesByHub(widget.hubId);
 
     return StreamBuilder<List<Game>>(
       stream: gamesStream,

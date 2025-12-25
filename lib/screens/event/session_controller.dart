@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:kattrick/data/games_repository.dart';
 import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/features/games/data/repositories/session_repository.dart';
+import 'package:kattrick/features/games/data/repositories/match_approval_repository.dart';
 import 'package:kattrick/models/match_result.dart';
 import 'package:kattrick/models/game.dart';
 import 'package:kattrick/utils/stopwatch_utility.dart';
@@ -44,14 +45,17 @@ class SessionState with _$SessionState {
 /// - Stopwatch integration
 class SessionController extends StateNotifier<SessionState> {
   final String gameId;
-  final GamesRepository _gamesRepo;
+  final SessionRepository _sessionRepo;
+  final MatchApprovalRepository _matchApprovalRepo;
   final StopwatchUtility stopwatch;
 
   SessionController({
     required this.gameId,
-    required GamesRepository gamesRepo,
+    required SessionRepository sessionRepo,
+    required MatchApprovalRepository matchApprovalRepo,
     required this.stopwatch,
-  })  : _gamesRepo = gamesRepo,
+  })  : _sessionRepo = sessionRepo,
+        _matchApprovalRepo = matchApprovalRepo,
         super(const SessionState());
 
   /// Increment score for a team
@@ -216,7 +220,7 @@ class SessionController extends StateNotifier<SessionState> {
       // Submit match
       if (asModeratorRequest) {
         // Moderator submission - requires approval
-        await _gamesRepo.submitMatchResult(
+        await _matchApprovalRepo.submitMatchResult(
           gameId,
           match,
           submitterId: currentUserId,
@@ -224,11 +228,11 @@ class SessionController extends StateNotifier<SessionState> {
         );
       } else {
         // Manager submission - approved immediately
-        await _gamesRepo.addMatchToSession(gameId, match, currentUserId);
+        await _sessionRepo.addMatchToSession(gameId, match, currentUserId);
 
         // If tie with manager selection, update rotation
         if (scoreA == scoreB && managerSelectedStayingTeam != null) {
-          await _gamesRepo.updateRotationAfterTie(
+          await _sessionRepo.updateRotationAfterTie(
             gameId,
             match,
             managerSelectedStayingTeam,
@@ -277,12 +281,14 @@ class SessionController extends StateNotifier<SessionState> {
 final sessionControllerProvider = StateNotifierProvider.family
     .autoDispose<SessionController, SessionState, String>(
   (ref, gameId) {
-    final gamesRepo = ref.watch(gamesRepositoryProvider);
+    final sessionRepo = ref.watch(sessionRepositoryProvider);
+    final matchApprovalRepo = ref.watch(matchApprovalRepositoryProvider);
     final stopwatch = StopwatchUtility();
 
     final controller = SessionController(
       gameId: gameId,
-      gamesRepo: gamesRepo,
+      sessionRepo: sessionRepo,
+      matchApprovalRepo: matchApprovalRepo,
       stopwatch: stopwatch,
     );
 
