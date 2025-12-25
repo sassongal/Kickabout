@@ -56,8 +56,12 @@ Stream<HubPermissions?> hubPermissionsStream(
   HubPermissionsStreamRef ref,
   ({String hubId, String userId}) params,
 ) async* {
-  // Watch hub data
-  final hubStream = ref.watch(hubStreamProvider(params.hubId));
+  // Get repository and service
+  final hubsRepo = ref.read(hubsRepositoryProvider);
+  final permissionsService = ref.read(hubPermissionsServiceProvider);
+
+  // Watch hub changes
+  final hubStream = hubsRepo.watchHub(params.hubId);
 
   await for (final hub in hubStream) {
     if (hub == null) {
@@ -66,15 +70,10 @@ Stream<HubPermissions?> hubPermissionsStream(
     }
 
     // Fetch membership (could be cached by repository)
-    final hubsRepo = ref.read(hubsRepositoryProvider);
-    final membership = await hubsRepo.getHubMember(params.hubId, params.userId);
+    final membership = await hubsRepo.getMembership(params.hubId, params.userId);
 
-    // Compute permissions
-    yield HubPermissions(
-      hub: hub,
-      userId: params.userId,
-      membership: membership,
-    );
+    // Compute permissions using service
+    yield permissionsService.createPermissions(hub, membership, params.userId);
   }
 }
 
@@ -90,12 +89,14 @@ Stream<HubPermissions?> hubPermissionsStream(
 Stream<HubMemberRole?> hubRoleStream(
   HubRoleStreamRef ref,
   ({String hubId, String userId}) params,
-) {
+) async* {
   final permissionsStream = ref.watch(
     hubPermissionsStreamProvider((hubId: params.hubId, userId: params.userId)),
   );
 
-  return permissionsStream.map((permissions) => permissions?.effectiveRole);
+  await for (final permissions in permissionsStream) {
+    yield permissions?.effectiveRole;
+  }
 }
 
 // ============================================================================
