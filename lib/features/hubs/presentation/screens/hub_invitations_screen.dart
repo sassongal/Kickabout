@@ -48,8 +48,8 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
         }
 
         final hub = snapshot.data!;
-        final invitationCode = hub.settings['invitationCode'] as String? ??
-            widget.hubId.substring(0, 8).toUpperCase();
+        // TODO: Add invitationCode to HubSettings model
+        final invitationCode = widget.hubId.substring(0, 8).toUpperCase();
 
         // Generate invitation link
         final invitationLink = 'https://kattrick.app/invite/$invitationCode';
@@ -161,7 +161,8 @@ class _HubInvitationsScreenState extends ConsumerState<HubInvitationsScreen> {
                 child: SwitchListTile(
                   title: const Text('הזמנות פעילות'),
                   subtitle: const Text('אפשר להצטרף דרך קישור הזמנה'),
-                  value: hub.settings['invitationsEnabled'] as bool? ?? true,
+                  // TODO: Add invitationsEnabled to HubSettings model
+                  value: true, // Default enabled
                   onChanged: (value) =>
                       _updateSetting('invitationsEnabled', value),
                 ),

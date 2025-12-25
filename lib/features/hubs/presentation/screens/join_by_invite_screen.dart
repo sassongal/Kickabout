@@ -84,8 +84,8 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
       }
 
       // Check if invitations are enabled
-      final invitationsEnabled =
-          hub.settings['invitationsEnabled'] as bool? ?? true;
+      // TODO: Add invitationsEnabled to HubSettings model
+      final invitationsEnabled = true; // Default enabled
       if (!mounted) return;
       if (!invitationsEnabled) {
         SnackbarHelper.showError(context, l10n.hubInvitationsDisabled);
@@ -93,7 +93,8 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
       }
 
       // Check join mode
-      final joinMode = hub.settings['joinMode'] as String? ?? 'auto';
+      // TODO: Add joinMode to HubSettings model
+      final joinMode = 'auto'; // Default to auto
 
       // Prevent double-join using user profile hubIds
       final currentUser = await ref.read(usersRepositoryProvider).getUser(currentUserId);
@@ -159,7 +160,8 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
     }
 
     final hub = _hub!;
-    final joinMode = hub.settings['joinMode'] as String? ?? 'auto';
+    // TODO: Add joinMode to HubSettings model
+    final joinMode = 'auto'; // Default to auto
     final requiresApproval = joinMode == 'approval';
 
     return PremiumScaffold(

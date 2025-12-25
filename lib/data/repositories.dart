@@ -1,12 +1,12 @@
 // Barrel file for all repositories
 export 'users_repository.dart';
-export 'hubs_repository.dart';
+export 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 export 'games_repository.dart';
 export 'signups_repository.dart';
 export 'teams_repository.dart' show FavoriteTeamsRepository;
 export 'game_teams_repository.dart';
 export 'events_repository.dart';
-export 'hub_events_repository.dart';
+export 'package:kattrick/features/hubs/data/repositories/hub_events_repository.dart';
 // export 'ratings_repository.dart'; // Removed - no longer used
 export 'feed_repository.dart';
 export 'comments_repository.dart';

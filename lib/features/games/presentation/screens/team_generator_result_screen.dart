@@ -278,7 +278,7 @@ class _TeamGeneratorResultScreenState
 
     // Check if moderators are allowed and user is moderator
     final allowModerators =
-        hub.settings['allowModeratorsToCreateGames'] as bool? ?? false;
+        hub.settings.allowModeratorsToCreateGames;
 
     if (allowModerators) {
       // For now, simplified check - in production, fetch HubMember to verify role

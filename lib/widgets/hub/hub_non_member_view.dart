@@ -178,7 +178,7 @@ class _HubNonMemberViewState extends ConsumerState<HubNonMemberView> {
   Widget build(BuildContext context) {
     final venuesStream = widget.venuesRepo.watchVenuesByHub(widget.hubId);
     final showManagerContact =
-        widget.hub.settings['showManagerContactInfo'] as bool? ?? true;
+        widget.hub.settings.showManagerContactInfo;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
