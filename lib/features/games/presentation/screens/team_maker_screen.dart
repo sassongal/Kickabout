@@ -16,7 +16,7 @@ import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/team_card.dart';
-import 'package:kattrick/screens/game/team_maker_controller.dart';
+import 'package:kattrick/features/games/presentation/screens/team_maker_controller.dart';
 import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 

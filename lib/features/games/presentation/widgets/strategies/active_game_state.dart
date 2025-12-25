@@ -5,7 +5,7 @@ import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
-import 'package:kattrick/screens/game/strategies/game_detail_sections.dart';
+import 'package:kattrick/features/games/presentation/widgets/strategies/game_detail_sections.dart';
 
 class ActiveGameState extends StatelessWidget {
   final Game game;

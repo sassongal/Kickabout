@@ -12,7 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/utils/stopwatch_utility.dart';
-import 'package:kattrick/screens/game/fullscreen_stopwatch_screen.dart';
+import 'package:kattrick/features/games/presentation/screens/fullscreen_stopwatch_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 

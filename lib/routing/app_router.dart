@@ -23,18 +23,18 @@ import 'package:kattrick/screens/events/event_management_screen.dart'
     deferred as hub_event_management_screen;
 import 'package:kattrick/screens/hub/create_poll_screen.dart';
 import 'package:kattrick/screens/hub/poll_detail_screen.dart';
-import 'package:kattrick/screens/game/game_list_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/game_list_screen.dart'
     deferred as game_list_screen;
-import 'package:kattrick/screens/game/create_game_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/create_game_screen.dart'
     deferred as create_game_screen;
-import 'package:kattrick/screens/game/game_detail_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/game_detail_screen.dart'
     deferred as game_detail_screen;
-import 'package:kattrick/screens/game/all_events_screen.dart';
-import 'package:kattrick/screens/game/confirm_attendance_screen.dart';
-import 'package:kattrick/screens/game/attendance_monitoring_screen.dart';
-import 'package:kattrick/screens/game/team_maker_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/all_events_screen.dart';
+import 'package:kattrick/features/games/presentation/screens/confirm_attendance_screen.dart';
+import 'package:kattrick/features/games/presentation/screens/attendance_monitoring_screen.dart';
+import 'package:kattrick/features/games/presentation/screens/team_maker_screen.dart'
     deferred as team_maker_screen;
-import 'package:kattrick/screens/game/log_game_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/log_game_screen.dart'
     deferred as log_game_screen;
 import 'package:kattrick/screens/profile/player_profile_screen.dart'
     deferred as player_profile_screen;
@@ -64,7 +64,7 @@ import 'package:kattrick/screens/social/following_screen.dart'
 import 'package:kattrick/screens/social/followers_screen.dart'
     deferred as followers_screen;
 import 'package:kattrick/screens/home/home_screen.dart';
-import 'package:kattrick/screens/game/game_chat_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/game_chat_screen.dart'
     deferred as game_chat_screen;
 import 'package:kattrick/screens/community/community_screen.dart';
 
@@ -95,7 +95,7 @@ import 'package:kattrick/screens/hub/hub_insights_screen.dart'
     deferred as hub_insights_screen;
 import 'package:kattrick/screens/hub/join_by_invite_screen.dart'
     deferred as join_by_invite_screen;
-import 'package:kattrick/screens/game/game_calendar_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/game_calendar_screen.dart'
     deferred as game_calendar_screen;
 import 'package:kattrick/screens/social/create_post_screen.dart'
     deferred as create_post_screen;
@@ -116,7 +116,7 @@ import 'package:kattrick/screens/venue/create_manual_venue_screen.dart'
 import 'package:kattrick/screens/venues/discover_venues_screen.dart'
     deferred as discover_venues_screen;
 import 'package:kattrick/screens/location/map_picker_screen.dart';
-import 'package:kattrick/screens/game/log_past_game_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/log_past_game_screen.dart'
     deferred as log_past_game_screen;
 import 'package:kattrick/screens/hub/hub_analytics_screen.dart'
     deferred as hub_analytics_screen;
@@ -125,15 +125,15 @@ import 'package:kattrick/screens/social/create_recruiting_post_screen.dart'
 import 'package:kattrick/screens/activity/community_activity_feed_screen.dart'
     deferred as community_activity_feed_screen;
 import 'package:kattrick/screens/weather/weather_detail_screen.dart';
-import 'package:kattrick/screens/game/game_recording_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/game_recording_screen.dart'
     deferred as game_recording_screen;
-import 'package:kattrick/screens/event/team_generator_config_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/team_generator_config_screen.dart'
     deferred as team_generator_config_screen;
-import 'package:kattrick/screens/event/team_generator_result_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/team_generator_result_screen.dart'
     deferred as team_generator_result_screen;
-import 'package:kattrick/screens/event/game_session_screen.dart'
+import 'package:kattrick/features/games/presentation/screens/game_session_screen.dart'
     deferred as game_session_screen;
-import 'package:kattrick/logic/live_match_screen.dart';
+import 'package:kattrick/features/games/presentation/screens/live_match_screen.dart';
 import 'package:kattrick/screens/debug/create_dummy_players_screen.dart'
     deferred as create_dummy_players_screen;
 import 'package:kattrick/screens/debug/auth_status_screen.dart';

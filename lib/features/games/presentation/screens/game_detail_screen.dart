@@ -20,9 +20,9 @@ import 'package:kattrick/widgets/loading_widget.dart';
 import 'package:kattrick/services/game_management_service.dart';
 import 'package:kattrick/widgets/dialogs/edit_game_result_dialog.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
-import 'package:kattrick/screens/game/strategies/active_game_state.dart';
-import 'package:kattrick/screens/game/strategies/completed_game_state.dart';
-import 'package:kattrick/screens/game/strategies/pending_game_state.dart';
+import 'package:kattrick/features/games/presentation/widgets/strategies/active_game_state.dart';
+import 'package:kattrick/features/games/presentation/widgets/strategies/completed_game_state.dart';
+import 'package:kattrick/features/games/presentation/widgets/strategies/pending_game_state.dart';
 
 @immutable
 class _TeamUsersRequest {

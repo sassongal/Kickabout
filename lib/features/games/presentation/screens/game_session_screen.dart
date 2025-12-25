@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
-import 'package:kattrick/screens/event/session_controller.dart';
+import 'package:kattrick/features/games/presentation/screens/session_controller.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/stopwatch_widget.dart';
