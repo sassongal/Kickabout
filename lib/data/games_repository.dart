@@ -271,4 +271,136 @@ class GamesRepository {
       'audit.auditLog': FieldValue.arrayUnion([auditEvent.toJson()]),
     });
   }
+
+  /// Create game with signups in a batch operation
+  ///
+  /// Data-access only - no business validation
+  /// Use GameFinalizationService for business logic
+  Future<String> createGameWithSignups({
+    required Map<String, dynamic> gameData,
+    required String gameId,
+    required List<String> playerIds,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final batch = _firestore.batch();
+      final now = FieldValue.serverTimestamp();
+
+      // Add game document
+      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+      batch.set(gameRef, gameData);
+
+      // Add signups for players
+      for (final playerId in playerIds) {
+        final signupRef = _firestore.doc(FirestorePaths.gameSignup(gameId, playerId));
+        batch.set(signupRef, {
+          'playerId': playerId,
+          'status': SignupStatus.confirmed.toFirestore(),
+          'signedUpAt': now,
+        });
+      }
+
+      await batch.commit();
+
+      // Invalidate cache
+      _cacheInvalidation.onGameCreated(gameId, hubId: gameData['hubId'] as String?);
+
+      return gameId;
+    } catch (e) {
+      throw Exception('Failed to create game with signups: $e');
+    }
+  }
+
+  /// Convert event to game in a batch operation
+  ///
+  /// Data-access only - no business validation
+  /// Use GameFinalizationService for business logic
+  Future<String> convertEventToGameBatch({
+    required String eventId,
+    required String hubId,
+    required String gameId,
+    required Map<String, dynamic> gameData,
+    required List<String> presentPlayerIds,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final batch = _firestore.batch();
+      final now = FieldValue.serverTimestamp();
+
+      // 1. Create game document
+      final gameRef = _firestore.doc(FirestorePaths.game(gameId));
+      batch.set(gameRef, gameData);
+
+      // 2. Create signups for present players
+      for (final playerId in presentPlayerIds) {
+        final signupRef = _firestore.doc(FirestorePaths.gameSignup(gameId, playerId));
+        batch.set(signupRef, {
+          'playerId': playerId,
+          'status': SignupStatus.confirmed.toFirestore(),
+          'signedUpAt': now,
+        });
+      }
+
+      // 3. Update event: mark as completed and reference the game
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+      batch.update(eventRef, {
+        'status': 'completed',
+        'gameId': gameId,
+        'updatedAt': now,
+      });
+
+      await batch.commit();
+
+      // Invalidate caches
+      _cacheInvalidation.onEventConvertedToGame(hubId, eventId, gameId);
+
+      return gameId;
+    } catch (e) {
+      throw Exception('Failed to convert event to game: $e');
+    }
+  }
+
+  /// Get event data from Firestore
+  ///
+  /// Returns event document data and reference
+  Future<(Map<String, dynamic> data, String eventId)> getEventData({
+    required String eventId,
+    required String hubId,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+
+      final eventDoc = await eventRef.get();
+      if (!eventDoc.exists) {
+        throw Exception('Event not found: $eventId');
+      }
+
+      return (eventDoc.data()!, eventId);
+    } catch (e) {
+      throw Exception('Failed to get event data: $e');
+    }
+  }
+
+  /// Generate new game ID
+  String generateGameId() {
+    return _firestore.collection(FirestorePaths.games()).doc().id;
+  }
 }

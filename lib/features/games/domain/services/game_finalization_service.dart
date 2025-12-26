@@ -5,21 +5,19 @@ import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/game_result.dart';
 import 'package:kattrick/models/log_past_game_details.dart';
-import 'package:kattrick/services/firestore_paths.dart';
-import 'package:kattrick/services/cache_invalidation_service.dart';
+import 'package:kattrick/data/games_repository.dart';
 
 /// Service for Game Finalization logic
 /// Handles converting events to games, logging past games, and finalizing games
 /// This is domain logic, not just data access
+///
+/// ARCHITECTURE: Services use Repositories for data access, not Firestore directly
 class GameFinalizationService {
-  final FirebaseFirestore _firestore;
-  final CacheInvalidationService _cacheInvalidation;
+  final GamesRepository _gamesRepo;
 
   GameFinalizationService({
-    FirebaseFirestore? firestore,
-    CacheInvalidationService? cacheInvalidation,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _cacheInvalidation = cacheInvalidation ?? CacheInvalidationService();
+    GamesRepository? gamesRepository,
+  })  : _gamesRepo = gamesRepository ?? GamesRepository();
 
   /// Log a past game retroactively
   ///
@@ -34,8 +32,10 @@ class GameFinalizationService {
     try {
       final now = FieldValue.serverTimestamp();
 
-      // Create game object with nested structure
-      final gameId = _firestore.collection(FirestorePaths.games()).doc().id;
+      // BUSINESS LOGIC: Generate game ID
+      final gameId = _gamesRepo.generateGameId();
+
+      // BUSINESS LOGIC: Create game object with nested structure
       final game = Game(
         gameId: gameId,
         createdBy: currentUserId,
@@ -49,8 +49,7 @@ class GameFinalizationService {
         region: details.region,
         city: details.city,
         teams: details.teams,
-        createdAt: DateTime
-            .now(), // approximation, will set server timestamp later if needed, but Game model expects DateTime.
+        createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         denormalized: GameDenormalizedData(
           goalScorerIds: details.goalScorerIds,
@@ -69,32 +68,13 @@ class GameFinalizationService {
       // Overwrite timestamps with server timestamp
       gameData['createdAt'] = now;
       gameData['updatedAt'] = now;
-      // Game.toJson() already puts gameId in, but let's be safe as we generated it appropriately
 
-      final gameRef = _firestore.collection(FirestorePaths.games()).doc(gameId);
-
-      // Add gameId to gameData (required by firestore.rules)
-      // gameData['gameId'] = gameId; // Already in toJson
-
-      // Create signups for all participating players
-      final batch = _firestore.batch();
-
-      // Add game document
-      batch.set(gameRef, gameData);
-
-      // Add signups
-      for (final playerId in details.playerIds) {
-        final signupRef =
-            _firestore.doc(FirestorePaths.gameSignup(gameId, playerId));
-        batch.set(signupRef, {
-          'playerId': playerId,
-          'status': SignupStatus.confirmed.toFirestore(),
-          'signedUpAt': now,
-        });
-      }
-
-      // Commit all writes
-      await batch.commit();
+      // DATA ACCESS: Use repository to create game with signups
+      await _gamesRepo.createGameWithSignups(
+        gameData: gameData,
+        gameId: gameId,
+        playerIds: details.playerIds,
+      );
 
       // The onGameCompleted Cloud Function will be triggered automatically
       // when the game status is set to 'completed'
@@ -136,19 +116,13 @@ class GameFinalizationService {
     }
 
     try {
-      // Get event data
-      final eventRef = _firestore
-          .collection(FirestorePaths.hubs())
-          .doc(hubId)
-          .collection('events')
-          .doc(eventId);
+      // DATA ACCESS: Get event data from repository
+      final (eventData, _) = await _gamesRepo.getEventData(
+        eventId: eventId,
+        hubId: hubId,
+      );
 
-      final eventDoc = await eventRef.get();
-      if (!eventDoc.exists) {
-        throw Exception('Event not found: $eventId');
-      }
-
-      final eventData = eventDoc.data()!;
+      // BUSINESS LOGIC: Parse event and prepare game data
       final event = HubEvent.fromJson({...eventData, 'eventId': eventId});
 
       // Get teams from event (if they exist)
@@ -156,7 +130,10 @@ class GameFinalizationService {
           ? event.teams
           : <Team>[]; // Teams may not exist if TeamMaker wasn't used
 
-      // Create game document
+      // BUSINESS LOGIC: Generate game ID
+      final gameId = _gamesRepo.generateGameId();
+
+      // BUSINESS LOGIC: Create game document data
       final now = FieldValue.serverTimestamp();
       final gameData = {
         'createdBy': event.createdBy,
@@ -185,43 +162,17 @@ class GameFinalizationService {
         'updatedAt': now,
         'photoUrls': <String>[],
         'isRecurring': false,
+        'gameId': gameId, // Required by firestore.rules
       };
 
-      final gameRef = _firestore.collection(FirestorePaths.games()).doc();
-      final gameId = gameRef.id;
-
-      // Add gameId to gameData (required by firestore.rules)
-      gameData['gameId'] = gameId;
-
-      // Create batch for atomic operations
-      final batch = _firestore.batch();
-
-      // 1. Create game document
-      batch.set(gameRef, gameData);
-
-      // 2. Create signups for present players (status: confirmed)
-      for (final playerId in presentPlayerIds) {
-        final signupRef =
-            _firestore.doc(FirestorePaths.gameSignup(gameId, playerId));
-        batch.set(signupRef, {
-          'playerId': playerId,
-          'status': SignupStatus.confirmed.toFirestore(),
-          'signedUpAt': now,
-        });
-      }
-
-      // 3. Update event: mark as completed and reference the game
-      batch.update(eventRef, {
-        'status': 'completed',
-        'gameId': gameId,
-        'updatedAt': now,
-      });
-
-      // Commit all writes atomically
-      await batch.commit();
-
-      // Invalidate caches using centralized service
-      _cacheInvalidation.onEventConvertedToGame(hubId, eventId, gameId);
+      // DATA ACCESS: Use repository to convert event to game atomically
+      await _gamesRepo.convertEventToGameBatch(
+        eventId: eventId,
+        hubId: hubId,
+        gameId: gameId,
+        gameData: gameData,
+        presentPlayerIds: presentPlayerIds,
+      );
 
       debugPrint('✅ Event converted to Game: $gameId (from event $eventId)');
 
@@ -238,13 +189,14 @@ class GameFinalizationService {
   /// and saving the result payload. A Cloud Function will then process the
   /// completion asynchronously.
   Future<void> finalizeGame(String gameId, GameResult result) async {
+    // BUSINESS LOGIC: Validate user authentication
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       throw Exception('User not authenticated');
     }
 
-    // 1. Only update the Game document
-    await _firestore.doc(FirestorePaths.game(gameId)).update({
+    // DATA ACCESS: Update game document via repository
+    await _gamesRepo.updateGame(gameId, {
       'status': 'processing_completion', // Intermediate status
       'resultPayload': result.toJson(), // Store the raw input (scores, scorers)
       'finalizedBy': currentUser.uid,

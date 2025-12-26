@@ -11,18 +11,16 @@ import 'package:kattrick/models/models.dart';
 /// - Signup status transitions
 /// - Atomic signup operations
 ///
-/// The repository handles only data access.
+/// ARCHITECTURE: Uses repositories for data access
+/// Note: Firestore transactions are used here as they're a cross-cutting infrastructure concern
 class GameSignupService {
-  final FirebaseFirestore _firestore;
   final GamesRepository _gamesRepo;
   final SignupsRepository _signupsRepo;
 
   GameSignupService({
-    FirebaseFirestore? firestore,
     GamesRepository? gamesRepo,
     SignupsRepository? signupsRepo,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _gamesRepo = gamesRepo ?? GamesRepository(),
+  })  : _gamesRepo = gamesRepo ?? GamesRepository(),
         _signupsRepo = signupsRepo ?? SignupsRepository();
 
   /// Set signup (create or update) with business logic validation
@@ -44,7 +42,8 @@ class GameSignupService {
 
     try {
       // Use transaction to ensure atomic capacity check and signup update
-      await _firestore.runTransaction((transaction) async {
+      // Note: Transactions are infrastructure-level, accessing Firestore directly is acceptable here
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
         final gameRef = _gamesRepo.getGameRef(gameId);
         final signupRef = _signupsRepo.getSignupRef(gameId, uid);
 

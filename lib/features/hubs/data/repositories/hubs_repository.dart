@@ -1671,6 +1671,76 @@ class HubsRepository {
       return _EmptyQuerySnapshot() as QuerySnapshot;
     });
   }
+
+  /// Create hub with manager member and update user in batch
+  ///
+  /// Data-access only - no business validation
+  /// Use HubCreationService for business logic
+  Future<String> createHubWithMemberBatch({
+    required Map<String, dynamic> hubData,
+    required String hubId,
+    required String creatorId,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final batch = _firestore.batch();
+
+      // Create hub document
+      final hubRef = _firestore.doc(FirestorePaths.hub(hubId));
+      batch.set(hubRef, hubData, SetOptions(merge: false));
+
+      // Add creator as manager member
+      final memberRef = hubRef.collection('members').doc(creatorId);
+      batch.set(memberRef, {
+        'hubId': hubId,
+        'userId': creatorId,
+        'joinedAt': FieldValue.serverTimestamp(),
+        'role': 'manager',
+        'status': 'active',
+        'veteranSince': null,
+        'managerRating': 0.0,
+        'lastActiveAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': creatorId,
+        'statusReason': null,
+      });
+
+      // Update user's hubIds (only if not already present)
+      final userRef = _firestore.doc(FirestorePaths.user(creatorId));
+      batch.update(userRef, {
+        'hubIds': FieldValue.arrayUnion([hubId]),
+      });
+
+      await batch.commit();
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.hub(hubId));
+
+      return hubId;
+    } catch (e) {
+      throw Exception('Failed to create hub with member: $e');
+    }
+  }
+
+  /// Get user data for validation
+  Future<Map<String, dynamic>?> getUserData(String userId) async {
+    if (!Env.isFirebaseAvailable) return null;
+
+    try {
+      final userDoc = await _firestore.doc(FirestorePaths.user(userId)).get();
+      return userDoc.data();
+    } catch (e) {
+      throw Exception('Failed to get user data: $e');
+    }
+  }
+
+  /// Generate new hub ID
+  String generateHubId() {
+    return _firestore.collection(FirestorePaths.hubs()).doc().id;
+  }
 }
 
 /// Empty QuerySnapshot for error fallback

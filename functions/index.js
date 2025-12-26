@@ -66,6 +66,8 @@ exports.onVenueChanged = venues.onVenueChanged;
 // Storage
 const storage = require('./src/storage');
 exports.onImageUploaded = storage.onImageUploaded;
+exports.getHubPhotoUploadUrl = storage.getHubPhotoUploadUrl;
+exports.getGamePhotoUploadUrl = storage.getGamePhotoUploadUrl;
 
 // Polls (already modular)
 const { votePoll, closePoll, onPollCreated, scheduledPollAutoClose } = require('./pollFunctions');

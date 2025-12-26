@@ -120,6 +120,8 @@ import 'package:kattrick/features/games/presentation/screens/log_past_game_scree
     deferred as log_past_game_screen;
 import 'package:kattrick/features/hubs/presentation/screens/hub_analytics_screen.dart'
     deferred as hub_analytics_screen;
+import 'package:kattrick/features/hubs/presentation/screens/banned_users_screen.dart'
+    deferred as banned_users_screen;
 import 'package:kattrick/screens/social/create_recruiting_post_screen.dart'
     deferred as create_recruiting_post_screen;
 import 'package:kattrick/screens/activity/community_activity_feed_screen.dart'
@@ -848,6 +850,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                     }),
               ),
               GoRoute(
+                path: 'banned',
+                name: 'hubBannedUsers',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: banned_users_screen.loadLibrary(),
+                    builder: () {
+                      final hubId = state.pathParameters['id']!;
+                      return banned_users_screen.BannedUsersScreen(
+                          hubId: hubId);
+                    }),
+              ),
+              GoRoute(
                 path: 'games/:gameId/edit',
                 name: 'editGame',
                 builder: (context, state) => LazyRouteLoader(
@@ -963,25 +976,24 @@ final routerProvider = Provider<GoRouter>((ref) {
                       return game_chat_screen.GameChatScreen(gameId: gameId);
                     }),
               ),
-              // Debug route: Create Dummy Players
-              GoRoute(
-                path: '/debug/create-dummy-players',
-                name: 'createDummyPlayers',
-                builder: (context, state) => LazyRouteLoader(
-                  loader: create_dummy_players_screen.loadLibrary(),
-                  builder: () =>
-                      create_dummy_players_screen.CreateDummyPlayersScreen(),
-                ),
-              ),
-              // Debug route: Auth Status
-              GoRoute(
-                path: '/debug/auth-status',
-                name: 'authStatus',
-                builder: (context, state) => const AuthStatusScreen(),
-              ),
             ],
           ),
         ],
+      ),
+
+      // Debug routes (moved from games/:id nesting - was incorrect)
+      GoRoute(
+        path: '/debug/create-dummy-players',
+        name: 'createDummyPlayers',
+        builder: (context, state) => LazyRouteLoader(
+          loader: create_dummy_players_screen.loadLibrary(),
+          builder: () => create_dummy_players_screen.CreateDummyPlayersScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/debug/auth-status',
+        name: 'authStatus',
+        builder: (context, state) => const AuthStatusScreen(),
       ),
 
       // Profile routes
