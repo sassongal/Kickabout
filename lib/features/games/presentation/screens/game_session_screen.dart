@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
+import 'package:kattrick/core/providers/auth_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/features/games/presentation/screens/session_controller.dart';
@@ -288,21 +290,15 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
     if (currentUserId == null) return const SizedBox.shrink();
 
     // Check permissions - for public games, creator is manager, for hub games check hub permissions
-    bool isManager = false;
-    bool isModerator = false;
-
     if (_game!.hubId != null) {
-      // Hub game - check hub permissions via StreamBuilder
-      final hubsRepo = ref.read(hubsRepositoryProvider);
+      // Hub game - check hub permissions via hubStreamProvider
+      final hubAsync = ref.watch(hubStreamProvider(_game!.hubId!));
 
-      return StreamBuilder<Hub?>(
-        stream: hubsRepo.watchHub(_game!.hubId!),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      return hubAsync.when(
+        data: (hub) {
+          bool isManager = false;
+          bool isModerator = false;
 
-          final hub = snapshot.data;
           if (hub != null) {
             final permissions = HubPermissions(hub: hub, userId: currentUserId);
             isManager = permissions.isManager;
@@ -325,10 +321,22 @@ class _GameSessionScreenState extends ConsumerState<GameSessionScreen> {
 
           return _buildActiveSessionContent(currentUserId, isManager, isModerator);
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => PremiumCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'שגיאה בטעינת הנתונים',
+              style: PremiumTypography.bodyMedium.copyWith(
+                color: PremiumColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
       );
     } else {
       // Public game - creator is manager
-      isManager = _game!.createdBy == currentUserId;
+      final isManager = _game!.createdBy == currentUserId;
 
       if (!isManager) {
         return PremiumCard(

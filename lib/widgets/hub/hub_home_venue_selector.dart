@@ -3,7 +3,8 @@ import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/venues_repository.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 import 'package:kattrick/utils/city_utils.dart';
@@ -21,23 +22,21 @@ class HubHomeVenueSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hubsRepo = ref.read(hubsRepositoryProvider);
-    final hubStream = hubsRepo.watchHub(hubId);
+    final hubAsync = ref.watch(hubStreamProvider(hubId));
 
-    return StreamBuilder<Hub?>(
-      stream: hubStream,
-      builder: (context, hubSnapshot) {
-        final hub = hubSnapshot.data;
+    return hubAsync.when(
+      data: (hub) {
         if (hub == null) {
           return const SizedBox.shrink();
         }
-
         return _HubHomeVenueSelectorContent(
           hubId: hubId,
           hub: hub,
           venuesRepo: venuesRepo,
         );
       },
+      loading: () => const SizedBox.shrink(),
+      error: (err, stack) => const SizedBox.shrink(),
     );
   }
 }

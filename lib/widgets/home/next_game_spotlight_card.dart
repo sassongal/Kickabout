@@ -13,6 +13,7 @@ import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/features/games/domain/services/event_action_service.dart';
 import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 
 /// Next Game Spotlight Card - Shows the user's next upcoming game/event
 ///
@@ -134,15 +135,13 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
 
   @override
   Widget build(BuildContext context) {
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
     final gameQueriesRepo = ref.watch(gameQueriesRepositoryProvider);
     final hubEventsRepo = ref.watch(hubEventsRepositoryProvider);
 
-    return StreamBuilder<List<Hub>>(
-      stream: hubsRepo.watchHubsByMember(widget.userId),
-      builder: (context, hubsSnapshot) {
-        final hubs = hubsSnapshot.data ?? [];
+    final hubsAsync = ref.watch(hubsByMemberStreamProvider(widget.userId));
 
+    return hubsAsync.when(
+      data: (hubs) {
         return StreamBuilder<_NextGameData?>(
           stream: _getNextGameStream(
             gameQueriesRepo,
@@ -194,6 +193,8 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
           },
         );
       },
+      loading: () => _buildLoadingCard(),
+      error: (err, stack) => _buildEmptyCard(),
     );
   }
 

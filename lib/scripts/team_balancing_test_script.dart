@@ -1,19 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/hub_settings.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_creation_service.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 /// סקריפט מקיף לבדיקת איזון קבוצות
 /// יוצר: Hub חדש + 15 שחקנים + אירוע אחד עם 3 קבוצות (Winner Stays)
+///
+/// ARCHITECTURAL NOTE: This script uses domain services instead of direct
+/// Firestore manipulation to enforce consistency and business rules.
 class TeamBalancingTestScript {
   final FirebaseFirestore firestore;
+  final HubCreationService _hubCreationService;
+  final HubsRepository _hubsRepository;
   final Random random = Random();
 
-  TeamBalancingTestScript({FirebaseFirestore? firestore})
-      : firestore = firestore ?? FirebaseFirestore.instance;
+  TeamBalancingTestScript({
+    FirebaseFirestore? firestore,
+    HubCreationService? hubCreationService,
+    HubsRepository? hubsRepository,
+  })  : firestore = firestore ?? FirebaseFirestore.instance,
+        _hubCreationService = hubCreationService ?? HubCreationService(),
+        _hubsRepository = hubsRepository ?? HubsRepository();
 
   /// רשימת שמות פרטיים
   final List<String> firstNames = [
@@ -153,38 +166,14 @@ class TeamBalancingTestScript {
       createdAt: DateTime.now(),
       location: hubLocation,
       geohash: hubGeohash,
-      settings: {
-        'ratingMode': 'advanced',
-        'allowGuestPlayers': false,
-      },
+      settings: const HubSettings(),
     );
 
-    final hubRef = firestore.doc(FirestorePaths.hub(hubId));
-    batch.set(hubRef, hub.toJson());
+    // ARCHITECTURAL FIX: Use HubCreationService instead of manual batch writes
+    // This ensures proper denormalization and business logic
+    await _hubCreationService.createHub(hub);
 
-    // הוספת המנהל כחבר ראשון
-    batch.set(
-      hubRef.collection('members').doc(managerId),
-      {
-        'userId': managerId,
-        'joinedAt': FieldValue.serverTimestamp(),
-        'role': 'manager',
-        'status': 'active',
-      },
-    );
-
-    // אם זה משתמש קיים, נעדכן את hubIds שלו
-    if (isExistingUser) {
-      batch.update(
-        firestore.doc(FirestorePaths.user(managerId)),
-        {
-          'hubIds': FieldValue.arrayUnion([hubId]),
-        },
-      );
-      debugPrint('✅ מעדכן את hubIds של המשתמש הקיים');
-    }
-
-    debugPrint('✅ Hub נוצר: $hubId');
+    debugPrint('✅ Hub נוצר: $hubId (using HubCreationService)');
     debugPrint('   📍 מיקום: גן דניאל, חיפה');
     debugPrint('   👤 מנהל: $managerId');
 
@@ -204,18 +193,19 @@ class TeamBalancingTestScript {
     playerIds.add(managerId);
     final managerRating = ratings[0]; // דירוג למנהל
 
-    // עדכון חבר ה-Hub של המנהל עם דירוג
-    batch.set(
-      hubRef.collection('members').doc(managerId),
-      {
-        'managerRating': managerRating,
-      },
-      SetOptions(merge: true), // מיזוג עם המסמך הקיים
-    );
+    // עדכון דירוג המנהל בחבר ה-Hub
+    await firestore
+        .doc(FirestorePaths.hub(hubId))
+        .collection('members')
+        .doc(managerId)
+        .update({
+      'managerRating': managerRating,
+    });
     debugPrint(
         '   ✅ 1/15: אתה (מנהל) - דירוג: ${managerRating.toStringAsFixed(1)}');
 
     // יצירת 14 שחקנים נוספים
+    final userBatch = firestore.batch();
     for (int i = 0; i < 14; i++) {
       final firstName = firstNames[random.nextInt(firstNames.length)];
       final lastName = lastNames[random.nextInt(lastNames.length)];
@@ -248,69 +238,71 @@ class TeamBalancingTestScript {
         location: location,
         geohash: geohash,
         photoUrl: photoUrl,
-        hubIds: [hubId],
+        hubIds: [], // Will be updated by repository
         isProfileComplete: true,
       );
 
-      batch.set(firestore.doc(FirestorePaths.user(userId)), user.toJson());
+      userBatch.set(firestore.doc(FirestorePaths.user(userId)), user.toJson());
       playerIds.add(userId);
-
-      // הוספת השחקן כחבר ב-Hub
-      batch.set(
-        hubRef.collection('members').doc(userId),
-        {
-          'userId': userId,
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': 'member',
-          'status': 'active',
-          'managerRating': ratings[i + 1], // דירוג מנהל
-        },
-      );
 
       debugPrint(
           '   ✅ ${i + 2}/15: $fullName - דירוג: ${ratings[i + 1].toStringAsFixed(1)}');
     }
 
-    // שלב 4: יצירת אירוע
-    debugPrint('\n📅 שלב 4: יצירת אירוע עם 3 קבוצות...');
+    // Commit user creation batch
+    await userBatch.commit();
 
-    // יצירת ID לאירוע
-    final eventsCollectionRef =
-        firestore.collection('hubs').doc(hubId).collection('events');
-    final eventDocRef = eventsCollectionRef.doc();
-    final eventId = eventDocRef.id;
+    // ARCHITECTURAL FIX: Add members through repository with ratings
+    // This ensures proper member document structure and triggers Cloud Functions
+    for (int i = 0; i < playerIds.length - 1; i++) {
+      // Skip manager (first in list)
+      final userId = playerIds[i + 1];
+      await _hubsRepository.addMember(hubId, userId);
 
-    final eventDate =
+      // Update managerRating separately (metadata field)
+      await firestore
+          .doc(FirestorePaths.hub(hubId))
+          .collection('members')
+          .doc(userId)
+          .update({
+        'managerRating': ratings[i + 2], // +2 because manager took ratings[0] and we're at i+1
+      });
+    }
+
+    // שלב 4: יצירת משחק (Game) עם 3 קבוצות
+    debugPrint('\n📅 שלב 4: יצירת משחק עם 3 קבוצות...');
+
+    // יצירת ID למשחק
+    final gameDocRef = firestore.collection('games').doc();
+    final gameId = gameDocRef.id;
+
+    final gameDate =
         DateTime.now().add(const Duration(hours: 2)); // בעוד שעתיים
 
-    final event = HubEvent(
-      eventId: eventId,
+    final game = Game(
+      gameId: gameId,
       hubId: hubId,
       createdBy: managerId,
-      title: 'אירוע בדיקת איזון קבוצות',
-      description: 'אירוע מיוחד לבדיקת מערכת איזון הקבוצות - 15 שחקנים מאושרים',
-      eventDate: eventDate,
+      gameDate: gameDate,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      status: 'upcoming',
+      status: GameStatus.teamSelection,
       location: 'גן דניאל',
       locationPoint: hubLocation,
       geohash: hubGeohash,
       teamCount: 3, // 3 קבוצות עבור Winner Stays
-      maxParticipants: 15,
-      registeredPlayerIds: playerIds, // כל 15 השחקנים
-      waitingListPlayerIds: [],
+      maxPlayers: 15,
     );
 
-    batch.set(eventDocRef, event.toJson());
-    debugPrint('✅ אירוע נוצר: $eventId');
+    batch.set(gameDocRef, game.toJson());
+    debugPrint('✅ משחק נוצר: $gameId');
     debugPrint(
-        '   📅 תאריך: ${eventDate.day}/${eventDate.month}/${eventDate.year} ${eventDate.hour}:${eventDate.minute.toString().padLeft(2, '0')}');
+        '   📅 תאריך: ${gameDate.day}/${gameDate.month}/${gameDate.year} ${gameDate.hour}:${gameDate.minute.toString().padLeft(2, '0')}');
     debugPrint('   🏟️ מיקום: גן דניאל');
     debugPrint('   👥 מספר שחקנים: 15 (3 קבוצות של 5)');
 
-    // שלב 5: רישום כל 15 השחקנים לאירוע (confirmed)
-    debugPrint('\n📝 שלב 5: רישום כל 15 השחקנים לאירוע...');
+    // שלב 5: רישום כל 15 השחקנים למשחק (confirmed)
+    debugPrint('\n📝 שלב 5: רישום כל 15 השחקנים למשחק...');
     for (int i = 0; i < playerIds.length; i++) {
       final signup = GameSignup(
         playerId: playerIds[i],
@@ -320,11 +312,11 @@ class TeamBalancingTestScript {
       );
 
       batch.set(
-        firestore.doc(FirestorePaths.gameSignup(eventId, playerIds[i])),
+        firestore.doc(FirestorePaths.gameSignup(gameId, playerIds[i])),
         signup.toJson(),
       );
     }
-    debugPrint('✅ כל 15 השחקנים נרשמו לאירוע (אישרו הגעה)');
+    debugPrint('✅ כל 15 השחקנים נרשמו למשחק (אישרו הגעה)');
 
     // שליחת כל הנתונים לFirestore
     debugPrint('\n💾 שומר את כל הנתונים ל-Firestore...');
@@ -343,7 +335,7 @@ class TeamBalancingTestScript {
     debugPrint('=' * 60);
     debugPrint('📊 סיכום:');
     debugPrint('   🏟️ Hub ID: $hubId');
-    debugPrint('   📅 Event ID: $eventId');
+    debugPrint('   ⚽ Game ID: $gameId');
     debugPrint('   👤 Manager ID: $managerId');
     debugPrint('   👥 מספר שחקנים: 15');
     debugPrint('   📈 טווח דירוגים: 4.2 - 8.5');
@@ -359,36 +351,32 @@ class TeamBalancingTestScript {
 
     return {
       'hubId': hubId,
-      'eventId': eventId,
+      'gameId': gameId,
       'managerId': managerId,
       'playerIds': playerIds,
       'success': true,
-      'message': 'תרחיש נוצר בהצלחה עם Hub $hubId, אירוע $eventId, ו-15 שחקנים',
+      'message': 'תרחיש נוצר בהצלחה עם Hub $hubId, משחק $gameId, ו-15 שחקנים',
     };
   }
 
   /// פונקציה עזר - מחיקת כל הנתונים של התרחיש (לניקיון)
   Future<void> cleanupTestScenario({
     required String hubId,
-    required String eventId,
+    required String gameId,
     required List<String> playerIds,
   }) async {
     debugPrint('🧹 מנקה תרחיש בדיקה...');
 
     final batch = firestore.batch();
 
-    // מחיקת רישומים לאירוע
+    // מחיקת רישומים למשחק
     for (final playerId in playerIds) {
-      batch.delete(firestore.doc(FirestorePaths.gameSignup(eventId, playerId)));
+      batch.delete(firestore.doc(FirestorePaths.gameSignup(gameId, playerId)));
     }
 
-    // מחיקת אירוע
-    final eventRef = firestore
-        .collection('hubs')
-        .doc(hubId)
-        .collection('events')
-        .doc(eventId);
-    batch.delete(eventRef);
+    // מחיקת משחק
+    final gameRef = firestore.collection('games').doc(gameId);
+    batch.delete(gameRef);
 
     // מחיקת חברי Hub
     for (final playerId in playerIds) {

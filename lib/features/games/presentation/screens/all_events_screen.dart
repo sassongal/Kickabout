@@ -9,6 +9,7 @@ import 'package:kattrick/widgets/premium/spotlight_card.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 
 class AllEventsScreen extends ConsumerStatefulWidget {
   const AllEventsScreen({super.key});
@@ -22,7 +23,6 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
     final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
-    final hubsRepo = ref.read(hubsRepositoryProvider);
 
     if (currentUserId == null) {
       return const AppScaffold(
@@ -31,16 +31,12 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
       );
     }
 
+    final hubsAsync = ref.watch(hubsByMemberStreamProvider(currentUserId));
+
     return AppScaffold(
       title: 'כל האירועים',
-      body: StreamBuilder<List<Hub>>(
-        stream: hubsRepo.watchHubsByMember(currentUserId),
-        builder: (context, hubsSnapshot) {
-          if (hubsSnapshot.connectionState == ConnectionState.waiting) {
-            return const PremiumLoadingState(message: 'טוען אירועים...');
-          }
-
-          final hubs = hubsSnapshot.data ?? [];
+      body: hubsAsync.when(
+        data: (hubs) {
           final hubIds = hubs.map((h) => h.hubId).toList();
 
           // Also fetch games created by user or where user is signed up, even if not in hub list
@@ -98,6 +94,12 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
             },
           );
         },
+        loading: () => const PremiumLoadingState(message: 'טוען אירועים...'),
+        error: (err, stack) => PremiumEmptyState(
+          icon: Icons.error_outline,
+          title: 'שגיאה',
+          message: 'לא ניתן לטעון אירועים',
+        ),
       ),
     );
   }

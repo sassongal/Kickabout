@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/hub_role.dart';
 import 'package:kattrick/models/hub.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/widgets/common/home_logo_button.dart';
 
 /// Custom Permissions Management Screen
@@ -71,95 +71,63 @@ class _CustomPermissionsScreenState
           );
         }
 
-        final hubsRepo = ref.watch(hubsRepositoryProvider);
+        final hubAsync = ref.watch(hubStreamProvider(widget.hubId));
 
-        return Scaffold(
-          appBar: AppBar(
-            leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
-            leading: AppBarHomeLogo(showBackButton: canPop),
-            title: const Text('Custom Permissions'),
-            elevation: 0,
-            automaticallyImplyLeading: false,
-          ),
-          body: StreamBuilder<Hub?>(
-            stream: hubsRepo.watchHub(widget.hubId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError || snapshot.data == null) {
-                return Center(
+        return hubAsync.when(
+          data: (hub) {
+            if (hub == null) {
+              return Scaffold(
+                appBar: AppBar(
+                  leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+                  leading: AppBarHomeLogo(showBackButton: canPop),
+                  title: const Text('Custom Permissions'),
+                  elevation: 0,
+                  automaticallyImplyLeading: false,
+                ),
+                body: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.error_outline,
                           size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
-                      Text('Error loading hub: ${snapshot.error}'),
+                      const Text('Hub not found'),
                     ],
                   ),
-                );
-              }
-
-              final hub = snapshot.data!;
-
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Info card
-                  Card(
-                    color: Colors.blue.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: Colors.blue.shade700),
-                              const SizedBox(width: 8),
-                              Text(
-                                'About Custom Permissions',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade700,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Grant specific permissions to individual users without changing their role. '
-                            'Use sparingly - most users should get permissions from their role.',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Permission types
-                  ...permissionTypes.entries.map((entry) {
-                    final permissionKey = entry.key;
-                    final permissionName = entry.value;
-                    final userIds = (hub.permissions[permissionKey]
-                                as List<dynamic>?)
-                            ?.cast<String>() ??
-                        [];
-
-                    return _PermissionCard(
-                      hubId: widget.hubId,
-                      permissionKey: permissionKey,
-                      permissionName: permissionName,
-                      userCount: userIds.length,
-                    );
-                  }),
-                ],
+                ),
               );
-            },
+            }
+            return _buildContent(context, hub, canPop);
+          },
+          loading: () => Scaffold(
+            appBar: AppBar(
+              leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+              leading: AppBarHomeLogo(showBackButton: canPop),
+              title: const Text('Custom Permissions'),
+              elevation: 0,
+              automaticallyImplyLeading: false,
+            ),
+            body: const Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, stack) => Scaffold(
+            appBar: AppBar(
+              leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+              leading: AppBarHomeLogo(showBackButton: canPop),
+              title: const Text('Custom Permissions'),
+              elevation: 0,
+              automaticallyImplyLeading: false,
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline,
+                      size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text('Error loading hub: $error'),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -180,6 +148,73 @@ class _CustomPermissionsScreenState
           automaticallyImplyLeading: false,
         ),
         body: Center(child: Text('Error: $error')),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, Hub hub, bool canPop) {
+    return Scaffold(
+      appBar: AppBar(
+        leadingWidth: AppBarHomeLogo.leadingWidth(showBackButton: canPop),
+        leading: AppBarHomeLogo(showBackButton: canPop),
+        title: const Text('Custom Permissions'),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Info card
+          Card(
+            color: Colors.blue.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      Text(
+                        'About Custom Permissions',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Grant specific permissions to individual users without changing their role. '
+                    'Use sparingly - most users should get permissions from their role.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Permission types
+          ...permissionTypes.entries.map((entry) {
+            final permissionKey = entry.key;
+            final permissionName = entry.value;
+            final userIds = (hub.permissions[permissionKey]
+                        as List<dynamic>?)
+                    ?.cast<String>() ??
+                [];
+
+            return _PermissionCard(
+              hubId: widget.hubId,
+              permissionKey: permissionKey,
+              permissionName: permissionName,
+              userCount: userIds.length,
+            );
+          }),
+        ],
       ),
     );
   }

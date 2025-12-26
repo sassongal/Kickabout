@@ -422,3 +422,122 @@ exports.createSuperAdmin = onCall(
     }
   },
 );
+
+// --- Vote on Poll ---
+/**
+ * Vote on a poll
+ * @param {string} pollId - Poll ID
+ * @param {Array<string>} selectedOptionIds - Selected option IDs
+ * @param {number?} rating - Rating value (1-5) for rating polls
+ * @return {Object} Result with success status
+ */
+exports.votePoll = onCall(
+  {
+    invoker: 'public',
+    memory: '256MiB',
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be authenticated');
+    }
+
+    const userId = request.auth.uid;
+    const { pollId, selectedOptionIds, rating } = request.data;
+
+    // Validation
+    if (!pollId) {
+      throw new HttpsError('invalid-argument', 'Missing pollId parameter');
+    }
+
+    if (!selectedOptionIds || !Array.isArray(selectedOptionIds) || selectedOptionIds.length === 0) {
+      if (!rating) {
+        throw new HttpsError('invalid-argument', 'Must provide selectedOptionIds or rating');
+      }
+    }
+
+    info(`User ${userId} voting on poll ${pollId}`);
+
+    try {
+      // Use transaction to ensure atomic vote recording
+      await db.runTransaction(async (transaction) => {
+        const pollRef = db.collection('polls').doc(pollId);
+        const pollDoc = await transaction.get(pollRef);
+
+        if (!pollDoc.exists) {
+          throw new HttpsError('not-found', 'Poll not found');
+        }
+
+        const pollData = pollDoc.data();
+
+        // Check if poll is active
+        if (pollData.status !== 'active') {
+          throw new HttpsError('failed-precondition', 'Poll is closed', { code: 'poll-closed' });
+        }
+
+        // Check if poll has ended
+        if (pollData.endsAt && pollData.endsAt.toDate() < new Date()) {
+          throw new HttpsError('failed-precondition', 'Poll has ended', { code: 'poll-closed' });
+        }
+
+        // Check if user already voted
+        const voters = pollData.voters || [];
+        if (voters.includes(userId) && !pollData.allowMultipleVotes) {
+          throw new HttpsError('failed-precondition', 'Already voted', { code: 'already-voted' });
+        }
+
+        // Validate vote type matches poll type
+        const pollType = pollData.type;
+        if (pollType === 'rating' && !rating) {
+          throw new HttpsError('invalid-argument', 'Rating is required for rating polls');
+        }
+        if (pollType === 'singleChoice' && selectedOptionIds && selectedOptionIds.length !== 1) {
+          throw new HttpsError('invalid-argument', 'Single choice polls require exactly one option');
+        }
+
+        // Prepare updates
+        const updates = {
+          totalVotes: FieldValue.increment(1),
+        };
+
+        // Add user to voters list if not already voted
+        if (!voters.includes(userId)) {
+          updates.voters = FieldValue.arrayUnion(userId);
+        }
+
+        // Update vote counts for selected options
+        const options = pollData.options || [];
+        const updatedOptions = options.map((option) => {
+          if (selectedOptionIds && selectedOptionIds.includes(option.optionId)) {
+            return {
+              ...option,
+              voteCount: (option.voteCount || 0) + 1,
+              voters: pollData.isAnonymous
+                ? (option.voters || [])
+                : [...(option.voters || []), userId],
+            };
+          }
+          return option;
+        });
+
+        updates.options = updatedOptions;
+
+        // Update poll document
+        transaction.update(pollRef, updates);
+
+        info(`✅ Vote recorded for poll ${pollId} by user ${userId}`);
+      });
+
+      return {
+        success: true,
+        message: 'Vote recorded successfully',
+      };
+    } catch (error) {
+      info(`⚠️ Error voting on poll:`, error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError('internal', `Failed to vote: ${error.message}`);
+    }
+  },
+);

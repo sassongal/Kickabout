@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
+import 'package:kattrick/core/providers/auth_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_member.dart' as models;
 import 'package:kattrick/theme/premium_theme.dart';
@@ -287,76 +289,89 @@ class _HubPlayersListScreenV2State
 
   @override
   Widget build(BuildContext context) {
+    final hubAsync = ref.watch(hubStreamProvider(widget.hubId));
+
+    return hubAsync.when(
+      data: (hub) {
+        if (hub == null) {
+          return PremiumScaffold(
+            title: 'שחקני ההוב',
+            showBackButton: true,
+            body: const Center(child: Text('Hub לא נמצא')),
+          );
+        }
+        return _buildContent(context, hub);
+      },
+      loading: () => PremiumScaffold(
+        title: 'שחקני ההוב',
+        showBackButton: true,
+        body: const Center(child: KineticLoadingAnimation(size: 40)),
+      ),
+      error: (err, stack) => PremiumScaffold(
+        title: 'שחקני ההוב',
+        showBackButton: true,
+        body: const Center(child: Text('שגיאה בטעינת הנתונים')),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, Hub hub) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
+
+    final hubPermissionsAsync = currentUserId != null
+        ? ref.watch(hubPermissionsProvider(
+            (hubId: widget.hubId, userId: currentUserId)))
+        : null;
+    final hubPermissions = hubPermissionsAsync?.valueOrNull;
+    final isManagerRole =
+        (hubPermissions?.isManager ?? false) || currentUserId == hub.createdBy;
+    final isModeratorRole = hubPermissions?.isModerator ?? false;
+    final canEditRatings = isManagerRole;
+    final canViewRatings = isManagerRole || isModeratorRole;
+    final canInvitePlayers =
+        hubPermissions?.canInvitePlayers ?? isManagerRole;
+
+    if (!canEditRatings && _isRatingMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _isRatingMode = false;
+            _tempRatings.clear();
+          });
+        }
+      });
+    }
+
+    // Load ratings when entering rating mode
+    if (_isRatingMode && _tempRatings.isEmpty && _members.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            for (final member in _members) {
+              if (member.managerRating != null &&
+                  member.managerRating! > 0) {
+                // Round existing ratings to nearest 0.5
+                _tempRatings[member.user.uid] =
+                    _roundToNearestHalf(member.managerRating!);
+              }
+            }
+          });
+        }
+      });
+    }
+
+    final filteredMembers = _filterAndSort(_members, hub);
+
+    if (!canViewRatings && _sortBy == 'rating') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _sortBy = 'name');
+      });
+    }
 
     return PremiumScaffold(
       title: 'שחקני ההוב',
       showBackButton: true,
-      body: StreamBuilder<Hub?>(
-        stream: hubsRepo.watchHub(widget.hubId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: KineticLoadingAnimation(size: 40));
-          }
-
-          final hub = snapshot.data;
-          if (hub == null) {
-            return const Center(child: Text('Hub לא נמצא'));
-          }
-
-          final hubPermissionsAsync = currentUserId != null
-              ? ref.watch(hubPermissionsProvider(
-                  (hubId: widget.hubId, userId: currentUserId)))
-              : null;
-          final hubPermissions = hubPermissionsAsync?.valueOrNull;
-          final isManagerRole =
-              (hubPermissions?.isManager ?? false) || currentUserId == hub.createdBy;
-          final isModeratorRole = hubPermissions?.isModerator ?? false;
-          final isHubManager = isManagerRole;
-          final canEditRatings = isManagerRole;
-          final canViewRatings = isManagerRole || isModeratorRole;
-          final canInvitePlayers =
-              hubPermissions?.canInvitePlayers ?? isManagerRole;
-
-          if (!canEditRatings && _isRatingMode) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  _isRatingMode = false;
-                  _tempRatings.clear();
-                });
-              }
-            });
-          }
-
-          // Load ratings when entering rating mode
-          if (_isRatingMode && _tempRatings.isEmpty && _members.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  for (final member in _members) {
-                    if (member.managerRating != null &&
-                        member.managerRating! > 0) {
-                      // Round existing ratings to nearest 0.5
-                      _tempRatings[member.user.uid] =
-                          _roundToNearestHalf(member.managerRating!);
-                    }
-                  }
-                });
-              }
-            });
-          }
-
-          final filteredMembers = _filterAndSort(_members, hub);
-
-          if (!canViewRatings && _sortBy == 'rating') {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => _sortBy = 'name');
-            });
-          }
-
-          return Column(
+      body: Column(
             children: [
               // Search and Controls
               Padding(
@@ -502,9 +517,7 @@ class _HubPlayersListScreenV2State
                       ),
               ),
             ],
-          );
-        },
-      ),
+          ),
     );
   }
 

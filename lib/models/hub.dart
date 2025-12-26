@@ -91,7 +91,56 @@ class Hub with _$Hub {
     @Default(0) double activityScore, // Activity score
   }) = _Hub;
 
+  const Hub._();
+
   factory Hub.fromJson(Map<String, dynamic> json) => _$HubFromJson(json);
+
+  // ============================================================================
+  // BUSINESS LOGIC METHODS
+  // ============================================================================
+
+  // Membership capacity
+  /// Whether the hub has reached its maximum member capacity
+  bool get isFull => settings.maxMembers > 0 && memberCount >= settings.maxMembers;
+
+  /// Whether the hub has available slots for new members
+  bool get hasSpace => !isFull;
+
+  /// Number of available member slots (999 if unlimited)
+  int get availableSlots => settings.maxMembers > 0
+      ? settings.maxMembers - memberCount
+      : 999;
+
+  // Joining policies
+  /// Whether joining requires manager approval
+  bool get requiresApproval => settings.joinMode.requiresApproval;
+
+  /// Whether members can join automatically without approval
+  bool get allowsAutoJoin => settings.joinMode.allowsAutoJoin;
+
+  // Role checks (uses denormalized arrays for O(1) lookup)
+  /// Check if a user is a manager of this hub
+  bool isManager(String userId) => managerIds.contains(userId);
+
+  /// Check if a user is a moderator of this hub
+  bool isModerator(String userId) => moderatorIds.contains(userId);
+
+  /// Check if a user is an active member of this hub
+  bool isActiveMember(String userId) => activeMemberIds.contains(userId);
+
+  /// Check if a user is the creator of this hub
+  bool isCreator(String userId) => createdBy == userId;
+
+  // Invitations
+  /// Get the invitation code for this hub (falls back to hubId prefix)
+  String get inviteCode => settings.invitationCode ?? hubId.substring(0, 8);
+
+  /// Whether invitations are enabled for this hub
+  bool get invitationsEnabled => settings.invitationsEnabled;
+
+  // Display helpers
+  /// Get formatted member count text in Hebrew
+  String get memberCountText => '$memberCount ${memberCount == 1 ? 'חבר' : 'חברים'}';
 }
 
 /// Firestore converter for Hub

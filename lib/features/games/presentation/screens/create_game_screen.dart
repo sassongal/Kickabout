@@ -13,6 +13,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/routing/app_paths.dart';
 import 'package:kattrick/utils/city_utils.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 import 'package:kattrick/models/targeting_criteria.dart';
@@ -425,18 +426,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         }
       }
 
-      // Notify hub members via a dedicated service
-      try {
-        if (selectedHubId.isNotEmpty) {
-          // final notificationService = ref.read(notificationsRepositoryProvider);
-          // await notificationService.notifyHubOfNewGame(...)
-          // TODO: Implement notifyHubOfNewGame in NotificationsRepository or GameManagementService
-          debugPrint('✅ Notified hub members via Cloud Function (Placeholder)');
-        }
-      } catch (e) {
-        // Log error but don't fail game creation
-        debugPrint('⚠️ Failed to call notifyHubOnNewGame: $e');
-      }
+      // Note: Hub member notifications are already handled above via pushNotificationIntegrationService
+      // The Cloud Function 'notifyHubOnNewGame' exists as an alternative but is not needed here
 
       // Log analytics
       try {
@@ -526,11 +517,10 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
 
-    final hubsStream = currentUserId != null
-        ? hubsRepo.watchHubsByMember(currentUserId)
-        : Stream.value(<Hub>[]);
+    final hubsAsync = currentUserId != null
+        ? ref.watch(hubsByMemberStreamProvider(currentUserId))
+        : const AsyncValue.data(<Hub>[]);
 
     return AppScaffold(
       title: 'צור משחק',
@@ -587,15 +577,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
               // Hub selection (Only for Hub Games)
               if (!_isPublicGame) ...[
                 if (_selectedHubId == null || widget.hubId == null)
-                  StreamBuilder<List<Hub>>(
-                    stream: hubsStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const LinearProgressIndicator();
-                      }
-
-                      final hubs = snapshot.data ?? [];
-
+                  hubsAsync.when(
+                    data: (hubs) {
                       return DropdownButtonFormField<String?>(
                         initialValue: _selectedHubId,
                         decoration: const InputDecoration(
@@ -632,6 +615,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                             : null,
                       );
                     },
+                    loading: () => const LinearProgressIndicator(),
+                    error: (err, stack) => Text('שגיאה: $err'),
                   ),
                 const SizedBox(height: 16),
               ],

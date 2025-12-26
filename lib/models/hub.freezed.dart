@@ -535,7 +535,7 @@ class __$$HubImplCopyWithImpl<$Res> extends _$HubCopyWithImpl<$Res, _$HubImpl>
 
 /// @nodoc
 @JsonSerializable()
-class _$HubImpl implements _Hub {
+class _$HubImpl extends _Hub {
   const _$HubImpl(
       {required this.hubId,
       required this.name,
@@ -573,7 +573,8 @@ class _$HubImpl implements _Hub {
         _moderatorIds = moderatorIds,
         _legacySettings = legacySettings,
         _permissions = permissions,
-        _venueIds = venueIds;
+        _venueIds = venueIds,
+        super._();
 
   factory _$HubImpl.fromJson(Map<String, dynamic> json) =>
       _$$HubImplFromJson(json);
@@ -857,7 +858,7 @@ class _$HubImpl implements _Hub {
   }
 }
 
-abstract class _Hub implements Hub {
+abstract class _Hub extends Hub {
   const factory _Hub(
       {required final String hubId,
       required final String name,
@@ -890,6 +891,7 @@ abstract class _Hub implements Hub {
       final int? gameCount,
       @TimestampConverter() final DateTime? lastActivity,
       final double activityScore}) = _$HubImpl;
+  const _Hub._() : super._();
 
   factory _Hub.fromJson(Map<String, dynamic> json) = _$HubImpl.fromJson;
 

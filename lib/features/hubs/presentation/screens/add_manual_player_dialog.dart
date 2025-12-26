@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/services_providers.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_membership_service.dart';
 
 /// Dialog for hub manager to add a manual player (without app)
 class AddManualPlayerDialog extends ConsumerStatefulWidget {
@@ -59,7 +61,6 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
     try {
       final firestore = FirebaseFirestore.instance;
       final usersRepo = ref.read(usersRepositoryProvider);
-      final hubsRepo = ref.read(hubsRepositoryProvider);
 
       // Check if phone number is already taken
       if (_phoneController.text.trim().isNotEmpty) {
@@ -111,14 +112,34 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
       // Save user
       await usersRepo.setUser(user);
 
-      // Add to hub
-      await hubsRepo.addMember(widget.hubId, playerId);
+      // Add to hub using HubMembershipService for business validation
+      final membershipService = ref.read(hubMembershipServiceProvider);
+      await membershipService.addMember(
+        hubId: widget.hubId,
+        userId: playerId,
+      );
 
       if (mounted) {
         Navigator.of(context).pop(true); // Return true to indicate success
         SnackbarHelper.showSuccess(
           context,
           'השחקן ${user.name} נוסף בהצלחה',
+        );
+      }
+    } on HubCapacityExceededException catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SnackbarHelper.showError(
+          context,
+          'ה-Hub מלא (${e.currentCount}/${e.maxCount} חברים)',
+        );
+      }
+    } on UserHubLimitException catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SnackbarHelper.showError(
+          context,
+          'השחקן הגיע למקסימום של 10 Hubs',
         );
       }
     } catch (e) {

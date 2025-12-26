@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/auth_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/services_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_membership_service.dart';
 
 /// Join Hub by Invitation Code Screen
 class JoinByInviteScreen extends ConsumerStatefulWidget {
@@ -84,17 +87,12 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
       }
 
       // Check if invitations are enabled
-      // TODO: Add invitationsEnabled to HubSettings model
-      final invitationsEnabled = true; // Default enabled
+      final invitationsEnabled = hub.settings.invitationsEnabled;
       if (!mounted) return;
       if (!invitationsEnabled) {
         SnackbarHelper.showError(context, l10n.hubInvitationsDisabled);
         return;
       }
-
-      // Check join mode
-      // TODO: Add joinMode to HubSettings model
-      final joinMode = 'auto'; // Default to auto
 
       // Prevent double-join using user profile hubIds
       final currentUser = await ref.read(usersRepositoryProvider).getUser(currentUserId);
@@ -105,20 +103,38 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
         return;
       }
 
-      if (joinMode == 'auto') {
-        // Auto join
-        await hubsRepo.addMember(_hub!.hubId, currentUserId);
-        if (!mounted) return;
+      // Use HubMembershipService for business validation
+      final membershipService = ref.read(hubMembershipServiceProvider);
+      await membershipService.addMember(
+        hubId: _hub!.hubId,
+        userId: currentUserId,
+      );
+
+      if (!mounted) return;
+      if (hub.allowsAutoJoin) {
         SnackbarHelper.showSuccess(context, l10n.joinedHubSuccess(hub.name));
-        context.go('/hubs/${hub.hubId}');
       } else {
-        // Approval required - create a join request
-        // For now, we'll just add them (in production, you'd create a join request)
-        await hubsRepo.addMember(_hub!.hubId, currentUserId);
-        if (!mounted) return;
         SnackbarHelper.showSuccess(context, l10n.joinRequestSent);
-        context.go('/hubs/${hub.hubId}');
       }
+      context.go('/hubs/${hub.hubId}');
+    } on HubCapacityExceededException catch (e) {
+      if (!mounted) return;
+      SnackbarHelper.showError(
+        context,
+        'ה-Hub מלא (${e.currentCount}/${e.maxCount} חברים)',
+      );
+    } on UserHubLimitException catch (_) {
+      if (!mounted) return;
+      SnackbarHelper.showError(
+        context,
+        'הגעת למקסימום של 10 Hubs',
+      );
+    } on HubMemberBannedException catch (_) {
+      if (!mounted) return;
+      SnackbarHelper.showError(
+        context,
+        'אינך יכול להצטרף ל-Hub זה',
+      );
     } catch (e) {
       if (!mounted) return;
       SnackbarHelper.showError(context, l10n.joinHubError(e.toString()));
@@ -160,9 +176,7 @@ class _JoinByInviteScreenState extends ConsumerState<JoinByInviteScreen> {
     }
 
     final hub = _hub!;
-    // TODO: Add joinMode to HubSettings model
-    final joinMode = 'auto'; // Default to auto
-    final requiresApproval = joinMode == 'approval';
+    final requiresApproval = hub.requiresApproval;
 
     return PremiumScaffold(
       title: l10n.joinHubTitle,

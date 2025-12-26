@@ -53,6 +53,22 @@ mixin _$HubSettings {
   /// Minimum number of games played to be considered a veteran
   int get veteranGamesThreshold => throw _privateConstructorUsedError;
 
+  /// Invitation code for joining the hub
+  /// If null, uses hubId.substring(0, 8) as fallback
+  String? get invitationCode => throw _privateConstructorUsedError;
+
+  /// Enable/disable invitations for this hub
+  bool get invitationsEnabled => throw _privateConstructorUsedError;
+
+  /// Join mode: auto (immediate) or approval (requires manager approval)
+  @JoinModeConverter()
+  JoinMode get joinMode => throw _privateConstructorUsedError;
+
+  /// Match logging policy: who can log matches
+  @MatchLoggingPolicyConverter()
+  MatchLoggingPolicy get matchLoggingPolicy =>
+      throw _privateConstructorUsedError;
+
   /// Serializes this HubSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -79,7 +95,11 @@ abstract class $HubSettingsCopyWith<$Res> {
       bool enableChat,
       bool enableEvents,
       int maxMembers,
-      int veteranGamesThreshold});
+      int veteranGamesThreshold,
+      String? invitationCode,
+      bool invitationsEnabled,
+      @JoinModeConverter() JoinMode joinMode,
+      @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy});
 }
 
 /// @nodoc
@@ -107,6 +127,10 @@ class _$HubSettingsCopyWithImpl<$Res, $Val extends HubSettings>
     Object? enableEvents = null,
     Object? maxMembers = null,
     Object? veteranGamesThreshold = null,
+    Object? invitationCode = freezed,
+    Object? invitationsEnabled = null,
+    Object? joinMode = null,
+    Object? matchLoggingPolicy = null,
   }) {
     return _then(_value.copyWith(
       showManagerContactInfo: null == showManagerContactInfo
@@ -149,6 +173,22 @@ class _$HubSettingsCopyWithImpl<$Res, $Val extends HubSettings>
           ? _value.veteranGamesThreshold
           : veteranGamesThreshold // ignore: cast_nullable_to_non_nullable
               as int,
+      invitationCode: freezed == invitationCode
+          ? _value.invitationCode
+          : invitationCode // ignore: cast_nullable_to_non_nullable
+              as String?,
+      invitationsEnabled: null == invitationsEnabled
+          ? _value.invitationsEnabled
+          : invitationsEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      joinMode: null == joinMode
+          ? _value.joinMode
+          : joinMode // ignore: cast_nullable_to_non_nullable
+              as JoinMode,
+      matchLoggingPolicy: null == matchLoggingPolicy
+          ? _value.matchLoggingPolicy
+          : matchLoggingPolicy // ignore: cast_nullable_to_non_nullable
+              as MatchLoggingPolicy,
     ) as $Val);
   }
 }
@@ -171,7 +211,11 @@ abstract class _$$HubSettingsImplCopyWith<$Res>
       bool enableChat,
       bool enableEvents,
       int maxMembers,
-      int veteranGamesThreshold});
+      int veteranGamesThreshold,
+      String? invitationCode,
+      bool invitationsEnabled,
+      @JoinModeConverter() JoinMode joinMode,
+      @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy});
 }
 
 /// @nodoc
@@ -197,6 +241,10 @@ class __$$HubSettingsImplCopyWithImpl<$Res>
     Object? enableEvents = null,
     Object? maxMembers = null,
     Object? veteranGamesThreshold = null,
+    Object? invitationCode = freezed,
+    Object? invitationsEnabled = null,
+    Object? joinMode = null,
+    Object? matchLoggingPolicy = null,
   }) {
     return _then(_$HubSettingsImpl(
       showManagerContactInfo: null == showManagerContactInfo
@@ -239,6 +287,22 @@ class __$$HubSettingsImplCopyWithImpl<$Res>
           ? _value.veteranGamesThreshold
           : veteranGamesThreshold // ignore: cast_nullable_to_non_nullable
               as int,
+      invitationCode: freezed == invitationCode
+          ? _value.invitationCode
+          : invitationCode // ignore: cast_nullable_to_non_nullable
+              as String?,
+      invitationsEnabled: null == invitationsEnabled
+          ? _value.invitationsEnabled
+          : invitationsEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      joinMode: null == joinMode
+          ? _value.joinMode
+          : joinMode // ignore: cast_nullable_to_non_nullable
+              as JoinMode,
+      matchLoggingPolicy: null == matchLoggingPolicy
+          ? _value.matchLoggingPolicy
+          : matchLoggingPolicy // ignore: cast_nullable_to_non_nullable
+              as MatchLoggingPolicy,
     ));
   }
 }
@@ -256,7 +320,12 @@ class _$HubSettingsImpl extends _HubSettings {
       this.enableChat = true,
       this.enableEvents = true,
       this.maxMembers = 50,
-      this.veteranGamesThreshold = 10})
+      this.veteranGamesThreshold = 10,
+      this.invitationCode,
+      this.invitationsEnabled = true,
+      @JoinModeConverter() this.joinMode = JoinMode.auto,
+      @MatchLoggingPolicyConverter()
+      this.matchLoggingPolicy = MatchLoggingPolicy.managerOnly})
       : super._();
 
   factory _$HubSettingsImpl.fromJson(Map<String, dynamic> json) =>
@@ -315,9 +384,31 @@ class _$HubSettingsImpl extends _HubSettings {
   @JsonKey()
   final int veteranGamesThreshold;
 
+  /// Invitation code for joining the hub
+  /// If null, uses hubId.substring(0, 8) as fallback
+  @override
+  final String? invitationCode;
+
+  /// Enable/disable invitations for this hub
+  @override
+  @JsonKey()
+  final bool invitationsEnabled;
+
+  /// Join mode: auto (immediate) or approval (requires manager approval)
+  @override
+  @JsonKey()
+  @JoinModeConverter()
+  final JoinMode joinMode;
+
+  /// Match logging policy: who can log matches
+  @override
+  @JsonKey()
+  @MatchLoggingPolicyConverter()
+  final MatchLoggingPolicy matchLoggingPolicy;
+
   @override
   String toString() {
-    return 'HubSettings(showManagerContactInfo: $showManagerContactInfo, allowJoinRequests: $allowJoinRequests, allowModeratorsToCreateGames: $allowModeratorsToCreateGames, requireResultApproval: $requireResultApproval, allowMemberInvites: $allowMemberInvites, enablePolls: $enablePolls, enableChat: $enableChat, enableEvents: $enableEvents, maxMembers: $maxMembers, veteranGamesThreshold: $veteranGamesThreshold)';
+    return 'HubSettings(showManagerContactInfo: $showManagerContactInfo, allowJoinRequests: $allowJoinRequests, allowModeratorsToCreateGames: $allowModeratorsToCreateGames, requireResultApproval: $requireResultApproval, allowMemberInvites: $allowMemberInvites, enablePolls: $enablePolls, enableChat: $enableChat, enableEvents: $enableEvents, maxMembers: $maxMembers, veteranGamesThreshold: $veteranGamesThreshold, invitationCode: $invitationCode, invitationsEnabled: $invitationsEnabled, joinMode: $joinMode, matchLoggingPolicy: $matchLoggingPolicy)';
   }
 
   @override
@@ -346,7 +437,15 @@ class _$HubSettingsImpl extends _HubSettings {
             (identical(other.maxMembers, maxMembers) ||
                 other.maxMembers == maxMembers) &&
             (identical(other.veteranGamesThreshold, veteranGamesThreshold) ||
-                other.veteranGamesThreshold == veteranGamesThreshold));
+                other.veteranGamesThreshold == veteranGamesThreshold) &&
+            (identical(other.invitationCode, invitationCode) ||
+                other.invitationCode == invitationCode) &&
+            (identical(other.invitationsEnabled, invitationsEnabled) ||
+                other.invitationsEnabled == invitationsEnabled) &&
+            (identical(other.joinMode, joinMode) ||
+                other.joinMode == joinMode) &&
+            (identical(other.matchLoggingPolicy, matchLoggingPolicy) ||
+                other.matchLoggingPolicy == matchLoggingPolicy));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -362,7 +461,11 @@ class _$HubSettingsImpl extends _HubSettings {
       enableChat,
       enableEvents,
       maxMembers,
-      veteranGamesThreshold);
+      veteranGamesThreshold,
+      invitationCode,
+      invitationsEnabled,
+      joinMode,
+      matchLoggingPolicy);
 
   /// Create a copy of HubSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -391,7 +494,12 @@ abstract class _HubSettings extends HubSettings {
       final bool enableChat,
       final bool enableEvents,
       final int maxMembers,
-      final int veteranGamesThreshold}) = _$HubSettingsImpl;
+      final int veteranGamesThreshold,
+      final String? invitationCode,
+      final bool invitationsEnabled,
+      @JoinModeConverter() final JoinMode joinMode,
+      @MatchLoggingPolicyConverter()
+      final MatchLoggingPolicy matchLoggingPolicy}) = _$HubSettingsImpl;
   const _HubSettings._() : super._();
 
   factory _HubSettings.fromJson(Map<String, dynamic> json) =
@@ -439,6 +547,25 @@ abstract class _HubSettings extends HubSettings {
   /// Minimum number of games played to be considered a veteran
   @override
   int get veteranGamesThreshold;
+
+  /// Invitation code for joining the hub
+  /// If null, uses hubId.substring(0, 8) as fallback
+  @override
+  String? get invitationCode;
+
+  /// Enable/disable invitations for this hub
+  @override
+  bool get invitationsEnabled;
+
+  /// Join mode: auto (immediate) or approval (requires manager approval)
+  @override
+  @JoinModeConverter()
+  JoinMode get joinMode;
+
+  /// Match logging policy: who can log matches
+  @override
+  @MatchLoggingPolicyConverter()
+  MatchLoggingPolicy get matchLoggingPolicy;
 
   /// Create a copy of HubSettings
   /// with the given fields replaced by the non-null parameter values.

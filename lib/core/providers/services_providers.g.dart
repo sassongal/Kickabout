@@ -251,5 +251,29 @@ final hubPermissionsServiceProvider =
 // ignore: unused_element
 typedef HubPermissionsServiceRef
     = AutoDisposeProviderRef<HubPermissionsService>;
+String _$hubMembershipServiceHash() =>
+    r'9f7465d1390d2a6cc8fb2ca86d2b7fa6faabbfe5';
+
+/// Hub Membership Service Provider
+///
+/// Orchestrates hub membership operations with business validation.
+/// Use this instead of calling repository methods directly.
+///
+/// Copied from [hubMembershipService].
+@ProviderFor(hubMembershipService)
+final hubMembershipServiceProvider =
+    AutoDisposeProvider<HubMembershipService>.internal(
+  hubMembershipService,
+  name: r'hubMembershipServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$hubMembershipServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef HubMembershipServiceRef = AutoDisposeProviderRef<HubMembershipService>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

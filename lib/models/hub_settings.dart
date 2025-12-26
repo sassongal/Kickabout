@@ -1,4 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:kattrick/models/value_objects/join_mode.dart';
+import 'package:kattrick/models/value_objects/match_logging_policy.dart';
 
 part 'hub_settings.freezed.dart';
 part 'hub_settings.g.dart';
@@ -42,6 +44,19 @@ class HubSettings with _$HubSettings {
 
     /// Minimum number of games played to be considered a veteran
     @Default(10) int veteranGamesThreshold,
+
+    /// Invitation code for joining the hub
+    /// If null, uses hubId.substring(0, 8) as fallback
+    String? invitationCode,
+
+    /// Enable/disable invitations for this hub
+    @Default(true) bool invitationsEnabled,
+
+    /// Join mode: auto (immediate) or approval (requires manager approval)
+    @JoinModeConverter() @Default(JoinMode.auto) JoinMode joinMode,
+
+    /// Match logging policy: who can log matches
+    @MatchLoggingPolicyConverter() @Default(MatchLoggingPolicy.managerOnly) MatchLoggingPolicy matchLoggingPolicy,
   }) = _HubSettings;
 
   const HubSettings._();
@@ -66,6 +81,12 @@ class HubSettings with _$HubSettings {
       enableEvents: map['enableEvents'] as bool? ?? true,
       maxMembers: map['maxMembers'] as int? ?? 50,
       veteranGamesThreshold: map['veteranGamesThreshold'] as int? ?? 10,
+      invitationCode: map['invitationCode'] as String?,
+      invitationsEnabled: map['invitationsEnabled'] as bool? ?? true,
+      joinMode: JoinMode.fromFirestore(map['joinMode'] as String? ?? 'auto'),
+      matchLoggingPolicy: MatchLoggingPolicy.fromFirestore(
+        map['matchLoggingPolicy'] as String? ?? 'managerOnly',
+      ),
     );
   }
 

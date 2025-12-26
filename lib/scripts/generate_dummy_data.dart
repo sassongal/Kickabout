@@ -1,19 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/models/hub_settings.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_creation_service.dart';
+import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 /// Script to generate dummy data for Haifa area
 /// Run this from a Flutter app or Firebase console
+///
+/// ARCHITECTURAL NOTE: This script uses domain services instead of direct
+/// Firestore manipulation to enforce consistency and business rules.
 class DummyDataGenerator {
   final FirebaseFirestore firestore;
+  final HubCreationService _hubCreationService;
+  final HubsRepository _hubsRepository;
   final Random random = Random();
 
-  DummyDataGenerator({FirebaseFirestore? firestore})
-      : firestore = firestore ?? FirebaseFirestore.instance;
+  DummyDataGenerator({
+    FirebaseFirestore? firestore,
+    HubCreationService? hubCreationService,
+    HubsRepository? hubsRepository,
+  })  : firestore = firestore ?? FirebaseFirestore.instance,
+        _hubCreationService = hubCreationService ?? HubCreationService(),
+        _hubsRepository = hubsRepository ?? HubsRepository();
 
   /// הוספת שחקנים מדומים ל-Hub קיים ספציפי
   Future<void> addPlayersToExistingHub({
@@ -352,39 +365,42 @@ class DummyDataGenerator {
       hubRegion = regions[random.nextInt(regions.length)];
     }
 
+    final creatorId = finalMemberIds.isNotEmpty
+        ? finalMemberIds[0]
+        : firestore.collection('users').doc().id;
+
     final hub = Hub(
       hubId: hubId,
       name: finalName,
       description: finalDescription,
-      createdBy: finalMemberIds.isNotEmpty
-          ? finalMemberIds[0]
-          : firestore.collection('users').doc().id,
-      memberCount: finalMemberIds.length,
+      createdBy: creatorId,
+      memberCount: 1, // Will be updated as members are added
       region: hubRegion,
       createdAt: DateTime.now().subtract(Duration(days: random.nextInt(180))),
       location: finalLocation,
       geohash: geohash,
-      settings: {
-        'ratingMode': ['basic', 'advanced'][random.nextInt(2)],
-      },
+      settings: const HubSettings(),
     );
 
-    final batch = firestore.batch();
-    final hubRef = firestore.doc(FirestorePaths.hub(hubId));
-    batch.set(hubRef, hub.toJson());
+    // ARCHITECTURAL FIX: Use HubCreationService instead of direct Firestore manipulation
+    // This ensures denormalized fields are handled correctly by domain layer
+    await _hubCreationService.createHub(hub);
 
-    // Add members to subcollection (Strategy C)
-    for (final memberId in finalMemberIds) {
-      batch.set(
-        hubRef.collection('members').doc(memberId),
-        {
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': memberId == finalMemberIds[0] ? 'manager' : 'member',
-        },
-      );
+    // ARCHITECTURAL FIX: Add remaining members through repository
+    // The first member (creator) was already added by HubCreationService
+    for (int i = 1; i < finalMemberIds.length; i++) {
+      final memberId = finalMemberIds[i];
+
+      // Repository handles: capacity validation, member document creation,
+      // user.hubIds update, and triggers Cloud Function for denormalization sync
+      await _hubsRepository.addMember(hubId, memberId);
     }
 
-    await batch.commit();
+    // Note: Cloud Function onMembershipChange automatically:
+    // - Syncs denormalized arrays (activeMemberIds, memberIds, managerIds, moderatorIds)
+    // - Updates memberCount
+    // - Updates user's hubIds
+    // No manual denormalization needed!
 
     // Generate some games for this hub
     await _generateGamesForHub(hubId, finalMemberIds, finalLocation);
@@ -682,6 +698,10 @@ class DummyDataGenerator {
       print('✅ Added player to batch ${i + 1}/25: ${playerNames[i]}');
     }
 
+    // Commit user creation batch first
+    await batch.commit();
+    print('✅ Committed batch with 25 users');
+
     // Create "השדים האדומים" Hub with first 18 players
     final hubMemberIds = userIds.take(18).toList();
 
@@ -691,39 +711,29 @@ class DummyDataGenerator {
       hubMemberIds.insert(0, currentUser.uid);
     }
 
+    final creatorId = currentUser?.uid ?? hubMemberIds[0];
     final hub = Hub(
       hubId: hubId,
       name: 'השדים האדומים',
       description:
           'קבוצת כדורגל פעילה וחזקה מחיפה. משחקים קבועים במגרש גן דניאל. קבוצה תחרותית עם מסורת ארוכה.',
-      createdBy: currentUser?.uid ?? hubMemberIds[0],
-      memberCount: hubMemberIds.length, // Use memberCount instead of memberIds
+      createdBy: creatorId,
+      memberCount: 1, // Will be updated as members are added
       createdAt: DateTime.now().subtract(const Duration(days: 180)),
       location: hubLocation,
       geohash: hubGeohash,
-      settings: {
-        'ratingMode': 'advanced',
-        'photoUrl': hubPhotoUrl, // Add hub photo
-      },
+      settings: const HubSettings(),
     );
 
-    final hubRef = firestore.doc(FirestorePaths.hub(hubId));
-    batch.set(hubRef, hub.toJson());
+    // ARCHITECTURAL FIX: Use HubCreationService
+    await _hubCreationService.createHub(hub);
 
-    // Add members to subcollection (Strategy C)
-    for (final memberId in hubMemberIds) {
-      batch.set(
-        hubRef.collection('members').doc(memberId),
-        {
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': memberId == hubMemberIds[0] ? 'manager' : 'member',
-        },
-      );
+    // ARCHITECTURAL FIX: Add remaining members through repository
+    for (int i = 1; i < hubMemberIds.length; i++) {
+      await _hubsRepository.addMember(hubId, hubMemberIds[i]);
     }
 
-    // Commit all users and hub in one batch
-    await batch.commit();
-    print('✅ Committed batch with 25 users and 1 hub');
+    print('✅ Created Hub with ${hubMemberIds.length} members (using domain services)');
 
     // Generate games for this hub
     await _generateGamesForHub(hubId, hubMemberIds, hubLocation);
@@ -858,23 +868,19 @@ class DummyDataGenerator {
         createdAt: DateTime.now().subtract(Duration(days: 180 + i * 30)),
         location: hubLocation,
         geohash: hubGeohash,
-        region: hubRegions[i], // Add region
-        memberCount: hubMemberIds.length,
-        settings: {
-          'ratingMode': ['basic', 'advanced'][random.nextInt(2)],
-        },
-        // NOTE: roles removed - now stored in members subcollection
+        region: hubRegions[i],
+        memberCount: 1, // Will be updated as members are added
+        settings: const HubSettings(),
       );
 
-      await firestore.doc(FirestorePaths.hub(hubId)).set(hub.toJson());
-      // Add members subcollection
-      final hubRef = firestore.doc(FirestorePaths.hub(hubId));
-      for (final memberId in hubMemberIds) {
-        await hubRef.collection('members').doc(memberId).set({
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': memberId == managerId ? 'manager' : 'member',
-        });
+      // ARCHITECTURAL FIX: Use HubCreationService
+      await _hubCreationService.createHub(hub);
+
+      // ARCHITECTURAL FIX: Add remaining members through repository
+      for (int j = 1; j < hubMemberIds.length; j++) {
+        await _hubsRepository.addMember(hubId, hubMemberIds[j]);
       }
+
       hubIds.add(hubId);
       hubMemberAssignments[hubId] = hubMemberIds;
 
@@ -1319,43 +1325,30 @@ class DummyDataGenerator {
       final geohash =
           GeohashUtils.encode(hubLocation.latitude, hubLocation.longitude);
 
+      final creatorId = hubMemberIds.isNotEmpty ? hubMemberIds[0] : allUserIds[0];
       final hub = Hub(
         hubId: hubId,
         name: hubData['name'] as String,
         description: hubData['description'] as String?,
-        createdBy: hubMemberIds.isNotEmpty ? hubMemberIds[0] : allUserIds[0],
-        memberCount: hubMemberIds.length,
+        createdBy: creatorId,
+        memberCount: 1, // Will be updated as members are added
         region: 'צפון',
         createdAt: DateTime.now().subtract(Duration(days: random.nextInt(180))),
         location: hubLocation,
         geohash: geohash,
-        settings: {
-          'ratingMode': 'basic',
-        },
-        // NOTE: roles removed - now stored in members subcollection
+        settings: const HubSettings(),
       );
 
-      await firestore.doc(FirestorePaths.hub(hubId)).set({
-        ...hub.toJson(),
-        'isDummy': true, // Flag for cleanup
-      });
+      // ARCHITECTURAL FIX: Use HubCreationService
+      await _hubCreationService.createHub(hub);
 
-      // Add members subcollection
-      final hubRef = firestore.doc(FirestorePaths.hub(hubId));
-      for (int idx = 0; idx < hubMemberIds.length; idx++) {
-        final memberId = hubMemberIds[idx];
-        await hubRef.collection('members').doc(memberId).set({
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': idx == 0 ? 'manager' : 'member',
-        });
+      // ARCHITECTURAL FIX: Add remaining members through repository
+      for (int idx = 1; idx < hubMemberIds.length; idx++) {
+        await _hubsRepository.addMember(hubId, hubMemberIds[idx]);
       }
 
-      // Update users' hubIds
-      for (final userId in hubMemberIds) {
-        await firestore.doc(FirestorePaths.user(userId)).update({
-          'hubIds': FieldValue.arrayUnion([hubId]),
-        });
-      }
+      // Mark as dummy for cleanup (done via direct update since it's metadata)
+      await firestore.doc(FirestorePaths.hub(hubId)).update({'isDummy': true});
 
       hubIds.add(hubId);
       debugPrint(
@@ -1459,13 +1452,12 @@ class DummyDataGenerator {
       location: location,
       geohash: GeohashUtils.encode(location.latitude, location.longitude),
       createdAt: DateTime.now(),
-      settings: {'ratingMode': 'advanced'},
+      settings: const HubSettings(),
     );
-
-    batch.set(firestore.doc(FirestorePaths.hub(hubId)), hub.toJson());
 
     // 3. Create 14 Dummy Players with varied ratings/positions
     final dummyIds = <String>[];
+    final playerRatings = <String, double>{}; // Track ratings for later update
 
     // Distribution for 15 players (including user):
     // 2 Goalkeepers, 6 Defenders, 5 Midfielders, 2 Attackers
@@ -1498,6 +1490,7 @@ class DummyDataGenerator {
 
       // Ratings between 4.0 and 9.0
       final rating = 4.0 + random.nextDouble() * 5.0;
+      playerRatings[userId] = rating;
 
       final user = User(
         uid: userId,
@@ -1515,31 +1508,32 @@ class DummyDataGenerator {
 
       batch.set(firestore.doc(FirestorePaths.user(userId)), user.toJson());
       dummyIds.add(userId);
-
-      // Add as Hub Member
-      batch.set(
-        firestore.doc(FirestorePaths.hubMember(hubId, userId)),
-        {
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': 'member',
-          'userId': userId,
-          'managerRating': rating, // Set explicit manager rating for team maker
-          'status': 'active'
-        },
-      );
     }
 
-    // Add current user as Hub Member (Manager)
-    batch.set(
-      firestore.doc(FirestorePaths.hubMember(hubId, currentUser.uid)),
-      {
-        'joinedAt': FieldValue.serverTimestamp(),
-        'role': 'manager',
-        'userId': currentUser.uid,
-        'managerRating': 7.5, // Default rating for manager
-        'status': 'active'
-      },
-    );
+    // Commit user creation batch
+    await batch.commit();
+
+    // ARCHITECTURAL FIX: Use HubCreationService to create hub
+    await _hubCreationService.createHub(hub);
+
+    // ARCHITECTURAL FIX: Add dummy players through repository
+    for (final userId in dummyIds) {
+      await _hubsRepository.addMember(hubId, userId);
+
+      // Update managerRating separately (metadata field)
+      await firestore
+          .doc(FirestorePaths.hubMember(hubId, userId))
+          .update({
+        'managerRating': playerRatings[userId],
+      });
+    }
+
+    // Update manager's rating
+    await firestore
+        .doc(FirestorePaths.hubMember(hubId, currentUser.uid))
+        .update({
+      'managerRating': 7.5,
+    });
 
     // 4. Create Event
     final eventDate = DateTime.now().add(const Duration(days: 2));
@@ -1558,12 +1552,11 @@ class DummyDataGenerator {
       status: 'upcoming',
     );
 
-    batch.set(
-        firestore.doc(FirestorePaths.hubEvent(hubId, eventId)), event.toJson());
+    await firestore
+        .doc(FirestorePaths.hubEvent(hubId, eventId))
+        .set(event.toJson());
 
-    await batch.commit();
-
-    print('✅ Scenario Created!');
+    debugPrint('✅ Scenario Created!');
     return {
       'hubId': hubId,
       'eventId': eventId,

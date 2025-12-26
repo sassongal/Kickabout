@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_role.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/auth_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/services_providers.dart';
 import 'package:kattrick/services/analytics_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_membership_service.dart';
 import 'package:kattrick/utils/hub_sharing_utils.dart';
 import 'package:kattrick/widgets/hub/hub_command_center.dart';
 import 'package:kattrick/widgets/hub/hub_home_venue_selector.dart';
@@ -340,6 +343,7 @@ class HubHeader extends ConsumerWidget {
     if (currentUserId == null) return;
 
     final hubsRepo = ref.read(hubsRepositoryProvider);
+    final membershipService = ref.read(hubMembershipServiceProvider);
 
     try {
       if (isMember) {
@@ -350,7 +354,11 @@ class HubHeader extends ConsumerWidget {
           );
         }
       } else {
-        await hubsRepo.addMember(hub.hubId, currentUserId);
+        // Use HubMembershipService for business validation
+        await membershipService.addMember(
+          hubId: hub.hubId,
+          userId: currentUserId,
+        );
 
         // Log analytics
         try {
@@ -365,6 +373,24 @@ class HubHeader extends ConsumerWidget {
             const SnackBar(content: Text('הצטרפת ל-Hub')),
           );
         }
+      }
+    } on HubCapacityExceededException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ה-Hub מלא (${e.currentCount}/${e.maxCount} חברים)')),
+        );
+      }
+    } on UserHubLimitException catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('הגעת למקסימום של 10 Hubs')),
+        );
+      }
+    } on HubMemberBannedException catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('אינך יכול להצטרף ל-Hub זה')),
+        );
       }
     } catch (e) {
       if (context.mounted) {

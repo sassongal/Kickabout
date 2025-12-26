@@ -15,6 +15,7 @@ import 'package:kattrick/services/custom_api_service.dart';
 import 'package:kattrick/services/weather_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_analytics_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_membership_service.dart';
 
 part 'services_providers.g.dart';
 
@@ -100,6 +101,19 @@ HubAnalyticsService hubAnalyticsService(HubAnalyticsServiceRef ref) {
 HubPermissionsService hubPermissionsService(HubPermissionsServiceRef ref) {
   return HubPermissionsService(
     hubsRepo: ref.watch(hubsRepositoryProvider),
+  );
+}
+
+/// Hub Membership Service Provider
+///
+/// Orchestrates hub membership operations with business validation.
+/// Use this instead of calling repository methods directly.
+@riverpod
+HubMembershipService hubMembershipService(HubMembershipServiceRef ref) {
+  return HubMembershipService(
+    hubsRepo: ref.watch(hubsRepositoryProvider),
+    usersRepo: ref.watch(usersRepositoryProvider),
+    notificationService: ref.watch(pushNotificationServiceProvider),
   );
 }
 

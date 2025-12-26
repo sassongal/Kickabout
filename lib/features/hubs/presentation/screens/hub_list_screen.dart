@@ -11,6 +11,7 @@ import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/services/error_handler_service.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart' show HubCreationCheckResult;
+import 'package:kattrick/core/providers/complex_providers.dart';
 
 /// Hub list screen - lists hubs of user
 class HubListScreen extends ConsumerStatefulWidget {
@@ -36,7 +37,7 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
       );
     }
 
-    final hubsStream = hubsRepo.watchHubsByMember(currentUserId);
+    final hubsAsync = ref.watch(hubsByMemberStreamProvider(currentUserId));
 
     return AppScaffold(
       title: l10n.yourHubsTitle,
@@ -94,41 +95,8 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
           );
         },
       ),
-      body: StreamBuilder<List<Hub>>(
-        stream: hubsStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 5,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: SkeletonLoader(height: 100),
-              ),
-            );
-          }
-
-          if (snapshot.hasError) {
-            return PremiumEmptyState(
-              icon: Icons.error_outline,
-              title: l10n.errorLoadingHubs,
-              message: ErrorHandlerService().handleException(
-                snapshot.error,
-                context: 'Hub list screen',
-              ),
-              action: ElevatedButton.icon(
-                onPressed: () {
-                  // Retry by rebuilding
-                  setState(() {});
-                },
-                icon: const Icon(Icons.refresh),
-                label: Text(l10n.tryAgain),
-              ),
-            );
-          }
-
-          final hubs = snapshot.data ?? [];
-
+      body: hubsAsync.when(
+        data: (hubs) {
           if (hubs.isEmpty) {
             return PremiumEmptyState(
               icon: Icons.group_outlined,
@@ -188,6 +156,30 @@ class _HubListScreenState extends ConsumerState<HubListScreen> {
             },
           );
         },
+        loading: () => ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: 5,
+          itemBuilder: (context, index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SkeletonLoader(height: 100),
+          ),
+        ),
+        error: (err, stack) => PremiumEmptyState(
+          icon: Icons.error_outline,
+          title: l10n.errorLoadingHubs,
+          message: ErrorHandlerService().handleException(
+            err,
+            context: 'Hub list screen',
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () {
+              // Retry by rebuilding
+              setState(() {});
+            },
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.tryAgain),
+          ),
+        ),
       ),
     );
   }

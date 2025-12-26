@@ -15,6 +15,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/game/my_next_match_card.dart';
 import 'package:kattrick/widgets/game/game_feed_card.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 
 /// Selected hub provider (for filtering games)
 final selectedHubProvider = StateProvider<String?>((ref) => null);
@@ -31,7 +32,6 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
   GeoPoint? _userLocation;
   Stream<Game?>? _cachedNextMatchStream;
   Stream<List<Game>>? _cachedDiscoveryStream;
-  Stream<List<Hub>>? _cachedUserHubsStream;
   String? _cachedUserId;
   GeoPoint? _cachedLocation;
 
@@ -72,14 +72,12 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
   @override
   Widget build(BuildContext context) {
     final gameQueriesRepo = ref.watch(gameQueriesRepositoryProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
 
     if (currentUserId == null) {
       // Clear cached streams when user logs out
       _cachedNextMatchStream = null;
       _cachedDiscoveryStream = null;
-      _cachedUserHubsStream = null;
       _cachedUserId = null;
       return const SizedBox.shrink();
     }
@@ -95,12 +93,11 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
         userLocation: _userLocation,
         radiusKm: 10.0,
       );
-      _cachedUserHubsStream = hubsRepo.watchHubsByMember(currentUserId);
     }
 
     final nextMatchStream = _cachedNextMatchStream!;
     final discoveryStream = _cachedDiscoveryStream!;
-    final userHubsStream = _cachedUserHubsStream!;
+    final hubsAsync = ref.watch(hubsByMemberStreamProvider(currentUserId));
 
     return AppScaffold(
       title: 'לוח משחקים',
@@ -117,11 +114,9 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
         icon: const Icon(Icons.add),
         label: const Text('צור משחק'),
       ),
-      body: StreamBuilder<List<Hub>>(
-        stream: userHubsStream,
-        builder: (context, hubsSnapshot) {
-          final userHubIds =
-              hubsSnapshot.data?.map((h) => h.hubId).toSet() ?? {};
+      body: hubsAsync.when(
+        data: (hubs) {
+          final userHubIds = hubs.map((h) => h.hubId).toSet();
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -332,6 +327,8 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
             ),
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('שגיאה: $err')),
       ),
     );
   }

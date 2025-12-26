@@ -41,6 +41,32 @@ Stream<Hub?> hubStream(HubStreamRef ref, String hubId) {
   return hubsRepo.watchHub(hubId);
 }
 
+/// Hubs by member stream - all hubs a user belongs to
+///
+/// This provider eliminates duplicate watchHubsByMember() subscriptions.
+/// All screens showing user's hubs should use this provider.
+///
+/// Benefits:
+/// - Single subscription shared across widgets
+/// - Automatic caching with keepAlive
+/// - Consistent hub list across screens
+///
+/// Usage:
+/// ```dart
+/// final hubsAsync = ref.watch(hubsByMemberStreamProvider(userId));
+/// return hubsAsync.when(
+///   data: (hubs) => HubList(hubs),
+///   loading: () => LoadingIndicator(),
+///   error: (err, stack) => ErrorDisplay(err),
+/// );
+/// ```
+@riverpod
+Stream<List<Hub>> hubsByMemberStream(HubsByMemberStreamRef ref, String userId) {
+  ref.keepAlive(); // Cache across navigation
+  final hubsRepo = ref.watch(hubsRepositoryProvider);
+  return hubsRepo.watchHubsByMember(userId);
+}
+
 /// Hub permissions provider - computes effective permissions for a user in a hub
 ///
 /// This provider automatically watches hub state and membership, recomputing
@@ -284,9 +310,7 @@ Future<HubPermissions> hubPermissions(
       throw Exception('Hub not found');
     }
 
-    final permissionsService = HubPermissionsService(
-      hubsRepo: ref.read(hubsRepositoryProvider),
-    );
+    final permissionsService = ref.read(hubPermissionsServiceProvider);
     return permissionsService.getPermissions(hub, params.userId);
   } catch (e) {
     rethrow;

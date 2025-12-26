@@ -282,8 +282,260 @@ class _HubStreamProviderElement extends AutoDisposeStreamProviderElement<Hub?>
   String get hubId => (origin as HubStreamProvider).hubId;
 }
 
+String _$hubsByMemberStreamHash() =>
+    r'd96082c95f18636cc3a99fa28c571bc0bf5bb2d5';
+
+/// Hubs by member stream - all hubs a user belongs to
+///
+/// This provider eliminates duplicate watchHubsByMember() subscriptions.
+/// All screens showing user's hubs should use this provider.
+///
+/// Benefits:
+/// - Single subscription shared across widgets
+/// - Automatic caching with keepAlive
+/// - Consistent hub list across screens
+///
+/// Usage:
+/// ```dart
+/// final hubsAsync = ref.watch(hubsByMemberStreamProvider(userId));
+/// return hubsAsync.when(
+///   data: (hubs) => HubList(hubs),
+///   loading: () => LoadingIndicator(),
+///   error: (err, stack) => ErrorDisplay(err),
+/// );
+/// ```
+///
+/// Copied from [hubsByMemberStream].
+@ProviderFor(hubsByMemberStream)
+const hubsByMemberStreamProvider = HubsByMemberStreamFamily();
+
+/// Hubs by member stream - all hubs a user belongs to
+///
+/// This provider eliminates duplicate watchHubsByMember() subscriptions.
+/// All screens showing user's hubs should use this provider.
+///
+/// Benefits:
+/// - Single subscription shared across widgets
+/// - Automatic caching with keepAlive
+/// - Consistent hub list across screens
+///
+/// Usage:
+/// ```dart
+/// final hubsAsync = ref.watch(hubsByMemberStreamProvider(userId));
+/// return hubsAsync.when(
+///   data: (hubs) => HubList(hubs),
+///   loading: () => LoadingIndicator(),
+///   error: (err, stack) => ErrorDisplay(err),
+/// );
+/// ```
+///
+/// Copied from [hubsByMemberStream].
+class HubsByMemberStreamFamily extends Family<AsyncValue<List<Hub>>> {
+  /// Hubs by member stream - all hubs a user belongs to
+  ///
+  /// This provider eliminates duplicate watchHubsByMember() subscriptions.
+  /// All screens showing user's hubs should use this provider.
+  ///
+  /// Benefits:
+  /// - Single subscription shared across widgets
+  /// - Automatic caching with keepAlive
+  /// - Consistent hub list across screens
+  ///
+  /// Usage:
+  /// ```dart
+  /// final hubsAsync = ref.watch(hubsByMemberStreamProvider(userId));
+  /// return hubsAsync.when(
+  ///   data: (hubs) => HubList(hubs),
+  ///   loading: () => LoadingIndicator(),
+  ///   error: (err, stack) => ErrorDisplay(err),
+  /// );
+  /// ```
+  ///
+  /// Copied from [hubsByMemberStream].
+  const HubsByMemberStreamFamily();
+
+  /// Hubs by member stream - all hubs a user belongs to
+  ///
+  /// This provider eliminates duplicate watchHubsByMember() subscriptions.
+  /// All screens showing user's hubs should use this provider.
+  ///
+  /// Benefits:
+  /// - Single subscription shared across widgets
+  /// - Automatic caching with keepAlive
+  /// - Consistent hub list across screens
+  ///
+  /// Usage:
+  /// ```dart
+  /// final hubsAsync = ref.watch(hubsByMemberStreamProvider(userId));
+  /// return hubsAsync.when(
+  ///   data: (hubs) => HubList(hubs),
+  ///   loading: () => LoadingIndicator(),
+  ///   error: (err, stack) => ErrorDisplay(err),
+  /// );
+  /// ```
+  ///
+  /// Copied from [hubsByMemberStream].
+  HubsByMemberStreamProvider call(
+    String userId,
+  ) {
+    return HubsByMemberStreamProvider(
+      userId,
+    );
+  }
+
+  @override
+  HubsByMemberStreamProvider getProviderOverride(
+    covariant HubsByMemberStreamProvider provider,
+  ) {
+    return call(
+      provider.userId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'hubsByMemberStreamProvider';
+}
+
+/// Hubs by member stream - all hubs a user belongs to
+///
+/// This provider eliminates duplicate watchHubsByMember() subscriptions.
+/// All screens showing user's hubs should use this provider.
+///
+/// Benefits:
+/// - Single subscription shared across widgets
+/// - Automatic caching with keepAlive
+/// - Consistent hub list across screens
+///
+/// Usage:
+/// ```dart
+/// final hubsAsync = ref.watch(hubsByMemberStreamProvider(userId));
+/// return hubsAsync.when(
+///   data: (hubs) => HubList(hubs),
+///   loading: () => LoadingIndicator(),
+///   error: (err, stack) => ErrorDisplay(err),
+/// );
+/// ```
+///
+/// Copied from [hubsByMemberStream].
+class HubsByMemberStreamProvider extends AutoDisposeStreamProvider<List<Hub>> {
+  /// Hubs by member stream - all hubs a user belongs to
+  ///
+  /// This provider eliminates duplicate watchHubsByMember() subscriptions.
+  /// All screens showing user's hubs should use this provider.
+  ///
+  /// Benefits:
+  /// - Single subscription shared across widgets
+  /// - Automatic caching with keepAlive
+  /// - Consistent hub list across screens
+  ///
+  /// Usage:
+  /// ```dart
+  /// final hubsAsync = ref.watch(hubsByMemberStreamProvider(userId));
+  /// return hubsAsync.when(
+  ///   data: (hubs) => HubList(hubs),
+  ///   loading: () => LoadingIndicator(),
+  ///   error: (err, stack) => ErrorDisplay(err),
+  /// );
+  /// ```
+  ///
+  /// Copied from [hubsByMemberStream].
+  HubsByMemberStreamProvider(
+    String userId,
+  ) : this._internal(
+          (ref) => hubsByMemberStream(
+            ref as HubsByMemberStreamRef,
+            userId,
+          ),
+          from: hubsByMemberStreamProvider,
+          name: r'hubsByMemberStreamProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$hubsByMemberStreamHash,
+          dependencies: HubsByMemberStreamFamily._dependencies,
+          allTransitiveDependencies:
+              HubsByMemberStreamFamily._allTransitiveDependencies,
+          userId: userId,
+        );
+
+  HubsByMemberStreamProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.userId,
+  }) : super.internal();
+
+  final String userId;
+
+  @override
+  Override overrideWith(
+    Stream<List<Hub>> Function(HubsByMemberStreamRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: HubsByMemberStreamProvider._internal(
+        (ref) => create(ref as HubsByMemberStreamRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        userId: userId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeStreamProviderElement<List<Hub>> createElement() {
+    return _HubsByMemberStreamProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is HubsByMemberStreamProvider && other.userId == userId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, userId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin HubsByMemberStreamRef on AutoDisposeStreamProviderRef<List<Hub>> {
+  /// The parameter `userId` of this provider.
+  String get userId;
+}
+
+class _HubsByMemberStreamProviderElement
+    extends AutoDisposeStreamProviderElement<List<Hub>>
+    with HubsByMemberStreamRef {
+  _HubsByMemberStreamProviderElement(super.provider);
+
+  @override
+  String get userId => (origin as HubsByMemberStreamProvider).userId;
+}
+
 String _$hubPermissionsStreamHash() =>
-    r'7f6fd62ec2d970e507f356312dc13436cb4ce869';
+    r'1f2bb781d89f9c2a4582a0407de1a1837e5e3f85';
 
 /// Hub permissions provider - computes effective permissions for a user in a hub
 ///
@@ -482,7 +734,7 @@ class _HubPermissionsStreamProviderElement
       (origin as HubPermissionsStreamProvider).params;
 }
 
-String _$hubRoleStreamHash() => r'5ecfef7beba19fc93c04953a0b1844fd52235374';
+String _$hubRoleStreamHash() => r'36e76c8f910873c195bee3fea8f5a8486bf5bbdb';
 
 /// Hub role stream provider - derives user's role in a hub
 ///
@@ -1467,7 +1719,7 @@ final homeDashboardDataProvider =
 // ignore: unused_element
 typedef HomeDashboardDataRef
     = AutoDisposeFutureProviderRef<Map<String, dynamic>>;
-String _$hubPermissionsHash() => r'3981876268339b5323d01304b74d1c05b3a7f110';
+String _$hubPermissionsHash() => r'149637cf1e7b9cb6dc02eb42dd851d90aef39804';
 
 /// Hub permissions provider - provides HubPermissions for a user in a hub
 /// Usage: ref.watch(hubPermissionsProvider((hubId: 'xxx', userId: 'yyy')))

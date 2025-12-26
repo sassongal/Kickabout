@@ -5,7 +5,9 @@ import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
+import 'package:kattrick/core/providers/auth_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/models/hub_member.dart' as models;
 import 'package:kattrick/features/hubs/presentation/screens/add_manual_player_dialog.dart';
@@ -210,101 +212,125 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = ref.watch(currentUserIdProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
-    final usersRepo = ref.watch(usersRepositoryProvider);
+    final hubAsync = ref.watch(hubStreamProvider(widget.hubId));
 
-    return PremiumScaffold(
-      title: 'שחקני ההוב',
-      showBackButton: true,
-      body: StreamBuilder<Hub?>(
-        stream: hubsRepo.watchHub(widget.hubId),
-        builder: (context, hubSnapshot) {
-          if (hubSnapshot.connectionState == ConnectionState.waiting) {
-            return const PremiumLoadingState(message: 'טוען שחקנים...');
-          }
-
-          if (!hubSnapshot.hasData || hubSnapshot.data == null) {
-            return Center(
+    return hubAsync.when(
+      data: (hub) {
+        if (hub == null) {
+          return PremiumScaffold(
+            title: 'שחקני ההוב',
+            showBackButton: true,
+            body: Center(
               child: Text(
                 'Hub לא נמצא',
                 style: PremiumTypography.bodyLarge,
               ),
-            );
-          }
+            ),
+          );
+        }
+        return _buildContent(context, hub);
+      },
+      loading: () => PremiumScaffold(
+        title: 'שחקני ההוב',
+        showBackButton: true,
+        body: const PremiumLoadingState(message: 'טוען שחקנים...'),
+      ),
+      error: (err, stack) => PremiumScaffold(
+        title: 'שחקני ההוב',
+        showBackButton: true,
+        body: Center(
+          child: Text(
+            'שגיאה בטעינת הנתונים',
+            style: PremiumTypography.bodyLarge,
+          ),
+        ),
+      ),
+    );
+  }
 
-          final hub = hubSnapshot.data!;
-          final isHubManager = currentUserId == hub.createdBy;
+  Widget _buildContent(BuildContext context, Hub hub) {
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final hubsRepo = ref.watch(hubsRepositoryProvider);
+    final usersRepo = ref.watch(usersRepositoryProvider);
 
-          // Fetch permissions asynchronously - watch the provider for reactive updates
-          final hubPermissionsAsync = currentUserId != null
-              ? ref.watch(hubPermissionsProvider(
-                  (hubId: widget.hubId, userId: currentUserId)))
-              : null;
-          final hubPermissions = hubPermissionsAsync?.valueOrNull;
+    final isHubManager = currentUserId == hub.createdBy;
 
-          final canManageRatings = (hubPermissions?.isManager ?? false) ||
-              (hubPermissions?.isModerator ?? false);
+    // Fetch permissions asynchronously - watch the provider for reactive updates
+    final hubPermissionsAsync = currentUserId != null
+        ? ref.watch(hubPermissionsProvider(
+            (hubId: widget.hubId, userId: currentUserId)))
+        : null;
+    final hubPermissions = hubPermissionsAsync?.valueOrNull;
 
-          // Load existing ratings when entering rating mode
-          if (_isRatingMode && _tempRatings.isEmpty && _members.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  // Load ratings from members list
-                  for (final member in _members) {
-                    if (member.managerRating != null) {
-                      _tempRatings[member.user.uid] = member.managerRating!;
-                    }
-                  }
-                });
+    final canManageRatings = (hubPermissions?.isManager ?? false) ||
+        (hubPermissions?.isModerator ?? false);
+
+    // Load existing ratings when entering rating mode
+    if (_isRatingMode && _tempRatings.isEmpty && _members.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            // Load ratings from members list
+            for (final member in _members) {
+              if (member.managerRating != null) {
+                _tempRatings[member.user.uid] = member.managerRating!;
               }
-            });
-          }
+            }
+          });
+        }
+      });
+    }
 
-          if (hub.memberCount == 0) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 64,
-                    color: PremiumColors.textSecondary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'אין שחקנים בהוב',
-                    style: PremiumTypography.heading3,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'הוסף שחקנים כדי להתחיל',
-                    style: PremiumTypography.bodyMedium,
-                  ),
-                  if (isHubManager) ...[
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final result = await showDialog<bool>(
-                          context: context,
-                          builder: (context) =>
-                              AddManualPlayerDialog(hubId: widget.hubId),
-                        );
-                        if (result == true && mounted) {
-                          // Refresh will happen automatically
-                        }
-                      },
-                      icon: const Icon(Icons.person_add),
-                      label: const Text('הוסף שחקן'),
-                    ),
-                  ],
-                ],
+    if (hub.memberCount == 0) {
+      return PremiumScaffold(
+        title: 'שחקני ההוב',
+        showBackButton: true,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.people_outline,
+                size: 64,
+                color: PremiumColors.textSecondary,
               ),
-            );
-          }
+              const SizedBox(height: 16),
+              Text(
+                'אין שחקנים בהוב',
+                style: PremiumTypography.heading3,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'הוסף שחקנים כדי להתחיל',
+                style: PremiumTypography.bodyMedium,
+              ),
+              if (isHubManager) ...[
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) =>
+                          AddManualPlayerDialog(hubId: widget.hubId),
+                    );
+                    if (result == true && mounted) {
+                      // Refresh will happen automatically
+                    }
+                  },
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('הוסף שחקן'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
 
-          return FutureBuilder<List<User>>(
+    return PremiumScaffold(
+      title: 'שחקני ההוב',
+      showBackButton: true,
+      body: FutureBuilder<List<User>>(
             future: () async {
               final memberIds = await hubsRepo.getHubMemberIds(hub.hubId);
               return usersRepo.getUsers(memberIds);
@@ -640,9 +666,7 @@ class _HubPlayersListScreenState extends ConsumerState<HubPlayersListScreen> {
                 ],
               );
             },
-          );
-        },
-      ),
+          ),
     );
   }
 

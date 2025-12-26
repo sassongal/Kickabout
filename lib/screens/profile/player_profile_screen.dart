@@ -20,6 +20,7 @@ import 'package:kattrick/widgets/gamification/gamification_visuals.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
 import 'package:kattrick/widgets/street_baller_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
 // ignore_for_file: unused_element
 
 /// Enhanced Player Profile Screen with Premium Design
@@ -1661,23 +1662,10 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
     User user,
     HubsRepository hubsRepo,
   ) {
-    return StreamBuilder<List<Hub>>(
-      stream: hubsRepo.watchHubsByMember(user.uid),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const PremiumLoadingState(message: 'טוען האבים...');
-        }
+    final hubsAsync = ref.watch(hubsByMemberStreamProvider(user.uid));
 
-        if (snapshot.hasError) {
-          return PremiumEmptyState(
-            icon: Icons.error_outline,
-            title: 'שגיאה בטעינת האבים',
-            message: snapshot.error.toString(),
-          );
-        }
-
-        final hubs = snapshot.data ?? [];
-
+    return hubsAsync.when(
+      data: (hubs) {
         if (hubs.isEmpty) {
           return PremiumEmptyState(
             icon: Icons.group_off,
@@ -1745,6 +1733,12 @@ class _PlayerProfileScreenState extends ConsumerState<PlayerProfileScreen>
           },
         );
       },
+      loading: () => const PremiumLoadingState(message: 'טוען האבים...'),
+      error: (err, stack) => PremiumEmptyState(
+        icon: Icons.error_outline,
+        title: 'שגיאה בטעינת האבים',
+        message: err.toString(),
+      ),
     );
   }
 
