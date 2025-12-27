@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
-import 'package:kattrick/models/hub.dart';
-import 'package:kattrick/models/hub_member.dart';
-import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/features/hubs/domain/models/hub.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_member.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import '../helpers/mock_firestore.dart';
 
 void main() {
@@ -458,7 +458,7 @@ void main() {
       mockFirestore = MockFirebaseFirestore();
       mockMemberRef = MockDocumentReference();
       mockMemberDoc = MockDocumentSnapshot();
-      service = HubPermissionsService(mockFirestore);
+      service = HubPermissionsService();
     });
 
     group('getMembership', () {

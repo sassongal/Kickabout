@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/shared/infrastructure/analytics/analytics_service.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
 import 'package:image_picker/image_picker.dart'; // For image picking
 import 'package:image/image.dart' as img; // For image processing
@@ -20,6 +20,7 @@ import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart' show HubCreationLimitException, HubCreationLimitReason;
 import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/features/hubs/presentation/widgets/grow_your_team_modal.dart';
 
 /// Create hub screen
 class CreateHubScreen extends ConsumerStatefulWidget {
@@ -253,7 +254,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
 
       // Generate geohash and location if venue is provided (optional)
       String? geohash;
-      GeoPoint? location;
+      GeographicPoint? location;
 
       if (mainVenue != null) {
         location = mainVenue.location;
@@ -419,8 +420,18 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.hubCreatedSuccess)),
         );
+
+        // Show Grow Your Team modal
+        await showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => GrowYourTeamModal(hub: createdHub!),
+        );
+
         // Navigate to the newly created hub's detail screen
-        context.go('/hubs/$hubId');
+        if (mounted) {
+          context.go('/hubs/$hubId');
+        }
       }
     } catch (e, stackTrace) {
       debugPrint('Error creating hub: $e');

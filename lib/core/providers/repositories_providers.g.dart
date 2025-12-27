@@ -63,7 +63,7 @@ final gamesRepositoryProvider = AutoDisposeProvider<GamesRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef GamesRepositoryRef = AutoDisposeProviderRef<GamesRepository>;
-String _$sessionRepositoryHash() => r'44369f92870923238df4509118d29818dfde5c3d';
+String _$sessionRepositoryHash() => r'9ed008d076cfa47b21835a6709ac14c638dedaad';
 
 /// Session Repository Provider (Session lifecycle)
 ///
@@ -84,7 +84,7 @@ final sessionRepositoryProvider =
 // ignore: unused_element
 typedef SessionRepositoryRef = AutoDisposeProviderRef<SessionRepository>;
 String _$matchApprovalRepositoryHash() =>
-    r'fcf33f6fedee00ee7adf596a13945d70330c042f';
+    r'f451b7a07c906823164199437f970843e734ba68';
 
 /// Match Approval Repository Provider (Match approval workflow)
 ///
@@ -128,7 +128,7 @@ final gameQueriesRepositoryProvider =
 typedef GameQueriesRepositoryRef
     = AutoDisposeProviderRef<GameQueriesRepository>;
 String _$gameFinalizationServiceHash() =>
-    r'adc0f69a177705a70456bc7c6a2bbcddede5637b';
+    r'8967f39d99e8e8d94653f35c6a0fea6e91080a46';
 
 /// Game Finalization Service Provider (Game finalization logic)
 ///
@@ -150,7 +150,7 @@ final gameFinalizationServiceProvider =
 typedef GameFinalizationServiceRef
     = AutoDisposeProviderRef<GameFinalizationService>;
 String _$hubCreationServiceHash() =>
-    r'7d25fccf3ac3669019558928dc5a06abfa55138e';
+    r'33de6b133061674c1be0cfd92a8392070f458631';
 
 /// Hub Creation Service Provider (Hub creation business logic)
 ///
@@ -190,7 +190,7 @@ final signupsRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SignupsRepositoryRef = AutoDisposeProviderRef<SignupsRepository>;
-String _$gameSignupServiceHash() => r'6c52726c226e9a88ef33952cdb6f3938b16362e9';
+String _$gameSignupServiceHash() => r'238daedbcfd021366501ea25464a643374fec874';
 
 /// Game Signup Service Provider (Signup business logic)
 ///
@@ -371,7 +371,7 @@ final commentsRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CommentsRepositoryRef = AutoDisposeProviderRef<CommentsRepository>;
-String _$followRepositoryHash() => r'9ac35f869e863650b9205ae8f5f805b1b87ad4c9';
+String _$followRepositoryHash() => r'852c84fb661dc84af07750196d454339387ef782';
 
 /// Follow Repository Provider
 ///
@@ -516,5 +516,79 @@ final venuesRepositoryProvider = AutoDisposeProvider<VenuesRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef VenuesRepositoryRef = AutoDisposeProviderRef<VenuesRepository>;
+String _$hubVenuesRepositoryHash() =>
+    r'f6854086c991b3d8c953d9618fa8faab5367f304';
+
+/// Hub Venues Repository Provider
+///
+/// Manages hub-venue relationships (linking/unlinking).
+/// Extracted from HubsRepository to follow Single Responsibility Principle.
+///
+/// Copied from [hubVenuesRepository].
+@ProviderFor(hubVenuesRepository)
+final hubVenuesRepositoryProvider =
+    AutoDisposeProvider<HubVenuesRepository>.internal(
+  hubVenuesRepository,
+  name: r'hubVenuesRepositoryProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$hubVenuesRepositoryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef HubVenuesRepositoryRef = AutoDisposeProviderRef<HubVenuesRepository>;
+String _$hubContactRepositoryHash() =>
+    r'dcec5d98d58f784d1dba87ac039fd8ec658726be';
+
+/// Hub Contact Repository Provider
+///
+/// Manages player-to-manager contact messages.
+/// Extracted from HubsRepository to follow Single Responsibility Principle.
+///
+/// Copied from [hubContactRepository].
+@ProviderFor(hubContactRepository)
+final hubContactRepositoryProvider =
+    AutoDisposeProvider<HubContactRepository>.internal(
+  hubContactRepository,
+  name: r'hubContactRepositoryProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$hubContactRepositoryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef HubContactRepositoryRef = AutoDisposeProviderRef<HubContactRepository>;
+String _$hubJoinRequestsRepositoryHash() =>
+    r'ac2cee0c636b85ab797ba6dc93906fd8a250665c';
+
+/// Hub Join Requests Repository Provider
+///
+/// Manages join request approval/rejection workflow.
+/// Extracted from HubsRepository to follow Single Responsibility Principle.
+/// ⚠️ CRITICAL: Uses transactions for atomic operations!
+///
+/// Copied from [hubJoinRequestsRepository].
+@ProviderFor(hubJoinRequestsRepository)
+final hubJoinRequestsRepositoryProvider =
+    AutoDisposeProvider<HubJoinRequestsRepository>.internal(
+  hubJoinRequestsRepository,
+  name: r'hubJoinRequestsRepositoryProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$hubJoinRequestsRepositoryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef HubJoinRequestsRepositoryRef
+    = AutoDisposeProviderRef<HubJoinRequestsRepository>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

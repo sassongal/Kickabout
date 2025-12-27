@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kattrick/models/match_result.dart';
-import 'package:kattrick/models/team.dart';
+import 'package:kattrick/shared/domain/models/match_result.dart';
+import 'package:kattrick/shared/domain/models/team.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 

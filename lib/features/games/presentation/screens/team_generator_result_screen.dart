@@ -209,15 +209,13 @@ class _TeamGeneratorResultScreenState
       final gamesRepo = ref.read(gamesRepositoryProvider);
       final eventsRepo = ref.read(hubEventsRepositoryProvider);
       final currentUserId = ref.read(currentUserIdProvider);
-      final firestore = FirebaseFirestore.instance;
 
       if (currentUserId == null) {
         throw Exception('משתמש לא מחובר');
       }
 
       // 1. Create Game document
-      final gameRef = firestore.collection('games').doc();
-      final gameId = gameRef.id;
+      final gameId = gamesRepo.generateGameId();
 
       final game = Game(
         gameId: gameId,

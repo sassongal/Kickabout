@@ -7,7 +7,7 @@ import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
-import 'package:kattrick/models/notification.dart' as app_notification;
+import 'package:kattrick/features/social/domain/models/notification.dart' as app_notification;
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/theme/premium_theme.dart';

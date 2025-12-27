@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_settings.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_settings.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_creation_service.dart';
@@ -27,6 +28,14 @@ class DummyDataGenerator {
   })  : firestore = firestore ?? FirebaseFirestore.instance,
         _hubCreationService = hubCreationService ?? HubCreationService(),
         _hubsRepository = hubsRepository ?? HubsRepository();
+
+  /// Generate realistic height and weight for a player
+  Map<String, double> _generatePhysicalStats() {
+    final heightCm = 160.0 + random.nextDouble() * 35.0; // 160-195 cm
+    final bmi = 21.0 + random.nextDouble() * 6.0; // BMI 21-27 (athletic)
+    final weightKg = bmi * (heightCm / 100) * (heightCm / 100);
+    return {'height': heightCm, 'weight': weightKg};
+  }
 
   /// הוספת שחקנים מדומים ל-Hub קיים ספציפי
   Future<void> addPlayersToExistingHub({
@@ -59,6 +68,11 @@ class DummyDataGenerator {
       final photoId = random.nextInt(99);
       final photoUrl = 'https://randomuser.me/api/portraits/men/$photoId.jpg';
 
+      // Generate realistic weight and height
+      final heightCm = 160.0 + random.nextDouble() * 35.0; // 160-195 cm
+      final bmi = 21.0 + random.nextDouble() * 6.0; // BMI 21-27
+      final weightKg = bmi * (heightCm / 100) * (heightCm / 100);
+
       final user = User(
         uid: userId,
         name: '$firstName $lastName',
@@ -76,6 +90,8 @@ class DummyDataGenerator {
         location: location,
         geohash: geohash,
         photoUrl: photoUrl,
+        heightCm: heightCm,
+        weightKg: weightKg,
         hubIds: [hubId], // הוספה ישירה של ה-Hub למשתמש
       );
 
@@ -207,7 +223,7 @@ class DummyDataGenerator {
   ];
 
   /// Generate a random coordinate near Haifa
-  GeoPoint _randomCoordinateNearHaifa() {
+  GeographicPoint _randomCoordinateNearHaifa() {
     // Generate random offset in km
     final angle = random.nextDouble() * 2 * pi;
     final distance = random.nextDouble() * radiusKm;
@@ -216,9 +232,9 @@ class DummyDataGenerator {
     final latOffset = distance * cos(angle) / 111.0;
     final lngOffset = distance * sin(angle) / 111.0;
 
-    return GeoPoint(
-      haifaLat + latOffset,
-      haifaLng + lngOffset,
+    return GeographicPoint(
+      latitude: haifaLat + latOffset,
+      longitude: haifaLng + lngOffset,
     );
   }
 
@@ -241,6 +257,7 @@ class DummyDataGenerator {
     final userId = firestore.collection('users').doc().id;
     final location = _randomCoordinateNearHaifa();
     final geohash = GeohashUtils.encode(location.latitude, location.longitude);
+    final physicalStats = _generatePhysicalStats();
 
     final user = User(
       uid: userId,
@@ -263,6 +280,8 @@ class DummyDataGenerator {
       totalParticipations: random.nextInt(50),
       location: location,
       geohash: geohash,
+      heightCm: physicalStats['height'],
+      weightKg: physicalStats['weight'],
       region: regions[random.nextInt(regions.length)],
     );
 
@@ -300,7 +319,7 @@ class DummyDataGenerator {
     String? description,
     List<String>? memberIds,
     int? memberCount,
-    GeoPoint? location,
+    GeographicPoint? location,
   }) async {
     final hubId = firestore.collection('hubs').doc().id;
 
@@ -428,7 +447,7 @@ class DummyDataGenerator {
     for (final entry in realFields.entries) {
       final fieldName = entry.key;
       final coords = entry.value;
-      final location = GeoPoint(coords['lat']!, coords['lng']!);
+      final location = GeographicPoint(latitude: coords['lat']!, longitude: coords['lng']!);
 
       // Take users for this hub
       final hubUserIds = userIds.skip(userIndex).take(playersPerHub).toList();
@@ -449,7 +468,7 @@ class DummyDataGenerator {
 
   /// Generate games for a hub
   Future<void> _generateGamesForHub(
-      String hubId, List<String> memberIds, GeoPoint? hubLocation) async {
+      String hubId, List<String> memberIds, GeographicPoint? hubLocation) async {
     if (memberIds.length < 10) return; // Need at least 10 players for games
 
     // Use hub location if provided, otherwise random
@@ -487,7 +506,7 @@ class DummyDataGenerator {
     required bool isPast,
     int? daysAgo,
     int? daysAhead,
-    GeoPoint? location,
+    GeographicPoint? location,
   }) async {
     final gameId = firestore.collection('games').doc().id;
     final gameDate = isPast
@@ -585,11 +604,12 @@ class DummyDataGenerator {
 
     // Create hub first to get hubId
     final hubId = firestore.collection('hubs').doc().id;
-    final hubLocation = GeoPoint(32.8000, 34.9800); // גן דניאל area
+    final hubLocation = GeographicPoint(
+      latitude: 32.8000,
+      longitude: 34.9800,
+    ); // גן דניאל area
     final hubGeohash =
         GeohashUtils.encode(hubLocation.latitude, hubLocation.longitude);
-    final hubPhotoUrl =
-        'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=600&fit=crop';
 
     // Israeli male names for players (25 male names)
     final playerNames = [
@@ -664,12 +684,13 @@ class DummyDataGenerator {
           'https://randomuser.me/api/portraits/men/${photoIds[i]}.jpg';
 
       final userId = firestore.collection('users').doc().id;
-      final location = GeoPoint(
-        32.8000 + (i % 5) * 0.01, // Spread around Haifa
-        34.9800 + (i % 5) * 0.01,
+      final location = GeographicPoint(
+        latitude: 32.8000 + (i % 5) * 0.01, // Spread around Haifa
+        longitude: 34.9800 + (i % 5) * 0.01,
       );
       final geohash =
           GeohashUtils.encode(location.latitude, location.longitude);
+      final physicalStats = _generatePhysicalStats();
 
       final user = User(
         uid: userId,
@@ -689,6 +710,8 @@ class DummyDataGenerator {
         totalParticipations: 10 + i * 2,
         location: location,
         geohash: geohash,
+        heightCm: physicalStats['height'],
+        weightKg: physicalStats['weight'],
         photoUrl: photoUrl, // Add photo URL - real photos of men
         hubIds: i < 18 ? [hubId] : [], // First 18 are in the hub
       );
@@ -773,6 +796,7 @@ class DummyDataGenerator {
       final location = _randomCoordinateNearHaifa();
       final geohash =
           GeohashUtils.encode(location.latitude, location.longitude);
+      final physicalStats = _generatePhysicalStats();
 
       final user = User(
         uid: userId,
@@ -795,6 +819,8 @@ class DummyDataGenerator {
         totalParticipations: random.nextInt(50),
         location: location,
         geohash: geohash,
+        heightCm: physicalStats['height'],
+        weightKg: physicalStats['weight'],
         photoUrl: photoUrl, // Add photo URL
         region: regions[random.nextInt(regions.length)], // Add random region
       );
@@ -1250,12 +1276,13 @@ class DummyDataGenerator {
       final fullName = '$firstName $lastName';
 
       final userId = firestore.collection('users').doc().id;
-      final location = GeoPoint(
-        haifaLat + (random.nextDouble() - 0.5) * 0.1, // ±0.05 degrees (~5km)
-        haifaLng + (random.nextDouble() - 0.5) * 0.1,
+      final location = GeographicPoint(
+        latitude: haifaLat + (random.nextDouble() - 0.5) * 0.1, // ±0.05 degrees (~5km)
+        longitude: haifaLng + (random.nextDouble() - 0.5) * 0.1,
       );
       final geohash =
           GeohashUtils.encode(location.latitude, location.longitude);
+      final physicalStats = _generatePhysicalStats();
 
       // final ageGroup = AgeUtils.getAgeGroup(birthDate); // Removed as it's not in the User model yet
 
@@ -1278,6 +1305,8 @@ class DummyDataGenerator {
         totalParticipations: random.nextInt(50),
         location: location,
         geohash: geohash,
+        heightCm: physicalStats['height'],
+        weightKg: physicalStats['weight'],
         region: 'צפון',
         // ageGroup: ageGroup, // This field needs to be added to the User model first
         hubIds: [], // Initialize as empty list
@@ -1318,9 +1347,9 @@ class DummyDataGenerator {
         userIndex++;
       }
 
-      final hubLocation = GeoPoint(
-        (hubData['lat'] as num).toDouble(),
-        (hubData['lng'] as num).toDouble(),
+      final hubLocation = GeographicPoint(
+        latitude: (hubData['lat'] as num).toDouble(),
+        longitude: (hubData['lng'] as num).toDouble(),
       );
       final geohash =
           GeohashUtils.encode(hubLocation.latitude, hubLocation.longitude);
@@ -1491,6 +1520,7 @@ class DummyDataGenerator {
       // Ratings between 4.0 and 9.0
       final rating = 4.0 + random.nextDouble() * 5.0;
       playerRatings[userId] = rating;
+      final physicalStats = _generatePhysicalStats();
 
       final user = User(
         uid: userId,
@@ -1501,6 +1531,8 @@ class DummyDataGenerator {
         currentRankScore: rating,
         location: location,
         geohash: GeohashUtils.encode(location.latitude, location.longitude),
+        heightCm: physicalStats['height'],
+        weightKg: physicalStats['weight'],
         createdAt: DateTime.now(),
         // Important: Tag as dummy for cleanup
         availabilityStatus: 'dummy',

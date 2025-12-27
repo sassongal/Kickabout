@@ -2,11 +2,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/core/providers/services_providers.dart';
 import 'package:kattrick/core/providers/auth_providers.dart';
-import 'package:kattrick/data/leaderboard_repository.dart';
+import 'package:kattrick/features/gamification/data/repositories/leaderboard_repository.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_role.dart';
-import 'package:kattrick/models/hub_member.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_member.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
+import 'package:kattrick/features/dashboard/domain/services/dashboard_service_provider.dart';
+import 'package:kattrick/features/admin/domain/services/admin_task_service_provider.dart';
 
 part 'complex_providers.g.dart';
 
@@ -247,52 +249,14 @@ Stream<List<Hub>> hubsByCreator(
 }
 
 /// Home dashboard data provider (weather & vibe) - using Open-Meteo (free)
+///
+/// Refactored to delegate to DashboardService for business logic.
+/// This provider now only handles state management.
 @riverpod
 Future<Map<String, dynamic>> homeDashboardData(HomeDashboardDataRef ref) async {
-  try {
-    final locationService = ref.read(locationServiceProvider);
-    final weatherService = ref.read(weatherServiceProvider);
-    final position = await locationService.getCurrentLocation();
-
-    if (position == null) {
-      return {
-        'vibeMessage': 'יום ענק לכדורגל! ⚽',
-        'temperature': null,
-        'condition': null,
-        'summary': 'יום ענק לכדורגל! ⚽',
-      };
-    }
-
-    final weather = await weatherService.getCurrentWeather(
-      latitude: position.latitude,
-      longitude: position.longitude,
-    );
-
-    if (weather == null) {
-      return {
-        'vibeMessage': 'יום טוב לכדורגל! ☀️',
-        'temperature': null,
-        'condition': null,
-        'summary': 'יום טוב לכדורגל! ☀️',
-      };
-    }
-
-    return {
-      'vibeMessage': weather.summary,
-      'temperature': weather.temperature,
-      'condition': weather.condition,
-      'summary': weather.summary,
-      'weatherCode': weather.weatherCode,
-    };
-  } catch (e) {
-    // In case of error, return default message
-    return {
-      'vibeMessage': 'יום טוב לכדורגל! ☀️',
-      'temperature': null,
-      'condition': null,
-      'summary': 'יום טוב לכדורגל! ☀️',
-    };
-  }
+  final dashboardService = ref.read(dashboardServiceProvider);
+  final data = await dashboardService.getDashboardData();
+  return data.toMap();
 }
 
 /// Hub permissions provider - provides HubPermissions for a user in a hub
@@ -384,6 +348,10 @@ Future<UserRole> hubRole(HubRoleRef ref, String hubId) async {
 /// - Status is 'teamsFormed' or 'inProgress'
 /// - gameDate is in the past
 @riverpod
+/// Admin tasks count stream provider
+///
+/// Refactored to delegate to AdminTaskService for business logic.
+/// This provider now only handles state management and streaming.
 Stream<int> adminTasks(AdminTasksRef ref) {
   try {
     final currentUserId = ref.read(currentUserIdProvider);
@@ -391,73 +359,13 @@ Stream<int> adminTasks(AdminTasksRef ref) {
       return Stream.value(0);
     }
 
-    final hubsRepo = ref.read(hubsRepositoryProvider);
-    final gameQueriesRepo = ref.read(gameQueriesRepositoryProvider);
     final usersRepo = ref.read(usersRepositoryProvider);
+    final adminTaskService = ref.read(adminTaskServiceProvider);
 
-    // Get current user to check hubRoles
+    // Watch user changes and recalculate admin tasks
     return usersRepo.watchUser(currentUserId).asyncMap((user) async {
       if (user == null) return 0;
-
-      // Get all hubs where user is admin
-      final adminHubIds = <String>{};
-
-      // Check user.hubIds (if exists) or query hubs
-      final userHubIds = user.hubIds;
-      if (userHubIds.isNotEmpty) {
-        for (final hubId in userHubIds) {
-          try {
-            final hub = await hubsRepo.getHub(hubId);
-            if (hub != null) {
-              // Check if user is creator or manager
-              if (hub.createdBy == currentUserId) {
-                adminHubIds.add(hubId);
-              } else {
-                final roleString =
-                    await hubsRepo.getUserRole(hubId, currentUserId);
-                if (roleString != null) {
-                  final hubRole = HubRole.fromFirestore(roleString);
-                  if (hubRole == HubRole.manager ||
-                      hubRole == HubRole.moderator) {
-                    adminHubIds.add(hubId);
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            // Skip this hub if error
-            continue;
-          }
-        }
-      }
-
-      if (adminHubIds.isEmpty) return 0;
-
-      // Query games for each hub
-      int totalStuckGames = 0;
-      final now = DateTime.now();
-
-      for (final hubId in adminHubIds) {
-        try {
-          // Get games for this hub
-          final games = await gameQueriesRepo.listGamesByHub(hubId);
-
-          // Filter stuck games
-          final stuckGames = games.where((game) {
-            final isStuckStatus = game.status == GameStatus.teamsFormed ||
-                game.status == GameStatus.inProgress;
-            final isPastDate = game.gameDate.isBefore(now);
-            return isStuckStatus && isPastDate;
-          });
-
-          totalStuckGames += stuckGames.length;
-        } catch (e) {
-          // Skip this hub if error
-          continue;
-        }
-      }
-
-      return totalStuckGames;
+      return await adminTaskService.getAdminTasksCount(currentUserId);
     });
   } catch (e) {
     return Stream.value(0);

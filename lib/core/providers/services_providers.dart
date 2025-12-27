@@ -4,18 +4,20 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:kattrick/core/providers/firestore_provider.dart';
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/services/storage_service.dart';
-import 'package:kattrick/services/location_service.dart';
+import 'package:kattrick/features/location/infrastructure/services/location_service.dart';
 import 'package:kattrick/services/push_notification_service.dart';
-import 'package:kattrick/services/game_reminder_service.dart';
+import 'package:kattrick/features/games/domain/services/game_reminder_service.dart';
 import 'package:kattrick/services/push_notification_integration_service.dart';
-import 'package:kattrick/services/auth_service.dart';
+import 'package:kattrick/features/auth/infrastructure/services/auth_service.dart';
 import 'package:kattrick/services/scouting_service.dart';
 import 'package:kattrick/services/google_places_service.dart';
 import 'package:kattrick/services/custom_api_service.dart';
 import 'package:kattrick/services/weather_service.dart';
-import 'package:kattrick/features/hubs/domain/services/hub_analytics_service.dart';
+import 'package:kattrick/features/hubs/infrastructure/services/hub_analytics_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_membership_service.dart';
+import 'package:kattrick/features/hubs/domain/services/player_merge_service.dart';
+import 'package:kattrick/shared/domain/events/event_bus.dart';
 
 part 'services_providers.g.dart';
 
@@ -90,7 +92,15 @@ CustomApiService customApiService(CustomApiServiceRef ref) {
 /// Hub Analytics Service Provider
 @riverpod
 HubAnalyticsService hubAnalyticsService(HubAnalyticsServiceRef ref) {
-  return HubAnalyticsService(ref.watch(firestoreProvider));
+  final service = HubAnalyticsService(
+    ref.watch(firestoreProvider),
+    eventBus: ref.watch(eventBusProvider),
+  );
+
+  // Ensure proper cleanup when provider is disposed
+  ref.onDispose(() => service.dispose());
+
+  return service;
 }
 
 /// Hub Permissions Service Provider - SINGLETON for permission calculations
@@ -114,6 +124,19 @@ HubMembershipService hubMembershipService(HubMembershipServiceRef ref) {
     hubsRepo: ref.watch(hubsRepositoryProvider),
     usersRepo: ref.watch(usersRepositoryProvider),
     notificationService: ref.watch(pushNotificationServiceProvider),
+  );
+}
+
+/// Player Merge Service Provider
+///
+/// Handles merging fictitious players with real user accounts.
+/// Automatically transfers memberships, ratings, and history when a real user
+/// signs up with a phone number matching a fictitious player.
+@riverpod
+PlayerMergeService playerMergeService(PlayerMergeServiceRef ref) {
+  return PlayerMergeService(
+    usersRepo: ref.watch(usersRepositoryProvider),
+    hubsRepo: ref.watch(hubsRepositoryProvider),
   );
 }
 

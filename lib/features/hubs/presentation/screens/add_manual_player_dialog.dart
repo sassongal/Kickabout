@@ -1,6 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/core/providers/services_providers.dart';
@@ -8,14 +8,20 @@ import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_membership_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 
 /// Dialog for hub manager to add a manual player (without app)
 class AddManualPlayerDialog extends ConsumerStatefulWidget {
   final String hubId;
+  final String? initialName;
+  final String? initialPhone;
 
   const AddManualPlayerDialog({
     super.key,
     required this.hubId,
+    this.initialName,
+    this.initialPhone,
   });
 
   @override
@@ -28,9 +34,16 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _cityController = TextEditingController();
-  final _ratingController = TextEditingController(text: '3.3');
+  final _heightController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _ageController = TextEditingController();
   String _selectedPosition = 'Midfielder';
+  double _rating = 4.0; // Default rating on 1-7 scale
   bool _isLoading = false;
+
+  // Image picker
+  File? _selectedImage;
+  final ImagePicker _imagePicker = ImagePicker();
 
   final List<String> _positions = [
     'Goalkeeper',
@@ -40,13 +53,49 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Set initial values from contact if provided
+    if (widget.initialName != null) {
+      _nameController.text = widget.initialName!;
+    }
+    if (widget.initialPhone != null) {
+      _phoneController.text = widget.initialPhone!;
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _cityController.dispose();
-    _ratingController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
+    _ageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        SnackbarHelper.showError(context, 'שגיאה בבחירת תמונה');
+      }
+    }
   }
 
   Future<void> _addPlayer() async {
@@ -59,7 +108,6 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
     setState(() => _isLoading = true);
 
     try {
-      final firestore = FirebaseFirestore.instance;
       final usersRepo = ref.read(usersRepositoryProvider);
 
       // Check if phone number is already taken
@@ -81,20 +129,33 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
       }
 
       // Create a unique ID for the manual player
-      final playerId = firestore.collection('users').doc().id;
+      final playerId = usersRepo.generateUserId();
 
-      // Parse rating (default 3.3 if empty or invalid)
-      final ratingText = _ratingController.text.trim();
-      final rating = double.tryParse(ratingText) ?? 3.3;
-      final finalRating = rating.clamp(0.0, 10.0); // Ensure rating is between 0-10
+      // Calculate birthDate from age (if provided)
+      DateTime birthDate;
+      if (_ageController.text.trim().isNotEmpty) {
+        final age = int.parse(_ageController.text.trim());
+        birthDate = DateTime.now().subtract(Duration(days: 365 * age));
+      } else {
+        // Default to 25 years old
+        birthDate = DateTime.now().subtract(const Duration(days: 365 * 25));
+      }
 
-      // Create user document
+      // Parse physical stats
+      final heightCm = _heightController.text.trim().isNotEmpty
+          ? double.tryParse(_heightController.text.trim())
+          : null;
+      final weightKg = _weightController.text.trim().isNotEmpty
+          ? double.tryParse(_weightController.text.trim())
+          : null;
+
+      // Create user document with isFictitious flag
       final user = User(
         uid: playerId,
         name: _nameController.text.trim(),
         email: _emailController.text.trim().isNotEmpty
             ? _emailController.text.trim()
-            : 'manual_$playerId@kickadoor.local', // Fake email for manual players without email
+            : 'manual_$playerId@kickadoor.local',
         phoneNumber: _phoneController.text.trim().isNotEmpty
             ? _phoneController.text.trim()
             : null,
@@ -102,15 +163,49 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
             ? _cityController.text.trim()
             : null,
         preferredPosition: _selectedPosition,
-        availabilityStatus: 'notAvailable', // Manual players are not available
+        availabilityStatus: 'notAvailable',
         createdAt: DateTime.now(),
-        birthDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
-        currentRankScore: finalRating,
+        birthDate: birthDate,
+        heightCm: heightCm,
+        weightKg: weightKg,
+        currentRankScore: _rating, // Use slider value
         totalParticipations: 0,
+        isFictitious: true, // Mark as fictitious player
       );
 
       // Save user
       await usersRepo.setUser(user);
+
+      // Upload image if selected
+      if (_selectedImage != null) {
+        try {
+          final storageService = ref.read(storageServiceProvider);
+
+          // Resize and compress image
+          final imageBytes = await _selectedImage!.readAsBytes();
+          final decodedImage = img.decodeImage(imageBytes);
+          if (decodedImage != null) {
+            final resizedImage = img.copyResize(
+              decodedImage,
+              width: 256,
+              height: 256,
+            );
+            final compressedBytes = img.encodeJpg(resizedImage, quality: 85);
+
+            // Upload to Storage
+            final photoUrl = await storageService.uploadProfilePhotoFromBytes(
+              playerId,
+              compressedBytes,
+            );
+
+            // Update user with photo URL
+            await usersRepo.updateUser(playerId, {'photoUrl': photoUrl});
+          }
+        } catch (e) {
+          debugPrint('Error uploading player photo: $e');
+          // Continue without photo - not critical
+        }
+      }
 
       // Add to hub using HubMembershipService for business validation
       final membershipService = ref.read(hubMembershipServiceProvider);
@@ -118,6 +213,10 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
         hubId: widget.hubId,
         userId: playerId,
       );
+
+      // Set manager rating (1-7 scale)
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      await hubsRepo.setPlayerRating(widget.hubId, playerId, _rating);
 
       if (mounted) {
         Navigator.of(context).pop(true); // Return true to indicate success
@@ -154,24 +253,67 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'הוסף שחקן ידנית',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'הוסף שחקן שמשחק בקבוצה אבל לא מוריד את האפליקציה',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'הוסף שחקן ידנית',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'הוסף שחקן שמשחק בקבוצה אבל לא מוריד את האפליקציה',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+
+                // Image/Avatar Picker
+                Center(
+                  child: GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          backgroundImage: _selectedImage != null
+                              ? FileImage(_selectedImage!)
+                              : null,
+                          child: _selectedImage == null
+                              ? Icon(
+                                  Icons.person_add,
+                                  size: 40,
+                                  color: Theme.of(context).primaryColor,
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
               // Name field
               TextFormField(
                 controller: _nameController,
@@ -188,13 +330,15 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              // Phone field (optional)
+              // Phone field (optional, for merge)
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
                   labelText: 'מספר טלפון (אופציונלי)',
                   border: OutlineInputBorder(),
                   hintText: '050-1234567',
+                  prefixIcon: Icon(Icons.phone),
+                  helperText: 'למיזוג אוטומטי כשהשחקן יצטרף',
                 ),
                 keyboardType: TextInputType.phone,
                 inputFormatters: [
@@ -240,28 +384,83 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 16),
-              // Rating field
+              // Age field
               TextFormField(
-                controller: _ratingController,
+                controller: _ageController,
                 decoration: const InputDecoration(
-                  labelText: 'ציון (0-10)',
+                  labelText: 'גיל (אופציונלי)',
                   border: OutlineInputBorder(),
-                  hintText: '3.3',
-                  helperText: 'ברירת מחדל: 3.3',
+                  hintText: '25',
+                  prefixIcon: Icon(Icons.cake),
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: TextInputType.number,
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
+                  FilteringTextInputFormatter.digitsOnly,
                 ],
                 validator: (value) {
                   if (value != null && value.trim().isNotEmpty) {
-                    final rating = double.tryParse(value);
-                    if (rating == null || rating < 0 || rating > 10) {
-                      return 'ציון חייב להיות בין 0 ל-10';
+                    final age = int.tryParse(value);
+                    if (age == null || age < 13 || age > 80) {
+                      return 'גיל לא סביר (13-80)';
                     }
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              // Physical Stats Row
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _heightController,
+                      decoration: const InputDecoration(
+                        labelText: 'גובה (ס״מ)',
+                        border: OutlineInputBorder(),
+                        hintText: '175',
+                        prefixIcon: Icon(Icons.straighten),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
+                      ],
+                      validator: (value) {
+                        if (value != null && value.trim().isNotEmpty) {
+                          final height = double.tryParse(value);
+                          if (height == null || height < 140 || height > 220) {
+                            return 'גובה לא סביר';
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _weightController,
+                      decoration: const InputDecoration(
+                        labelText: 'משקל (ק״ג)',
+                        border: OutlineInputBorder(),
+                        hintText: '75',
+                        prefixIcon: Icon(Icons.fitness_center),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
+                      ],
+                      validator: (value) {
+                        if (value != null && value.trim().isNotEmpty) {
+                          final weight = double.tryParse(value);
+                          if (weight == null || weight < 40 || weight > 150) {
+                            return 'משקל לא סביר';
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               // Position dropdown
@@ -270,6 +469,7 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
                 decoration: const InputDecoration(
                   labelText: 'עמדה מועדפת',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.sports_soccer),
                 ),
                 items: _positions.map((position) {
                   return DropdownMenuItem(
@@ -282,6 +482,56 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
                     setState(() => _selectedPosition = value);
                   }
                 },
+              ),
+              const SizedBox(height: 16),
+              // Rating Slider
+              Text(
+                'רמת כושר (1-7) - למנהל בלבד',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 8,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                        activeTrackColor: Theme.of(context).primaryColor,
+                      ),
+                      child: Slider(
+                        value: _rating,
+                        min: 1.0,
+                        max: 7.0,
+                        divisions: 12, // 0.5 increments
+                        label: _rating.toStringAsFixed(1),
+                        onChanged: (value) {
+                          setState(() => _rating = value);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _rating.toStringAsFixed(1),
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               // Buttons
@@ -307,7 +557,8 @@ class _AddManualPlayerDialogState extends ConsumerState<AddManualPlayerDialog> {
                   ),
                 ],
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

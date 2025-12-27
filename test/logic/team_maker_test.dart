@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kattrick/logic/team_maker.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:kattrick/models/models.dart';
 
 void main() {

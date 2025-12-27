@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/features/hubs/data/repositories/polls_repository.dart';
-import 'package:kattrick/models/poll.dart';
+import 'package:kattrick/features/hubs/domain/models/poll.dart';
 import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/premium/gradient_button.dart';

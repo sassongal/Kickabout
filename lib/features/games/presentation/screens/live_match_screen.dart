@@ -478,6 +478,88 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
     _saveLiveState();
   }
 
+  /// Show confirmation dialog for ending the event
+  Future<void> _showEndEventDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('סיום אירוע'),
+        content: const Text(
+          'האם אתה בטוח שברצונך לסיים את האירוע?\n\n'
+          'פעולה זו תחשב את הסטטיסטיקות הסופיות ותפרסם פוסט בפיד הקהילתי.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('אישור'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _completeEvent();
+    }
+  }
+
+  /// Complete the event and navigate back
+  Future<void> _completeEvent() async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final currentUserId = ref.read(currentUserIdProvider);
+      if (currentUserId == null || _hub == null || _event == null) {
+        throw Exception('Missing required data');
+      }
+
+      final eventsRepo = ref.read(hubEventsRepositoryProvider);
+
+      await eventsRepo.completeEvent(
+        hubId: widget.hubId,
+        eventId: widget.eventId,
+        userId: currentUserId,
+        hub: _hub!,
+        event: _event!,
+      );
+
+      if (mounted) {
+        // Close loading dialog
+        Navigator.pop(context);
+
+        // Show success message
+        SnackbarHelper.showSuccess(context, 'האירוע הסתיים בהצלחה!');
+
+        // Navigate back
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        // Close loading dialog if open
+        Navigator.pop(context);
+
+        SnackbarHelper.showError(
+          context,
+          'שגיאה בסיום האירוע: ${e.toString()}',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -731,26 +813,28 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          // Match number badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue, width: 1.5),
-            ),
-            child: Text(
-              'משחק #$currentMatchNumber',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Match number badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue, width: 1.5),
+                ),
+                child: Text(
+                  'משחק #$currentMatchNumber',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-            ),
-          ),
           // Stopwatch Widget - Premium with Hero animation
           Expanded(
             child: Align(
@@ -889,6 +973,32 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
               ),
             ),
           ),
+            ],
+          ),
+          // End Event Button (always shown for managers)
+          if (canLog)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: GestureDetector(
+                onTap: _showEndEventDialog,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white24, width: 1),
+                  ),
+                  child: const Text(
+                    'סיום אירוע',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1723,70 +1833,13 @@ class _MatchLoggingDialogState extends ConsumerState<_MatchLoggingDialog> {
 
   /// Update player statistics in hub members subcollection
   Future<void> _updatePlayerStats(MatchResult match) async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-      final batch = firestore.batch();
-
-      // Count goals and assists per player
-      final Map<String, int> playerGoals = {};
-      final Map<String, int> playerAssists = {};
-
-      for (final scorerId in match.scorerIds) {
-        playerGoals[scorerId] = (playerGoals[scorerId] ?? 0) + 1;
-      }
-
-      for (final assistId in match.assistIds) {
-        playerAssists[assistId] = (playerAssists[assistId] ?? 0) + 1;
-      }
-
-      // Update each player's stats in hub members
-      for (final playerId in {
-        ...playerGoals.keys,
-        ...playerAssists.keys,
-        if (match.mvpId != null) match.mvpId!
-      }) {
-        final memberRef = firestore
-            .collection('hubs')
-            .doc(widget.hubId)
-            .collection('members')
-            .doc(playerId);
-
-        final memberDoc = await memberRef.get();
-        if (!memberDoc.exists) continue;
-
-        final updates = <String, dynamic>{};
-
-        // Update goals
-        final goalsCount = playerGoals[playerId] ?? 0;
-        if (goalsCount > 0) {
-          updates['totalGoals'] = FieldValue.increment(goalsCount);
-        }
-
-        // Update assists
-        final assistsCount = playerAssists[playerId] ?? 0;
-        if (assistsCount > 0) {
-          updates['totalAssists'] = FieldValue.increment(assistsCount);
-        }
-
-        // Update MVP count
-        if (playerId == match.mvpId) {
-          updates['totalMvps'] = FieldValue.increment(1);
-        }
-
-        // Update games played
-        updates['gamesPlayed'] = FieldValue.increment(1);
-
-        if (updates.isNotEmpty) {
-          batch.update(memberRef, updates);
-        }
-      }
-
-      // Commit batch
-      await batch.commit();
-    } catch (e) {
-      debugPrint('⚠️ Failed to update player stats: $e');
-      // Don't throw - stats update failure shouldn't block the match
-    }
+    // DATA ACCESS: Use repository to update member stats
+    await ref.read(hubsRepositoryProvider).updateMemberStatsFromMatch(
+          hubId: widget.hubId,
+          scorerIds: match.scorerIds,
+          assistIds: match.assistIds,
+          mvpId: match.mvpId,
+        );
   }
 
   @override

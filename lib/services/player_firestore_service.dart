@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/player.dart';
+import 'package:kattrick/features/profile/domain/models/player.dart';
 
 class PlayerFirestoreService {
   final _players = FirebaseFirestore.instance.collection('players');

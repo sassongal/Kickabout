@@ -5,9 +5,13 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/features/games/data/repositories/session_repository.dart';
 import 'package:kattrick/features/games/data/repositories/match_approval_repository.dart';
 import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
-import 'package:kattrick/features/games/domain/services/game_finalization_service.dart';
-import 'package:kattrick/features/games/domain/services/game_signup_service.dart';
+import 'package:kattrick/features/games/infrastructure/services/game_finalization_service.dart';
+import 'package:kattrick/features/games/infrastructure/services/game_signup_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_creation_service.dart';
+import 'package:kattrick/features/hubs/data/repositories/hub_venues_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hub_contact_repository.dart';
+import 'package:kattrick/features/hubs/data/repositories/hub_join_requests_repository.dart';
+import 'package:kattrick/shared/domain/events/event_bus.dart';
 
 part 'repositories_providers.g.dart';
 
@@ -35,6 +39,8 @@ SessionRepository sessionRepository(SessionRepositoryRef ref) {
   return SessionRepository(
     firestore: ref.watch(firestoreProvider),
     gamesRepo: ref.watch(gamesRepositoryProvider),
+    hubsRepo: ref.watch(hubsRepositoryProvider),
+    eventBus: ref.watch(eventBusProvider),
   );
 }
 
@@ -45,6 +51,7 @@ MatchApprovalRepository matchApprovalRepository(MatchApprovalRepositoryRef ref) 
     firestore: ref.watch(firestoreProvider),
     gamesRepo: ref.watch(gamesRepositoryProvider),
     sessionRepo: ref.watch(sessionRepositoryProvider),
+    hubsRepo: ref.watch(hubsRepositoryProvider),
   );
 }
 
@@ -58,7 +65,8 @@ GameQueriesRepository gameQueriesRepository(GameQueriesRepositoryRef ref) {
 @riverpod
 GameFinalizationService gameFinalizationService(GameFinalizationServiceRef ref) {
   return GameFinalizationService(
-    firestore: ref.watch(firestoreProvider),
+    gamesRepository: ref.watch(gamesRepositoryProvider),
+    eventBus: ref.watch(eventBusProvider),
   );
 }
 
@@ -67,7 +75,6 @@ GameFinalizationService gameFinalizationService(GameFinalizationServiceRef ref) 
 HubCreationService hubCreationService(HubCreationServiceRef ref) {
   return HubCreationService(
     hubsRepo: ref.watch(hubsRepositoryProvider),
-    firestore: ref.watch(firestoreProvider),
   );
 }
 
@@ -81,7 +88,6 @@ SignupsRepository signupsRepository(SignupsRepositoryRef ref) {
 @riverpod
 GameSignupService gameSignupService(GameSignupServiceRef ref) {
   return GameSignupService(
-    firestore: ref.watch(firestoreProvider),
     gamesRepo: ref.watch(gamesRepositoryProvider),
     signupsRepo: ref.watch(signupsRepositoryProvider),
   );
@@ -139,7 +145,10 @@ CommentsRepository commentsRepository(CommentsRepositoryRef ref) {
 /// Follow Repository Provider
 @riverpod
 FollowRepository followRepository(FollowRepositoryRef ref) {
-  return FollowRepository(firestore: ref.watch(firestoreProvider));
+  return FollowRepository(
+    firestore: ref.watch(firestoreProvider),
+    usersRepository: ref.watch(usersRepositoryProvider),
+  );
 }
 
 /// Chat Repository Provider
@@ -176,5 +185,39 @@ PrivateMessagesRepository privateMessagesRepository(PrivateMessagesRepositoryRef
 @riverpod
 VenuesRepository venuesRepository(VenuesRepositoryRef ref) {
   return VenuesRepository(firestore: ref.watch(firestoreProvider));
+}
+
+// ============================================================================
+// HUB SPLIT REPOSITORIES - Extracted from HubsRepository (Phase 3)
+// ============================================================================
+
+/// Hub Venues Repository Provider
+///
+/// Manages hub-venue relationships (linking/unlinking).
+/// Extracted from HubsRepository to follow Single Responsibility Principle.
+@riverpod
+HubVenuesRepository hubVenuesRepository(HubVenuesRepositoryRef ref) {
+  return HubVenuesRepository(firestore: ref.watch(firestoreProvider));
+}
+
+/// Hub Contact Repository Provider
+///
+/// Manages player-to-manager contact messages.
+/// Extracted from HubsRepository to follow Single Responsibility Principle.
+@riverpod
+HubContactRepository hubContactRepository(HubContactRepositoryRef ref) {
+  return HubContactRepository(firestore: ref.watch(firestoreProvider));
+}
+
+/// Hub Join Requests Repository Provider
+///
+/// Manages join request approval/rejection workflow.
+/// Extracted from HubsRepository to follow Single Responsibility Principle.
+/// ⚠️ CRITICAL: Uses transactions for atomic operations!
+@riverpod
+HubJoinRequestsRepository hubJoinRequestsRepository(
+  HubJoinRequestsRepositoryRef ref,
+) {
+  return HubJoinRequestsRepository(firestore: ref.watch(firestoreProvider));
 }
 

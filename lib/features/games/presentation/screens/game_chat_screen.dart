@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/features/profile/data/repositories/users_repository.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 

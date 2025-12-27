@@ -1,6 +1,6 @@
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/core/providers/auth_providers.dart';
-import 'package:kattrick/models/log_past_game_details.dart';
+import 'package:kattrick/features/games/domain/models/log_past_game_details.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

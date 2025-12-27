@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/theme/premium_theme.dart';
@@ -9,6 +8,7 @@ import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/utils/venue_seeder_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 
 /// Admin Dashboard Screen - Central hub for admin operations
 class AdminDashboardScreen extends ConsumerStatefulWidget {
@@ -251,14 +251,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       const double haifaLat = 32.7940;
       const double haifaLng = 34.9896;
 
-      final firestore = FirebaseFirestore.instance;
-      final userRef = firestore.collection('users').doc(currentUser.uid);
-
+      final usersRepo = ref.read(usersRepositoryProvider);
       final locationService = ref.read(locationServiceProvider);
       final geohash = locationService.generateGeohash(haifaLat, haifaLng);
 
-      await userRef.update({
-        'location': GeoPoint(haifaLat, haifaLng),
+      await usersRepo.updateUser(currentUser.uid, {
+        'location': GeographicPoint(
+          latitude: haifaLat,
+          longitude: haifaLng,
+        ),
         'geohash': geohash,
         'city': 'חיפה',
         'region': 'צפון',

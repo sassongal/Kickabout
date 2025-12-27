@@ -6,14 +6,13 @@ import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/models/models.dart' hide Notification;
-import 'package:kattrick/screens/social/hub_chat_screen.dart';
+import 'package:kattrick/features/social/presentation/screens/hub_chat_screen.dart';
 import 'package:kattrick/features/hubs/presentation/widgets/hub_events_tab.dart';
-import 'package:kattrick/services/error_handler_service.dart';
-import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import 'package:kattrick/widgets/hub/hub_header.dart';
 import 'package:kattrick/widgets/hub/hub_games_tab.dart';
 import 'package:kattrick/widgets/hub/hub_polls_tab.dart';
-import 'package:kattrick/widgets/hub/hub_admin_speed_dial.dart';
 import 'package:kattrick/widgets/hub/hub_non_member_view.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 

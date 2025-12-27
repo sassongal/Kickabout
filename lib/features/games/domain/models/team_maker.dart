@@ -74,11 +74,20 @@ class PlayerForTeam {
   final double rating;
   final PlayerRole role;
 
+  // Physical data (optional)
+  final double? heightCm;
+  final double? weightKg;
+  final double? bmi;
+  final double physicalScore; // Position-aware physical score
+
   PlayerForTeam({
     required this.uid,
     required this.rating,
     required this.role,
-  });
+    this.heightCm,
+    this.weightKg,
+  })  : bmi = _calculateBMI(heightCm, weightKg),
+        physicalScore = _calculatePhysicalScore(role, heightCm, weightKg);
 
   /// Create PlayerForTeam from User with manager rating
   ///
@@ -103,6 +112,8 @@ class PlayerForTeam {
       uid: user.uid,
       rating: rating,
       role: PlayerRole.fromPosition(user.preferredPosition),
+      heightCm: user.heightCm,
+      weightKg: user.weightKg,
     );
   }
 
@@ -114,6 +125,69 @@ class PlayerForTeam {
 
   /// Check if player is offensive
   bool get isOffensive => role == PlayerRole.attacker;
+
+  /// Calculate BMI from height and weight
+  static double? _calculateBMI(double? height, double? weight) {
+    if (height == null || weight == null) return null;
+    final heightM = height / 100.0;
+    return weight / (heightM * heightM);
+  }
+
+  /// Calculate position-aware physical score
+  static double _calculatePhysicalScore(
+    PlayerRole role,
+    double? height,
+    double? weight,
+  ) {
+    // Use defaults if data is missing
+    final h = height ?? _getDefaultHeight(role);
+    final w = weight ?? _getDefaultWeight(role);
+    final bmi = w / ((h / 100.0) * (h / 100.0));
+
+    return switch (role) {
+      // Goalkeepers: Height is most important (60%), weight secondary (40%)
+      // Ideal: 185cm, 80kg
+      PlayerRole.goalkeeper => h * 0.6 + w * 0.4,
+
+      // Defenders: Height and weight equally important (50%-50%)
+      // Ideal: 180cm, 78kg
+      PlayerRole.defender => h * 0.5 + w * 0.5,
+
+      // Midfielders: Agility matters (lower BMI is better)
+      // Ideal: 175cm, 70kg, BMI ~22-24
+      PlayerRole.midfielder => () {
+          final agilityBonus = (27.0 - bmi).clamp(0.0, 5.0);
+          return h * 0.3 + w * 0.3 + agilityBonus * 10;
+        }(),
+
+      // Attackers: Mix of agility and height
+      // Ideal: 177cm, 72kg, BMI ~23
+      PlayerRole.attacker => () {
+          final agilityBonus = (26.0 - bmi).clamp(0.0, 5.0);
+          return h * 0.4 + w * 0.3 + agilityBonus * 10;
+        }(),
+    };
+  }
+
+  /// Default height by role (cm)
+  static double _getDefaultHeight(PlayerRole role) {
+    return switch (role) {
+      PlayerRole.goalkeeper => 185.0,
+      PlayerRole.defender => 180.0,
+      PlayerRole.midfielder => 175.0,
+      PlayerRole.attacker => 177.0,
+    };
+  }
+
+  /// Default weight by role (kg)
+  static double _getDefaultWeight(PlayerRole role) {
+    return switch (role) {
+      PlayerRole.goalkeeper => 80.0,
+      PlayerRole.defender => 78.0,
+      PlayerRole.midfielder => 70.0,
+      PlayerRole.attacker => 72.0,
+    };
+  }
 }
 
 /// Team balance metrics
@@ -125,6 +199,14 @@ class TeamBalanceMetrics {
   final double positionBalance; // 0-1, how well positions are distributed
   final double goalkeeperBalance; // 0-1, how well goalkeepers are distributed
 
+  // Physical metrics
+  final double physicalBalance; // 0-1, how well physical attributes are balanced
+  final double avgHeight; // Average height in cm
+  final double avgWeight; // Average weight in kg
+  final double avgBMI; // Average BMI
+  final int playersWithPhysicalData; // Count of players with height/weight data
+  final double physicalDataCoverage; // 0.0-1.0, percentage of players with data
+
   TeamBalanceMetrics({
     required this.averageRating,
     required this.stddev,
@@ -132,6 +214,12 @@ class TeamBalanceMetrics {
     required this.maxRating,
     this.positionBalance = 1.0,
     this.goalkeeperBalance = 1.0,
+    this.physicalBalance = 1.0,
+    this.avgHeight = 0.0,
+    this.avgWeight = 0.0,
+    this.avgBMI = 0.0,
+    this.playersWithPhysicalData = 0,
+    this.physicalDataCoverage = 0.0,
   });
 }
 
@@ -631,22 +719,74 @@ class TeamMaker {
     return buffer.toString();
   }
 
-  /// Calculate overall balance score considering rating and position distribution
+  /// Calculate physical balance across teams
+  static double _calculatePhysicalBalance(List<List<PlayerForTeam>> teams) {
+    // Check data coverage
+    final allPlayers = teams.expand((t) => t).toList();
+    final playersWithData = allPlayers
+        .where((p) => p.heightCm != null && p.weightKg != null)
+        .length;
+    final coverage = allPlayers.isEmpty ? 0.0 : playersWithData / allPlayers.length;
+
+    // If less than 50% have data, reduce impact by returning perfect score
+    if (coverage < 0.5) {
+      return 1.0;
+    }
+
+    // Calculate average physical score for each team
+    final teamPhysicalScores = teams.map((team) {
+      if (team.isEmpty) return 0.0;
+      final avgScore =
+          team.fold<double>(0.0, (sum, p) => sum + p.physicalScore) /
+              team.length;
+      return avgScore;
+    }).toList();
+
+    // Calculate variance (lower variance = better balance)
+    final variance = _calculateVariance(teamPhysicalScores);
+    final crossTeamBalance = (1.0 / (1.0 + variance / 10.0)).clamp(0.0, 1.0);
+
+    // Also check for diversity within each team (not all same height)
+    final teamHeightVariances = teams.map((team) {
+      final heights =
+          team.where((p) => p.heightCm != null).map((p) => p.heightCm!).toList();
+      if (heights.length < 2) return 5.0; // Default variance
+      final heightTeams = heights.map((h) => [PlayerForTeam(
+        uid: '',
+        rating: h,
+        role: PlayerRole.midfielder,
+      )]).toList();
+      return _calculateStddev(heightTeams);
+    }).toList();
+
+    final avgHeightVar = teamHeightVariances.isEmpty
+        ? 5.0
+        : teamHeightVariances.reduce((a, b) => a + b) /
+            teamHeightVariances.length;
+
+    // Diversity within team is good (but not too much)
+    final withinTeamDiversity = (avgHeightVar / 10.0).clamp(0.3, 1.0);
+
+    // Combine: 70% cross-team balance, 30% within-team diversity
+    return crossTeamBalance * 0.7 + withinTeamDiversity * 0.3;
+  }
+
+  /// Calculate overall balance score considering rating, position, and physical attributes
   static double _calculateBalanceScore(List<List<PlayerForTeam>> teams) {
     if (teams.isEmpty) return 0.0;
 
-    // Rating balance (lower stddev = higher score)
+    // 1. Rating balance (lower stddev = higher score) - 40%
     final stddev = _calculateStddev(teams);
     final ratingScore = (1.0 / (1.0 + stddev)).clamp(0.0, 1.0);
 
-    // Goalkeeper balance
+    // 2. Goalkeeper balance - 15%
     final gkCounts = teams
         .map((t) => t.where((p) => p.isGoalkeeper).length.toDouble())
         .toList();
     final gkVariance = _calculateVariance(gkCounts);
     final gkScore = (1.0 / (1.0 + gkVariance * 2)).clamp(0.0, 1.0);
 
-    // Position balance (defenders vs attackers)
+    // 3. Position balance (defenders vs attackers) - 25%
     final defCounts = teams
         .map((t) => t.where((p) => p.isDefensive).length.toDouble())
         .toList();
@@ -658,8 +798,14 @@ class TeamMaker {
     final posScore =
         (1.0 / (1.0 + (defVariance + attVariance))).clamp(0.0, 1.0);
 
-    // Weighted combination: rating (50%), goalkeeper (25%), position (25%)
-    return ratingScore * 0.5 + gkScore * 0.25 + posScore * 0.25;
+    // 4. Physical balance - 20%
+    final physicalScore = _calculatePhysicalBalance(teams);
+
+    // Weighted combination: rating (40%), position (25%), GK (15%), physical (20%)
+    return ratingScore * 0.40 +
+        posScore * 0.25 +
+        gkScore * 0.15 +
+        physicalScore * 0.20;
   }
 
   /// Calculate standard deviation of team average ratings
@@ -731,6 +877,14 @@ class TeamMaker {
     double positionBalance = 1.0;
     double goalkeeperBalance = 1.0;
 
+    // Physical metrics
+    double physicalBalance = 1.0;
+    double avgHeight = 0.0;
+    double avgWeight = 0.0;
+    double avgBMI = 0.0;
+    int playersWithData = 0;
+    double coverage = 0.0;
+
     if (playerTeams != null && playerTeams.isNotEmpty) {
       // Calculate goalkeeper distribution
       final gkCounts = playerTeams.map((team) {
@@ -757,6 +911,28 @@ class TeamMaker {
       // Average the position variances (lower variance = better balance)
       final avgPositionVariance = (defVariance + attVariance) / 2;
       positionBalance = (1.0 / (1.0 + avgPositionVariance)).clamp(0.0, 1.0);
+
+      // Calculate physical metrics
+      final allPlayers = playerTeams.expand((t) => t).toList();
+      final playersWithPhysical = allPlayers
+          .where((p) => p.heightCm != null && p.weightKg != null)
+          .toList();
+
+      playersWithData = playersWithPhysical.length;
+      coverage = allPlayers.isEmpty ? 0.0 : playersWithData / allPlayers.length;
+
+      if (playersWithPhysical.isNotEmpty) {
+        avgHeight = playersWithPhysical
+                .fold<double>(0.0, (sum, p) => sum + p.heightCm!) /
+            playersWithData;
+        avgWeight = playersWithPhysical
+                .fold<double>(0.0, (sum, p) => sum + p.weightKg!) /
+            playersWithData;
+        avgBMI = playersWithPhysical.fold<double>(0.0, (sum, p) => sum + p.bmi!) /
+            playersWithData;
+
+        physicalBalance = _calculatePhysicalBalance(playerTeams);
+      }
     }
 
     return TeamBalanceMetrics(
@@ -766,6 +942,12 @@ class TeamMaker {
       maxRating: averages.isEmpty ? 0.0 : averages.reduce(max),
       positionBalance: positionBalance,
       goalkeeperBalance: goalkeeperBalance,
+      physicalBalance: physicalBalance,
+      avgHeight: avgHeight,
+      avgWeight: avgWeight,
+      avgBMI: avgBMI,
+      playersWithPhysicalData: playersWithData,
+      physicalDataCoverage: coverage,
     );
   }
 

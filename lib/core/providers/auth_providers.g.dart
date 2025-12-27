@@ -27,7 +27,7 @@ final authStateForCacheProvider =
 // ignore: unused_element
 typedef AuthStateForCacheRef
     = AutoDisposeStreamProviderRef<firebase_auth.User?>;
-String _$currentUserIdHash() => r'4470a2c4ec7c4d619a6e21132df470a0e9e18fc7';
+String _$currentUserIdHash() => r'0dcf0d26ae938f0bc5a6fa2215f4bdaf0a887570';
 
 /// Current user ID provider - simplified, no side effects
 /// Cache clearing is handled in main.dart to avoid rebuild loops

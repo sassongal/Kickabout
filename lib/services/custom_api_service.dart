@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:kattrick/config/env.dart';
-import 'package:kattrick/models/venue.dart';
+import 'package:kattrick/features/venues/domain/models/venue.dart';
 
 /// Service for custom API integration
 /// This service allows you to integrate with your own API endpoints

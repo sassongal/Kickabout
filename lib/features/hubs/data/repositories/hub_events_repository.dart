@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/firestore_paths.dart';
-import 'package:kattrick/services/cache_service.dart';
+import 'package:kattrick/shared/infrastructure/cache/cache_service.dart';
 import 'package:kattrick/services/retry_service.dart';
-import 'package:kattrick/services/monitoring_service.dart';
+import 'package:kattrick/shared/infrastructure/monitoring/monitoring_service.dart';
 import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:kattrick/features/games/domain/services/live_match_permissions.dart';
 
@@ -934,5 +934,272 @@ class HubEventsRepository {
       debugPrint('Error updating match result: $e');
       rethrow;
     }
+  }
+
+  /// Complete an event and create feed post with statistics
+  /// This method:
+  /// 1. Calculates event statistics (winning team, MVP, total matches)
+  /// 2. Updates player profiles with goals, assists, and matches played
+  /// 3. Marks event as completed
+  /// 4. Creates a feed post announcing completion
+  Future<void> completeEvent({
+    required String hubId,
+    required String eventId,
+    required String userId,
+    required Hub hub,
+    required HubEvent event,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    // Permission check - only managers and moderators can complete events
+    if (!LiveMatchPermissions.canLogMatch(
+        userId: userId, hub: hub, event: event)) {
+      throw Exception('Permission denied: Only managers can complete events');
+    }
+
+    try {
+      // Calculate statistics (will handle empty matches gracefully)
+      final stats = _calculateEventStatistics(event);
+
+      // Prepare event update
+      final eventRef = _firestore
+          .collection(FirestorePaths.hubs())
+          .doc(hubId)
+          .collection('events')
+          .doc(eventId);
+
+      // Run transaction to update event and create feed post atomically
+      await _firestore.runTransaction((transaction) async {
+        // Update event with completion data
+        transaction.update(eventRef, {
+          'status': 'completed',
+          'completedAt': FieldValue.serverTimestamp(),
+          'winningTeamColor': stats['winningTeamColor'],
+          'eventMvpId': stats['mvpId'],
+          'totalMatches': stats['totalMatches'],
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        // Update player statistics
+        await _updatePlayerStats(
+          transaction: transaction,
+          event: event,
+          hubId: hubId,
+        );
+
+        // Create feed post
+        await _createEventCompletionPost(
+          transaction: transaction,
+          hubId: hubId,
+          eventId: eventId,
+          event: event,
+          stats: stats,
+        );
+      });
+
+      // Invalidate cache
+      CacheService().clear(CacheKeys.event(hubId, eventId));
+      CacheService().clear(CacheKeys.eventsByHub(hubId));
+    } catch (e) {
+      debugPrint('Error completing event: $e');
+      throw Exception('Failed to complete event: $e');
+    }
+  }
+
+  /// Calculate event statistics from matches
+  Map<String, dynamic> _calculateEventStatistics(HubEvent event) {
+    // Find winning team (most wins in aggregateWins)
+    String? winningTeamColor;
+    int maxWins = 0;
+    event.aggregateWins.forEach((color, wins) {
+      if (wins > maxWins) {
+        maxWins = wins;
+        winningTeamColor = color;
+      }
+    });
+
+    // Calculate MVP (player who was MVP most times)
+    final mvpCounts = <String, int>{};
+    for (final match in event.matches) {
+      if (match.mvpId != null && match.mvpId!.isNotEmpty) {
+        mvpCounts[match.mvpId!] = (mvpCounts[match.mvpId!] ?? 0) + 1;
+      }
+    }
+
+    String? eventMvpId;
+    int maxMvpCount = 0;
+    mvpCounts.forEach((playerId, mvpCount) {
+      if (mvpCount > maxMvpCount) {
+        maxMvpCount = mvpCount;
+        eventMvpId = playerId;
+      }
+    });
+
+    return {
+      'winningTeamColor': winningTeamColor,
+      'winningTeamWins': maxWins,
+      'mvpId': eventMvpId,
+      'totalMatches': event.matches.length,
+    };
+  }
+
+  /// Update player statistics for all players who participated
+  Future<void> _updatePlayerStats({
+    required Transaction transaction,
+    required HubEvent event,
+    required String hubId,
+  }) async {
+    // Collect stats for each player
+    final playerStats = <String, Map<String, int>>{};
+
+    for (final match in event.matches) {
+      // Track matches played (all players who scored or assisted)
+      final participantIds = {
+        ...match.scorerIds,
+        ...match.assistIds,
+        if (match.mvpId != null) match.mvpId!,
+      };
+
+      for (final playerId in participantIds) {
+        playerStats.putIfAbsent(playerId, () => {
+              'goals': 0,
+              'assists': 0,
+              'gamesPlayed': 0,
+            });
+
+        // Count this match once per player
+        if (!playerStats[playerId]!.containsKey('_counted_${match.matchId}')) {
+          playerStats[playerId]!['gamesPlayed'] =
+              (playerStats[playerId]!['gamesPlayed'] ?? 0) + 1;
+          playerStats[playerId]!['_counted_${match.matchId}'] = 1;
+        }
+      }
+
+      // Count goals
+      for (final scorerId in match.scorerIds) {
+        playerStats.putIfAbsent(scorerId, () => {
+              'goals': 0,
+              'assists': 0,
+              'gamesPlayed': 0,
+            });
+        playerStats[scorerId]!['goals'] =
+            (playerStats[scorerId]!['goals'] ?? 0) + 1;
+      }
+
+      // Count assists
+      for (final assistId in match.assistIds) {
+        playerStats.putIfAbsent(assistId, () => {
+              'goals': 0,
+              'assists': 0,
+              'gamesPlayed': 0,
+            });
+        playerStats[assistId]!['assists'] =
+            (playerStats[assistId]!['assists'] ?? 0) + 1;
+      }
+    }
+
+    // Update each player's profile
+    for (final entry in playerStats.entries) {
+      final playerId = entry.key;
+      final stats = entry.value;
+
+      final userRef = _firestore.doc(FirestorePaths.user(playerId));
+
+      // Use FieldValue.increment for atomic updates
+      transaction.update(userRef, {
+        'goals': FieldValue.increment(stats['goals'] ?? 0),
+        'assists': FieldValue.increment(stats['assists'] ?? 0),
+        'gamesPlayed': FieldValue.increment(stats['gamesPlayed'] ?? 0),
+        'totalParticipations': FieldValue.increment(stats['gamesPlayed'] ?? 0),
+      });
+    }
+  }
+
+  /// Create feed post announcing event completion
+  Future<void> _createEventCompletionPost({
+    required Transaction transaction,
+    required String hubId,
+    required String eventId,
+    required HubEvent event,
+    required Map<String, dynamic> stats,
+  }) async {
+    // Get MVP name if available
+    String? mvpName;
+    if (stats['mvpId'] != null) {
+      try {
+        final mvpDoc = await _firestore
+            .doc(FirestorePaths.user(stats['mvpId']))
+            .get();
+        if (mvpDoc.exists) {
+          final mvpUser = User.fromJson({...mvpDoc.data()!, 'uid': mvpDoc.id});
+          mvpName = mvpUser.displayName;
+        }
+      } catch (e) {
+        debugPrint('Error fetching MVP name: $e');
+      }
+    }
+
+    // Get hub name
+    String? hubName;
+    try {
+      final hubDoc = await _firestore
+          .doc(FirestorePaths.hub(hubId))
+          .get();
+      if (hubDoc.exists) {
+        final hubData = Hub.fromJson({...hubDoc.data()!, 'hubId': hubId});
+        hubName = hubData.name;
+      }
+    } catch (e) {
+      debugPrint('Error fetching hub name: $e');
+    }
+
+    // Create feed post content
+    final totalMatches = stats['totalMatches'] ?? 0;
+
+    String content;
+    if (totalMatches == 0) {
+      // No matches played
+      content = 'אירוע "${event.title}" ${hubName != null ? 'ב-$hubName ' : ''}הסתיים!';
+    } else {
+      // Has matches - show statistics
+      final winningTeamName = stats['winningTeamColor'] ?? 'לא ידוע';
+      final wins = stats['winningTeamWins'] ?? 0;
+      final mvpText = mvpName != null ? '\n⭐ MVP של האירוע: $mvpName' : '';
+
+      content = '''אירוע "${event.title}" ${hubName != null ? 'ב-$hubName ' : ''}הסתיים!
+🏆 הקבוצה המנצחת: $winningTeamName עם $wins ניצחונות$mvpText
+📊 סך הכל $totalMatches משחקים''';
+    }
+
+    final feedPostRef = _firestore
+        .collection(FirestorePaths.hubs())
+        .doc(hubId)
+        .collection('feed')
+        .doc('posts')
+        .collection('items')
+        .doc();
+
+    final feedPost = FeedPost(
+      postId: feedPostRef.id,
+      hubId: hubId,
+      authorId: event.createdBy,
+      type: 'event_completed',
+      content: content,
+      eventId: eventId,
+      createdAt: DateTime.now(),
+      hubName: hubName,
+      winningTeamColor: stats['winningTeamColor'],
+      winningTeamWins: stats['winningTeamWins'],
+      eventMvpId: stats['mvpId'],
+      eventMvpName: mvpName,
+      totalMatches: stats['totalMatches'],
+    );
+
+    final postData = feedPost.toJson();
+    postData.remove('postId');
+
+    transaction.set(feedPostRef, postData);
   }
 }

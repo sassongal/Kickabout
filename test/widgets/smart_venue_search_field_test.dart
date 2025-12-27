@@ -3,10 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
-import 'package:kattrick/models/venue.dart';
-import 'package:kattrick/data/venues_repository.dart';
+import 'package:kattrick/features/venues/domain/models/venue.dart';
+import 'package:kattrick/features/venues/data/repositories/venues_repository.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 
 // Mock classes
 class MockVenuesRepository extends Mock implements VenuesRepository {}
@@ -70,7 +70,7 @@ void main() {
         venueId: 'venue1',
         hubId: 'hub1',
         name: 'מגרש טסט',
-        location: const GeoPoint(32.0, 34.0),
+        location: const GeographicPoint(latitude: 32.0, longitude: 34.0),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -97,7 +97,7 @@ void main() {
         hubId: 'hub1',
         name: 'מגרש טסט',
         address: 'כתובת טסט',
-        location: const GeoPoint(32.0, 34.0),
+        location: const GeographicPoint(latitude: 32.0, longitude: 34.0),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -132,7 +132,7 @@ void main() {
         venueId: 'venue1', // Has ID = verified
         hubId: 'hub1',
         name: 'מגרש מאומת',
-        location: const GeoPoint(32.0, 34.0),
+        location: const GeographicPoint(latitude: 32.0, longitude: 34.0),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

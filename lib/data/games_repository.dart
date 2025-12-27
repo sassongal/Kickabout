@@ -1,13 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/game_audit_event.dart';
+import 'package:kattrick/features/games/domain/models/game_audit_event.dart';
 import 'package:kattrick/services/firestore_paths.dart';
-import 'package:kattrick/services/cache_service.dart';
-import 'package:kattrick/services/cache_invalidation_service.dart';
+import 'package:kattrick/shared/infrastructure/cache/cache_service.dart';
+import 'package:kattrick/shared/infrastructure/cache/cache_invalidation_service.dart';
 import 'package:kattrick/services/retry_service.dart';
-import 'package:kattrick/services/monitoring_service.dart';
+import 'package:kattrick/shared/infrastructure/monitoring/monitoring_service.dart';
+import 'package:kattrick/utils/geohash_utils.dart';
 
 /// Repository for basic Game CRUD operations
 /// For complex queries, see GameQueriesRepository
@@ -402,5 +404,86 @@ class GamesRepository {
   /// Generate new game ID
   String generateGameId() {
     return _firestore.collection(FirestorePaths.games()).doc().id;
+  }
+
+  /// Find games nearby using geohash-based queries
+  ///
+  /// Returns games within the specified radius, sorted by distance.
+  /// Only returns games that have a locationPoint set.
+  Future<List<Game>> findGamesNearby({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) async {
+    if (!Env.isFirebaseAvailable) return [];
+
+    try {
+      // Get geohash for the location
+      final centerGeohash =
+          GeohashUtils.encode(latitude, longitude, precision: 7);
+      final neighbors = GeohashUtils.neighbors(centerGeohash);
+
+      // Query games in the geohash area concurrently
+      final geohashes = <String>{centerGeohash, ...neighbors};
+      final snapshots = await Future.wait(
+        geohashes.map(
+          (geohash) => _firestore
+              .collection(FirestorePaths.games())
+              .where('geohash', isGreaterThanOrEqualTo: geohash)
+              .where('geohash', isLessThanOrEqualTo: '${geohash}z')
+              // Only get upcoming and in-progress games
+              .where('status', whereIn: [
+                GameStatus.scheduled.name,
+                GameStatus.recruiting.name,
+                GameStatus.teamSelection.name,
+                GameStatus.teamsFormed.name,
+                GameStatus.inProgress.name,
+              ])
+              .limit(20) // Limit per geohash to prevent massive loads
+              .get(),
+        ),
+      );
+
+      final games = <Game>[];
+      final distances = <String, double>{};
+
+      for (final snapshot in snapshots) {
+        for (final doc in snapshot.docs) {
+          if (distances.containsKey(doc.id)) continue;
+
+          try {
+            final game = Game.fromJson({...doc.data(), 'gameId': doc.id});
+
+            // Skip games without location
+            if (game.locationPoint == null) continue;
+
+            final distanceKm = Geolocator.distanceBetween(
+                  latitude,
+                  longitude,
+                  game.locationPoint!.latitude,
+                  game.locationPoint!.longitude,
+                ) /
+                1000; // Convert to km
+
+            if (distanceKm <= radiusKm) {
+              distances[doc.id] = distanceKm;
+              games.add(game);
+            }
+          } catch (e) {
+            debugPrint('⚠️ Error parsing game ${doc.id}: $e');
+            continue;
+          }
+        }
+      }
+
+      // Sort by distance (closest first)
+      games.sort((a, b) =>
+          distances[a.gameId]!.compareTo(distances[b.gameId]!));
+
+      return games;
+    } catch (e) {
+      debugPrint('❌ Error in findGamesNearby: $e');
+      return [];
+    }
   }
 }

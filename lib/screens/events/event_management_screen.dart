@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/features/hubs/data/repositories/hub_events_repository.dart';
-import 'package:kattrick/data/users_repository.dart';
-import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
-import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/core/providers/auth_providers.dart';
+import 'package:kattrick/core/providers/complex_providers.dart';
+import 'package:kattrick/features/profile/data/repositories/users_repository.dart';
 import 'package:kattrick/services/weather_service.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/theme/premium_theme.dart';
@@ -44,7 +44,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     setState(() => _isLoadingWeather = true);
 
     try {
-      final eventsRepo = HubEventsRepository();
+      final eventsRepo = ref.read(hubEventsRepositoryProvider);
       final event = await eventsRepo.getHubEvent(widget.hubId, widget.eventId);
 
       if (event?.locationPoint != null) {
@@ -100,9 +100,9 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final eventsRepo = HubEventsRepository();
-    final usersRepo = UsersRepository();
-    final hubsRepo = HubsRepository();
+    final eventsRepo = ref.watch(hubEventsRepositoryProvider);
+    final usersRepo = ref.watch(usersRepositoryProvider);
+    final hubsRepo = ref.watch(hubsRepositoryProvider);
 
     return PremiumScaffold(
       title: 'ניהול אירוע',

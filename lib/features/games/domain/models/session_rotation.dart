@@ -1,6 +1,6 @@
-import 'package:kattrick/models/team.dart';
-import 'package:kattrick/models/rotation_state.dart';
-import 'package:kattrick/models/match_result.dart';
+import 'package:kattrick/shared/domain/models/team.dart';
+import 'package:kattrick/features/games/domain/models/rotation_state.dart';
+import 'package:kattrick/shared/domain/models/match_result.dart';
 
 /// SessionRotationLogic - Pure logic for managing team rotation in Winner Stays format
 /// Supports 2-8 teams with winner-stays-on rotation

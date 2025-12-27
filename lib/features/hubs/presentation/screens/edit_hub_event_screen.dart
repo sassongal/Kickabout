@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart' hide Notification;
-import 'package:kattrick/models/notification.dart' as app_notification;
+import 'package:kattrick/features/social/domain/models/notification.dart' as app_notification;
 
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';

@@ -7,7 +7,7 @@ import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 
 /// Community Activity Feed Screen
 /// Displays public games and events from all hubs

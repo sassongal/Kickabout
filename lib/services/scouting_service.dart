@@ -3,7 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/services/location_service.dart';
+import 'package:kattrick/features/location/infrastructure/services/location_service.dart';
 
 /// Scouting criteria
 class ScoutingCriteria {

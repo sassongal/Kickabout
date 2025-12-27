@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/models/venue.dart';
+import 'package:kattrick/features/venues/domain/models/venue.dart';
 
 /// A reusable widget for searching venues with smart autocomplete.
 ///

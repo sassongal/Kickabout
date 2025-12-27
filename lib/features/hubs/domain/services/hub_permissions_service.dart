@@ -11,9 +11,9 @@
 /// - Custom permissions via Hub.permissions are rare overrides only
 library;
 
-import 'package:kattrick/models/hub_member.dart';
-import 'package:kattrick/models/hub.dart';
-import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_member.dart';
+import 'package:kattrick/features/hubs/domain/models/hub.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 
 /// Permission capabilities mapped to roles

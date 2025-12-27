@@ -3,11 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/firestore_paths.dart';
-import 'package:kattrick/services/cache_invalidation_service.dart';
+import 'package:kattrick/shared/infrastructure/cache/cache_invalidation_service.dart';
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/features/games/domain/models/session_rotation.dart';
 import 'package:kattrick/data/games_repository.dart';
+import 'package:kattrick/shared/domain/events/event_bus.dart';
+import 'package:kattrick/shared/domain/events/game_events.dart';
 
 /// Repository for Game Session lifecycle operations
 /// Handles Winner Stays format sessions: start, end, add matches, rotation
@@ -15,14 +17,20 @@ class SessionRepository {
   final FirebaseFirestore _firestore;
   final CacheInvalidationService _cacheInvalidation;
   final GamesRepository _gamesRepo;
+  final HubsRepository? _hubsRepo;
+  final EventBus? _eventBus;
 
   SessionRepository({
     FirebaseFirestore? firestore,
     CacheInvalidationService? cacheInvalidation,
     GamesRepository? gamesRepo,
+    HubsRepository? hubsRepo,
+    EventBus? eventBus,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _cacheInvalidation = cacheInvalidation ?? CacheInvalidationService(),
-        _gamesRepo = gamesRepo ?? GamesRepository();
+        _gamesRepo = gamesRepo ?? GamesRepository(),
+        _hubsRepo = hubsRepo,
+        _eventBus = eventBus;
 
   /// Start a session (activates Winner Stays rotation)
   ///
@@ -42,8 +50,10 @@ class SessionRepository {
 
       // Verify permissions
       if (game.hubId != null) {
-        final hubsRepo = HubsRepository();
-        final hub = await hubsRepo.getHub(game.hubId!);
+        if (_hubsRepo == null) {
+          throw Exception('HubsRepository not provided for hub game verification');
+        }
+        final hub = await _hubsRepo.getHub(game.hubId!);
         if (hub == null) {
           throw Exception('Hub not found: ${game.hubId}');
         }
@@ -83,6 +93,16 @@ class SessionRepository {
       // Invalidate caches
       _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
 
+      // Fire domain event for cross-feature communication
+      if (_eventBus != null) {
+        _eventBus.fire(GameSessionStartedEvent(
+          gameId: gameId,
+          hubId: game.hubId,
+          startedBy: managerId,
+        ));
+        debugPrint('🔔 GameSessionStartedEvent fired: $gameId');
+      }
+
       debugPrint('✅ Session started: $gameId by $managerId');
     } catch (e) {
       debugPrint('❌ Failed to start session: $e');
@@ -108,8 +128,10 @@ class SessionRepository {
 
       // Verify permissions
       if (game.hubId != null) {
-        final hubsRepo = HubsRepository();
-        final hub = await hubsRepo.getHub(game.hubId!);
+        if (_hubsRepo == null) {
+          throw Exception('HubsRepository not provided for hub game verification');
+        }
+        final hub = await _hubsRepo.getHub(game.hubId!);
         if (hub == null) {
           throw Exception('Hub not found: ${game.hubId}');
         }
@@ -137,6 +159,17 @@ class SessionRepository {
 
       // Invalidate caches
       _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
+
+      // Fire domain event for cross-feature communication
+      if (_eventBus != null) {
+        _eventBus.fire(GameSessionEndedEvent(
+          gameId: gameId,
+          hubId: game.hubId,
+          endedBy: managerId,
+          matchCount: game.session.matches.length,
+        ));
+        debugPrint('🔔 GameSessionEndedEvent fired: $gameId');
+      }
 
       debugPrint('✅ Session ended: $gameId by $managerId');
     } catch (e) {
@@ -170,8 +203,10 @@ class SessionRepository {
 
       // Verify permissions (outside transaction to reduce contention)
       if (game.hubId != null) {
-        final hubsRepo = HubsRepository();
-        final hub = await hubsRepo.getHub(game.hubId!);
+        if (_hubsRepo == null) {
+          throw Exception('HubsRepository not provided for hub game verification');
+        }
+        final hub = await _hubsRepo.getHub(game.hubId!);
         if (hub == null) {
           throw Exception('Hub not found: ${game.hubId}');
         }
@@ -253,6 +288,25 @@ class SessionRepository {
 
       // Step 4: Invalidate caches using centralized service
       _cacheInvalidation.onGameUpdated(gameId, hubId: game.hubId);
+
+      // Step 5: Fire domain event for cross-feature communication
+      if (_eventBus != null) {
+        // Collect all unique player IDs from the match (scorers and assisters)
+        // Note: This is a subset of actual participants, but represents active contributors
+        final playerIds = <String>{
+          ...match.scorerIds,
+          ...match.assistIds,
+          if (match.mvpId != null) match.mvpId!,
+        }.toList();
+
+        _eventBus.fire(MatchAddedToSessionEvent(
+          gameId: gameId,
+          hubId: game.hubId,
+          matchId: match.matchId,
+          playerIds: playerIds,
+        ));
+        debugPrint('🔔 MatchAddedToSessionEvent fired: ${match.matchId}');
+      }
 
       debugPrint('✅ Match added to session: $gameId, match: ${match.matchId}');
     } catch (e) {
@@ -338,8 +392,10 @@ class SessionRepository {
 
       // Verify permissions
       if (game.hubId != null) {
-        final hubsRepo = HubsRepository();
-        final hub = await hubsRepo.getHub(game.hubId!);
+        if (_hubsRepo == null) {
+          throw Exception('HubsRepository not provided for hub game verification');
+        }
+        final hub = await _hubsRepo.getHub(game.hubId!);
         if (hub == null) {
           throw Exception('Hub not found: ${game.hubId}');
         }

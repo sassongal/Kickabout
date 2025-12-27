@@ -1,0 +1,727 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/premium/skeleton_loader.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/widgets/game_photos_gallery.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/features/social/presentation/screens/feed_controller.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+
+/// Feed screen - shows activity feed for a hub
+class FeedScreen extends ConsumerStatefulWidget {
+  final String? hubId;
+
+  const FeedScreen({super.key, this.hubId});
+
+  @override
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  static final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy', 'he');
+  late ScrollController _scrollController;
+  String _selectedFilter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final usersRepo = ref.read(usersRepositoryProvider);
+
+    if (widget.hubId == null || widget.hubId!.isEmpty) {
+      return const AppScaffold(
+        title: 'קהילה',
+        showBottomNav: true,
+        forceBottomNav: true,
+        body: Center(
+          child: Text('פיד קהילתי בקרוב'),
+        ),
+      );
+    }
+
+    if (currentUserId == null) {
+      return AppScaffold(
+        title: 'פיד פעילות',
+        body: const Center(child: Text('נא להתחבר')),
+      );
+    }
+
+    return FutureBuilder<User?>(
+      future: usersRepo.getUser(currentUserId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return AppScaffold(
+            title: 'פיד פעילות',
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return AppScaffold(
+            title: 'פיד פעילות',
+            body: PremiumEmptyState(
+              icon: Icons.error_outline,
+              title: 'שגיאה בטעינת המשתמש',
+              message: ErrorHandlerService().handleException(
+                snapshot.error,
+                context: 'Feed screen - user loading',
+              ),
+            ),
+          );
+        }
+
+        final user = snapshot.data;
+        final userRegion = user?.region;
+        final filter = FeedFilter(
+          hubId: widget.hubId,
+          region: userRegion,
+          filterType: _selectedFilter,
+        );
+        final feedState = ref.watch(feedControllerProvider(filter));
+
+        return AppScaffold(
+          title: userRegion != null ? 'פיד אזורי ($userRegion)' : 'פיד פעילות',
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => context.push('/hubs/${widget.hubId}/create-post'),
+            icon: const Icon(Icons.add),
+            label: const Text('צור פוסט'),
+          ),
+          body: Column(
+            children: [
+              // Filter chips
+              Container(
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    FilterChip(
+                      label: const Text('הכל'),
+                      selected: _selectedFilter == 'all',
+                      onSelected: (_) =>
+                          setState(() => _selectedFilter = 'all'),
+                      avatar: _selectedFilter == 'all'
+                          ? const Icon(Icons.check, size: 16)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      label: const Text('משחקים'),
+                      avatar: const Icon(Icons.sports_soccer, size: 18),
+                      selected: _selectedFilter == 'games',
+                      onSelected: (_) =>
+                          setState(() => _selectedFilter = 'games'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      label: const Text('מחפשים שחקנים'),
+                      avatar: const Icon(Icons.person_search, size: 18),
+                      selected: _selectedFilter == 'recruiting',
+                      onSelected: (_) =>
+                          setState(() => _selectedFilter = 'recruiting'),
+                      selectedColor: Colors.orange.withOpacity(0.3),
+                      backgroundColor: Colors.orange.withOpacity(0.05),
+                      labelStyle: TextStyle(
+                        fontWeight: _selectedFilter == 'recruiting'
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      label: const Text('הישגים'),
+                      avatar: const Icon(Icons.emoji_events, size: 18),
+                      selected: _selectedFilter == 'achievements',
+                      onSelected: (_) =>
+                          setState(() => _selectedFilter = 'achievements'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      label: const Text('פוסטים'),
+                      avatar: const Icon(Icons.post_add, size: 18),
+                      selected: _selectedFilter == 'posts',
+                      onSelected: (_) =>
+                          setState(() => _selectedFilter = 'posts'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: feedState.when(
+                  loading: () => ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SkeletonLoader(height: 120),
+                    ),
+                  ),
+                  error: (error, stackTrace) => PremiumEmptyState(
+                    icon: Icons.error_outline,
+                    title: 'שגיאה בטעינת הפיד',
+                    message: ErrorHandlerService().handleException(
+                      error,
+                      context: 'Feed screen',
+                    ),
+                    action: ElevatedButton.icon(
+                      onPressed: () =>
+                          ref.refresh(feedControllerProvider(filter)),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('נסה שוב'),
+                    ),
+                  ),
+                  data: (posts) {
+                    if (posts.isEmpty) {
+                      return PremiumEmptyState(
+                        icon: Icons.feed,
+                        title: 'אין פעילות עדיין',
+                        message: userRegion != null
+                            ? 'כשיהיו משחקים חדשים באזור שלך, הם יופיעו כאן'
+                            : 'כשיהיו משחקים חדשים או הישגים, הם יופיעו כאן',
+                        action: ElevatedButton.icon(
+                          onPressed: () =>
+                              context.push('/hubs/${widget.hubId}/create-post'),
+                          icon: const Icon(Icons.add),
+                          label: const Text('צור פוסט'),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      controller: _scrollController,
+                      itemCount: posts.length,
+                      padding: const EdgeInsets.all(8),
+                      itemBuilder: (context, index) {
+                        final post = posts[index];
+                        return _PostCard(
+                          post: post,
+                          currentUserId: currentUserId,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Removed: _buildBody - not used (using StreamBuilder directly)
+}
+
+class _PostCard extends ConsumerWidget {
+  final FeedPost post;
+  final String? currentUserId;
+
+  const _PostCard({
+    required this.post,
+    required this.currentUserId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final authorName = (post.authorName ?? '').trim().isNotEmpty
+        ? post.authorName!.trim()
+        : 'משתמש';
+    final authorPhotoUrl = (post.authorPhotoUrl ?? '').trim();
+    final authorInitial = authorName.isNotEmpty ? authorName[0] : '?';
+    // Removed: Like functionality (simplified feed - no likes)
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Author info
+            Row(
+              children: [
+                InkWell(
+                  onTap: () => context.push('/profile/${post.authorId}'),
+                  borderRadius: BorderRadius.circular(20),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
+                    backgroundImage: authorPhotoUrl.isNotEmpty
+                        ? NetworkImage(authorPhotoUrl)
+                        : null,
+                    child: authorPhotoUrl.isEmpty
+                        ? Text(
+                            authorInitial.toUpperCase(),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.push('/profile/${post.authorId}'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          authorName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          _getPostTypeText(post.type),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatTime(post.createdAt),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Content
+            if (post.content != null) ...[
+              Text(post.content ?? post.text ?? ''),
+              const SizedBox(height: 8),
+            ],
+            // Photos
+            if (post.photoUrls.isNotEmpty) ...[
+              GamePhotosGallery(
+                photoUrls: post.photoUrls,
+                canAddPhotos: false,
+                canDelete: false,
+              ),
+              const SizedBox(height: 8),
+            ],
+
+                // NEW: Recruiting Post UI
+                if (post.type == 'hub_recruiting') ...[
+                  const SizedBox(height: 12),
+
+                  // Recruiting Info Container
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Urgency Badge
+                        if (post.isUrgent)
+                          Row(
+                            children: [
+                              const Icon(Icons.warning_amber,
+                                  size: 16, color: Colors.red),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.recruitingUrgentLabel,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        if (post.isUrgent) const SizedBox(height: 8),
+
+                        // Needed Players Count
+                        if (post.neededPlayers > 0)
+                          Row(
+                            children: [
+                              const Icon(Icons.group,
+                                  size: 18, color: Colors.orange),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  l10n.recruitingNeededPlayers(
+                                      post.neededPlayers),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        const SizedBox(height: 8),
+
+                        // Recruiting Deadline
+                        if (post.recruitingUntil != null)
+                          Row(
+                            children: [
+                              const Icon(Icons.schedule,
+                                  size: 16, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  l10n.recruitingUntilLabel(
+                                      _FeedScreenState._dateFormatter
+                                          .format(post.recruitingUntil!)),
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 12),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        const SizedBox(height: 12),
+
+                        // Action Buttons
+                        _buildRecruitingActions(context, ref),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Action buttons based on post type
+                // For completed games: "View Result"
+                if (post.type == 'game_completed' || post.gameId != null)
+                  InkWell(
+                    onTap: () =>
+                        context.push('/games/${post.gameId ?? post.entityId}'),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.sports_soccer, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'צפה בתוצאה',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // For events: "Join Game"
+                if (post.type == 'event_created' ||
+                    (post.entityId != null && post.gameId == null))
+                  InkWell(
+                    onTap: () {
+                      // Navigate to event details
+                      context
+                          .push('/hubs/${post.hubId}/events/${post.entityId}');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.event, color: Colors.green),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'הצטרף למשחק',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+            // Comments only (no likes)
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.comment_outlined),
+                  onPressed: () => context
+                      .push('/hubs/${post.hubId}/feed/${post.postId}'),
+                ),
+                Text('${post.commentsCount}'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getPostTypeText(String type) {
+    switch (type) {
+      case 'game':
+      case 'game_created':
+        return 'יצר משחק חדש';
+      case 'game_completed':
+        return 'משחק הושלם';
+      case 'event_created':
+        return 'אירוע נפתח';
+      case 'achievement':
+        return 'השיג הישג';
+      case 'rating':
+        return 'דירג שחקן';
+      case 'hub_recruiting':
+        return 'מחפש שחקנים';
+      case 'post':
+        return 'פרסם פוסט';
+      default:
+        return 'פעילות';
+    }
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final difference = now.difference(time);
+
+    if (difference.inMinutes < 1) {
+      return 'עכשיו';
+    } else if (difference.inHours < 1) {
+      return 'לפני ${difference.inMinutes} דקות';
+    } else if (difference.inDays < 1) {
+      return 'לפני ${difference.inHours} שעות';
+    } else if (difference.inDays < 7) {
+      return 'לפני ${difference.inDays} ימים';
+    } else {
+      return _FeedScreenState._dateFormatter.format(time);
+    }
+  }
+
+  // NEW: Recruiting Post Helper Methods
+
+  Widget _buildRecruitingActions(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<bool>(
+      future: _isHubMember(ref, post.hubId, currentUserId),
+      builder: (context, memberSnapshot) {
+        final isHubMember = memberSnapshot.data ?? false;
+        final hasLinkedEvent = post.gameId != null || post.eventId != null;
+
+        return Row(
+          children: [
+            // Contact Button (only if NOT a member)
+            if (!isHubMember)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _showContactDialog(context, ref),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  label: const Text('שלח הודעה'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+
+            // Spacing
+            if (!isHubMember && hasLinkedEvent) const SizedBox(width: 8),
+
+            // Join Event Button (only if linked to game/event)
+            if (hasLinkedEvent)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _requestToJoinEvent(context, ref),
+                  icon: const Icon(Icons.event_available, size: 18),
+                  label: const Text('בקש הצטרפות'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool> _isHubMember(WidgetRef ref, String hubId, String? userId) async {
+    if (userId == null) return false;
+
+    try {
+      final user = await ref.read(usersRepositoryProvider).getUser(userId);
+      return user?.hubIds.contains(hubId) ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _showContactDialog(BuildContext context, WidgetRef ref) async {
+    if (currentUserId == null) {
+      SnackbarHelper.showError(context, 'נא להתחבר');
+      return;
+    }
+
+    // Check if already sent message
+    final existingMessage = await ref
+        .read(hubContactRepositoryProvider)
+        .checkExistingContactMessage(post.hubId, currentUserId!, post.postId);
+
+    if (existingMessage != null) {
+      if (context.mounted) {
+        SnackbarHelper.showInfo(context, 'כבר שלחת הודעה למנהל ההאב');
+      }
+      return;
+    }
+
+    final messageController = TextEditingController();
+
+    if (!context.mounted) {
+      messageController.dispose();
+      return;
+    }
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('שלח הודעה למנהל'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'תוכל לשלוח הודעה אחת בלבד למנהל ${post.hubName ?? 'ההאב'}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'הודעה',
+                  hintText: 'הי! אשמח להצטרף...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 4,
+                maxLength: 300,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (messageController.text.trim().isEmpty) {
+                  SnackbarHelper.showError(context, 'נא להזין הודעה');
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
+              child: const Text('שלח'),
+            ),
+          ],
+        ),
+      );
+
+      final message = messageController.text.trim();
+      if (result == true && message.isNotEmpty) {
+        try {
+          await ref.read(hubContactRepositoryProvider).sendContactMessage(
+                hubId: post.hubId,
+                postId: post.postId,
+                senderId: currentUserId!,
+                message: message,
+              );
+
+          if (context.mounted) {
+            SnackbarHelper.showSuccess(context, 'ההודעה נשלחה בהצлחה!');
+          }
+        } catch (e) {
+          if (context.mounted) {
+            SnackbarHelper.showError(context, 'שגיאה בשליחת הודעה: $e');
+          }
+        }
+      }
+    } finally {
+      messageController.dispose();
+    }
+  }
+
+  Future<void> _requestToJoinEvent(BuildContext context, WidgetRef ref) async {
+    if (currentUserId == null) {
+      SnackbarHelper.showError(context, 'נא להתחבר');
+      return;
+    }
+
+    try {
+      if (post.gameId != null) {
+        // Note: Game signup with manager approval will be implemented
+        // when the full event/game management system is ready
+        if (context.mounted) {
+          SnackbarHelper.showInfo(context, 'בקשת הצטרפות למשחקים בפיתוח');
+        }
+      } else if (post.eventId != null) {
+        // Request to join Event
+        if (context.mounted) {
+          SnackbarHelper.showInfo(context, 'בקשת הצטרפות לאירועים בפיתוח');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackbarHelper.showError(context, 'שגיאה: $e');
+      }
+    }
+  }
+}

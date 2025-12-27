@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_settings.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_settings.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_creation_service.dart';
@@ -90,7 +91,7 @@ class TeamBalancingTestScript {
   ];
 
   /// יצירת קואורדינטה רנדומלית ליד חיפה
-  GeoPoint _randomCoordinateNearHaifa() {
+  GeographicPoint _randomCoordinateNearHaifa() {
     const double haifaLat = 32.7940;
     const double haifaLng = 34.9896;
     const double radiusKm = 10.0;
@@ -101,9 +102,9 @@ class TeamBalancingTestScript {
     final latOffset = distance * cos(angle) / 111.0;
     final lngOffset = distance * sin(angle) / 111.0;
 
-    return GeoPoint(
-      haifaLat + latOffset,
-      haifaLng + lngOffset,
+    return GeographicPoint(
+      latitude: haifaLat + latOffset,
+      longitude: haifaLng + lngOffset,
     );
   }
 
@@ -114,7 +115,10 @@ class TeamBalancingTestScript {
     debugPrint('🚀 מתחיל יצירת תרחיש מלא לבדיקת איזון קבוצות...\n');
 
     final batch = firestore.batch();
-    final hubLocation = GeoPoint(32.8000, 34.9800); // גן דניאל, חיפה
+    final hubLocation = GeographicPoint(
+      latitude: 32.8000,
+      longitude: 34.9800,
+    ); // גן דניאל, חיפה
     final hubGeohash =
         GeohashUtils.encode(hubLocation.latitude, hubLocation.longitude);
 
@@ -122,11 +126,9 @@ class TeamBalancingTestScript {
     debugPrint('📝 שלב 1: זיהוי משתמש מנהל...');
     final currentUser = auth.FirebaseAuth.instance.currentUser;
     String managerId;
-    bool isExistingUser = false;
 
     if (currentUser != null) {
       managerId = currentUser.uid;
-      isExistingUser = true;
       debugPrint('✅ משתמש מחובר: ${currentUser.email} (${currentUser.uid})');
     } else {
       // אם אין משתמש מחובר, נוצר אחד

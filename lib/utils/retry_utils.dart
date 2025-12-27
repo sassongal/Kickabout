@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 
 /// Retry utility for network operations
 class RetryUtils {

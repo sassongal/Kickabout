@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/targeting_criteria.dart';
+import 'package:kattrick/shared/domain/models/targeting_criteria.dart';
 
 void main() {
   group('Architecture Verification', () {

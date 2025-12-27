@@ -8,11 +8,15 @@ import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/core/providers/auth_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_member.dart' as models;
+import 'package:kattrick/features/hubs/domain/models/hub_member.dart' as models;
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:kattrick/features/hubs/presentation/screens/add_manual_player_dialog.dart';
+import 'package:kattrick/features/hubs/presentation/widgets/contact_picker_dialog.dart';
 
 /// View model combining HubMember with User for display
 class HubMemberWithUser {
@@ -87,20 +91,14 @@ class _HubPlayersListScreenV2State
     setState(() => _isLoading = true);
 
     try {
-      Query query = FirebaseFirestore.instance
-          .collection('hubs')
-          .doc(widget.hubId)
-          .collection('members')
-          .orderBy('joinedAt', descending: true)
-          .limit(_pageSize);
+      // DATA ACCESS: Use repository to get paginated members
+      final result = await ref.read(hubsRepositoryProvider).getHubMembersPaginated(
+            hubId: widget.hubId,
+            limit: _pageSize,
+            startAfter: _lastDocument,
+          );
 
-      if (_lastDocument != null) {
-        query = query.startAfterDocument(_lastDocument!);
-      }
-
-      final snapshot = await query.get();
-
-      if (snapshot.docs.isEmpty) {
+      if (result.isEmpty) {
         setState(() {
           _hasMore = false;
           _isLoading = false;
@@ -108,49 +106,22 @@ class _HubPlayersListScreenV2State
         return;
       }
 
-      _lastDocument = snapshot.docs.last;
+      _lastDocument = result.lastDoc;
 
       // Fetch user data for these members
-      final memberIds = snapshot.docs.map((doc) => doc.id).toList();
+      final memberIds = result.items.map((m) => m.userId).toList();
       final users = await ref.read(usersRepositoryProvider).getUsers(memberIds);
 
       // Create map for quick lookup
       final userMap = {for (var u in users) u.uid: u};
-      final memberDataMap = <String, Map<String, dynamic>>{};
-
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final status = data['status'] as String? ?? 'active';
-
-        // Only include active members
-        if (status == 'active') {
-          memberDataMap[doc.id] = {
-            'joinedAt': data['joinedAt'] as Timestamp?,
-            'role': data['role'] as String? ?? 'member',
-            'managerRating': data['managerRating'] as double?,
-          };
-        }
-      }
 
       final newMembers = <HubMemberWithUser>[];
-      for (final userId in memberIds) {
-        // Skip if not active (filtered out above)
-        if (!memberDataMap.containsKey(userId)) continue;
-
-        final user = userMap[userId];
+      for (final member in result.items) {
+        final user = userMap[member.userId];
         if (user != null) {
-          final meta = memberDataMap[userId];
-          final roleString = meta?['role'] as String? ?? 'member';
           newMembers.add(HubMemberWithUser(
             user: user,
-            member: models.HubMember(
-              hubId: widget.hubId,
-              userId: user.uid,
-              joinedAt: meta?['joinedAt']?.toDate() ?? DateTime.now(),
-              role: models.HubMemberRole.fromString(roleString),
-              status: models.HubMemberStatus.active,
-              managerRating: (meta?['managerRating'] as double?) ?? 0.0,
-            ),
+            member: member,
           ));
         }
       }
@@ -158,7 +129,7 @@ class _HubPlayersListScreenV2State
       if (mounted) {
         setState(() {
           _members.addAll(newMembers);
-          _hasMore = snapshot.docs.length == _pageSize;
+          _hasMore = result.hasMore;
           _isLoading = false;
         });
       }
@@ -371,6 +342,7 @@ class _HubPlayersListScreenV2State
     return PremiumScaffold(
       title: 'שחקני ההוב',
       showBackButton: true,
+      floatingActionButton: _buildSpeedDial(context, hub, canInvitePlayers),
       body: Column(
             children: [
               // Search and Controls
@@ -430,11 +402,6 @@ class _HubPlayersListScreenV2State
                         ),
                       ],
                     ),
-
-                    if (canInvitePlayers) ...[
-                      const SizedBox(height: 12),
-                      _buildScoutingButton(context),
-                    ],
 
                     // Rating mode toggle (managers only)
                     if (canEditRatings) ...[
@@ -506,7 +473,8 @@ class _HubPlayersListScreenV2State
                             child: PremiumCard(
                               onTap: _isRatingMode
                                   ? null
-                                  : () => context.push('/profile/${user.uid}'),
+                                  : () => _showPlayerActionsBottomSheet(
+                                      context, member, canEditRatings),
                               child: _isRatingMode
                                   ? _buildRatingTile(user, currentRating)
                                   : _buildNormalTile(
@@ -603,22 +571,289 @@ class _HubPlayersListScreenV2State
     );
   }
 
-  Widget _buildScoutingButton(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: () =>
-          context.push('/hubs/${widget.hubId}/scouting'),
-      icon: const Icon(Icons.search),
-      label: const Text('חיפוש והזמנת שחקנים'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: PremiumColors.accent,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 52),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+  Widget _buildSpeedDial(BuildContext context, Hub hub, bool isManager) {
+    return SpeedDial(
+      icon: Icons.group_add,
+      activeIcon: Icons.close,
+      backgroundColor: PremiumColors.primary,
+      foregroundColor: Colors.white,
+      overlayColor: Colors.black,
+      overlayOpacity: 0.5,
+      spacing: 12,
+      spaceBetweenChildren: 12,
+      children: [
+        // 1. Add Manual Player (managers only)
+        if (isManager)
+          SpeedDialChild(
+            child: const Icon(Icons.person_add, color: Colors.white),
+            backgroundColor: PremiumColors.secondary,
+            label: 'הוסף שחקן ידנית',
+            labelStyle: const TextStyle(fontSize: 14),
+            onTap: () async {
+              await showDialog(
+                context: context,
+                builder: (context) => AddManualPlayerDialog(hubId: widget.hubId),
+              );
+              // Refresh the list after adding
+              _members.clear();
+              _lastDocument = null;
+              _hasMore = true;
+              await _loadMembers();
+            },
+          ),
+
+        // 2. Add from Contacts (managers only)
+        if (isManager)
+          SpeedDialChild(
+            child: const Icon(Icons.contacts, color: Colors.white),
+            backgroundColor: PremiumColors.accent,
+            label: 'הוסף מאנשי הקשר',
+            labelStyle: const TextStyle(fontSize: 14),
+            onTap: () async {
+              await _addFromContacts(context);
+            },
+          ),
+
+        // 3. Share WhatsApp Link (everyone)
+        SpeedDialChild(
+          child: const Icon(Icons.share, color: Colors.white),
+          backgroundColor: Colors.green,
+          label: 'שתף קישור WhatsApp',
+          labelStyle: const TextStyle(fontSize: 14),
+          onTap: () async {
+            await _shareHubOnWhatsApp(context, hub);
+          },
         ),
-        elevation: 2,
+
+        // 4. Player Archive (managers only)
+        if (isManager)
+          SpeedDialChild(
+            child: const Icon(Icons.archive, color: Colors.white),
+            backgroundColor: Colors.orange,
+            label: 'ארכיון שחקנים',
+            labelStyle: const TextStyle(fontSize: 14),
+            onTap: () {
+              context.push('/hubs/${widget.hubId}/players/archive');
+            },
+          ),
+      ],
+    );
+  }
+
+  /// Share hub on WhatsApp
+  Future<void> _shareHubOnWhatsApp(BuildContext context, Hub hub) async {
+    try {
+      final String shareText = '''
+היי! הצטרף לקבוצת הכדורגל שלנו "${hub.name}" באפליקציית Kickaboor!
+
+להצטרפות, הורד את האפליקציה וחפש את הקבוצה שלנו.
+''';
+
+      await Share.share(
+        shareText,
+        subject: 'הזמנה לקבוצת ${hub.name}',
+      );
+    } catch (e) {
+      debugPrint('Error sharing hub: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('שגיאה בשיתוף'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Add player from contacts
+  Future<void> _addFromContacts(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (context) => ContactPickerDialog(hubId: widget.hubId),
+    );
+
+    // Refresh the list after adding
+    _members.clear();
+    _lastDocument = null;
+    _hasMore = true;
+    await _loadMembers();
+  }
+
+  /// Show player actions bottom sheet
+  Future<void> _showPlayerActionsBottomSheet(
+    BuildContext context,
+    HubMemberWithUser member,
+    bool isManager,
+  ) async {
+    final user = member.user;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: PremiumColors.primary.withOpacity(0.1),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: user.photoUrl != null
+                        ? CachedNetworkImageProvider(user.photoUrl!)
+                        : null,
+                    child: user.photoUrl == null
+                        ? Text(
+                            user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                            style: PremiumTypography.heading3,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name,
+                          style: PremiumTypography.heading3,
+                        ),
+                        if (member.managerRating != null)
+                          Text(
+                            'דירוג: ${member.managerRating!.toStringAsFixed(1)}',
+                            style: PremiumTypography.bodySmall.copyWith(
+                              color: PremiumColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // Actions
+            ListTile(
+              leading: const Icon(Icons.person, color: PremiumColors.primary),
+              title: const Text('צפה בכרטיס שחקן'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/profile/${user.uid}');
+              },
+            ),
+
+            // Edit Player (managers + fictitious only)
+            if (isManager && user.isFictitious)
+              ListTile(
+                leading: const Icon(Icons.edit, color: PremiumColors.accent),
+                title: const Text('ערוך שחקן'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Show edit dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('עריכת שחקנים תתמוך בגרסה הבאה'),
+                    ),
+                  );
+                },
+              ),
+
+            // Archive Player (managers only)
+            if (isManager)
+              ListTile(
+                leading: const Icon(Icons.archive, color: Colors.orange),
+                title: const Text('העבר לארכיון'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _archivePlayer(context, member);
+                },
+              ),
+
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
+  }
+
+  /// Archive a player
+  Future<void> _archivePlayer(
+    BuildContext context,
+    HubMemberWithUser member,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('העבר לארכיון'),
+        content: Text('האם להעביר את ${member.user.name} לארכיון?\n\nהשחקן לא יוכל להשתתף במשחקים עתידיים, אך ניתן לשחזר אותו בכל עת.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('העבר לארכיון'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        final hubsRepo = ref.read(hubsRepositoryProvider);
+        await hubsRepo.updateMemberStatus(
+          widget.hubId,
+          member.userId,
+          models.HubMemberStatus.archived,
+          reason: 'הועבר לארכיון על ידי מנהל',
+        );
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${member.user.name} הועבר לארכיון'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+
+          // Refresh the list
+          _members.clear();
+          _lastDocument = null;
+          _hasMore = true;
+          await _loadMembers();
+        }
+      } catch (e) {
+        debugPrint('Error archiving player: $e');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('שגיאה בהעברה לארכיון'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Widget _buildNormalTile(
@@ -697,8 +932,35 @@ class _HubPlayersListScreenV2State
                 ],
               ],
             ),
+          const SizedBox(height: 4),
+          if (user.heightCm != null || user.weightKg != null)
+            Row(
+              children: [
+                if (user.heightCm != null) ...[
+                  Icon(Icons.straighten, size: 14, color: PremiumColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Text('${user.heightCm!.toInt()} ס״מ',
+                      style: PremiumTypography.bodySmall),
+                ],
+                if (user.heightCm != null && user.weightKg != null)
+                  const SizedBox(width: 12),
+                if (user.weightKg != null) ...[
+                  Icon(Icons.fitness_center, size: 14, color: PremiumColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Text('${user.weightKg!.toInt()} ק״ג',
+                      style: PremiumTypography.bodySmall),
+                ],
+              ],
+            ),
         ],
       ),
+      trailing: canManageRatings
+          ? IconButton(
+              icon: const Icon(Icons.edit_note, size: 20),
+              tooltip: 'ערוך נתונים פיזיים',
+              onPressed: () => _showEditPhysicalStatsDialog(user),
+            )
+          : null,
     );
   }
 
@@ -817,5 +1079,124 @@ class _HubPlayersListScreenV2State
     final clamped = value.clamp(1.0, 7.0);
     // Round to nearest 0.5
     return (clamped * 2).round() / 2.0;
+  }
+
+  /// Show dialog to edit physical stats (height, weight) for a user
+  Future<void> _showEditPhysicalStatsDialog(User user) async {
+    final heightController = TextEditingController(
+      text: user.heightCm?.toString() ?? '',
+    );
+    final weightController = TextEditingController(
+      text: user.weightKg?.toString() ?? '',
+    );
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('עדכן נתונים פיזיים - ${user.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: heightController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'גובה (ס״מ)',
+                border: OutlineInputBorder(),
+                suffixText: 'ס״מ',
+                prefixIcon: Icon(Icons.height),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: weightController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'משקל (ק״ג)',
+                border: OutlineInputBorder(),
+                suffixText: 'ק״ג',
+                prefixIcon: Icon(Icons.fitness_center),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('שמור'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      final height = heightController.text.trim().isEmpty
+          ? null
+          : double.tryParse(heightController.text.trim());
+      final weight = weightController.text.trim().isEmpty
+          ? null
+          : double.tryParse(weightController.text.trim());
+
+      // Validate ranges
+      if (height != null && (height < 140 || height > 220)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('גובה לא סביר (140-220 ס״מ)')),
+        );
+        return;
+      }
+      if (weight != null && (weight < 40 || weight > 150)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('משקל לא סביר (40-150 ק״ג)')),
+        );
+        return;
+      }
+
+      await _updatePhysicalStats(user.uid, height, weight);
+    }
+
+    heightController.dispose();
+    weightController.dispose();
+  }
+
+  /// Update physical stats for a user
+  Future<void> _updatePhysicalStats(
+      String userId, double? height, double? weight) async {
+    try {
+      final usersRepo = ref.read(usersRepositoryProvider);
+
+      await usersRepo.updateUser(userId, {
+        'heightCm': height,
+        'weightKg': weight,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('נתונים פיזיים עודכנו בהצלחה')),
+        );
+        // Refresh the members list
+        setState(() {
+          _members.clear();
+          _lastDocument = null;
+          _hasMore = true;
+        });
+        _loadMembers();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בעדכון: $e')),
+        );
+      }
+    }
   }
 }

@@ -3,10 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
-import 'package:kattrick/models/venue.dart';
-import 'package:kattrick/data/venues_repository.dart';
+import 'package:kattrick/features/venues/domain/models/venue.dart';
+import 'package:kattrick/features/venues/data/repositories/venues_repository.dart';
 import 'package:kattrick/data/repositories_providers.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 
 // Mock classes
 class MockVenuesRepository extends Mock implements VenuesRepository {}
@@ -23,7 +23,7 @@ void main() {
     hubId: 'hub1',
     name: 'מגרש 1',
     address: 'כתובת 1',
-    location: const GeoPoint(32.0, 34.0),
+    location: const GeographicPoint(latitude: 32.0, longitude: 34.0),
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   );
@@ -33,7 +33,7 @@ void main() {
     hubId: 'hub1',
     name: 'מגרש 2',
     address: 'כתובת 2',
-    location: const GeoPoint(32.1, 34.1),
+    location: const GeographicPoint(latitude: 32.1, longitude: 34.1),
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   );
@@ -91,7 +91,7 @@ void main() {
         venueId: 'venue3',
         hubId: 'hub1',
         name: 'מגרש 3',
-        location: const GeoPoint(32.2, 34.2),
+        location: const GeographicPoint(latitude: 32.2, longitude: 34.2),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

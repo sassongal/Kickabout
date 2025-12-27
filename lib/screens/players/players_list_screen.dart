@@ -13,8 +13,8 @@ import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
-import 'package:kattrick/services/location_service.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/features/location/infrastructure/services/location_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 import 'package:geolocator/geolocator.dart';
 
 /// Players List Screen - לוח שחקנים

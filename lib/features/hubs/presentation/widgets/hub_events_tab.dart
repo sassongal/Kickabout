@@ -9,10 +9,10 @@ import 'package:kattrick/widgets/premium/spotlight_card.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/theme/premium_theme.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/features/games/domain/services/event_action_service.dart';
+import 'package:kattrick/features/games/infrastructure/services/event_action_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
 

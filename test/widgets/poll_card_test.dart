@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kattrick/models/poll.dart';
-import 'package:kattrick/models/user.dart';
+import 'package:kattrick/features/hubs/domain/models/poll.dart';
+import 'package:kattrick/features/profile/domain/models/user.dart';
 import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/widgets/polls/poll_card.dart';
 

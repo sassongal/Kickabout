@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kattrick/models/models.dart' hide Notification;
-import 'package:kattrick/models/notification.dart' as app_models;
+import 'package:kattrick/features/social/domain/models/notification.dart' as app_models;
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/widgets/optimized_image.dart';

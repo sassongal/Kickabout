@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/shared/infrastructure/analytics/analytics_service.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/core/constants.dart';
@@ -16,7 +16,7 @@ import 'package:kattrick/utils/city_utils.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
 
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
-import 'package:kattrick/models/targeting_criteria.dart';
+import 'package:kattrick/shared/domain/models/targeting_criteria.dart';
 
 /// Create game screen
 class CreateGameScreen extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   TimeOfDay _selectedTime = TimeOfDay.now();
   int _teamCount = 2;
   bool _isLoading = false;
-  GeoPoint? _selectedLocation;
+  GeographicPoint? _selectedLocation;
   String? _locationAddress;
   String? _selectedVenueId; // Venue ID for proper venue reference
   bool _isLoadingLocation = false;
@@ -113,7 +113,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       final position = await locationService.getCurrentLocation();
 
       if (position != null) {
-        final geoPoint = locationService.positionToGeoPoint(position);
+        final geoPoint = locationService.positionToGeographicPoint(position);
         String? address;
         try {
           address = await locationService.coordinatesToAddress(
@@ -1073,7 +1073,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                                     mounted) {
                                   setState(() {
                                     _selectedLocation =
-                                        result['location'] as GeoPoint?;
+                                        result['location'] as GeographicPoint?;
                                     _locationAddress =
                                         result['address'] as String?;
                                     _locationController.text =

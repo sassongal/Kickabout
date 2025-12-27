@@ -24,6 +24,7 @@ import 'package:kattrick/widgets/stopwatch_countdown_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
 import 'package:kattrick/widgets/home/bubble_menu.dart';
@@ -1038,7 +1039,10 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
               );
 
               await userRef.update({
-                'location': GeoPoint(position.latitude, position.longitude),
+                'location': GeographicPoint(
+                  latitude: position.latitude,
+                  longitude: position.longitude,
+                ),
                 'geohash': geohash,
                 'hasManualLocation': false,
               });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kattrick/data/repositories_providers.dart';
@@ -120,7 +121,10 @@ class _LocationSearchDialogState extends ConsumerState<LocationSearchDialog> {
       }
 
       await userRef.update({
-        'location': GeoPoint(placeDetails.latitude, placeDetails.longitude),
+        'location': GeographicPoint(
+          latitude: placeDetails.latitude,
+          longitude: placeDetails.longitude,
+        ),
         'geohash': geohash,
         'city': cityName ?? placeDetails.address,
         'manualLocationCity': cityName ?? placeDetails.address,

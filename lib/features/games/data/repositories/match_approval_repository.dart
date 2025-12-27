@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/firestore_paths.dart';
-import 'package:kattrick/services/cache_invalidation_service.dart';
+import 'package:kattrick/shared/infrastructure/cache/cache_invalidation_service.dart';
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/data/games_repository.dart';
@@ -16,16 +16,19 @@ class MatchApprovalRepository {
   final CacheInvalidationService _cacheInvalidation;
   final GamesRepository _gamesRepo;
   final SessionRepository _sessionRepo;
+  final HubsRepository? _hubsRepo;
 
   MatchApprovalRepository({
     FirebaseFirestore? firestore,
     CacheInvalidationService? cacheInvalidation,
     GamesRepository? gamesRepo,
     SessionRepository? sessionRepo,
+    HubsRepository? hubsRepo,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _cacheInvalidation = cacheInvalidation ?? CacheInvalidationService(),
         _gamesRepo = gamesRepo ?? GamesRepository(),
-        _sessionRepo = sessionRepo ?? SessionRepository();
+        _sessionRepo = sessionRepo ?? SessionRepository(),
+        _hubsRepo = hubsRepo;
 
   /// Submit a match result with optional moderator approval workflow
   ///
@@ -88,8 +91,10 @@ class MatchApprovalRepository {
 
       // Verify permissions
       if (game.hubId != null) {
-        final hubsRepo = HubsRepository();
-        final hub = await hubsRepo.getHub(game.hubId!);
+        if (_hubsRepo == null) {
+          throw Exception('HubsRepository not provided for hub game verification');
+        }
+        final hub = await _hubsRepo.getHub(game.hubId!);
         if (hub == null) {
           throw Exception('Hub not found: ${game.hubId}');
         }
@@ -175,8 +180,10 @@ class MatchApprovalRepository {
 
       // Verify permissions
       if (game.hubId != null) {
-        final hubsRepo = HubsRepository();
-        final hub = await hubsRepo.getHub(game.hubId!);
+        if (_hubsRepo == null) {
+          throw Exception('HubsRepository not provided for hub game verification');
+        }
+        final hub = await _hubsRepo.getHub(game.hubId!);
         if (hub == null) {
           throw Exception('Hub not found: ${game.hubId}');
         }
@@ -255,6 +262,13 @@ class MatchApprovalRepository {
           .where((match) => match.approvalStatus == MatchApprovalStatus.pending)
           .toList();
     });
+  }
+
+  /// Generate new match ID
+  ///
+  /// Helper method for generating unique match IDs
+  String generateMatchId() {
+    return _firestore.collection('temp').doc().id;
   }
 }
 

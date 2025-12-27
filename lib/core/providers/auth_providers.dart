@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:kattrick/core/providers/services_providers.dart';
-import 'package:kattrick/services/cache_service.dart';
 
 part 'auth_providers.g.dart';
 
@@ -18,7 +17,14 @@ Stream<firebase_auth.User?> authStateForCache(AuthStateForCacheRef ref) {
 @riverpod
 String? currentUserId(CurrentUserIdRef ref) {
   final authService = ref.watch(authServiceProvider);
-  return authService.currentUserId;
+  final uid = authService.currentUserId;
+
+  // 🔍 DIAGNOSTIC: Log when UID is null to track auth state timing issues
+  if (uid == null && kDebugMode) {
+    debugPrint('⚠️ currentUserIdProvider returned NULL at ${DateTime.now().toIso8601String()}');
+  }
+
+  return uid;
 }
 
 /// Check if current user is anonymous

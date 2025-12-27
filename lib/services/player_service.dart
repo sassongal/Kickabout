@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kattrick/models/player.dart';
+import 'package:kattrick/features/profile/domain/models/player.dart';
 
 class PlayerService {
   static const String _playersKey = 'players';

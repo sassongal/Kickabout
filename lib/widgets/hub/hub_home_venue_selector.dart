@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/data/venues_repository.dart';
+import 'package:kattrick/features/venues/data/repositories/venues_repository.dart';
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:geolocator/geolocator.dart';
@@ -128,10 +128,11 @@ class _HubHomeVenueSelectorContentState
 
   Future<void> _handleVenueSelection(Venue result) async {
     final hubsRepo = ref.read(hubsRepositoryProvider);
+    final hubVenuesRepo = ref.read(hubVenuesRepositoryProvider);
 
     debugPrint('🏟️ Setting home venue: ${result.name} (${result.venueId})');
 
-    await hubsRepo.setHubPrimaryVenue(widget.hubId, result.venueId);
+    await hubVenuesRepo.setHubPrimaryVenue(widget.hubId, result.venueId);
 
     // If hub city is empty, populate from venue city (and region)
     if ((widget.hub.city == null || widget.hub.city!.isEmpty) &&

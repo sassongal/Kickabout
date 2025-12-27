@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
 
 /// Dialog for setting a player's rating within a hub
-class SetPlayerRatingDialog extends StatefulWidget {
+class SetPlayerRatingDialog extends ConsumerStatefulWidget {
   final String hubId;
   final String playerId;
   final String playerName;
@@ -18,10 +19,10 @@ class SetPlayerRatingDialog extends StatefulWidget {
   });
 
   @override
-  State<SetPlayerRatingDialog> createState() => _SetPlayerRatingDialogState();
+  ConsumerState<SetPlayerRatingDialog> createState() => _SetPlayerRatingDialogState();
 }
 
-class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
+class _SetPlayerRatingDialogState extends ConsumerState<SetPlayerRatingDialog> {
   final TextEditingController _ratingController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
@@ -61,7 +62,7 @@ class _SetPlayerRatingDialogState extends State<SetPlayerRatingDialog> {
 
     try {
       final rating = double.parse(_ratingController.text);
-      final hubsRepo = HubsRepository();
+      final hubsRepo = ref.read(hubsRepositoryProvider);
 
       await hubsRepo.setPlayerRating(widget.hubId, widget.playerId, rating);
 

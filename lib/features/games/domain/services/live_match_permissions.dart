@@ -1,5 +1,5 @@
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/value_objects/match_logging_policy.dart';
+import 'package:kattrick/shared/domain/models/value_objects/match_logging_policy.dart';
 
 class LiveMatchPermissions {
   /// בדיקה האם למשתמש יש הרשאה לתעד משחק באירוע ספציפי

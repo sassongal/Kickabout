@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kattrick/models/player_stats.dart';
+import 'package:kattrick/features/profile/domain/models/player_stats.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 
 /// Service for managing player game statistics.

@@ -1,6 +1,6 @@
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/features/games/domain/use_cases/submit_game_use_case.dart';
-import 'package:kattrick/features/games/domain/use_cases/log_match_result_use_case.dart';
+import 'package:kattrick/features/games/infrastructure/use_cases/log_match_result_use_case.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

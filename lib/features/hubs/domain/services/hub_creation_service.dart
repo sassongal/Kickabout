@@ -1,7 +1,7 @@
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 
 /// Service for Hub creation business logic
 ///

@@ -3,10 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/firestore_paths.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
-import 'package:kattrick/services/cache_service.dart';
-import 'package:kattrick/services/monitoring_service.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/cache/cache_service.dart';
+import 'package:kattrick/shared/infrastructure/monitoring/monitoring_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -53,7 +54,7 @@ class GameQueriesRepository {
   /// OPTIMIZED VERSION - Uses correct geohash precision and neighbor queries
   /// to minimize over-fetching instead of fetching 3x data.
   Stream<List<Game>> watchDiscoveryFeed({
-    GeoPoint? userLocation,
+    GeographicPoint? userLocation,
     double radiusKm = 10.0,
     int limit = 20,
   }) {

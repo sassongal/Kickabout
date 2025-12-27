@@ -10,7 +10,8 @@
     "test": "mocha --require @babel/register --timeout 10000 'test/**/*.test.js'",
     "test:watch": "mocha --require @babel/register --watch 'test/**/*.test.js'",
     "test:coverage": "nyc --reporter=html --reporter=text mocha --require @babel/register 'test/**/*.test.js'",
-    "create-super-admin": "node scripts/createSuperAdmin.js"
+    "create-super-admin": "node scripts/createSuperAdmin.js",
+    "backfill-geohashes": "node scripts/backfill_geohashes.js"
   },
   "engines": {
     "node": "20"
@@ -21,7 +22,8 @@
     "@sentry/node": "^8.11.1",
     "axios": "^1.7.9",
     "firebase-admin": "^13.0.1",
-    "firebase-functions": "^7.0.2"
+    "firebase-functions": "^7.0.2",
+    "geofire-common": "^6.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.28.5",

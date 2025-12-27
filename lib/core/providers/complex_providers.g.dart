@@ -1698,9 +1698,12 @@ class _HubsByCreatorProviderElement
   String get uid => (origin as HubsByCreatorProvider).uid;
 }
 
-String _$homeDashboardDataHash() => r'dcf4d255ad2ae88c187d3dae3a5c5d1e1fbd4ec2';
+String _$homeDashboardDataHash() => r'3212ea2f55ca5127a9c40f2e81e1c0acd006d025';
 
 /// Home dashboard data provider (weather & vibe) - using Open-Meteo (free)
+///
+/// Refactored to delegate to DashboardService for business logic.
+/// This provider now only handles state management.
 ///
 /// Copied from [homeDashboardData].
 @ProviderFor(homeDashboardData)
@@ -2022,14 +2025,12 @@ class _HubRoleProviderElement extends AutoDisposeFutureProviderElement<UserRole>
   String get hubId => (origin as HubRoleProvider).hubId;
 }
 
-String _$adminTasksHash() => r'273ed476be654d8c6524192f6298a56c657b9256';
+String _$adminTasksHash() => r'bdc0343ee8f698a35f1b1edc8e90c779055c174e';
 
-/// Admin tasks provider - counts games that need to be closed
+/// Admin tasks count stream provider
 ///
-/// Returns the number of games that:
-/// - User is admin of (hub manager)
-/// - Status is 'teamsFormed' or 'inProgress'
-/// - gameDate is in the past
+/// Refactored to delegate to AdminTaskService for business logic.
+/// This provider now only handles state management and streaming.
 ///
 /// Copied from [adminTasks].
 @ProviderFor(adminTasks)

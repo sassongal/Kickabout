@@ -137,7 +137,7 @@ class _EditManualPlayerDialogState
       }
 
       // Get invitation code or use hub ID
-      final invitationCode = hub.settings['invitationCode'] as String? ??
+      final invitationCode = hub.settings.invitationCode ??
           widget.hubId.substring(0, 8).toUpperCase();
       final invitationLink = 'https://kattrick.app/invite/$invitationCode';
 

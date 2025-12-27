@@ -8,7 +8,7 @@ import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/features/hubs/presentation/screens/hub_invitations_screen.dart';
 import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
@@ -768,7 +768,8 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
       if (_mainVenueId != null) {
         debugPrint('📝 Setting primary venue: $_mainVenueId');
         // This function updates primaryVenueId, mainVenueId, primaryVenueLocation, and venue hubCount
-        await hubsRepo.setHubPrimaryVenue(widget.hubId, _mainVenueId!);
+        final hubVenuesRepo = ref.read(hubVenuesRepositoryProvider);
+        await hubVenuesRepo.setHubPrimaryVenue(widget.hubId, _mainVenueId!);
         debugPrint('✅ Set primary venue');
 
         // Also update location and geohash for consistency (mainVenueId is already updated by setHubPrimaryVenue)

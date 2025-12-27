@@ -50,6 +50,12 @@
 		<string>אנחנו זקוקים למיקום שלך כדי למצוא מגרשים ומשחקים קרובים</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>אנחנו זקוקים למיקום שלך כדי למצוא מגרשים ומשחקים קרובים</string>
+		<!-- Photo Library permissions -->
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>אנחנו זקוקים לגישה לספריית התמונות שלך כדי להעלות תמונות פרופיל של שחקנים</string>
+		<!-- Contacts permissions -->
+		<key>NSContactsUsageDescription</key>
+		<string>אנחנו זקוקים לגישה לאנשי הקשר שלך כדי לעזור לך להוסיף שחקנים להוב</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<!-- FIX: Ensure this matches your dart-define or replace with actual key for quick dev -->

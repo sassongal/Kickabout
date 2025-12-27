@@ -12,8 +12,8 @@ import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/routing/app_router.dart';
 import 'package:kattrick/services/push_notification_service.dart';
 import 'package:kattrick/services/deep_link_service.dart';
-import 'package:kattrick/services/error_handler_service.dart';
-import 'package:kattrick/services/analytics_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/analytics/analytics_service.dart';
 import 'package:kattrick/services/remote_config_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,7 +26,8 @@ import 'package:kattrick/services/web_maps_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'package:kattrick/core/providers/auth_providers.dart';
-import 'package:kattrick/services/cache_service.dart';
+import 'package:kattrick/core/providers/services_providers.dart';
+import 'package:kattrick/shared/infrastructure/cache/cache_service.dart';
 
 /// Initialize background services (non-blocking)
 Future<void> _initializeBackgroundServices() async {
@@ -85,6 +86,16 @@ Future<bool> _initializeAppServices() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('✅ Firebase initialized successfully');
+
+    // 🔍 DIAGNOSTIC: Log Firebase project and current user identity
+    final firebaseOptions = DefaultFirebaseOptions.currentPlatform;
+    debugPrint('🔐 Firebase Project: ${firebaseOptions.projectId}');
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      debugPrint('🔐 Current user: uid=${currentUser.uid}, email=${currentUser.email ?? "N/A"}, isAnonymous=${currentUser.isAnonymous}');
+    } else {
+      debugPrint('🔐 Current user: NOT AUTHENTICATED');
+    }
 
     // Enable Firebase App Check (debug providers for dev)
     // In debug mode: Uses debug provider which generates a debug token
@@ -317,29 +328,25 @@ class MyApp extends ConsumerStatefulWidget {
 
 class _MyAppState extends ConsumerState<MyApp> {
   @override
-  void initState() {
-    super.initState();
-    // Set up listener after first frame to avoid rebuild loops
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.listen(authStateForCacheProvider, (previous, next) {
-          if (next.hasValue) {
-            final firebaseUser = next.value;
-            final newUserId = firebaseUser?.uid;
-            if (newUserId != null) {
-              // Clear cache for new user (handled in login screen too, but this is a safety net)
-              CacheService().clear(CacheKeys.user(newUserId));
-              debugPrint('🧹 Cleared cache for user change: $newUserId');
-            }
-          }
-        });
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+
+    // Listen for auth state changes to clear cache
+    ref.listen(authStateForCacheProvider, (previous, next) {
+      if (next.hasValue) {
+        final firebaseUser = next.value;
+        final newUserId = firebaseUser?.uid;
+        if (newUserId != null) {
+          // Clear cache for new user (handled in login screen too, but this is a safety net)
+          CacheService().clear(CacheKeys.user(newUserId));
+          debugPrint('🧹 Cleared cache for user change: $newUserId');
+        }
+      }
+    });
+
+    // Initialize HubAnalyticsService to set up event listeners
+    // This ensures the service is instantiated and listening for domain events
+    ref.watch(hubAnalyticsServiceProvider);
 
     // Initialize deep link service
     DeepLinkService().initialize(router: router);

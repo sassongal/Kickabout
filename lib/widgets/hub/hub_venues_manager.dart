@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kattrick/models/venue.dart';
+import 'package:kattrick/features/venues/domain/models/venue.dart';
 import 'package:kattrick/widgets/input/smart_venue_search_field.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 

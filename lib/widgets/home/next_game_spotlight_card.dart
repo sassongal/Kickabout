@@ -10,7 +10,7 @@ import 'package:kattrick/features/games/data/repositories/game_queries_repositor
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/features/games/domain/services/event_action_service.dart';
+import 'package:kattrick/features/games/infrastructure/services/event_action_service.dart';
 import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
@@ -770,13 +770,13 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                 (event.isStarted || now.isAfter(startTime.subtract(const Duration(minutes: 30))));
             
             // Include event if:
-            // 1. It's live/ongoing, OR
-            // 2. It's within the duration window, OR
-            // 3. It's upcoming (future event)
-            final shouldInclude = isLive || 
-                isWithinDurationWindow || 
-                (event.eventDate.isAfter(now) && event.eventDate.isBefore(futureLimit));
-            
+            // 1. NOT completed (hide completed events), AND
+            // 2. (It's live/ongoing, OR within duration window, OR upcoming future event)
+            final shouldInclude = event.status != 'completed' &&
+                (isLive ||
+                 isWithinDurationWindow ||
+                 (event.eventDate.isAfter(now) && event.eventDate.isBefore(futureLimit)));
+
             if (shouldInclude) {
               final isRegistered = event.registeredPlayerIds.contains(userId);
               if (isRegistered) {

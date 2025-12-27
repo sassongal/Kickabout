@@ -206,7 +206,7 @@ final customApiServiceProvider = AutoDisposeProvider<CustomApiService>.internal(
 // ignore: unused_element
 typedef CustomApiServiceRef = AutoDisposeProviderRef<CustomApiService>;
 String _$hubAnalyticsServiceHash() =>
-    r'273f07e0ed827673847e3c42339e6d870290c314';
+    r'0d1e52098e2afc9aa3f75a58ac3bd3f30f88a46f';
 
 /// Hub Analytics Service Provider
 ///
@@ -275,5 +275,30 @@ final hubMembershipServiceProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef HubMembershipServiceRef = AutoDisposeProviderRef<HubMembershipService>;
+String _$playerMergeServiceHash() =>
+    r'25c6dce704ca2100ab5aa6c41cd3e491397a495a';
+
+/// Player Merge Service Provider
+///
+/// Handles merging fictitious players with real user accounts.
+/// Automatically transfers memberships, ratings, and history when a real user
+/// signs up with a phone number matching a fictitious player.
+///
+/// Copied from [playerMergeService].
+@ProviderFor(playerMergeService)
+final playerMergeServiceProvider =
+    AutoDisposeProvider<PlayerMergeService>.internal(
+  playerMergeService,
+  name: r'playerMergeServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$playerMergeServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef PlayerMergeServiceRef = AutoDisposeProviderRef<PlayerMergeService>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Still needed for QuerySnapshot type
 import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:kattrick/data/repositories_providers.dart';
@@ -11,7 +11,7 @@ import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 
 /// Manager Inbox - Approve/Deny Join Requests + Contact Messages
 class HubManageRequestsScreen extends ConsumerStatefulWidget {
@@ -67,13 +67,9 @@ class _HubManageRequestsScreenState
   }
 
   Widget _buildJoinRequestsList() {
-    final firestore = FirebaseFirestore.instance;
-    final requestsStream = firestore
-        .collection('hubs')
-        .doc(widget.hubId)
-        .collection('requests')
-        .where('status', isEqualTo: 'pending')
-        .snapshots();
+    final requestsStream = ref
+        .read(hubJoinRequestsRepositoryProvider)
+        .watchPendingJoinRequests(widget.hubId);
 
     return StreamBuilder<QuerySnapshot>(
       stream: requestsStream,
@@ -125,7 +121,7 @@ class _HubManageRequestsScreenState
   Widget _buildContactMessagesList() {
     return StreamBuilder<List<app_models.ContactMessage>>(
       stream:
-          ref.read(hubsRepositoryProvider).streamContactMessages(widget.hubId),
+          ref.read(hubContactRepositoryProvider).streamContactMessages(widget.hubId),
       builder: (context, snapshot) {
         // Loading state
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -186,7 +182,7 @@ class _HubManageRequestsScreenState
 
   Future<void> _markMessageAsRead(app_models.ContactMessage message) async {
     try {
-      await ref.read(hubsRepositoryProvider).updateContactMessageStatus(
+      await ref.read(hubContactRepositoryProvider).updateContactMessageStatus(
             hubId: widget.hubId,
             messageId: message.messageId,
             status: 'read',
@@ -205,7 +201,7 @@ class _HubManageRequestsScreenState
   Future<void> _replyToMessage(app_models.ContactMessage message) async {
     // Update status to 'replied'
     try {
-      await ref.read(hubsRepositoryProvider).updateContactMessageStatus(
+      await ref.read(hubContactRepositoryProvider).updateContactMessageStatus(
             hubId: widget.hubId,
             messageId: message.messageId,
             status: 'replied',
@@ -255,83 +251,21 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     setState(() => _isProcessing = true);
 
     try {
-      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hubJoinRequestsRepo = ref.read(hubJoinRequestsRepositoryProvider);
       final notificationsRepo = ref.read(notificationsRepositoryProvider);
-      final firestore = FirebaseFirestore.instance;
       final currentUserId = ref.read(currentUserIdProvider);
 
       if (currentUserId == null) {
         throw Exception('משתמש לא מחובר');
       }
 
-      // Transaction: Add user to hub and update request status
-      await firestore.runTransaction((transaction) async {
-        // 1. Get hub document
-        final hubRef = firestore.collection('hubs').doc(widget.hubId);
-        final hubDoc = await transaction.get(hubRef);
-
-        if (!hubDoc.exists) {
-          throw Exception('Hub לא נמצא');
-        }
-
-        final hubData = hubDoc.data()!;
-        final memberCount = hubData['memberCount'] as int? ?? 0;
-
-        // Check capacity
-        if (memberCount >= 50) {
-          throw Exception('ההאב מלא (מקסימום 50 חברים)');
-        }
-
-        // Check user
-        final userRef = firestore.collection('users').doc(widget.userId);
-        final userDoc = await transaction.get(userRef);
-        if (!userDoc.exists) throw Exception('משתמש לא נמצא');
-
-        final userData = userDoc.data()!;
-        final userHubIds = List<String>.from(userData['hubIds'] ?? []);
-
-        // Check if user is already a member
-        if (userHubIds.contains(widget.hubId)) {
-          // User already a member, just update request status
-          final requestRef =
-              hubRef.collection('requests').doc(widget.requestId);
-          transaction.update(requestRef, {
-            'status': 'approved',
-            'processedAt': FieldValue.serverTimestamp(),
-            'processedBy': currentUserId,
-          });
-          return;
-        }
-
-        // 2. Add to members subcollection
-        final memberRef = hubRef.collection('members').doc(widget.userId);
-        transaction.set(memberRef, {
-          'joinedAt': FieldValue.serverTimestamp(),
-          'role': 'player',
-        });
-
-        // 3. Increment memberCount
-        transaction.update(hubRef, {
-          'memberCount': FieldValue.increment(1),
-        });
-
-        // 4. Update user.hubIds
-        transaction.update(userRef, {
-          'hubIds': FieldValue.arrayUnion([widget.hubId]),
-        });
-
-        // 5. Update request status
-        final requestRef = hubRef.collection('requests').doc(widget.requestId);
-        transaction.update(requestRef, {
-          'status': 'approved',
-          'processedAt': FieldValue.serverTimestamp(),
-          'processedBy': currentUserId,
-        });
-      });
-
-      // Get hub name for notification
-      final hub = await hubsRepo.getHub(widget.hubId);
-      final hubName = hub?.name ?? 'האב';
+      // DATA ACCESS: Use repository to approve request and add member
+      final hubName = await hubJoinRequestsRepo.approveJoinRequest(
+        hubId: widget.hubId,
+        requestId: widget.requestId,
+        userId: widget.userId,
+        processedBy: currentUserId,
+      );
 
       // Send welcome notification to user
       final notification = app_models.Notification(
@@ -350,6 +284,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       await notificationsRepo.createNotification(notification);
 
       // Invalidate hub cache to refresh state
+      final hubsRepo = ref.read(hubsRepositoryProvider);
       await hubsRepo.getHub(widget.hubId, forceRefresh: true);
 
       if (mounted) {
@@ -396,23 +331,19 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     setState(() => _isProcessing = true);
 
     try {
-      final firestore = FirebaseFirestore.instance;
+      final hubJoinRequestsRepo = ref.read(hubJoinRequestsRepositoryProvider);
       final currentUserId = ref.read(currentUserIdProvider);
 
       if (currentUserId == null) {
         throw Exception('משתמש לא מחובר');
       }
 
-      await firestore
-          .collection('hubs')
-          .doc(widget.hubId)
-          .collection('requests')
-          .doc(widget.requestId)
-          .update({
-        'status': 'rejected',
-        'processedAt': FieldValue.serverTimestamp(),
-        'processedBy': currentUserId,
-      });
+      // DATA ACCESS: Use repository to reject request
+      await hubJoinRequestsRepo.rejectJoinRequest(
+        hubId: widget.hubId,
+        requestId: widget.requestId,
+        processedBy: currentUserId,
+      );
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'הבקשה נדחתה');

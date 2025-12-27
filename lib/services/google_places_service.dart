@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/config/env.dart';
-import 'package:kattrick/models/venue.dart';
+import 'package:kattrick/features/venues/domain/models/venue.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 
 /// Google Places API result model
 class PlaceResult {
@@ -59,7 +59,10 @@ class PlaceResult {
       hubId: hubId,
       name: name,
       description: address,
-      location: GeoPoint(latitude, longitude),
+      location: GeographicPoint(
+        latitude: latitude,
+        longitude: longitude,
+      ),
       address: address,
       googlePlaceId: placeId,
       amenities: _extractAmenities(),

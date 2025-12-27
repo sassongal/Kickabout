@@ -1,7 +1,7 @@
 import 'dart:math';
-import 'package:kattrick/models/player.dart';
-import 'package:kattrick/models/player_stats.dart';
-import 'package:kattrick/models/game.dart';
+import 'package:kattrick/features/profile/domain/models/player.dart';
+import 'package:kattrick/features/profile/domain/models/player_stats.dart';
+import 'package:kattrick/features/games/domain/models/game.dart';
 
 class RankingService {
   

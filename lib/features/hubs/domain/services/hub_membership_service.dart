@@ -1,8 +1,8 @@
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
-import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/features/profile/data/repositories/users_repository.dart';
 import 'package:kattrick/services/push_notification_service.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_member.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_member.dart';
 
 /// Domain service for hub membership operations
 ///

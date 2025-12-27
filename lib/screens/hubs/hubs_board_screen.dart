@@ -13,10 +13,10 @@ import 'package:kattrick/widgets/premium/loading_state.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/empty_state_illustrations.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
-import 'package:kattrick/services/location_service.dart';
-import 'package:kattrick/services/error_handler_service.dart';
+import 'package:kattrick/features/location/infrastructure/services/location_service.dart';
+import 'package:kattrick/shared/infrastructure/logging/error_handler_service.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/widgets/animations/scan_in_animation.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
@@ -601,7 +601,7 @@ class _HubsBoardScreenState extends ConsumerState<HubsBoardScreen>
   }
 
   Future<double> _calculateDistance(
-      GeoPoint hubLocation, Position userPosition) async {
+      GeographicPoint hubLocation, Position userPosition) async {
     return Geolocator.distanceBetween(
           userPosition.latitude,
           userPosition.longitude,

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kattrick/models/hub_member.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_member.dart';
 
 void main() {
   group('HubMember', () {

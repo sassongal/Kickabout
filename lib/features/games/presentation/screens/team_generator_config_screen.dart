@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/features/games/domain/models/team_maker.dart';
 import 'package:kattrick/models/models.dart';
@@ -30,7 +29,6 @@ class TeamGeneratorConfigScreen extends ConsumerStatefulWidget {
 
 class _TeamGeneratorConfigScreenState
     extends ConsumerState<TeamGeneratorConfigScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = true;
   bool _isGenerating = false;
   Hub? _hub;
@@ -142,10 +140,13 @@ class _TeamGeneratorConfigScreenState
         
         // Update rating in HubMember if changed
         if (member.managerRating != rating) {
-          await _firestore
-              .collection('hubs/${widget.hubId}/members')
-              .doc(user.uid)
-              .update({'managerRating': rating});
+          // DATA ACCESS: Use repository to update member field
+          await ref.read(hubsRepositoryProvider).updateMemberField(
+                hubId: widget.hubId,
+                userId: user.uid,
+                field: 'managerRating',
+                value: rating,
+              );
         }
       }
 

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/data/games_repository.dart';
-import 'package:kattrick/data/users_repository.dart';
+import 'package:kattrick/features/profile/data/repositories/users_repository.dart';
 
 import 'package:kattrick/services/firestore_paths.dart';
 

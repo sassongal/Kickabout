@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/utils/geohash_utils.dart';
 import 'package:kattrick/features/hubs/data/repositories/hubs_repository.dart';
@@ -140,7 +141,7 @@ class DummyPlayersCreator {
     print('Hub region: ${hub.region ?? "לא מוגדר"}');
 
     // Get hub location for generating nearby coordinates
-    GeoPoint? hubLocation = hub.primaryVenueLocation ?? hub.location;
+    GeographicPoint? hubLocation = hub.primaryVenueLocation ?? hub.location;
 
     for (var i = 0; i < count; i++) {
       // Generate random player data
@@ -157,7 +158,7 @@ class DummyPlayersCreator {
       final birthDate = DateTime.now().subtract(Duration(days: age * 365));
 
       // Generate location based on hub location
-      GeoPoint? location;
+      GeographicPoint? location;
       String? geohash;
       String? city;
       String? region;
@@ -186,6 +187,14 @@ class DummyPlayersCreator {
       final photoId = _random.nextInt(99);
       final photoUrl = 'https://randomuser.me/api/portraits/men/$photoId.jpg';
 
+      // Generate realistic weight and height
+      // Height: 160-195 cm (realistic range for adult men)
+      final heightCm = 160.0 + _random.nextDouble() * 35.0;
+      // Weight: based on height with some variation
+      // BMI typically 20-28 for athletes
+      final bmi = 21.0 + _random.nextDouble() * 6.0;
+      final weightKg = bmi * (heightCm / 100) * (heightCm / 100);
+
       // Create user document
       final userId = 'dummy_${hubId}_${timestamp}_$i';
       playerIds.add(userId);
@@ -205,6 +214,8 @@ class DummyPlayersCreator {
         location: location,
         geohash: geohash,
         photoUrl: photoUrl,
+        heightCm: heightCm,
+        weightKg: weightKg,
         hubIds: [hubId],
         createdAt: DateTime.now(),
         currentRankScore: rating,
@@ -237,7 +248,7 @@ class DummyPlayersCreator {
   }
 
   /// Generate a random location within 10km radius of a center point
-  GeoPoint _generateNearbyLocation(GeoPoint center) {
+  GeographicPoint _generateNearbyLocation(GeographicPoint center) {
     final angle = _random.nextDouble() * 2 * pi;
     final distanceKm = _random.nextDouble() * 10.0; // Up to 10km
 
@@ -246,9 +257,9 @@ class DummyPlayersCreator {
     final lngOffset =
         (distanceKm * sin(angle)) / (111.0 * cos(center.latitude * pi / 180));
 
-    return GeoPoint(
-      center.latitude + latOffset,
-      center.longitude + lngOffset,
+    return GeographicPoint(
+      latitude: center.latitude + latOffset,
+      longitude: center.longitude + lngOffset,
     );
   }
 

@@ -31,14 +31,14 @@ class HubCommandCenter extends ConsumerWidget {
     }
 
     // Watch pending join requests count from repository (not direct Firestore)
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
+    final hubJoinRequestsRepo = ref.watch(hubJoinRequestsRepositoryProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Pending join requests pill
         StreamBuilder<int>(
-          stream: hubsRepo.watchPendingJoinRequestsCount(hubId),
+          stream: hubJoinRequestsRepo.watchPendingJoinRequestsCount(hubId),
           builder: (context, snapshot) {
             final pendingCount = snapshot.data ?? 0;
             if (!hubPermissions.canManageMembers) {

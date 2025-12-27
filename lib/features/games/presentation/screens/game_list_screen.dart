@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
@@ -29,11 +29,11 @@ class GameListScreen extends ConsumerStatefulWidget {
 }
 
 class _GameListScreenState extends ConsumerState<GameListScreen> {
-  GeoPoint? _userLocation;
+  GeographicPoint? _userLocation;
   Stream<Game?>? _cachedNextMatchStream;
   Stream<List<Game>>? _cachedDiscoveryStream;
   String? _cachedUserId;
-  GeoPoint? _cachedLocation;
+  GeographicPoint? _cachedLocation;
 
   @override
   void initState() {
@@ -62,7 +62,10 @@ class _GameListScreenState extends ConsumerState<GameListScreen> {
       );
 
       setState(() {
-        _userLocation = GeoPoint(position.latitude, position.longitude);
+        _userLocation = GeographicPoint(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
       });
     } catch (e) {
       debugPrint('Error getting location: $e');

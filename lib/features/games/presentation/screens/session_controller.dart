@@ -1,12 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/features/games/data/repositories/session_repository.dart';
 import 'package:kattrick/features/games/data/repositories/match_approval_repository.dart';
-import 'package:kattrick/models/match_result.dart';
-import 'package:kattrick/models/game.dart';
+import 'package:kattrick/shared/domain/models/match_result.dart';
+import 'package:kattrick/features/games/domain/models/game.dart';
 import 'package:kattrick/utils/stopwatch_utility.dart';
 
 part 'session_controller.freezed.dart';
@@ -129,7 +128,7 @@ class SessionController extends StateNotifier<SessionState> {
 
     // If tie and manager, show selection dialog
     if (isTie && isManager && !asModeratorRequest) {
-      final matchId = FirebaseFirestore.instance.collection('temp').doc().id;
+      final matchId = _matchApprovalRepo.generateMatchId();
       final tieMatch = MatchResult(
         matchId: matchId,
         teamAColor: teamAColor,
@@ -203,7 +202,7 @@ class SessionController extends StateNotifier<SessionState> {
 
     try {
       // Create match result
-      final matchId = FirebaseFirestore.instance.collection('temp').doc().id;
+      final matchId = _matchApprovalRepo.generateMatchId();
       final match = MatchResult(
         matchId: matchId,
         teamAColor: teamAColor,

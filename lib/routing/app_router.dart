@@ -2,15 +2,15 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 import 'package:kattrick/routing/app_paths.dart';
 import 'package:kattrick/routing/go_router_refresh_stream.dart';
 import 'package:kattrick/utils/performance_utils.dart';
-import 'package:kattrick/screens/auth/auth_screen.dart';
-import 'package:kattrick/screens/welcome/welcome_screen.dart';
-import 'package:kattrick/screens/profile/profile_setup_wizard.dart';
+import 'package:kattrick/features/auth/presentation/screens/auth_screen.dart';
+import 'package:kattrick/features/auth/presentation/screens/welcome_screen.dart';
+import 'package:kattrick/features/profile/presentation/screens/profile_setup_wizard.dart';
 import 'package:kattrick/features/hubs/presentation/screens/hub_list_screen.dart';
 import 'package:kattrick/features/hubs/presentation/screens/create_hub_screen.dart';
 import 'package:kattrick/features/hubs/presentation/screens/hub_detail_screen.dart'
@@ -36,43 +36,43 @@ import 'package:kattrick/features/games/presentation/screens/team_maker_screen.d
     deferred as team_maker_screen;
 import 'package:kattrick/features/games/presentation/screens/log_game_screen.dart'
     deferred as log_game_screen;
-import 'package:kattrick/screens/profile/player_profile_screen.dart'
+import 'package:kattrick/features/profile/presentation/screens/player_profile_screen.dart'
     deferred as player_profile_screen;
-import 'package:kattrick/screens/profile/edit_profile_screen.dart'
+import 'package:kattrick/features/profile/presentation/screens/edit_profile_screen.dart'
     deferred as edit_profile_screen;
-import 'package:kattrick/screens/profile/privacy_settings_screen.dart'
+import 'package:kattrick/features/profile/presentation/screens/privacy_settings_screen.dart'
     deferred as privacy_settings_screen;
-import 'package:kattrick/screens/profile/settings_screen.dart'
+import 'package:kattrick/features/profile/presentation/screens/settings_screen.dart'
     deferred as settings_screen;
-import 'package:kattrick/screens/profile/notification_settings_screen.dart'
+import 'package:kattrick/features/profile/presentation/screens/notification_settings_screen.dart'
     deferred as notification_settings_screen;
-import 'package:kattrick/screens/profile/blocked_users_screen.dart';
-import 'package:kattrick/screens/profile/performance_breakdown_screen.dart'
+import 'package:kattrick/features/profile/presentation/screens/blocked_users_screen.dart';
+import 'package:kattrick/features/profile/presentation/screens/performance_breakdown_screen.dart'
     deferred as performance_breakdown_screen;
-import 'package:kattrick/screens/profile/hub_stats_screen.dart'
+import 'package:kattrick/features/profile/presentation/screens/hub_stats_screen.dart'
     deferred as hub_stats_screen;
-import 'package:kattrick/screens/location/discover_hubs_screen.dart'
+import 'package:kattrick/features/location/presentation/screens/discover_hubs_screen.dart'
     deferred as discover_hubs_screen;
-import 'package:kattrick/screens/location/map_screen.dart'
+import 'package:kattrick/features/location/presentation/screens/map_screen.dart'
     deferred as map_screen;
-import 'package:kattrick/screens/social/notifications_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/notifications_screen.dart'
     deferred as notifications_screen;
-import 'package:kattrick/screens/social/post_detail_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/post_detail_screen.dart'
     deferred as post_detail_screen;
-import 'package:kattrick/screens/social/following_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/following_screen.dart'
     deferred as following_screen;
-import 'package:kattrick/screens/social/followers_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/followers_screen.dart'
     deferred as followers_screen;
 import 'package:kattrick/screens/home/home_screen.dart';
 import 'package:kattrick/features/games/presentation/screens/game_chat_screen.dart'
     deferred as game_chat_screen;
 import 'package:kattrick/screens/community/community_screen.dart';
 
-import 'package:kattrick/screens/social/messages_list_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/messages_list_screen.dart'
     deferred as messages_list_screen;
-import 'package:kattrick/screens/social/private_chat_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/private_chat_screen.dart'
     deferred as private_chat_screen;
-import 'package:kattrick/screens/gamification/leaderboard_screen.dart'
+import 'package:kattrick/features/gamification/presentation/screens/leaderboard_screen.dart'
     deferred as leaderboard_screen;
 import 'package:kattrick/screens/splash/splash_screen.dart';
 import 'package:kattrick/screens/players/players_list_screen.dart'
@@ -85,8 +85,6 @@ import 'package:kattrick/screens/admin/admin_dashboard_screen.dart'
     deferred as admin_dashboard_screen;
 import 'package:kattrick/screens/admin/generate_dummy_data_screen.dart'
     deferred as generate_dummy_data_screen;
-import 'package:kattrick/features/hubs/presentation/screens/manage_roles_screen.dart'
-    deferred as manage_roles_screen;
 import 'package:kattrick/features/hubs/presentation/screens/hub_roles_screen.dart';
 import 'package:kattrick/features/hubs/presentation/screens/hub_settings_screen.dart';
 import 'package:kattrick/features/hubs/presentation/screens/custom_permissions_screen.dart'
@@ -97,32 +95,34 @@ import 'package:kattrick/features/hubs/presentation/screens/join_by_invite_scree
     deferred as join_by_invite_screen;
 import 'package:kattrick/features/games/presentation/screens/game_calendar_screen.dart'
     deferred as game_calendar_screen;
-import 'package:kattrick/screens/social/create_post_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/create_post_screen.dart'
     deferred as create_post_screen;
 import 'package:kattrick/features/hubs/presentation/screens/scouting_screen.dart'
     deferred as scouting_screen;
 import 'package:kattrick/features/hubs/presentation/screens/hub_players_list_screen_v2.dart'
     deferred as hub_players_list_screen;
+import 'package:kattrick/features/hubs/presentation/screens/hub_player_archive_screen.dart'
+    deferred as hub_player_archive_screen;
 import 'package:kattrick/features/hubs/presentation/screens/hub_rules_screen.dart'
     deferred as hub_rules_screen;
 import 'package:kattrick/features/hubs/presentation/screens/edit_game_screen.dart'
     deferred as edit_game_screen;
 import 'package:kattrick/features/hubs/presentation/screens/hub_manage_requests_screen.dart'
     deferred as hub_manage_requests_screen;
-import 'package:kattrick/screens/venue/venue_search_screen.dart'
+import 'package:kattrick/features/venues/presentation/screens/venue_search_screen.dart'
     deferred as venue_search_screen;
-import 'package:kattrick/screens/venue/create_manual_venue_screen.dart'
+import 'package:kattrick/features/venues/presentation/screens/create_manual_venue_screen.dart'
     deferred as create_manual_venue_screen;
 import 'package:kattrick/screens/venues/discover_venues_screen.dart'
     deferred as discover_venues_screen;
-import 'package:kattrick/screens/location/map_picker_screen.dart';
+import 'package:kattrick/features/location/presentation/screens/map_picker_screen.dart';
 import 'package:kattrick/features/games/presentation/screens/log_past_game_screen.dart'
     deferred as log_past_game_screen;
 import 'package:kattrick/features/hubs/presentation/screens/hub_analytics_screen.dart'
     deferred as hub_analytics_screen;
 import 'package:kattrick/features/hubs/presentation/screens/banned_users_screen.dart'
     deferred as banned_users_screen;
-import 'package:kattrick/screens/social/create_recruiting_post_screen.dart'
+import 'package:kattrick/features/social/presentation/screens/create_recruiting_post_screen.dart'
     deferred as create_recruiting_post_screen;
 import 'package:kattrick/screens/activity/community_activity_feed_screen.dart'
     deferred as community_activity_feed_screen;
@@ -481,7 +481,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppPaths.mapPicker,
         name: 'mapPicker',
         builder: (context, state) {
-          final initialLocation = state.extra as GeoPoint?;
+          final initialLocation = state.extra as GeographicPoint?;
           return MapPickerScreen(initialLocation: initialLocation);
         },
       ),
@@ -816,6 +816,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                       return hub_players_list_screen.HubPlayersListScreenV2(
                           hubId: hubId);
                     }),
+                routes: [
+                  GoRoute(
+                    path: 'archive',
+                    name: 'hubPlayersArchive',
+                    builder: (context, state) => LazyRouteLoader(
+                        loader: hub_player_archive_screen.loadLibrary(),
+                        builder: () {
+                          final hubId = state.pathParameters['id']!;
+                          return hub_player_archive_screen.HubPlayerArchiveScreen(
+                              hubId: hubId);
+                        }),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'log-past-game',

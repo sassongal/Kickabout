@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
-import 'package:kattrick/models/poll.dart';
+import 'package:kattrick/features/hubs/domain/models/poll.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 

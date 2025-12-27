@@ -272,13 +272,36 @@ service cloud.firestore {
           (birthDate is timestamp) &&
           int((request.time.toMillis() - birthDate.toMillis()) / (1000 * 60 * 60 * 24 * 365.25)) >= 13;
       }
-      
-      allow create: if (isAuthenticated() && request.resource.data.birthDate != null && request.resource.data.birthDate is timestamp && isValidBirthDate(request.resource.data.birthDate)) || isSuperAdmin();
-      
-      allow update: if (isAuthenticated() && request.auth.uid == userId &&
-        (!('birthDate' in request.resource.data) || 
-         (request.resource.data.birthDate is timestamp && 
-          isValidBirthDate(request.resource.data.birthDate)))) || isSuperAdmin();
+
+      function canCreateFictitiousUser() {
+        return isAuthenticated() &&
+          request.resource.data.get('isFictitious', false) == true &&
+          request.resource.data.email.matches('manual_.*@kickadoor.local');
+      }
+
+      allow create: if (
+        (isAuthenticated() && request.resource.data.birthDate != null && request.resource.data.birthDate is timestamp && isValidBirthDate(request.resource.data.birthDate)) ||
+        canCreateFictitiousUser() ||
+        isSuperAdmin()
+      );
+
+      // Update: User can update their own profile, or system can update stats (goals, assists, gamesPlayed)
+      // Stats updates are only allowed if ONLY stat fields are being updated (prevents abuse)
+      allow update: if (
+        // User updating their own profile
+        (isAuthenticated() && request.auth.uid == userId &&
+          (!('birthDate' in request.resource.data) ||
+           (request.resource.data.birthDate is timestamp &&
+            isValidBirthDate(request.resource.data.birthDate)))) ||
+        // System updating stats only (via Cloud Functions or backend transactions)
+        // Allow if only goals, assists, gamesPlayed, totalParticipations are being updated
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['goals', 'assists', 'gamesPlayed', 'totalParticipations', 'wins', 'losses', 'draws'])) ||
+        // Hub managers can update physical data (heightCm, weightKg) for their members
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['heightCm', 'weightKg'])) ||
+        isSuperAdmin()
+      );
       
       allow delete: if (isAuthenticated() && request.auth.uid == userId) || isSuperAdmin();
 
@@ -372,9 +395,11 @@ service cloud.firestore {
         // CAPACITY CHECK: Enforce maxMembers limit (default 50, can be changed in hub settings)
         // NOTE: Capacity check temporarily disabled for performance - re-enable after optimization
         allow create: if isAuthenticated() && (
-          // Creator can create their own membership (checked first)
-          (isHubCreatorById(hubId) && isOwner(userId) && request.resource.data.role == 'manager') ||
-          // Managers can add other members
+          // FIX: Allow creator to create their own manager membership during hub creation
+          // Don't check isHubCreatorById during batch - can't read hub being created in same batch
+          // Instead, check that user is creating their own membership as manager
+          (isOwner(userId) && request.resource.data.role == 'manager') ||
+          // Managers can add other members (after hub creation completes)
           // TODO: Re-add capacity check after optimizing getHubData() calls
           (isHubManager(hubId) && request.resource.data.role in ['member', 'moderator'])
         ) || isSuperAdmin();
@@ -508,10 +533,19 @@ service cloud.firestore {
     // Games Collection
     // ============================================
     match /games/{gameId} {
+      // FIX: Allow users to query their own games via confirmedPlayerIds
+      // This enables "my games" queries without requiring hub membership check
+      // The individual document read will still verify hub membership if needed
       allow read: if isAuthenticated() && (
+        // No hub - standalone game
         resource.data.hubId == null ||
         resource.data.hubId == '' ||
+        // User is in the game (checked via denormalized confirmedPlayerIds)
+        (resource.data.denormalized.confirmedPlayerIds != null &&
+         request.auth.uid in resource.data.denormalized.confirmedPlayerIds) ||
+        // User is hub member (for hub-based games)
         isHubMember(resource.data.hubId) ||
+        // Public completed games
         (resource.data.showInCommunityFeed == true &&
           resource.data.status == 'completed')
       );

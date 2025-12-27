@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:kattrick/models/player.dart';
-import 'package:kattrick/models/player_stats.dart';
+import 'package:kattrick/features/profile/domain/models/player.dart';
+import 'package:kattrick/features/profile/domain/models/player_stats.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/optimized_image.dart';

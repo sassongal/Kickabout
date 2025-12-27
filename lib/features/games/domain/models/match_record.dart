@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kattrick/models/converters/timestamp_converter.dart';
+import 'package:kattrick/shared/infrastructure/firestore/converters/timestamp_firestore_converter.dart';
 
 part 'match_record.freezed.dart';
 part 'match_record.g.dart';

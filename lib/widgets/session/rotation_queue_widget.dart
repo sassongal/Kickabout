@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kattrick/models/rotation_state.dart';
-import 'package:kattrick/models/team.dart';
+import 'package:kattrick/features/games/domain/models/rotation_state.dart';
+import 'package:kattrick/shared/domain/models/team.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/data/venues_repository.dart';
+import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/services/google_places_service.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/theme/premium_theme.dart';
@@ -181,9 +181,9 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
 
     // Return location data for manual selection
     Navigator.of(context).pop({
-      'location': GeoPoint(
-        _selectedPlace!.latitude,
-        _selectedPlace!.longitude,
+      'location': GeographicPoint(
+        latitude: _selectedPlace!.latitude,
+        longitude: _selectedPlace!.longitude,
       ),
       'name': _selectedPlace!.name,
       'address': _selectedPlace!.address,
@@ -195,7 +195,7 @@ class _DiscoverVenuesScreenState extends ConsumerState<DiscoverVenuesScreen> {
     setState(() => _isLoadingVenues = true);
 
     try {
-      final venuesRepo = VenuesRepository();
+      final venuesRepo = ref.read(venuesRepositoryProvider);
       final venues = await venuesRepo.getVenuesForMap();
 
       if (mounted) {

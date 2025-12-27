@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_role.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import 'package:kattrick/features/games/presentation/widgets/strategies/game_detail_sections.dart';
 
 class ActiveGameState extends StatelessWidget {

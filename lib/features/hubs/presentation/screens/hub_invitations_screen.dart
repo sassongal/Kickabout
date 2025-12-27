@@ -6,7 +6,7 @@ import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
 import 'package:kattrick/models/models.dart';
-import 'package:kattrick/models/hub_settings.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_settings.dart';
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
