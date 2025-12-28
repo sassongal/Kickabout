@@ -1462,6 +1462,33 @@ class DummyDataGenerator {
       throw Exception('Must be logged in to create scenario');
     }
 
+    // 1.1 Ensure current user exists in Firestore
+    final currentUserDoc = await firestore.doc(FirestorePaths.user(currentUser.uid)).get();
+    if (!currentUserDoc.exists) {
+      debugPrint('⚠️ Current user not found in Firestore. Creating user document...');
+      final location = _randomCoordinateNearHaifa();
+      final geohash = GeohashUtils.encode(location.latitude, location.longitude);
+      final physicalStats = _generatePhysicalStats();
+
+      final user = User(
+        uid: currentUser.uid,
+        name: currentUser.displayName ?? 'Test User',
+        email: currentUser.email ?? 'test@example.com',
+        preferredPosition: 'Midfielder',
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
+        currentRankScore: 7.5,
+        location: location,
+        geohash: geohash,
+        heightCm: physicalStats['height'],
+        weightKg: physicalStats['weight'],
+        createdAt: DateTime.now(),
+        availabilityStatus: 'available',
+      );
+
+      await firestore.doc(FirestorePaths.user(currentUser.uid)).set(user.toJson());
+      debugPrint('✅ Created user document for current user');
+    }
+
     final batch = firestore.batch();
     final hubId = firestore.collection('hubs').doc().id;
     final eventId =
@@ -1546,6 +1573,7 @@ class DummyDataGenerator {
     await batch.commit();
 
     // ARCHITECTURAL FIX: Use HubCreationService to create hub
+    // This automatically adds the creator (currentUser.uid) as the first member
     await _hubCreationService.createHub(hub);
 
     // ARCHITECTURAL FIX: Add dummy players through repository
@@ -1560,7 +1588,8 @@ class DummyDataGenerator {
       });
     }
 
-    // Update manager's rating
+    // Update current user's (manager's) rating
+    // HubCreationService already created the member document for current user
     await firestore
         .doc(FirestorePaths.hubMember(hubId, currentUser.uid))
         .update({
@@ -1584,11 +1613,21 @@ class DummyDataGenerator {
       status: 'upcoming',
     );
 
+    final eventData = event.toJson();
+    debugPrint('📝 Creating event at: ${FirestorePaths.hubEvent(hubId, eventId)}');
+    debugPrint('📝 Event data: ${eventData.keys.toList()}');
+
     await firestore
         .doc(FirestorePaths.hubEvent(hubId, eventId))
-        .set(event.toJson());
+        .set(eventData);
 
     debugPrint('✅ Scenario Created!');
+    debugPrint('   Hub ID: $hubId');
+    debugPrint('   Event ID: $eventId');
+    debugPrint('   Event Title: ${event.title}');
+    debugPrint('   Event Date: $eventDate');
+    debugPrint('   Registered Players: ${event.registeredPlayerIds.length}');
+
     return {
       'hubId': hubId,
       'eventId': eventId,
