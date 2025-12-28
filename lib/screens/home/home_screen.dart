@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kattrick/widgets/premium/bottom_navigation_bar.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/routing/app_paths.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
 
@@ -14,7 +13,6 @@ import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
-import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,6 +28,7 @@ import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
 import 'package:kattrick/widgets/home/bubble_menu.dart';
 import 'package:kattrick/widgets/home/hubs_carousel.dart';
 import 'package:kattrick/widgets/common/home_logo_button.dart';
+import 'package:kattrick/widgets/home/atmospheric_profile_header.dart';
 
 /// Premium Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly
@@ -98,7 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: PremiumColors.background,
         appBar: AppBar(
           title: const HomeLogoButton(
-            height: 40,
+            height: 56,
             padding: EdgeInsets.zero,
           ),
           backgroundColor: PremiumColors.surface,
@@ -194,21 +193,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Profile summary row at top (name, avatar, performance)
+                        // Atmospheric profile header with time-based backgrounds
                         if (user != null) ...[
-                          _ProfileSummaryCard(
+                          AtmosphericProfileHeader(
                             user: user,
                             currentUserId: currentUserId,
-                            gamificationStream: gamificationStream,
-                            onPerformanceTap: () => context
-                                .push('/profile/$currentUserId/performance'),
                           ),
                           const SizedBox(height: 16),
                         ],
-
-                        // Weather strip
-                        const HomeWeatherVibeWidget(),
-                        const SizedBox(height: 16),
 
                         // Next Game Spotlight Card - Shows upcoming game/event
                         NextGameSpotlightCard(userId: currentUserId),
@@ -523,8 +515,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String currentUserId,
   ) {
     return AppBar(
+      toolbarHeight: 72, // Increased from default 56
       title: const HomeLogoButton(
-        height: 40,
+        height: 60, // Premium size for main logo
         padding: EdgeInsets.zero,
       ),
       backgroundColor: PremiumColors.surface,
@@ -539,56 +532,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
       actions: [
-        // Inbox icon
-        IconButton(
-          icon: const Icon(Icons.inbox_outlined),
+        // Inbox icon - Premium style
+        _PremiumIconButton(
+          icon: Icons.inbox_outlined,
           onPressed: () => context.push('/messages'),
           tooltip: 'הודעות',
-          color: PremiumColors.textSecondary,
         ),
         // Stopwatch/Countdown Timer
         const StopwatchCountdownWidget(),
-        // Discover icon
-        IconButton(
-          icon: const Icon(Icons.explore_outlined),
+        // Discover icon - Premium style
+        _PremiumIconButton(
+          icon: Icons.explore_outlined,
           onPressed: () => context.push('/discover'),
           tooltip: 'גלה הובים',
-          color: PremiumColors.textSecondary,
         ),
-        // Leaderboard icon
-        IconButton(
-          icon: const Icon(Icons.emoji_events_outlined),
+        // Leaderboard icon - Premium style
+        _PremiumIconButton(
+          icon: Icons.emoji_events_outlined,
           onPressed: () => context.push('/leaderboard'),
           tooltip: 'שולחן מובילים',
-          color: PremiumColors.textSecondary,
         ),
-        // Notifications icon with badge
+        // Notifications icon with badge - Premium style
         StreamBuilder<int>(
           stream: unreadCountStream,
           builder: (context, snapshot) {
             final count = snapshot.data ?? 0;
-            return Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: () => context.push('/notifications'),
-                  tooltip: 'התראות',
-                  color: PremiumColors.textSecondary,
-                ),
-                if (count > 0)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: PremiumColors.error,
-                        shape: BoxShape.circle,
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _PremiumIconButton(
+                    icon: Icons.notifications_outlined,
+                    onPressed: () => context.push('/notifications'),
+                    tooltip: 'התראות',
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: PremiumColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: PremiumColors.surface,
+                            width: 2,
+                          ),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Center(
+                          child: Text(
+                            count > 9 ? '9+' : count.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             );
           },
         ),
@@ -791,91 +801,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-/// Weather & Vibe Widget for Home Screen
-class HomeWeatherVibeWidget extends ConsumerWidget {
-  const HomeWeatherVibeWidget({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final dashboardData = ref.watch(homeDashboardDataProvider);
-
-    return dashboardData.when(
-      data: (data) {
-        final vibeMessage =
-            data['vibeMessage'] as String? ?? 'יום טוב לכדורגל!';
-        final temp = data['temperature'] as int?;
-        final aqi = data['aqiIndex'] as int?;
-
-        return PremiumCard(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          onTap: () => context.push(AppPaths.weatherDetail),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // 1. Vibe Message (משמאל, תופס את רוב המקום)
-              Expanded(
-                child: Text(
-                  vibeMessage,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: PremiumColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // 2. Data Icons (מימין, קומפקטי)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // טמפרטורה
-                  if (temp != null) ...[
-                    Icon(
-                      Icons.thermostat,
-                      size: 16,
-                      color: PremiumColors.primary.withValues(alpha: 0.8),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$temp°',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: PremiumColors.textSecondary,
-                          ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  // איכות אוויר
-                  if (aqi != null) ...[
-                    Icon(
-                      Icons.air,
-                      size: 16,
-                      color: PremiumColors.secondary.withValues(alpha: 0.8),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$aqi',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: PremiumColors.textSecondary,
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-      loading: () => const SkeletonLoader(height: 100),
-      error: (err, stack) => PremiumEmptyState(
-        icon: Icons.cloud_off,
-        title: 'שגיאה בטעינת נתוני מזג אוויר',
-        message: 'לא ניתן לטעון את נתוני מזג האוויר כרגע',
-      ),
-    );
-  }
-}
 
 /// Location Toggle Button for AppBar
 /// Supports GPS mode and Manual Location mode
@@ -1124,115 +1049,64 @@ class _LocationToggleButtonState extends ConsumerState<_LocationToggleButton> {
   }
 }
 
-class _ProfileSummaryCard extends StatelessWidget {
-  final User user;
-  final String currentUserId;
-  final Stream<Gamification?> gamificationStream;
-  final VoidCallback onPerformanceTap;
+/// Premium Icon Button - עיצוב פרימיום לאייקונים ב-AppBar
+class _PremiumIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String tooltip;
 
-  const _ProfileSummaryCard({
-    required this.user,
-    required this.currentUserId,
-    required this.gamificationStream,
-    required this.onPerformanceTap,
+  const _PremiumIconButton({
+    required this.icon,
+    required this.onPressed,
+    required this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
-    return PremiumCard(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          // Compact Avatar with Edit Button
-          GestureDetector(
-            onTap: () => _showAvatarPicker(context, user, currentUserId),
-            child: Stack(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: PremiumColors.primaryGradient,
-                  ),
-                  padding: const EdgeInsets.all(2),
-                  child: PlayerAvatar(
-                    user: user,
-                    size: AvatarSize.md,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Tooltip(
+            message: tooltip,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    PremiumColors.surfaceVariant.withValues(alpha: 0.5),
+                    PremiumColors.surface.withValues(alpha: 0.3),
+                  ],
                 ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: PremiumColors.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.edit,
-                      size: 10,
-                      color: Colors.white,
-                    ),
-                  ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: PremiumColors.primary.withValues(alpha: 0.15),
+                  width: 1,
                 ),
-              ],
+                boxShadow: [
+                  BoxShadow(
+                    color: PremiumColors.primary.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                icon,
+                size: 26,
+                color: PremiumColors.primary,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          // Name and City
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  user.displayName ?? user.name,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF212121),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (user.city != null && user.city!.isNotEmpty)
-                  Text(
-                    user.city!,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: const Color(0xFF757575),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Performance Button - Compact
-          OutlinedButton.icon(
-            onPressed: onPerformanceTap,
-            icon: const Icon(Icons.analytics_outlined, size: 18),
-            label: const Text('ביצועים'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
-
-  void _showAvatarPicker(BuildContext context, User user, String userId) {
-    // Navigate to edit profile screen to change avatar
-    context.push('/profile/$userId/edit');
-  }
 }
+

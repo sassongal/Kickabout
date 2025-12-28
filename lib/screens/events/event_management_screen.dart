@@ -30,79 +30,11 @@ class EventManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
-  final _weatherService = WeatherService();
-  WeatherData? _weatherData;
-  bool _isLoadingWeather = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadWeather();
-  }
-
-  Future<void> _loadWeather() async {
-    setState(() => _isLoadingWeather = true);
-
-    try {
-      final eventsRepo = ref.read(hubEventsRepositoryProvider);
-      final event = await eventsRepo.getHubEvent(widget.hubId, widget.eventId);
-
-      if (event?.locationPoint != null) {
-        final weather = await _weatherService.getWeatherForDate(
-          latitude: event!.locationPoint!.latitude,
-          longitude: event.locationPoint!.longitude,
-          date: event.eventDate,
-        );
-
-        if (mounted) {
-          setState(() {
-            _weatherData = weather;
-            _isLoadingWeather = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() => _isLoadingWeather = false);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingWeather = false);
-      }
-    }
-  }
-
-  void _navigateToTeamGenerator(List<User> players) {
-    if (players.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('נדרשים לפחות 6 שחקנים ליצירת קבוצות')),
-      );
-      return;
-    }
-
-    // Navigate to team generator config screen
-    context.go('/hubs/${widget.hubId}/events/${widget.eventId}/team-generator/config');
-  }
-
-  Future<void> _navigateToLocation(double latitude, double longitude) async {
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('לא ניתן לפתוח ניווט')),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final eventsRepo = ref.watch(hubEventsRepositoryProvider);
     final usersRepo = ref.watch(usersRepositoryProvider);
-    final hubsRepo = ref.watch(hubsRepositoryProvider);
 
     return PremiumScaffold(
       title: 'ניהול אירוע',
@@ -114,7 +46,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
             final event = snapshot.data;
             final isEventOngoing = event != null &&
                 (event.isStarted || event.status == 'ongoing');
-            
+
             if (isEventOngoing) {
               return IconButton(
                 icon: const Icon(Icons.sports_soccer),
@@ -141,51 +73,177 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
             return const Center(child: Text('אירוע לא נמצא'));
           }
 
-          return FutureBuilder<Hub?>(
-            future: hubsRepo.getHub(widget.hubId),
-            builder: (context, hubSnapshot) {
-              final hub = hubSnapshot.data;
-
-              return FutureBuilder<List<User>>(
-                future: _fetchRegisteredPlayers(
-                    event.registeredPlayerIds, usersRepo),
-                builder: (context, playersSnapshot) {
-                  final players = playersSnapshot.data ?? [];
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Event Details Card
-                        _buildEventDetailsCard(event),
-                        const SizedBox(height: 16),
-
-                        // Weather Forecast Card
-                        if (event.locationPoint != null)
-                          _buildWeatherCard(event),
-                        const SizedBox(height: 16),
-
-                        // Registered Players Card
-                        _buildRegisteredPlayersCard(event, players, hub),
-                        const SizedBox(height: 16),
-
-                        // Teams Section - always show
-                        _buildTeamsCard(event, players, hub),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
+          // Use FutureProvider to prevent rebuild loops
+          return _EventManagementContent(
+            hubId: widget.hubId,
+            event: event,
+            usersRepo: usersRepo,
           );
         },
       ),
     );
   }
 
-  Widget _buildEventDetailsCard(HubEvent event) {
+}
+
+/// Separated widget to prevent rebuild loops caused by nested FutureBuilders
+class _EventManagementContent extends ConsumerStatefulWidget {
+  final String hubId;
+  final HubEvent event;
+  final UsersRepository usersRepo;
+
+  const _EventManagementContent({
+    required this.hubId,
+    required this.event,
+    required this.usersRepo,
+  });
+
+  @override
+  ConsumerState<_EventManagementContent> createState() => _EventManagementContentState();
+}
+
+class _EventManagementContentState extends ConsumerState<_EventManagementContent> {
+  Hub? _cachedHub;
+  List<User>? _cachedPlayers;
+  bool _isLoadingHub = true;
+  bool _isLoadingPlayers = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void didUpdateWidget(_EventManagementContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only reload if event's registered players changed
+    if (oldWidget.event.registeredPlayerIds != widget.event.registeredPlayerIds) {
+      _loadPlayers();
+    }
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([
+      _loadHub(),
+      _loadPlayers(),
+    ]);
+  }
+
+  Future<void> _loadHub() async {
+    if (!mounted) return;
+    setState(() => _isLoadingHub = true);
+
+    try {
+      final hubsRepo = ref.read(hubsRepositoryProvider);
+      final hub = await hubsRepo.getHub(widget.hubId);
+      if (mounted) {
+        setState(() {
+          _cachedHub = hub;
+          _isLoadingHub = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingHub = false);
+      }
+    }
+  }
+
+  Future<void> _loadPlayers() async {
+    if (!mounted) return;
+    setState(() => _isLoadingPlayers = true);
+
+    try {
+      final players = await _fetchRegisteredPlayers(
+        widget.event.registeredPlayerIds,
+        widget.usersRepo,
+      );
+      if (mounted) {
+        setState(() {
+          _cachedPlayers = players;
+          _isLoadingPlayers = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingPlayers = false);
+      }
+    }
+  }
+
+  Future<List<User>> _fetchRegisteredPlayers(
+    List<String> playerIds,
+    UsersRepository usersRepo,
+  ) async {
+    final players = <User>[];
+    for (final playerId in playerIds) {
+      final user = await usersRepo.getUser(playerId);
+      if (user != null) {
+        players.add(user);
+      }
+    }
+    return players;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoadingHub || _isLoadingPlayers) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final players = _cachedPlayers ?? [];
+    final hub = _cachedHub;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Event Details Card
+          _EventDetailsCard(event: widget.event, hubId: widget.hubId),
+          const SizedBox(height: 16),
+
+          // Weather Forecast Card
+          if (widget.event.locationPoint != null)
+            _WeatherCard(event: widget.event),
+          const SizedBox(height: 16),
+
+          // Registered Players Card
+          _RegisteredPlayersCard(
+            event: widget.event,
+            players: players,
+            hub: hub,
+            hubId: widget.hubId,
+          ),
+          const SizedBox(height: 16),
+
+          // Teams Section - always show
+          _TeamsCard(
+            event: widget.event,
+            players: players,
+            hub: hub,
+            hubId: widget.hubId,
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+/// Event Details Card Widget
+class _EventDetailsCard extends ConsumerWidget {
+  final HubEvent event;
+  final String hubId;
+
+  const _EventDetailsCard({
+    required this.event,
+    required this.hubId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'he');
 
     return Card(
@@ -209,8 +267,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit, size: 20),
                   onPressed: () {
-                    context.push(
-                        '/hubs/${widget.hubId}/events/${widget.eventId}/edit');
+                    context.push('/hubs/$hubId/events/${event.eventId}/edit');
                   },
                   tooltip: 'ערוך אירוע',
                   padding: EdgeInsets.zero,
@@ -226,7 +283,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 const Icon(Icons.access_time, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
-                  // Wrap with Expanded to prevent overflow
                   child: Text(
                     dateFormat.format(event.eventDate),
                     style: PremiumTypography.bodyLarge,
@@ -252,6 +308,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                     IconButton(
                       icon: const Icon(Icons.navigation),
                       onPressed: () => _navigateToLocation(
+                        context,
                         event.locationPoint!.latitude,
                         event.locationPoint!.longitude,
                       ),
@@ -293,7 +350,99 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     );
   }
 
-  Widget _buildWeatherCard(HubEvent event) {
+  Future<void> _navigateToLocation(BuildContext context, double latitude, double longitude) async {
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('לא ניתן לפתוח ניווט')),
+        );
+      }
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'upcoming':
+        return PremiumColors.primary;
+      case 'ongoing':
+        return PremiumColors.success;
+      case 'completed':
+        return PremiumColors.textSecondary;
+      case 'cancelled':
+        return PremiumColors.error;
+      default:
+        return PremiumColors.textSecondary;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'upcoming':
+        return 'קרוב';
+      case 'ongoing':
+        return 'בעיצומו';
+      case 'completed':
+        return 'הסתיים';
+      case 'cancelled':
+        return 'בוטל';
+      default:
+        return status;
+    }
+  }
+}
+
+/// Weather Card Widget
+class _WeatherCard extends StatefulWidget {
+  final HubEvent event;
+
+  const _WeatherCard({required this.event});
+
+  @override
+  State<_WeatherCard> createState() => _WeatherCardState();
+}
+
+class _WeatherCardState extends State<_WeatherCard> {
+  final _weatherService = WeatherService();
+  WeatherData? _weatherData;
+  bool _isLoadingWeather = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWeather();
+  }
+
+  Future<void> _loadWeather() async {
+    if (widget.event.locationPoint == null) return;
+
+    setState(() => _isLoadingWeather = true);
+
+    try {
+      final weather = await _weatherService.getWeatherForDate(
+        latitude: widget.event.locationPoint!.latitude,
+        longitude: widget.event.locationPoint!.longitude,
+        date: widget.event.eventDate,
+      );
+
+      if (mounted) {
+        setState(() {
+          _weatherData = weather;
+          _isLoadingWeather = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingWeather = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -305,7 +454,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 Icon(Icons.wb_sunny, color: PremiumColors.warning),
                 const SizedBox(width: 12),
                 Expanded(
-                  // Wrap with Expanded to prevent overflow
                   child: Text(
                     'תחזית מזג אוויר',
                     style: PremiumTypography.labelLarge,
@@ -381,8 +529,49 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
     );
   }
 
-  Widget _buildRegisteredPlayersCard(
-      HubEvent event, List<User> players, Hub? hub) {
+  Color _getWeatherRecommendationColor(WeatherData weather) {
+    if (weather.temperature > 30 || weather.temperature < 5) {
+      return PremiumColors.error;
+    } else if (weather.weatherCode >= 61 && weather.weatherCode <= 67) {
+      return PremiumColors.warning;
+    } else if (weather.weatherCode >= 95) {
+      return PremiumColors.error;
+    } else {
+      return PremiumColors.success;
+    }
+  }
+
+  IconData _getWeatherIcon(WeatherData weather) {
+    if (weather.weatherCode >= 95) {
+      return Icons.thunderstorm;
+    } else if (weather.weatherCode >= 71) {
+      return Icons.ac_unit;
+    } else if (weather.weatherCode >= 61) {
+      return Icons.water_drop;
+    } else if (weather.weatherCode == 0) {
+      return Icons.wb_sunny;
+    } else {
+      return Icons.cloud;
+    }
+  }
+}
+
+/// Registered Players Card Widget
+class _RegisteredPlayersCard extends ConsumerWidget {
+  final HubEvent event;
+  final List<User> players;
+  final Hub? hub;
+  final String hubId;
+
+  const _RegisteredPlayersCard({
+    required this.event,
+    required this.players,
+    required this.hub,
+    required this.hubId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -394,7 +583,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 Icon(Icons.people, color: PremiumColors.primary),
                 const SizedBox(width: 12),
                 Expanded(
-                  // Wrap with Expanded to prevent overflow
                   child: Text(
                     'שחקנים רשומים (${players.length}/${event.maxParticipants})',
                     style: PremiumTypography.labelLarge,
@@ -418,7 +606,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (context, index) {
                   final player = players[index];
-                  // Use system rating for display (managerRating would require async fetch)
                   final displayRating = player.currentRankScore;
 
                   return ListTile(
@@ -456,28 +643,44 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
 
             // Add recruiting post button if user has permission and event has spots
             const SizedBox(height: 16),
-            _buildRecruitingPostButton(event, players),
+            _RecruitingPostButton(
+              event: event,
+              players: players,
+              hubId: hubId,
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildRecruitingPostButton(HubEvent event, List<User> players) {
+/// Recruiting Post Button Widget
+class _RecruitingPostButton extends ConsumerWidget {
+  final HubEvent event;
+  final List<User> players;
+  final String hubId;
+
+  const _RecruitingPostButton({
+    required this.event,
+    required this.players,
+    required this.hubId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentUserId = ref.watch(currentUserIdProvider);
     if (currentUserId == null) return const SizedBox.shrink();
 
     final availableSpots = event.maxParticipants - players.length;
     final isUpcoming = event.status == 'upcoming';
 
-    // Check permissions
     final hubPermissionsAsync = ref.watch(
-      hubPermissionsProvider((hubId: widget.hubId, userId: currentUserId))
+      hubPermissionsProvider((hubId: hubId, userId: currentUserId))
     );
 
     return hubPermissionsAsync.when(
       data: (permissions) {
-        // Only show if user can create posts, event is upcoming, and has spots
         if (!permissions.canCreatePosts || !isUpcoming || availableSpots <= 0) {
           return const SizedBox.shrink();
         }
@@ -486,7 +689,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () {
-              context.push('/hubs/${widget.hubId}/create-recruiting-post');
+              context.push('/hubs/$hubId/create-recruiting-post');
             },
             icon: const Icon(Icons.group_add),
             label: Text('מחפש $availableSpots שחקנים'),
@@ -502,8 +705,24 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
       error: (_, __) => const SizedBox.shrink(),
     );
   }
+}
 
-  Widget _buildTeamsCard(HubEvent event, List<User> players, Hub? hub) {
+/// Teams Card Widget
+class _TeamsCard extends ConsumerWidget {
+  final HubEvent event;
+  final List<User> players;
+  final Hub? hub;
+  final String hubId;
+
+  const _TeamsCard({
+    required this.event,
+    required this.players,
+    required this.hub,
+    required this.hubId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -536,8 +755,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                 stream: ref.read(gamesRepositoryProvider).watchGame(event.gameId!),
                 builder: (context, gameSnapshot) {
                   final game = gameSnapshot.data;
-
-                  // Check if session is active
                   final isSessionActive = game?.session.isActive ?? false;
                   final hasSessionEnded = game?.session.sessionEndedAt != null;
 
@@ -547,9 +764,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // Navigate to GameSessionScreen
                           context.push(
-                            '/hubs/${widget.hubId}/events/${widget.eventId}/game-session',
+                            '/hubs/$hubId/events/${event.eventId}/game-session',
                           );
                         },
                         icon: Icon(
@@ -585,14 +801,12 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
               ),
             ],
 
-            // Show teams if they exist - Compact display with player names
+            // Show teams if they exist
             if (event.teams.isNotEmpty) ...[
               ...event.teams.asMap().entries.map((entry) {
                 final index = entry.key;
                 final team = entry.value;
                 final teamColor = _getTeamColor(team.name);
-                
-                // Get player names from the players list
                 final teamPlayers = players.where((p) => team.playerIds.contains(p.uid)).toList();
 
                 return Padding(
@@ -600,7 +814,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Team header with color indicator
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
@@ -641,7 +854,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Player names list
                       ...teamPlayers.map((player) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 4),
@@ -670,9 +882,7 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                   ),
                 );
               }),
-            ]
-            // Show message if no teams selected yet
-            else ...[
+            ] else ...[
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -691,10 +901,17 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      // Show generate teams button if enough players
                       if (hub != null && players.length >= 6)
                         ElevatedButton.icon(
-                          onPressed: () => _navigateToTeamGenerator(players),
+                          onPressed: () {
+                            if (players.length < 6) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('נדרשים לפחות 6 שחקנים ליצירת קבוצות')),
+                              );
+                              return;
+                            }
+                            context.go('/hubs/$hubId/events/${event.eventId}/team-generator/config');
+                          },
                           icon: const Icon(Icons.group_work),
                           label: const Text('יצירת כוחות'),
                           style: ElevatedButton.styleFrom(
@@ -722,76 +939,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
         ),
       ),
     );
-  }
-
-  Future<List<User>> _fetchRegisteredPlayers(
-    List<String> playerIds,
-    UsersRepository usersRepo,
-  ) async {
-    final players = <User>[];
-    for (final playerId in playerIds) {
-      final user = await usersRepo.getUser(playerId);
-      if (user != null) {
-        players.add(user);
-      }
-    }
-    return players;
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'upcoming':
-        return PremiumColors.primary;
-      case 'ongoing':
-        return PremiumColors.success;
-      case 'completed':
-        return PremiumColors.textSecondary;
-      case 'cancelled':
-        return PremiumColors.error;
-      default:
-        return PremiumColors.textSecondary;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'upcoming':
-        return 'קרוב';
-      case 'ongoing':
-        return 'בעיצומו';
-      case 'completed':
-        return 'הסתיים';
-      case 'cancelled':
-        return 'בוטל';
-      default:
-        return status;
-    }
-  }
-
-  Color _getWeatherRecommendationColor(WeatherData weather) {
-    if (weather.temperature > 30 || weather.temperature < 5) {
-      return PremiumColors.error;
-    } else if (weather.weatherCode >= 61 && weather.weatherCode <= 67) {
-      return PremiumColors.warning;
-    } else if (weather.weatherCode >= 95) {
-      return PremiumColors.error;
-    } else {
-      return PremiumColors.success;
-    }
-  }
-
-  IconData _getWeatherIcon(WeatherData weather) {
-    if (weather.weatherCode >= 95) {
-      return Icons.thunderstorm;
-    } else if (weather.weatherCode >= 71) {
-      return Icons.ac_unit;
-    } else if (weather.weatherCode >= 61) {
-      return Icons.water_drop;
-    } else if (weather.weatherCode == 0) {
-      return Icons.wb_sunny;
-    } else {
-      return Icons.cloud;
-    }
   }
 
   Color _getTeamColor(String teamName) {

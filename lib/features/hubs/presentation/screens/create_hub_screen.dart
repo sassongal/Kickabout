@@ -309,6 +309,7 @@ class _CreateHubScreenState extends ConsumerState<CreateHubScreen> {
         mainVenueId: _mainVenueId,
         primaryVenueId: _mainVenueId,
         primaryVenueLocation: location,
+        profileImageUrl: 'assets/images/HubDefault.png', // Default hub image
         logoUrl: null, // Will be updated after upload (if available)
       );
 

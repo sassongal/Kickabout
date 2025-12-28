@@ -18,7 +18,7 @@ class PremiumBottomNavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 32),
       color: Colors.transparent,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),

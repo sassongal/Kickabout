@@ -138,7 +138,7 @@ class _BubbleMenuState extends State<BubbleMenu>
 
         // הכפתור הראשי - צף משמאל למטה עם אפקט זכוכיתי
         Positioned(
-          bottom: 16,
+          bottom: 28,
           left: 16,
           child: GestureDetector(
             onTap: _toggleMenu,
