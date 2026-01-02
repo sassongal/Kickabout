@@ -903,4 +903,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get temp => 'temp';
+
+  @override
+  String get welcome_message_1_premium =>
+      '✨ Welcome to the family! Let\'s hit the field';
+
+  @override
+  String get welcome_message_2_premium =>
+      '🔥 Ready to showcase your skills? Time to shine!';
+
+  @override
+  String get welcome_message_3_premium =>
+      '⚡ Your next-level game platform starts here';
+
+  @override
+  String get welcome_message_4_premium =>
+      '🏆 Your team is waiting - let\'s make history together';
+
+  @override
+  String get welcome_message_5_premium =>
+      '🎯 From dream to field - your journey starts now';
+
+  @override
+  String get noUpcomingEvents => 'No upcoming events';
+
+  @override
+  String get signUpOrCreateEvent => 'Sign up for a game or create a new event';
+
+  @override
+  String get startsIn => 'Starts in';
+
+  @override
+  String get allMyEvents => 'All my events';
+
+  @override
+  String get organizer => 'Organizer';
+
+  @override
+  String get userFallback => 'User';
+
+  @override
+  String get eventLabel => 'Event';
+
+  @override
+  String get gameLabel => 'Game';
+
+  @override
+  String get startEvent => 'Start event';
 }

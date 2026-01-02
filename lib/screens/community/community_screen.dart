@@ -9,6 +9,7 @@ import 'package:kattrick/widgets/app_scaffold.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/skeleton_loader.dart';
 import 'package:kattrick/utils/city_utils.dart';
+import 'package:kattrick/widgets/community/community_welcome_card.dart';
 
 /// Community screen showing hub recruiting posts and public games
 class CommunityScreen extends ConsumerStatefulWidget {
@@ -98,12 +99,11 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         final recruitingStream = _cachedRecruitingStream!;
         final publicGamesStream = _cachedPublicGamesStream!;
 
-        final hasFilters = (_selectedRegion != null &&
-                _selectedRegion!.isNotEmpty) ||
-            (_selectedCity != null && _selectedCity!.isNotEmpty);
+        final hasFilters =
+            (_selectedRegion != null && _selectedRegion!.isNotEmpty) ||
+                (_selectedCity != null && _selectedCity!.isNotEmpty);
 
-        final headerText = effectiveRegion != null &&
-                effectiveRegion.isNotEmpty
+        final headerText = effectiveRegion != null && effectiveRegion.isNotEmpty
             ? (effectiveCity != null && effectiveCity.isNotEmpty
                 ? 'תוכן לפי אזור: $effectiveRegion • $effectiveCity'
                 : 'תוכן לפי אזור: $effectiveRegion')
@@ -197,9 +197,12 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
 
                         return ListView.builder(
                           padding: const EdgeInsets.all(12),
-                          itemCount: items.length,
+                          itemCount: items.length + 1, // +1 for Welcome Card
                           itemBuilder: (context, index) {
-                            final item = items[index];
+                            if (index == 0) {
+                              return const CommunityWelcomeCard();
+                            }
+                            final item = items[index - 1];
                             return item.when(
                               recruiting: (post) => _RecruitingCard(post: post),
                               game: (game) => _GameCard(game: game),

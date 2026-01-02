@@ -7,11 +7,11 @@ import 'package:kattrick/theme/premium_theme.dart';
 /// Each mode configures the map for a specific use case with customized
 /// markers, filters, and performance limits.
 enum MapMode {
-  /// Venue discovery mode - find and select football venues
-  findVenues,
-
   /// Hub discovery mode - explore nearby football communities
   exploreHubs,
+
+  /// Venue discovery mode - find and select football venues
+  findVenues,
 
   /// Game discovery mode - find active and upcoming matches
   exploreGames;
@@ -56,7 +56,7 @@ enum MapMode {
   double get defaultRadius {
     switch (this) {
       case MapMode.findVenues:
-        return 10.0; // Venues: 10km (local search)
+        return 15.0; // Venues: 15km (broader search)
       case MapMode.exploreHubs:
         return 5.0; // Hubs: 5km (tight community)
       case MapMode.exploreGames:
@@ -71,7 +71,7 @@ enum MapMode {
   int get maxInitialResults {
     switch (this) {
       case MapMode.findVenues:
-        return 10; // Limit venues for performance
+        return 50; // Increased limit for better discovery
       case MapMode.exploreHubs:
         return 20; // Show more hubs (less data per item)
       case MapMode.exploreGames:

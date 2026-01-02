@@ -15,6 +15,8 @@ import 'package:kattrick/utils/stopwatch_utility.dart';
 import 'package:kattrick/features/games/presentation/screens/fullscreen_stopwatch_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
+import 'package:kattrick/features/games/domain/models/rotation_state.dart';
+import 'package:kattrick/features/games/domain/models/session_rotation.dart';
 
 class LiveMatchScreen extends ConsumerStatefulWidget {
   final String hubId;
@@ -54,6 +56,12 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
 
   // Stream subscription for live state
   StreamSubscription<Map<String, dynamic>?>? _liveStateSubscription;
+
+  // New: Rotation state
+  RotationState? _rotationState;
+
+  // New: Countdown mode
+  bool _isCountdownMode = false;
 
   @override
   void initState() {
@@ -186,25 +194,32 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
             // Restore selected teams
             final teamAId = liveState['selectedTeamAId'] as String?;
             final teamBId = liveState['selectedTeamBId'] as String?;
+            _rotationState = liveState['rotationState'] as RotationState?;
 
-            if (teamAId != null && _teams.isNotEmpty) {
-              try {
-                _selectedTeamA = _teams.firstWhere((t) => t.teamId == teamAId);
-              } catch (e) {
+            if (_rotationState != null) {
+              _updateTeamsFromRotation();
+            } else {
+              if (teamAId != null && _teams.isNotEmpty) {
+                try {
+                  _selectedTeamA =
+                      _teams.firstWhere((t) => t.teamId == teamAId);
+                } catch (e) {
+                  _selectedTeamA = _teams[0];
+                }
+              } else if (_teams.length >= 1) {
                 _selectedTeamA = _teams[0];
               }
-            } else if (_teams.length >= 1) {
-              _selectedTeamA = _teams[0];
-            }
 
-            if (teamBId != null && _teams.length > 1) {
-              try {
-                _selectedTeamB = _teams.firstWhere((t) => t.teamId == teamBId);
-              } catch (e) {
-                _selectedTeamB = _teams.length > 1 ? _teams[1] : null;
+              if (teamBId != null && _teams.length > 1) {
+                try {
+                  _selectedTeamB =
+                      _teams.firstWhere((t) => t.teamId == teamBId);
+                } catch (e) {
+                  _selectedTeamB = _teams.length > 1 ? _teams[1] : null;
+                }
+              } else if (_teams.length >= 2) {
+                _selectedTeamB = _teams[1];
               }
-            } else if (_teams.length >= 2) {
-              _selectedTeamB = _teams[1];
             }
 
             // Resume stopwatch if it was running
@@ -280,6 +295,13 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
             }
           }
 
+          // Update rotation state
+          final remoteRotationJson = liveState['rotationState'];
+          if (remoteRotationJson != null) {
+            _rotationState = remoteRotationJson as RotationState;
+            _updateTeamsFromRotation();
+          }
+
           // Update stopwatch state if changed remotely
           final remoteIsRunning = liveState['isRunning'] as bool? ?? false;
           final remoteElapsed = liveState['elapsedOffsetSeconds'] as int? ?? 0;
@@ -330,6 +352,7 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
         scoreB: _scoreB,
         selectedTeamAId: _selectedTeamA?.teamId,
         selectedTeamBId: _selectedTeamB?.teamId,
+        rotationState: _rotationState,
       );
     } catch (e) {
       debugPrint('Error saving live state: $e');
@@ -392,24 +415,8 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                 _startTimestamp = null;
                 _elapsedOffsetSeconds = 0;
 
-                // Winner Stays Logic
-                Team? winner;
-                Team? loser;
-
-                if (record.scoreA > record.scoreB) {
-                  winner = _selectedTeamA;
-                  loser = _selectedTeamB;
-                } else if (record.scoreB > record.scoreA) {
-                  winner = _selectedTeamB;
-                  loser = _selectedTeamA;
-                } else {
-                  // Draw - must select winner (handled in dialog)
-                  // For now, keep both teams
-                  return;
-                }
-
                 // Apply Winner Stays rotation
-                _applyWinnerStaysRotation(winner: winner!, loser: loser!);
+                _applyWinnerStaysRotation(record);
               });
 
               // Clear live state after match is saved
@@ -423,6 +430,7 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                 scoreB: 0,
                 selectedTeamAId: _selectedTeamA?.teamId,
                 selectedTeamBId: _selectedTeamB?.teamId,
+                rotationState: _rotationState,
               );
 
               SnackbarHelper.showSuccess(context, 'המשחק נשמר בהצלחה!');
@@ -440,42 +448,45 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
     );
   }
 
-  /// Apply Winner Stays rotation logic:
-  /// 1. Winner stays on field (becomes Team A for next game)
-  /// 2. Loser goes to back of queue
-  /// 3. Next team in queue enters (becomes Team B)
-  void _applyWinnerStaysRotation({required Team winner, required Team loser}) {
-    if (_teams.length < 2) return; // Need at least 2 teams
+  /// Apply Winner Stays rotation logic using SessionRotationLogic
+  void _applyWinnerStaysRotation(MatchResult completedMatch) {
+    if (_teams.length < 2) return;
 
-    // Get current playing teams
-    final playingTeams =
-        [_selectedTeamA, _selectedTeamB].whereType<Team>().toList();
+    // Initialize rotation state if not already set
+    if (_rotationState == null) {
+      // Reorder teams so currently selected teams are first in the rotation
+      final otherTeams = _teams
+          .where((t) =>
+              t.teamId != _selectedTeamA?.teamId &&
+              t.teamId != _selectedTeamB?.teamId)
+          .toList();
 
-    // Find waiting teams (not currently playing)
-    final waitingTeams =
-        _teams.where((t) => !playingTeams.contains(t)).toList();
+      final orderedTeams = [
+        if (_selectedTeamA != null) _selectedTeamA!,
+        if (_selectedTeamB != null) _selectedTeamB!,
+        ...otherTeams,
+      ];
 
-    // Winner stays as Team A
-    _selectedTeamA = winner;
-
-    // Loser goes to back of queue (we'll rotate the teams list)
-    // Move loser to end of _teams list
-    final teamsCopy = List<Team>.from(_teams);
-    teamsCopy.remove(loser);
-    teamsCopy.add(loser);
-    _teams = teamsCopy;
-
-    // Next team in queue becomes Team B
-    if (waitingTeams.isNotEmpty) {
-      // Get the first waiting team (next in queue)
-      _selectedTeamB = waitingTeams.first;
-    } else {
-      // No waiting teams - loser becomes Team B again (they're back in queue)
-      _selectedTeamB = loser;
+      if (orderedTeams.length >= 2) {
+        _rotationState = SessionRotationLogic.createInitialState(orderedTeams);
+      }
     }
 
-    // Save updated team selection to live state
-    _saveLiveState();
+    try {
+      // Calculate next rotation
+      _rotationState = SessionRotationLogic.calculateNextRotation(
+        current: _rotationState!,
+        completedMatch: completedMatch,
+      );
+
+      // Update UI selection
+      _updateTeamsFromRotation();
+
+      // Save updated state to Firestore
+      _saveLiveState();
+    } catch (e) {
+      debugPrint('Error applying rotation: $e');
+    }
   }
 
   /// Show confirmation dialog for ending the event
@@ -733,10 +744,9 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                             ),
                           )
                         : SingleChildScrollView(
-                            physics: const NeverScrollableScrollPhysics(),
                             child: Column(
                               children: [
-                                ...team.playerIds.take(5).map((playerId) {
+                                ...team.playerIds.map((playerId) {
                                   final player = _playersMap[playerId];
                                   if (player == null)
                                     return const SizedBox.shrink();
@@ -766,18 +776,6 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                                     ),
                                   );
                                 }),
-                                if (team.playerIds.length > 5)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 2),
-                                    child: Text(
-                                      '+ ${team.playerIds.length - 5} נוספים',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
@@ -791,106 +789,78 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
     );
   }
 
-  /// Build premium stopwatch header with Hero animation
+  /// Build premium stopwatch header
   Widget _buildPremiumStopwatchHeader(bool canLog, int currentMatchNumber) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.grey[900]!,
-            Colors.black87,
-            Colors.grey[900]!,
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        color: const Color(0xFF1E293B), // Slate 800
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Match number badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue, width: 1.5),
-                ),
-                child: Text(
-                  'משחק #$currentMatchNumber',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-          // Stopwatch Widget - Premium with Hero animation
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: GestureDetector(
+          // Stopwatch Section
+          Hero(
+            tag: 'stopwatch',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
                 onTap: canLog
                     ? () {
-                        Navigator.push(
-                          context,
+                        Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => FullScreenStopwatchScreen(
                               stopwatchUtility: _stopwatchUtility,
                               elapsedOffsetSeconds: _elapsedOffsetSeconds,
                               isRunning: _stopwatchUtility.isRunning,
+                              isCountdownMode: _isCountdownMode,
                               onRunningChanged: (isRunning) {
-                                if (isRunning) {
-                                  _startTimestamp = DateTime.now();
-                                  _stopwatchUtility.start();
-                                } else {
-                                  _elapsedOffsetSeconds +=
-                                      _stopwatchUtility.elapsed.inSeconds;
-                                  _stopwatchUtility.pause();
-                                }
-                                _saveLiveState();
+                                setState(() {
+                                  if (isRunning) {
+                                    _startTimestamp = DateTime.now();
+                                    _stopwatchUtility.start();
+                                  } else {
+                                    _elapsedOffsetSeconds +=
+                                        _stopwatchUtility.elapsed.inSeconds;
+                                    _stopwatchUtility.pause();
+                                  }
+                                  _saveLiveState();
+                                });
                               },
                               onReset: () {
-                                _stopwatchUtility.reset();
-                                _startTimestamp = null;
-                                _elapsedOffsetSeconds = 0;
-                                _saveLiveState();
+                                setState(() {
+                                  _stopwatchUtility.reset();
+                                  _startTimestamp = null;
+                                  _elapsedOffsetSeconds = 0;
+                                  _saveLiveState();
+                                });
                               },
                             ),
                           ),
                         );
                       }
                     : null,
-                child: Hero(
-                  tag: 'stopwatch',
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Display time with offset in MM:SS:mm format
-                        AnimatedBuilder(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Display time with offset in MM:SS:mm format
+                      ExcludeSemantics(
+                        child: AnimatedBuilder(
                           animation: _stopwatchUtility,
                           builder: (context, _) {
                             final totalMilliseconds = (_elapsedOffsetSeconds *
@@ -898,26 +868,38 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                                 (_stopwatchUtility.isRunning
                                     ? _stopwatchUtility.elapsed.inMilliseconds
                                     : 0);
-                            final totalSeconds = totalMilliseconds ~/ 1000;
-                            final minutes = totalSeconds ~/ 60;
-                            final seconds = totalSeconds % 60;
-                            final centiseconds =
-                                (totalMilliseconds % 1000) ~/ 10;
 
-                            // Check if time limit reached
                             final durationMinutes =
                                 _event?.durationMinutes ?? 12;
-                            final timeLimitSeconds = durationMinutes * 60;
-                            final isTimeUp = totalSeconds >= timeLimitSeconds;
+                            final timeLimitMilliseconds =
+                                durationMinutes * 60 * 1000;
 
-                            return AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 200),
+                            final displayMs = _isCountdownMode
+                                ? (timeLimitMilliseconds - totalMilliseconds)
+                                    .clamp(0, timeLimitMilliseconds)
+                                : totalMilliseconds;
+
+                            final totalSeconds = displayMs ~/ 1000;
+                            final minutes = totalSeconds ~/ 60;
+                            final seconds = totalSeconds % 60;
+                            final centiseconds = (displayMs % 1000) ~/ 10;
+
+                            final isTimeUp =
+                                totalMilliseconds >= timeLimitMilliseconds;
+
+                            final color = (isTimeUp && !_isCountdownMode) ||
+                                    (_isCountdownMode && displayMs == 0)
+                                ? Colors.red
+                                : Colors.white;
+
+                            return Text(
+                              '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}:${centiseconds.toString().padLeft(2, '0')}',
                               style: TextStyle(
-                                fontSize: 42,
+                                fontSize: 48,
                                 fontWeight: FontWeight.bold,
-                                color: isTimeUp ? Colors.red : Colors.white,
+                                color: color,
                                 fontFamily: 'monospace',
-                                letterSpacing: 3,
+                                letterSpacing: 2,
                                 shadows: isTimeUp
                                     ? [
                                         Shadow(
@@ -927,76 +909,126 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                                       ]
                                     : null,
                               ),
-                              child: Text(
-                                '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}:${centiseconds.toString().padLeft(2, '0')}',
-                              ),
                             );
                           },
                         ),
-                        if (canLog) ...[
-                          const SizedBox(width: 16),
-                          IconButton(
-                            icon: Icon(
-                              _stopwatchUtility.isRunning
-                                  ? Icons.pause_circle_filled
-                                  : Icons.play_circle_filled,
-                              size: 36,
-                            ),
-                            color: Colors.white,
-                            onPressed: () {
-                              if (_stopwatchUtility.isRunning) {
-                                _elapsedOffsetSeconds +=
-                                    _stopwatchUtility.elapsed.inSeconds;
-                                _stopwatchUtility.pause();
-                              } else {
-                                _startTimestamp = DateTime.now();
-                                _stopwatchUtility.start();
-                              }
-                              _saveLiveState();
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.refresh, size: 28),
-                            color: Colors.white70,
-                            onPressed: () {
-                              _stopwatchUtility.reset();
-                              _startTimestamp = null;
-                              _elapsedOffsetSeconds = 0;
-                              _saveLiveState();
-                            },
-                          ),
-                        ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-            ],
-          ),
+          if (canLog) ...[
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    _isCountdownMode ? Icons.history : Icons.timer_outlined,
+                    color: Colors.white,
+                  ),
+                  tooltip: _isCountdownMode ? 'סטופר' : 'ספירה לאחור',
+                  onPressed: () {
+                    setState(() {
+                      _isCountdownMode = !_isCountdownMode;
+                    });
+                  },
+                ),
+                const SizedBox(width: 24),
+                IconButton(
+                  icon: Icon(
+                    _stopwatchUtility.isRunning
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_filled,
+                    size: 48,
+                  ),
+                  color: Colors.white,
+                  onPressed: () {
+                    if (_stopwatchUtility.isRunning) {
+                      _elapsedOffsetSeconds +=
+                          _stopwatchUtility.elapsed.inSeconds;
+                      _stopwatchUtility.pause();
+                    } else {
+                      _startTimestamp = DateTime.now();
+                      _stopwatchUtility.start();
+                    }
+                    _saveLiveState();
+                  },
+                ),
+                const SizedBox(width: 24),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 32),
+                  color: Colors.white70,
+                  onPressed: () {
+                    _stopwatchUtility.reset();
+                    _startTimestamp = null;
+                    _elapsedOffsetSeconds = 0;
+                    _saveLiveState();
+                  },
+                ),
+              ],
+            ),
+          ],
           // End Event Button (always shown for managers)
           if (canLog)
             Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: GestureDetector(
-                onTap: _showEndEventDialog,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white24, width: 1),
-                  ),
-                  child: const Text(
-                    'סיום אירוע',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // End Event Button
+                  GestureDetector(
+                    onTap: _showEndEventDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.red.withOpacity(0.3), width: 1.5),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.exit_to_app,
+                              color: Colors.redAccent, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'סיום אירוע',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+
+                  // Match number badge
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: Colors.blue.withOpacity(0.5), width: 1.5),
+                    ),
+                    child: Text(
+                      'משחק #$currentMatchNumber',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -1288,35 +1320,48 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
             ),
           ),
           // Rows
-          ...stats.entries.map((entry) {
-            final teamId = entry.key;
-            final teamStats = entry.value;
-            final team = _teams.firstWhere((t) => t.teamId == teamId,
-                orElse: () => _teams.first);
-            final goalDiff = (teamStats['gf'] ?? 0) - (teamStats['ga'] ?? 0);
+          ...(() {
+            final sortedEntries = stats.entries.toList()
+              ..sort((a, b) {
+                final pointsA = a.value['points'] ?? 0;
+                final pointsB = b.value['points'] ?? 0;
+                if (pointsB != pointsA) return pointsB.compareTo(pointsA);
 
-            return Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  Expanded(flex: 3, child: Text(team.name)),
-                  Expanded(
-                      child:
-                          Center(child: Text('${teamStats['played'] ?? 0}'))),
-                  Expanded(child: Center(child: Text('$goalDiff'))),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        '${teamStats['points'] ?? 0}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                final gdA = (a.value['gf'] ?? 0) - (a.value['ga'] ?? 0);
+                final gdB = (b.value['gf'] ?? 0) - (b.value['ga'] ?? 0);
+                return gdB.compareTo(gdA);
+              });
+
+            return sortedEntries.map((entry) {
+              final teamId = entry.key;
+              final teamStats = entry.value;
+              final team = _teams.firstWhere((t) => t.teamId == teamId,
+                  orElse: () => _teams.first);
+              final goalDiff = (teamStats['gf'] ?? 0) - (teamStats['ga'] ?? 0);
+
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                child: Row(
+                  children: [
+                    Expanded(flex: 3, child: Text(team.name)),
+                    Expanded(
+                        child:
+                            Center(child: Text('${teamStats['played'] ?? 0}'))),
+                    Expanded(child: Center(child: Text('$goalDiff'))),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          '${teamStats['points'] ?? 0}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+                  ],
+                ),
+              );
+            });
+          })(),
         ],
       ),
     );
@@ -1598,6 +1643,32 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
       playerIds.addAll(_selectedTeamB!.playerIds);
     }
     return playerIds.toList();
+  }
+
+  void _updateTeamsFromRotation() {
+    if (_rotationState == null || _teams.isEmpty) return;
+
+    try {
+      final teamA = _teams.firstWhere(
+        (t) =>
+            SessionRotationLogic.getTeamIdentifier(t) ==
+            _rotationState!.teamAColor,
+        orElse: () => _teams[0],
+      );
+      final teamB = _teams.firstWhere(
+        (t) =>
+            SessionRotationLogic.getTeamIdentifier(t) ==
+            _rotationState!.teamBColor,
+        orElse: () => _teams.length > 1 ? _teams[1] : _teams[0],
+      );
+
+      setState(() {
+        _selectedTeamA = teamA;
+        _selectedTeamB = teamB;
+      });
+    } catch (e) {
+      debugPrint('Error updating teams from rotation: $e');
+    }
   }
 }
 

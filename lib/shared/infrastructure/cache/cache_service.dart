@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:kattrick/models/models.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
 
 /// Cache entry with expiration
 class _CacheEntry<T> {
@@ -14,9 +15,9 @@ class _CacheEntry<T> {
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
   Map<String, dynamic> toJson() => {
-    'data': data,
-    'expiresAt': expiresAt.toIso8601String(),
-  };
+        'data': data,
+        'expiresAt': expiresAt.toIso8601String(),
+      };
 }
 
 /// Generic cache service for in-memory and persistent caching
@@ -41,21 +42,22 @@ class CacheService {
   int _persistentCacheHits = 0;
   int _persistentCacheMisses = 0;
   int _deduplicatedRequests = 0;
-  
+
   // Cache configuration
   static const Duration defaultTtl = Duration(minutes: 5);
   static const Duration gamesTtl = Duration(minutes: 10);
   static const Duration eventsTtl = Duration(minutes: 15);
   static const Duration usersTtl = Duration(hours: 1);
   static const int maxMemoryCacheSize = 100; // Max items in memory cache
-  static const int maxPersistentCacheSize = 50; // Max items in persistent cache (critical data only)
-  
+  static const int maxPersistentCacheSize =
+      50; // Max items in persistent cache (critical data only)
+
   // Keys that should be persisted (critical data)
   static const Set<String> _persistentKeys = {
     'user:',
     'hub:',
   };
-  
+
   /// Initialize persistent cache
   Future<void> _initPrefs() async {
     if (_prefsInitialized) return;
@@ -77,17 +79,17 @@ class CacheService {
       _cacheHits++;
       return entry.data as T;
     }
-    
+
     if (entry != null && entry.isExpired) {
       _memoryCache.remove(key);
     }
-    
+
     // Don't check persistent cache synchronously - it would block the main thread
     // Persistent cache will be loaded asynchronously when needed
     _cacheMisses++;
     return null;
   }
-  
+
   /// Get from persistent cache
   /// Supports User and Hub objects with proper deserialization
   T? _getFromPersistent<T>(String key) {
@@ -98,39 +100,41 @@ class CacheService {
         _persistentCacheMisses++;
         return null;
       }
-      
+
       final data = jsonDecode(jsonStr) as Map<String, dynamic>;
       final expiresAt = DateTime.parse(data['expiresAt'] as String);
-      
+
       if (DateTime.now().isAfter(expiresAt)) {
         _prefs?.remove(key);
         _persistentCacheMisses++;
         return null;
       }
-      
+
       _persistentCacheHits++;
-      
+
       // Handle complex objects (User, Hub) with proper deserialization
       final rawData = data['data'];
       if (rawData is Map<String, dynamic> || rawData is Map) {
         try {
           // Convert JSON back to Firestore types (GeoPoint, Timestamp)
           final convertedData = _convertJsonToTimestamps(rawData);
-          
+
           // FIX: Ensure convertedData is Map<String, dynamic>
           if (convertedData is! Map<String, dynamic>) {
-            debugPrint('⚠️ Converted data is not Map<String, dynamic>, skipping cache entry: $key');
+            debugPrint(
+                '⚠️ Converted data is not Map<String, dynamic>, skipping cache entry: $key');
             // Clear corrupted cache entry
             _prefs?.remove(key);
             return null;
           }
-          
+
           // Try to deserialize based on key prefix
           if (key.startsWith('user:')) {
             try {
               return User.fromJson(convertedData) as T?;
             } catch (e, stackTrace) {
-              debugPrint('⚠️ Error deserializing User from persistent cache: $e');
+              debugPrint(
+                  '⚠️ Error deserializing User from persistent cache: $e');
               debugPrint('Stack trace: $stackTrace');
               // Clear corrupted cache entry
               _prefs?.remove(key);
@@ -140,7 +144,8 @@ class CacheService {
             try {
               return Hub.fromJson(convertedData) as T?;
             } catch (e, stackTrace) {
-              debugPrint('⚠️ Error deserializing Hub from persistent cache: $e');
+              debugPrint(
+                  '⚠️ Error deserializing Hub from persistent cache: $e');
               debugPrint('Stack trace: $stackTrace');
               // Clear corrupted cache entry
               _prefs?.remove(key);
@@ -148,14 +153,15 @@ class CacheService {
             }
           }
         } catch (e, stackTrace) {
-          debugPrint('⚠️ Error converting JSON to timestamps for cache entry $key: $e');
+          debugPrint(
+              '⚠️ Error converting JSON to timestamps for cache entry $key: $e');
           debugPrint('Stack trace: $stackTrace');
           // Clear corrupted cache entry
           _prefs?.remove(key);
           return null;
         }
       }
-      
+
       // Fallback for simple types
       return rawData as T?;
     } catch (e, stackTrace) {
@@ -171,7 +177,7 @@ class CacheService {
       return null;
     }
   }
-  
+
   /// Check if key should be persisted
   bool _shouldPersist(String key) {
     return _persistentKeys.any((prefix) => key.startsWith(prefix));
@@ -192,44 +198,51 @@ class CacheService {
       _evictOldest();
     }
   }
-  
+
   /// Save to persistent cache (async, non-blocking)
   /// Supports User and Hub objects with proper serialization
-  Future<void> _saveToPersistent<T>(String key, T data, DateTime expiration) async {
+  Future<void> _saveToPersistent<T>(
+      String key, T data, DateTime expiration) async {
     // Don't block - run in background
     Future.microtask(() async {
       await _initPrefs();
       if (!_prefsInitialized) return;
-      
+
       try {
         dynamic serializedData;
-        
+
         // Handle complex objects (User, Hub) with proper serialization
         if (data is User) {
           serializedData = _convertTimestampsToJson(data.toJson());
         } else if (data is Hub) {
           serializedData = _convertTimestampsToJson(data.toJson());
-        } else if (data is Map || data is List || data is String || data is num || data is bool) {
+        } else if (data is Map ||
+            data is List ||
+            data is String ||
+            data is num ||
+            data is bool) {
           // Simple types can be serialized directly
           serializedData = data;
         } else {
           // For other types, try toJson if available
           try {
             final jsonData = (data as dynamic).toJson();
-            serializedData = jsonData is Map ? _convertTimestampsToJson(jsonData) : jsonData;
+            serializedData =
+                jsonData is Map ? _convertTimestampsToJson(jsonData) : jsonData;
           } catch (e) {
-            debugPrint('⚠️ Cannot serialize ${data.runtimeType} to persistent cache');
+            debugPrint(
+                '⚠️ Cannot serialize ${data.runtimeType} to persistent cache');
             return; // Skip saving if can't serialize
           }
         }
-        
+
         final entry = {
           'data': serializedData,
           'expiresAt': expiration.toIso8601String(),
         };
-        
+
         await _prefs?.setString(key, jsonEncode(entry));
-        
+
         // Evict oldest persistent entries if needed (also async, non-blocking)
         _evictOldestPersistent();
       } catch (e) {
@@ -237,17 +250,17 @@ class CacheService {
       }
     });
   }
-  
+
   /// Evict oldest persistent cache entries (async, non-blocking)
   void _evictOldestPersistent() {
     if (!_prefsInitialized) return;
-    
+
     // Run in background to avoid blocking main thread
     Future.microtask(() async {
       try {
         final keys = _prefs!.getKeys().where((k) => _shouldPersist(k)).toList();
         if (keys.length <= maxPersistentCacheSize) return;
-        
+
         // Get expiration times and sort
         final entries = <MapEntry<String, DateTime>>[];
         for (final key in keys) {
@@ -263,7 +276,7 @@ class CacheService {
             }
           }
         }
-        
+
         // Sort by expiration and remove oldest 10%
         entries.sort((a, b) => a.value.compareTo(b.value));
         final toRemove = (entries.length * 0.1).ceil();
@@ -395,7 +408,7 @@ class CacheService {
     // Sort by expiration time and remove oldest 10%
     final sorted = _memoryCache.entries.toList()
       ..sort((a, b) => a.value.expiresAt.compareTo(b.value.expiresAt));
-    
+
     final toRemove = (sorted.length * 0.1).ceil();
     for (int i = 0; i < toRemove && i < sorted.length; i++) {
       _memoryCache.remove(sorted[i].key);
@@ -409,7 +422,8 @@ class CacheService {
     final active = total - expired;
 
     final totalRequests = _cacheHits + _cacheMisses;
-    final hitRate = totalRequests > 0 ? (_cacheHits / totalRequests * 100) : 0.0;
+    final hitRate =
+        totalRequests > 0 ? (_cacheHits / totalRequests * 100) : 0.0;
 
     final persistentTotal = _persistentCacheHits + _persistentCacheMisses;
     final persistentHitRate = persistentTotal > 0
@@ -439,7 +453,7 @@ class CacheService {
       },
     };
   }
-  
+
   /// Reset analytics counters
   void resetAnalytics() {
     _cacheHits = 0;
@@ -460,8 +474,17 @@ class CacheService {
         'latitude': data.latitude,
         'longitude': data.longitude,
       };
+    } else if (data is UserLocation) {
+      return _convertTimestampsToJson(data.toJson());
+    } else if (data is PrivacySettings) {
+      return _convertTimestampsToJson(data.toJson());
+    } else if (data is NotificationPreferences) {
+      return _convertTimestampsToJson(data.toJson());
+    } else if (data is GeographicPoint) {
+      return _convertTimestampsToJson(data.toJson());
     } else if (data is Map) {
-      return data.map((key, value) => MapEntry(key, _convertTimestampsToJson(value)));
+      return data
+          .map((key, value) => MapEntry(key, _convertTimestampsToJson(value)));
     } else if (data is List) {
       return data.map((item) => _convertTimestampsToJson(item)).toList();
     } else {
@@ -474,8 +497,8 @@ class CacheService {
   dynamic _convertJsonToTimestamps(dynamic data) {
     if (data is Map) {
       // Check if it's a GeoPoint (has latitude and longitude, and only 2 keys)
-      if (data.containsKey('latitude') && 
-          data.containsKey('longitude') && 
+      if (data.containsKey('latitude') &&
+          data.containsKey('longitude') &&
           data.length == 2 &&
           data['latitude'] is num &&
           data['longitude'] is num) {
@@ -523,11 +546,11 @@ class CacheKeys {
     }
     return 'games:public';
   }
+
   static String event(String hubId, String eventId) => 'event:$hubId:$eventId';
   static String eventsByHub(String hubId) => 'events:hub:$hubId';
-  static String publicEvents({String? region}) => region != null
-      ? 'events:public:region:$region'
-      : 'events:public';
+  static String publicEvents({String? region}) =>
+      region != null ? 'events:public:region:$region' : 'events:public';
   static String user(String userId) => 'user:$userId';
   static String hub(String hubId) => 'hub:$hubId';
   static String venue(String venueId) => 'venue:$venueId';

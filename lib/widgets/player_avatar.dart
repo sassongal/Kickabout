@@ -20,7 +20,8 @@ class PlayerAvatar extends StatelessWidget {
     this.size,
     this.showName = false,
     this.clickable = true,
-  }) : assert(radius == null || size == null, 'Cannot specify both radius and size');
+  }) : assert(radius == null || size == null,
+            'Cannot specify both radius and size');
 
   // Get radius from size or use provided radius
   double get _radius {
@@ -78,7 +79,7 @@ class PlayerAvatar extends StatelessWidget {
       if (first.isNotEmpty) return first.toUpperCase();
       if (last.isNotEmpty) return last.toUpperCase();
     }
-    
+
     // Fallback to splitting name
     final parts = user.name.split(' ');
     if (parts.isEmpty) return '?';
@@ -91,9 +92,12 @@ class PlayerAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarRadius = _radius;
-    final ringRadius = radius == null ? _ringRadius : avatarRadius + 4; // Add 4px for ring if using custom radius
+    final ringRadius = radius == null
+        ? _ringRadius
+        : avatarRadius + 4; // Add 4px for ring if using custom radius
     final hasStatus = user.availabilityStatus.isNotEmpty;
-    final statusColor = hasStatus ? _getStatusColor(user.availabilityStatus) : null;
+    final statusColor =
+        hasStatus ? _getStatusColor(user.availabilityStatus) : null;
 
     // Build the avatar with status ring
     Widget avatarWidget = Stack(
@@ -112,10 +116,29 @@ class PlayerAvatar extends StatelessWidget {
               ),
             ),
           ),
-        // Avatar circle
-        SizedBox(
+
+        // Avatar circle with Premium Depth
+        Container(
           width: avatarRadius * 2,
           height: avatarRadius * 2,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // Premium Depth Border
+            border: Border.all(
+              color: Colors.white,
+              width: 2, // Highlight border
+            ),
+            // Deep Shadow
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+              // Inner glow simulation via gradient overlay could be done here,
+              // but ClipOval clips it. Using outer shadow for depth.
+            ],
+          ),
           child: user.photoUrl != null && user.photoUrl!.isNotEmpty
               ? ClipOval(
                   child: OptimizedImage(
@@ -145,7 +168,7 @@ class PlayerAvatar extends StatelessWidget {
       final displayName = (user.firstName != null && user.lastName != null)
           ? '${user.firstName} ${user.lastName}'
           : user.name;
-      
+
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -205,7 +228,7 @@ class PlayerAvatar extends StatelessWidget {
 
   Widget _buildInitialsAvatar(double radius) {
     final backgroundColor = _getAvatarColor();
-    
+
     return Container(
       width: radius * 2,
       height: radius * 2,

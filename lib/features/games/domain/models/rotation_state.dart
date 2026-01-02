@@ -20,6 +20,10 @@ class RotationState with _$RotationState {
 
     /// Current match number in the session (starts at 1)
     @Default(1) int currentMatchNumber,
+
+    /// Map of team colors to their current win streaks
+    /// Used for "Streak Breaker" rule: force rotation after 3 consecutive wins
+    @Default({}) Map<String, int> teamWinStreaks,
   }) = _RotationState;
 
   factory RotationState.fromJson(Map<String, dynamic> json) =>

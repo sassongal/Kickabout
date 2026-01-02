@@ -10,7 +10,7 @@ import 'package:kattrick/services/weather_service.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:kattrick/widgets/premium/navigation_picker.dart';
 
 /// Event Management Screen - displays event details, registered players,
 /// weather forecast, and team generation functionality
@@ -30,7 +30,6 @@ class EventManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
-
   @override
   Widget build(BuildContext context) {
     final eventsRepo = ref.watch(hubEventsRepositoryProvider);
@@ -44,8 +43,8 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
           stream: eventsRepo.watchHubEvent(widget.hubId, widget.eventId),
           builder: (context, snapshot) {
             final event = snapshot.data;
-            final isEventOngoing = event != null &&
-                (event.isStarted || event.status == 'ongoing');
+            final isEventOngoing =
+                event != null && (event.isStarted || event.status == 'ongoing');
 
             if (isEventOngoing) {
               return IconButton(
@@ -83,7 +82,6 @@ class _EventManagementScreenState extends ConsumerState<EventManagementScreen> {
       ),
     );
   }
-
 }
 
 /// Separated widget to prevent rebuild loops caused by nested FutureBuilders
@@ -99,10 +97,12 @@ class _EventManagementContent extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_EventManagementContent> createState() => _EventManagementContentState();
+  ConsumerState<_EventManagementContent> createState() =>
+      _EventManagementContentState();
 }
 
-class _EventManagementContentState extends ConsumerState<_EventManagementContent> {
+class _EventManagementContentState
+    extends ConsumerState<_EventManagementContent> {
   Hub? _cachedHub;
   List<User>? _cachedPlayers;
   bool _isLoadingHub = true;
@@ -118,7 +118,8 @@ class _EventManagementContentState extends ConsumerState<_EventManagementContent
   void didUpdateWidget(_EventManagementContent oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Only reload if event's registered players changed
-    if (oldWidget.event.registeredPlayerIds != widget.event.registeredPlayerIds) {
+    if (oldWidget.event.registeredPlayerIds !=
+        widget.event.registeredPlayerIds) {
       _loadPlayers();
     }
   }
@@ -200,8 +201,14 @@ class _EventManagementContentState extends ConsumerState<_EventManagementContent
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Event Details Card
-          _EventDetailsCard(event: widget.event, hubId: widget.hubId),
+          // Event Details Card with Hero transition
+          Hero(
+            tag: 'event_card_${widget.event.eventId}',
+            child: Material(
+              color: Colors.transparent,
+              child: _EventDetailsCard(event: widget.event, hubId: widget.hubId),
+            ),
+          ),
           const SizedBox(height: 16),
 
           // Weather Forecast Card
@@ -306,11 +313,12 @@ class _EventDetailsCard extends ConsumerWidget {
                   ),
                   if (event.locationPoint != null)
                     IconButton(
-                      icon: const Icon(Icons.navigation),
+                      icon: const Icon(Icons.directions, size: 28),
                       onPressed: () => _navigateToLocation(
                         context,
                         event.locationPoint!.latitude,
                         event.locationPoint!.longitude,
+                        event.location,
                       ),
                       tooltip: 'ניווט למיקום',
                       color: PremiumColors.primary,
@@ -350,18 +358,18 @@ class _EventDetailsCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _navigateToLocation(BuildContext context, double latitude, double longitude) async {
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('לא ניתן לפתוח ניווט')),
-        );
-      }
-    }
+  Future<void> _navigateToLocation(
+    BuildContext context,
+    double latitude,
+    double longitude,
+    String? title,
+  ) async {
+    await NavigationPicker.show(
+      context,
+      latitude: latitude,
+      longitude: longitude,
+      title: title,
+    );
   }
 
   Color _getStatusColor(String status) {
@@ -675,9 +683,8 @@ class _RecruitingPostButton extends ConsumerWidget {
     final availableSpots = event.maxParticipants - players.length;
     final isUpcoming = event.status == 'upcoming';
 
-    final hubPermissionsAsync = ref.watch(
-      hubPermissionsProvider((hubId: hubId, userId: currentUserId))
-    );
+    final hubPermissionsAsync = ref
+        .watch(hubPermissionsProvider((hubId: hubId, userId: currentUserId)));
 
     return hubPermissionsAsync.when(
       data: (permissions) {
@@ -752,7 +759,8 @@ class _TeamsCard extends ConsumerWidget {
             // Show "Start Session" or "Enter Session" button if teams exist and game created
             if (event.teams.isNotEmpty && event.gameId != null) ...[
               StreamBuilder<Game?>(
-                stream: ref.read(gamesRepositoryProvider).watchGame(event.gameId!),
+                stream:
+                    ref.read(gamesRepositoryProvider).watchGame(event.gameId!),
                 builder: (context, gameSnapshot) {
                   final game = gameSnapshot.data;
                   final isSessionActive = game?.session.isActive ?? false;
@@ -770,17 +778,17 @@ class _TeamsCard extends ConsumerWidget {
                         },
                         icon: Icon(
                           isSessionActive
-                            ? Icons.sports_soccer
-                            : hasSessionEnded
-                              ? Icons.emoji_events
-                              : Icons.play_arrow,
+                              ? Icons.sports_soccer
+                              : hasSessionEnded
+                                  ? Icons.emoji_events
+                                  : Icons.play_arrow,
                         ),
                         label: Text(
                           isSessionActive
-                            ? 'כנס לסשן פעיל'
-                            : hasSessionEnded
-                              ? 'צפה בסיכום'
-                              : 'התחל סשן',
+                              ? 'כנס לסשן פעיל'
+                              : hasSessionEnded
+                                  ? 'צפה בסיכום'
+                                  : 'התחל סשן',
                         ),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
@@ -788,10 +796,10 @@ class _TeamsCard extends ConsumerWidget {
                             horizontal: 24,
                           ),
                           backgroundColor: isSessionActive
-                            ? Colors.green
-                            : hasSessionEnded
-                              ? Colors.amber
-                              : PremiumColors.primary,
+                              ? Colors.green
+                              : hasSessionEnded
+                                  ? Colors.amber
+                                  : PremiumColors.primary,
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -807,15 +815,19 @@ class _TeamsCard extends ConsumerWidget {
                 final index = entry.key;
                 final team = entry.value;
                 final teamColor = _getTeamColor(team.name);
-                final teamPlayers = players.where((p) => team.playerIds.contains(p.uid)).toList();
+                final teamPlayers = players
+                    .where((p) => team.playerIds.contains(p.uid))
+                    .toList();
 
                 return Padding(
-                  padding: EdgeInsets.only(bottom: index < event.teams.length - 1 ? 16 : 0),
+                  padding: EdgeInsets.only(
+                      bottom: index < event.teams.length - 1 ? 16 : 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: teamColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
@@ -906,11 +918,14 @@ class _TeamsCard extends ConsumerWidget {
                           onPressed: () {
                             if (players.length < 6) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('נדרשים לפחות 6 שחקנים ליצירת קבוצות')),
+                                const SnackBar(
+                                    content: Text(
+                                        'נדרשים לפחות 6 שחקנים ליצירת קבוצות')),
                               );
                               return;
                             }
-                            context.go('/hubs/$hubId/events/${event.eventId}/team-generator/config');
+                            context.go(
+                                '/hubs/$hubId/events/${event.eventId}/team-generator/config');
                           },
                           icon: const Icon(Icons.group_work),
                           label: const Text('יצירת כוחות'),

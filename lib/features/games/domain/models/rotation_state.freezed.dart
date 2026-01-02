@@ -33,6 +33,10 @@ mixin _$RotationState {
   /// Current match number in the session (starts at 1)
   int get currentMatchNumber => throw _privateConstructorUsedError;
 
+  /// Map of team colors to their current win streaks
+  /// Used for "Streak Breaker" rule: force rotation after 3 consecutive wins
+  Map<String, int> get teamWinStreaks => throw _privateConstructorUsedError;
+
   /// Serializes this RotationState to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -53,7 +57,8 @@ abstract class $RotationStateCopyWith<$Res> {
       {String teamAColor,
       String teamBColor,
       List<String> waitingTeamColors,
-      int currentMatchNumber});
+      int currentMatchNumber,
+      Map<String, int> teamWinStreaks});
 }
 
 /// @nodoc
@@ -75,6 +80,7 @@ class _$RotationStateCopyWithImpl<$Res, $Val extends RotationState>
     Object? teamBColor = null,
     Object? waitingTeamColors = null,
     Object? currentMatchNumber = null,
+    Object? teamWinStreaks = null,
   }) {
     return _then(_value.copyWith(
       teamAColor: null == teamAColor
@@ -93,6 +99,10 @@ class _$RotationStateCopyWithImpl<$Res, $Val extends RotationState>
           ? _value.currentMatchNumber
           : currentMatchNumber // ignore: cast_nullable_to_non_nullable
               as int,
+      teamWinStreaks: null == teamWinStreaks
+          ? _value.teamWinStreaks
+          : teamWinStreaks // ignore: cast_nullable_to_non_nullable
+              as Map<String, int>,
     ) as $Val);
   }
 }
@@ -109,7 +119,8 @@ abstract class _$$RotationStateImplCopyWith<$Res>
       {String teamAColor,
       String teamBColor,
       List<String> waitingTeamColors,
-      int currentMatchNumber});
+      int currentMatchNumber,
+      Map<String, int> teamWinStreaks});
 }
 
 /// @nodoc
@@ -129,6 +140,7 @@ class __$$RotationStateImplCopyWithImpl<$Res>
     Object? teamBColor = null,
     Object? waitingTeamColors = null,
     Object? currentMatchNumber = null,
+    Object? teamWinStreaks = null,
   }) {
     return _then(_$RotationStateImpl(
       teamAColor: null == teamAColor
@@ -147,6 +159,10 @@ class __$$RotationStateImplCopyWithImpl<$Res>
           ? _value.currentMatchNumber
           : currentMatchNumber // ignore: cast_nullable_to_non_nullable
               as int,
+      teamWinStreaks: null == teamWinStreaks
+          ? _value._teamWinStreaks
+          : teamWinStreaks // ignore: cast_nullable_to_non_nullable
+              as Map<String, int>,
     ));
   }
 }
@@ -158,8 +174,10 @@ class _$RotationStateImpl implements _RotationState {
       {required this.teamAColor,
       required this.teamBColor,
       final List<String> waitingTeamColors = const [],
-      this.currentMatchNumber = 1})
-      : _waitingTeamColors = waitingTeamColors;
+      this.currentMatchNumber = 1,
+      final Map<String, int> teamWinStreaks = const {}})
+      : _waitingTeamColors = waitingTeamColors,
+        _teamWinStreaks = teamWinStreaks;
 
   factory _$RotationStateImpl.fromJson(Map<String, dynamic> json) =>
       _$$RotationStateImplFromJson(json);
@@ -192,9 +210,23 @@ class _$RotationStateImpl implements _RotationState {
   @JsonKey()
   final int currentMatchNumber;
 
+  /// Map of team colors to their current win streaks
+  /// Used for "Streak Breaker" rule: force rotation after 3 consecutive wins
+  final Map<String, int> _teamWinStreaks;
+
+  /// Map of team colors to their current win streaks
+  /// Used for "Streak Breaker" rule: force rotation after 3 consecutive wins
+  @override
+  @JsonKey()
+  Map<String, int> get teamWinStreaks {
+    if (_teamWinStreaks is EqualUnmodifiableMapView) return _teamWinStreaks;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_teamWinStreaks);
+  }
+
   @override
   String toString() {
-    return 'RotationState(teamAColor: $teamAColor, teamBColor: $teamBColor, waitingTeamColors: $waitingTeamColors, currentMatchNumber: $currentMatchNumber)';
+    return 'RotationState(teamAColor: $teamAColor, teamBColor: $teamBColor, waitingTeamColors: $waitingTeamColors, currentMatchNumber: $currentMatchNumber, teamWinStreaks: $teamWinStreaks)';
   }
 
   @override
@@ -209,7 +241,9 @@ class _$RotationStateImpl implements _RotationState {
             const DeepCollectionEquality()
                 .equals(other._waitingTeamColors, _waitingTeamColors) &&
             (identical(other.currentMatchNumber, currentMatchNumber) ||
-                other.currentMatchNumber == currentMatchNumber));
+                other.currentMatchNumber == currentMatchNumber) &&
+            const DeepCollectionEquality()
+                .equals(other._teamWinStreaks, _teamWinStreaks));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -219,7 +253,8 @@ class _$RotationStateImpl implements _RotationState {
       teamAColor,
       teamBColor,
       const DeepCollectionEquality().hash(_waitingTeamColors),
-      currentMatchNumber);
+      currentMatchNumber,
+      const DeepCollectionEquality().hash(_teamWinStreaks));
 
   /// Create a copy of RotationState
   /// with the given fields replaced by the non-null parameter values.
@@ -242,7 +277,8 @@ abstract class _RotationState implements RotationState {
       {required final String teamAColor,
       required final String teamBColor,
       final List<String> waitingTeamColors,
-      final int currentMatchNumber}) = _$RotationStateImpl;
+      final int currentMatchNumber,
+      final Map<String, int> teamWinStreaks}) = _$RotationStateImpl;
 
   factory _RotationState.fromJson(Map<String, dynamic> json) =
       _$RotationStateImpl.fromJson;
@@ -263,6 +299,11 @@ abstract class _RotationState implements RotationState {
   /// Current match number in the session (starts at 1)
   @override
   int get currentMatchNumber;
+
+  /// Map of team colors to their current win streaks
+  /// Used for "Streak Breaker" rule: force rotation after 3 consecutive wins
+  @override
+  Map<String, int> get teamWinStreaks;
 
   /// Create a copy of RotationState
   /// with the given fields replaced by the non-null parameter values.

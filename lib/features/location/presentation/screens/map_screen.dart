@@ -19,7 +19,7 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  MapMode _selectedMode = MapMode.findVenues;
+  MapMode _selectedMode = MapMode.exploreHubs;
 
   @override
   Widget build(BuildContext context) {
@@ -55,15 +55,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildModeChip(
-                        mode: MapMode.findVenues,
-                        label: 'מגרשים',
-                        icon: Icons.stadium,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildModeChip(
                         mode: MapMode.exploreHubs,
                         label: 'הובים',
                         icon: Icons.groups,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildModeChip(
+                        mode: MapMode.findVenues,
+                        label: 'מגרשים',
+                        icon: Icons.stadium,
                       ),
                       const SizedBox(width: 8),
                       _buildModeChip(

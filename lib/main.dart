@@ -19,6 +19,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/widgets/premium/prism_background.dart';
 // Conditional import for Crashlytics (not available on Web)
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'
     if (dart.library.html) 'package:kattrick/services/crashlytics_stub.dart';
@@ -77,7 +78,6 @@ Future<void> main() async {
   }
 }
 
-
 /// Initializes all essential app services and returns true on success.
 Future<bool> _initializeAppServices() async {
   try {
@@ -92,7 +92,8 @@ Future<bool> _initializeAppServices() async {
     debugPrint('🔐 Firebase Project: ${firebaseOptions.projectId}');
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      debugPrint('🔐 Current user: uid=${currentUser.uid}, email=${currentUser.email ?? "N/A"}, isAnonymous=${currentUser.isAnonymous}');
+      debugPrint(
+          '🔐 Current user: uid=${currentUser.uid}, email=${currentUser.email ?? "N/A"}, isAnonymous=${currentUser.isAnonymous}');
     } else {
       debugPrint('🔐 Current user: NOT AUTHENTICATED');
     }
@@ -108,8 +109,10 @@ Future<bool> _initializeAppServices() async {
 
     if (kDebugMode) {
       debugPrint('🔐 Firebase App Check enabled in DEBUG mode');
-      debugPrint('📋 IMPORTANT: Look for "DebugAppCheckProvider" in logcat to get the debug token');
-      debugPrint('📝 Then add it to Firebase Console > App Check > Apps > Manage debug tokens');
+      debugPrint(
+          '📋 IMPORTANT: Look for "DebugAppCheckProvider" in logcat to get the debug token');
+      debugPrint(
+          '📝 Then add it to Firebase Console > App Check > Apps > Manage debug tokens');
       debugPrint('⚠️ Debug token changes when you reinstall the app!');
     } else {
       debugPrint('✅ Firebase App Check enabled (production mode)');
@@ -420,7 +423,16 @@ class _MyAppState extends ConsumerState<MyApp> {
 
         return Directionality(
           textDirection: TextDirection.rtl, // Hebrew is RTL
-          child: child!,
+          child: Stack(
+            children: [
+              // 1. Base Background (Solid Color)
+              Container(color: PremiumColors.background),
+              // 2. Prism Effect (Overlay)
+              const PrismBackground(opacity: 0.6), // Subtler effect
+              // 3. App Content (Transparent Scaffold)
+              child!,
+            ],
+          ),
         );
       },
     );

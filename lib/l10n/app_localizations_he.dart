@@ -894,4 +894,50 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get temp => 'temp';
+
+  @override
+  String get welcome_message_1_premium => '✨ ברוך הבא למשפחה! בואו תצא למגרש';
+
+  @override
+  String get welcome_message_2_premium =>
+      '🔥 מוכן להציג כישורים? הגיע הזמן לזרוח!';
+
+  @override
+  String get welcome_message_3_premium =>
+      '⚡ הפלטפורמה שלך למשחק ברמה הבאה מתחילה כאן';
+
+  @override
+  String get welcome_message_4_premium =>
+      '🏆 קבוצתך מחכה - בואו נעשה היסטוריה ביחד';
+
+  @override
+  String get welcome_message_5_premium =>
+      '🎯 מהחלום למגרש - המסע שלך מתחיל עכשיו';
+
+  @override
+  String get noUpcomingEvents => 'אין אירועים קרובים';
+
+  @override
+  String get signUpOrCreateEvent => 'הירשם למשחק או צור אירוע חדש';
+
+  @override
+  String get startsIn => 'מתחיל בעוד';
+
+  @override
+  String get allMyEvents => 'לכל האירועים שלי';
+
+  @override
+  String get organizer => 'מארגן';
+
+  @override
+  String get userFallback => 'משתמש';
+
+  @override
+  String get eventLabel => 'אירוע';
+
+  @override
+  String get gameLabel => 'משחק';
+
+  @override
+  String get startEvent => 'התחל אירוע';
 }

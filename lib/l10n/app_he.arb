@@ -757,5 +757,61 @@
   "teamBDefaultName": "קבוצה ב'",
   "finalScoreTitle": "תוצאה סופית",
   "hubFallbackName": "האב",
-  "temp": "temp"
+  "temp": "temp",
+  "welcome_message_1_premium": "✨ ברוך הבא למשפחה! בואו תצא למגרש",
+  "@welcome_message_1_premium": {
+    "description": "Premium welcome message 1"
+  },
+  "welcome_message_2_premium": "🔥 מוכן להציג כישורים? הגיע הזמן לזרוח!",
+  "@welcome_message_2_premium": {
+    "description": "Premium welcome message 2"
+  },
+  "welcome_message_3_premium": "⚡ הפלטפורמה שלך למשחק ברמה הבאה מתחילה כאן",
+  "@welcome_message_3_premium": {
+    "description": "Premium welcome message 3"
+  },
+  "welcome_message_4_premium": "🏆 קבוצתך מחכה - בואו נעשה היסטוריה ביחד",
+  "@welcome_message_4_premium": {
+    "description": "Premium welcome message 4"
+  },
+  "welcome_message_5_premium": "🎯 מהחלום למגרש - המסע שלך מתחיל עכשיו",
+  "@welcome_message_5_premium": {
+    "description": "Premium welcome message 5"
+  },
+  "noUpcomingEvents": "אין אירועים קרובים",
+  "@noUpcomingEvents": {
+    "description": "הודעה כשאין אירועים קרובים בלוח הזמנים"
+  },
+  "signUpOrCreateEvent": "הירשם למשחק או צור אירוע חדש",
+  "@signUpOrCreateEvent": {
+    "description": "טקסט עזר כשאין אירועים קרובים"
+  },
+  "startsIn": "מתחיל בעוד",
+  "@startsIn": {
+    "description": "טקסט לפני ספירה לאחור לאירוע"
+  },
+  "allMyEvents": "לכל האירועים שלי",
+  "@allMyEvents": {
+    "description": "כפתור לניווט לרשימת כל האירועים"
+  },
+  "organizer": "מארגן",
+  "@organizer": {
+    "description": "תווית למארגן האירוע"
+  },
+  "userFallback": "משתמש",
+  "@userFallback": {
+    "description": "שם ברירת מחדל כשלא נמצא שם המארגן"
+  },
+  "eventLabel": "אירוע",
+  "@eventLabel": {
+    "description": "תווית לסוג אירוע"
+  },
+  "gameLabel": "משחק",
+  "@gameLabel": {
+    "description": "תווית לסוג משחק"
+  },
+  "startEvent": "התחל אירוע",
+  "@startEvent": {
+    "description": "כפתור להתחלת אירוע"
+  }
 }

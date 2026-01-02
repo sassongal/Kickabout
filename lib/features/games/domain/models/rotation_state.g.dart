@@ -15,6 +15,10 @@ _$RotationStateImpl _$$RotationStateImplFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       currentMatchNumber: (json['currentMatchNumber'] as num?)?.toInt() ?? 1,
+      teamWinStreaks: (json['teamWinStreaks'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const {},
     );
 
 Map<String, dynamic> _$$RotationStateImplToJson(_$RotationStateImpl instance) =>
@@ -23,4 +27,5 @@ Map<String, dynamic> _$$RotationStateImplToJson(_$RotationStateImpl instance) =>
       'teamBColor': instance.teamBColor,
       'waitingTeamColors': instance.waitingTeamColors,
       'currentMatchNumber': instance.currentMatchNumber,
+      'teamWinStreaks': instance.teamWinStreaks,
     };

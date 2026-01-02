@@ -1713,6 +1713,90 @@ abstract class AppLocalizations {
   /// In he, this message translates to:
   /// **'temp'**
   String get temp;
+
+  /// Premium welcome message 1
+  ///
+  /// In he, this message translates to:
+  /// **'✨ ברוך הבא למשפחה! בואו תצא למגרש'**
+  String get welcome_message_1_premium;
+
+  /// Premium welcome message 2
+  ///
+  /// In he, this message translates to:
+  /// **'🔥 מוכן להציג כישורים? הגיע הזמן לזרוח!'**
+  String get welcome_message_2_premium;
+
+  /// Premium welcome message 3
+  ///
+  /// In he, this message translates to:
+  /// **'⚡ הפלטפורמה שלך למשחק ברמה הבאה מתחילה כאן'**
+  String get welcome_message_3_premium;
+
+  /// Premium welcome message 4
+  ///
+  /// In he, this message translates to:
+  /// **'🏆 קבוצתך מחכה - בואו נעשה היסטוריה ביחד'**
+  String get welcome_message_4_premium;
+
+  /// Premium welcome message 5
+  ///
+  /// In he, this message translates to:
+  /// **'🎯 מהחלום למגרש - המסע שלך מתחיל עכשיו'**
+  String get welcome_message_5_premium;
+
+  /// הודעה כשאין אירועים קרובים בלוח הזמנים
+  ///
+  /// In he, this message translates to:
+  /// **'אין אירועים קרובים'**
+  String get noUpcomingEvents;
+
+  /// טקסט עזר כשאין אירועים קרובים
+  ///
+  /// In he, this message translates to:
+  /// **'הירשם למשחק או צור אירוע חדש'**
+  String get signUpOrCreateEvent;
+
+  /// טקסט לפני ספירה לאחור לאירוע
+  ///
+  /// In he, this message translates to:
+  /// **'מתחיל בעוד'**
+  String get startsIn;
+
+  /// כפתור לניווט לרשימת כל האירועים
+  ///
+  /// In he, this message translates to:
+  /// **'לכל האירועים שלי'**
+  String get allMyEvents;
+
+  /// תווית למארגן האירוע
+  ///
+  /// In he, this message translates to:
+  /// **'מארגן'**
+  String get organizer;
+
+  /// שם ברירת מחדל כשלא נמצא שם המארגן
+  ///
+  /// In he, this message translates to:
+  /// **'משתמש'**
+  String get userFallback;
+
+  /// תווית לסוג אירוע
+  ///
+  /// In he, this message translates to:
+  /// **'אירוע'**
+  String get eventLabel;
+
+  /// תווית לסוג משחק
+  ///
+  /// In he, this message translates to:
+  /// **'משחק'**
+  String get gameLabel;
+
+  /// כפתור להתחלת אירוע
+  ///
+  /// In he, this message translates to:
+  /// **'התחל אירוע'**
+  String get startEvent;
 }
 
 class _AppLocalizationsDelegate

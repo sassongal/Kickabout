@@ -101,7 +101,8 @@ class PremiumColors {
 
   // Background - High contrast light mode
   static const background = Color(0xFFFAFAFA); // Soft white
-  static const surface = Color(0xFFFFFFFF); // Pure white
+  static const surface =
+      Color(0xE6FFFFFF); // 90% White (More translucent for Prism effect)
   static const surfaceVariant = Color(0xFFF5F5F5); // Very light gray
   static const surfaceElevated = Color(0xFFFFFFFF); // Elevated surface
 
@@ -122,6 +123,7 @@ class PremiumColors {
   static const warning = Color(0xFFEA580C); // Orange-600
   static const error = Color(0xFFDC2626); // Red-600
   static const info = Color(0xFF0284C7); // Sky-600
+  static const urgent = Color(0xFFFF6B35); // Vibrant orange for urgent events
 
   // Divider
   static const divider = Color(0xFFF4F4F5); // Very subtle
@@ -143,6 +145,28 @@ class PremiumColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [accent, accentLight],
+  );
+
+  // Team creation button gradient (purple to pink)
+  static const teamCreationGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF667eea), // Purple
+      Color(0xFF764ba2), // Dark Purple
+      Color(0xFFf093fb), // Pink
+    ],
+  );
+
+  // Event start button gradient (green shades)
+  static const eventStartGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF00C853), // Green
+      Color(0xFF00E676), // Light Green
+      Color(0xFF69F0AE), // Lighter Green
+    ],
   );
 
   static const backgroundGradient = LinearGradient(
@@ -232,7 +256,8 @@ class PremiumTypography {
 ThemeData get premiumTheme => ThemeData(
       useMaterial3: true,
       brightness: Brightness.light, // Changed to light for Hattrick style
-      scaffoldBackgroundColor: PremiumColors.background,
+      scaffoldBackgroundColor:
+          Colors.transparent, // Transparent to show Prism background
 
       colorScheme: const ColorScheme.light(
         primary: PremiumColors.primary,
@@ -253,7 +278,8 @@ ThemeData get premiumTheme => ThemeData(
       ),
 
       appBarTheme: AppBarTheme(
-        backgroundColor: PremiumColors.primary,
+        backgroundColor:
+            PremiumColors.primary.withValues(alpha: 0.2), // Glass effect
         foregroundColor: Colors.white,
         elevation: 2,
         centerTitle: true,
@@ -263,7 +289,8 @@ ThemeData get premiumTheme => ThemeData(
       ),
 
       cardTheme: CardThemeData(
-        color: PremiumColors.surface,
+        color: PremiumColors.surface
+            .withValues(alpha: 0.7), // Semi-transparent for Prism
         elevation: 0,
         shadowColor: Colors.black,
         shape: RoundedRectangleBorder(

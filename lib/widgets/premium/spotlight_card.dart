@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/premium/premium_prism_shader.dart';
 
 class SpotlightCard extends StatefulWidget {
   final Widget child;
@@ -8,6 +9,7 @@ class SpotlightCard extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final Color? spotlightColor;
   final double spotlightRadius;
+  final bool usePrism;
 
   const SpotlightCard({
     super.key,
@@ -17,6 +19,7 @@ class SpotlightCard extends StatefulWidget {
     this.padding = EdgeInsets.zero,
     this.spotlightColor,
     this.spotlightRadius = 300,
+    this.usePrism = false,
   });
 
   @override
@@ -30,8 +33,7 @@ class _SpotlightCardState extends State<SpotlightCard> {
   @override
   Widget build(BuildContext context) {
     final spotlightColor =
-        widget.spotlightColor ??
-            PremiumColors.primary.withValues(alpha: 0.15);
+        widget.spotlightColor ?? PremiumColors.primary.withValues(alpha: 0.15);
 
     return Padding(
       padding: widget.margin,
@@ -48,10 +50,14 @@ class _SpotlightCardState extends State<SpotlightCard> {
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: PremiumColors.surface,
+              color: widget.usePrism
+                  ? Colors.black.withValues(alpha: 0.4)
+                  : PremiumColors.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: PremiumColors.border,
+                color: widget.usePrism
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : PremiumColors.border,
                 width: 1,
               ),
               boxShadow: [
@@ -64,7 +70,15 @@ class _SpotlightCardState extends State<SpotlightCard> {
             ),
             child: Stack(
               children: [
-                // Spotlight Effect
+                // Prism Effect
+                if (widget.usePrism)
+                  const Positioned.fill(
+                    child: PremiumPrismShader(alpha: 0.05),
+                  ),
+
+                // Spotlight Effect (only if prism is off or we want both?)
+                // Let's keep spotlight only if isHovering and not prism, or both.
+                // Actually, let's allow both.
                 if (_isHovering)
                   Positioned.fill(
                     child: CustomPaint(

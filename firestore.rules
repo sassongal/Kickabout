@@ -59,17 +59,17 @@ service cloud.firestore {
     /// Check if user is an active member of hub
     /// OPTIMIZED (2025-12-20): Uses denormalized activeMemberIds array to eliminate get() calls
     /// Hub creator is ALWAYS considered active (even without HubMember doc)
-    /// FALLBACK (2025-12-22): If activeMemberIds doesn't exist, check memberIds
+    /// FALLBACK: If activeMemberIds doesn't exist, check memberIds
     function isActiveHubMember(hubId) {
-      let hub = getHubData(hubId);
+      let hub = get(/databases/$(database)/documents/hubs/$(hubId)).data;
 
-      return isAuthenticated() && (
+      return isAuthenticated() && hub != null && (
         // Creator is always active
-        hub.createdBy == request.auth.uid ||
+        hub.get('createdBy', '') == request.auth.uid ||
         // OPTIMIZED: O(1) array lookup - check activeMemberIds first
-        (hub.activeMemberIds != null && request.auth.uid in hub.activeMemberIds) ||
+        request.auth.uid in hub.get('activeMemberIds', []) ||
         // FALLBACK: If activeMemberIds doesn't exist, check memberIds
-        (hub.activeMemberIds == null && hub.memberIds != null && request.auth.uid in hub.memberIds)
+        (hub.get('activeMemberIds', null) == null && request.auth.uid in hub.get('memberIds', []))
       );
     }
 
@@ -77,17 +77,17 @@ service cloud.firestore {
     /// OPTIMIZED (2025-12-20): Uses denormalized role arrays to eliminate get() calls
     /// Hub creator is ALWAYS manager (even without HubMember doc)
     function hasRole(hubId, userId, allowedRoles) {
-      let hub = getHubData(hubId);
+      let hub = get(/databases/$(database)/documents/hubs/$(hubId)).data;
       
-      return (
+      return hub != null && (
         // Creator is always manager
-        (hub.createdBy == userId && 'manager' in allowedRoles) ||
+        (hub.get('createdBy', '') == userId && 'manager' in allowedRoles) ||
         // OPTIMIZED: O(1) array lookups instead of get() call
         // Check denormalized role arrays
-        ('manager' in allowedRoles && hub.managerIds != null && userId in hub.managerIds) ||
-        ('moderator' in allowedRoles && hub.moderatorIds != null && userId in hub.moderatorIds) ||
+        ('manager' in allowedRoles && userId in hub.get('managerIds', [])) ||
+        ('moderator' in allowedRoles && userId in hub.get('moderatorIds', [])) ||
         // Regular members check active membership array
-        ('member' in allowedRoles && hub.activeMemberIds != null && userId in hub.activeMemberIds)
+        ('member' in allowedRoles && userId in hub.get('activeMemberIds', []))
       );
     }
 
@@ -511,43 +511,39 @@ service cloud.firestore {
           request.resource.data.hubId == resource.data.hubId &&
           request.resource.data.createdBy == resource.data.createdBy) || isSuperAdmin();
 
-        // Live State subcollection for real-time match updates
+        // Signups subcollection for events
+        match /signups/{userId} {
+          // All hub members can see who signed up for an event
+          allow read: if isHubMember(hubId) || isSuperAdmin();
+          // Users can sign up themselves
+          allow create: if (isAuthenticated() && userId == request.auth.uid) || isHubAdmin(hubId) || isSuperAdmin();
+          // Users can cancel their own signup, or admin can manage
+          allow update, delete: if (isAuthenticated() && userId == request.auth.uid) || isHubAdmin(hubId) || isSuperAdmin();
+        }
+
         match /liveState/{stateId} {
           allow read: if isHubMember(hubId) || isSuperAdmin();
           allow write: if isHubModerator(hubId) || isSuperAdmin();
         }
 
-        match /games/{gameId} {
-          allow read: if isAuthenticated();
-          allow write: if isHubAdmin(hubId) || isSuperAdmin();
+        match /{collection}/{docId} {
+          allow read: if isHubMember(hubId) || isSuperAdmin();
+          allow write, update, delete: if isHubAdmin(hubId) || isSuperAdmin();
         }
       }
-
-      match /{collection}/{docId} {
-        allow read: if isHubMember(hubId) || isSuperAdmin();
-        allow write, update, delete: if isHubAdmin(hubId) || isSuperAdmin();
-      }
-    }
+    } // End of /hubs/{hubId} block
 
     // ============================================
     // Games Collection
     // ============================================
     match /games/{gameId} {
-      // FIX: Allow users to query their own games via confirmedPlayerIds
-      // This enables "my games" queries without requiring hub membership check
-      // The individual document read will still verify hub membership if needed
+      // FIX: Allow users to query their own games via confirmedPlayerIds or participants
+      // This enables "my games" queries without requiring hub membership check upfront
       allow read: if isAuthenticated() && (
-        // No hub - standalone game
-        resource.data.hubId == null ||
-        resource.data.hubId == '' ||
-        // User is in the game (checked via denormalized confirmedPlayerIds)
-        (resource.data.denormalized.confirmedPlayerIds != null &&
-         request.auth.uid in resource.data.denormalized.confirmedPlayerIds) ||
-        // User is hub member (for hub-based games)
-        isHubMember(resource.data.hubId) ||
-        // Public completed games
-        (resource.data.showInCommunityFeed == true &&
-          resource.data.status == 'completed')
+        resource.data.showInCommunityFeed == true ||
+        request.auth.uid in resource.data.confirmedPlayerIds ||
+        request.auth.uid in resource.data.participants ||
+        (resource.data.hubId != null && resource.data.hubId != '' && isHubMember(resource.data.hubId))
       );
 
       allow create: if ((

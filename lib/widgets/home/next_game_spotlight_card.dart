@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:kattrick/data/repositories.dart';
 import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
@@ -14,6 +17,7 @@ import 'package:kattrick/features/games/infrastructure/services/event_action_ser
 import 'package:kattrick/widgets/premium/premium_live_event_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kattrick/core/providers/complex_providers.dart';
+import 'package:kattrick/widgets/premium/premium_prism_shader.dart';
 
 /// Next Game Spotlight Card - Shows the user's next upcoming game/event
 ///
@@ -41,6 +45,11 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
   final ValueNotifier<Duration?> _timeUntilGame = ValueNotifier(null);
   String? _lastItemId;
   DateTime? _lastDateTime;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -97,8 +106,8 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
               width: double.infinity,
               child: _PremiumStartEventButton(
                 onPressed: () async {
-                  final actionController = ref
-                      .read(eventActionControllerProvider);
+                  final actionController =
+                      ref.read(eventActionControllerProvider);
                   await actionController.handleStartEvent(
                     context: context,
                     hubId: gameData.hubId,
@@ -175,17 +184,18 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
             final isManager = currentUserId != null &&
                 (hub.createdBy == currentUserId ||
                     hub.managerIds.contains(currentUserId));
-            
+
             // Check if event is within 1 hour before start (for manager actions)
             final now = DateTime.now();
-            final oneHourBeforeEvent = nextGame.dateTime.subtract(const Duration(hours: 1));
-            final canShowManagerActions = isManager && 
+            final oneHourBeforeEvent =
+                nextGame.dateTime.subtract(const Duration(hours: 1));
+            final canShowManagerActions = isManager &&
                 nextGame.isEvent &&
                 !nextGame.dateTime.isBefore(now) && // Event hasn't started yet
                 now.isAfter(oneHourBeforeEvent); // Within 1 hour before event
 
             return _buildGameCard(
-              context, 
+              context,
               nextGame,
               isManager: isManager,
               canShowManagerActions: canShowManagerActions,
@@ -251,7 +261,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
             ),
             const SizedBox(height: 12),
             Text(
-              'אין אירועים קרובים',
+              AppLocalizations.of(context)!.noUpcomingEvents,
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -260,7 +270,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
             ),
             const SizedBox(height: 4),
             Text(
-              'הירשם למשחק או צור אירוע חדש',
+              AppLocalizations.of(context)!.signUpOrCreateEvent,
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: Colors.grey.shade500,
@@ -273,7 +283,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
   }
 
   Widget _buildGameCard(
-    BuildContext context, 
+    BuildContext context,
     _NextGameData gameData, {
     bool isManager = false,
     bool canShowManagerActions = false,
@@ -312,20 +322,22 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                   context.push('/games/${gameData.id}');
                 }
               },
-              child: RepaintBoundary(
+              child: Hero(
+                tag: 'event_card_${gameData.id}',
+                child: RepaintBoundary(
                 // RepaintBoundary מבודד את הכרטיס - מפחית הבהובים!
                 child: Container(
                   constraints: const BoxConstraints(
                     minHeight: 232,
-                    maxHeight: 320, // Allow expansion for manager buttons
+                    maxHeight:
+                        380, // Increased from 320 to allow for manager buttons
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: isUrgent
-                            ? Colors.orange.withValues(alpha: 0.3)
-                            : PremiumColors.primary.withValues(alpha: 0.2),
+                        color: Colors.black
+                            .withValues(alpha: 0.2), // More neutral shadow
                         blurRadius: 20,
                         spreadRadius: 2,
                         offset: const Offset(0, 8),
@@ -335,376 +347,428 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
                     child: Stack(
-                  children: [
-                    // Animated gradient background
-                    AnimatedContainer(
-                      duration: const Duration(seconds: 3),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: isUrgent
-                              ? [
-                                  const Color(0xFFFF6B35),
-                                  const Color(0xFFF7931E),
-                                  const Color(0xFFFDC830),
-                                ]
-                              : [
-                                  const Color(0xFF667eea),
-                                  const Color(0xFF764ba2),
-                                  const Color(0xFFf093fb),
-                                ],
+                      children: [
+                        // Dark Glass Base
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
                         ),
-                      ),
-                    ),
 
-                    // Spotlight effect overlay
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _SpotlightPainter(
-                          color: Colors.white.withValues(alpha: 0.1),
+                        // Prism Effect
+                        const Positioned.fill(
+                          child: PremiumPrismShader(alpha: 0.05),
                         ),
-                      ),
-                    ),
 
-                    // Content
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Header: Type badge + Hub/Creator
-                          Row(
+                        // Content
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Type badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.25),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      gameData.isEvent
-                                          ? Icons.event
-                                          : Icons.sports_soccer,
-                                      size: 14,
-                                      color: Colors.white,
+                              // Header: Type badge + Hub/Creator
+                              Row(
+                                children: [
+                                  // Type badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
                                     ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      gameData.isEvent ? 'אירוע' : 'משחק',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.25),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.3),
+                                        width: 1,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const Spacer(),
-                              // Hub/Creator info
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      gameData.hubName != null
-                                          ? Icons.group
-                                          : Icons.person,
-                                      size: 14,
-                                      color: Colors.white,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          gameData.isEvent
+                                              ? Icons.event
+                                              : Icons.sports_soccer,
+                                          size: 14,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          gameData.isEvent
+                                              ? AppLocalizations.of(context)!.eventLabel
+                                              : AppLocalizations.of(context)!.gameLabel,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 6),
+                                  ),
+                                  const Spacer(),
+                                  // Hub/Creator info
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          gameData.hubName != null
+                                              ? Icons.group
+                                              : Icons.person,
+                                          size: 13,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          gameData.hubName ??
+                                              gameData.creatorName,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // Main content: Title + Date + Location
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (gameData.title != null) ...[
                                     Text(
-                                      gameData.hubName ?? gameData.creatorName,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white,
+                                      gameData.title!,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 22, // Increased size
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.black, // Darker text
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
+                                    const SizedBox(height: 6),
                                   ],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          // Main content: Title + Date + Location
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                                if (gameData.title != null) ...[
-                                  Text(
-                                    gameData.title!,
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                      shadows: [
-                                        Shadow(
-                                          color:
-                                              Colors.black.withValues(alpha: 0.3),
-                                          offset: const Offset(0, 2),
-                                          blurRadius: 4,
-                                        ),
-                                      ],
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                ],
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.calendar_today,
-                                      size: 14,
-                                      color: Colors.white.withValues(alpha: 0.9),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        DateFormat('dd/MM/yyyy · HH:mm')
-                                            .format(gameData.dateTime),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              Colors.white.withValues(alpha: 0.9),
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (gameData.location != null) ...[
-                                  const SizedBox(height: 3),
                                   Row(
                                     children: [
-                                      Icon(
-                                        Icons.location_on,
-                                        size: 14,
-                                        color:
-                                            Colors.white.withValues(alpha: 0.9),
+                                      const Icon(
+                                        Icons.calendar_today,
+                                        size: 16,
+                                        color: Colors.black87,
                                       ),
                                       const SizedBox(width: 6),
-                                      Expanded(
+                                      Flexible(
                                         child: Text(
-                                          gameData.location!,
+                                          DateFormat('dd/MM/yyyy · HH:mm')
+                                              .format(gameData.dateTime),
                                           style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w400,
-                                            color: Colors.white
-                                                .withValues(alpha: 0.85),
+                                            fontSize: 15, // Increased size
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.black87,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      // Navigation icon
-                                      if (gameData.isEvent && event != null && event.locationPoint != null)
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.navigation,
-                                            size: 18,
-                                            color: Colors.white,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          onPressed: () async {
-                                            final lat = event.locationPoint!.latitude;
-                                            final lng = event.locationPoint!.longitude;
-                                            final url = Uri.parse(
-                                              'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-                                            );
-                                            try {
-                                              if (await canLaunchUrl(url)) {
-                                                await launchUrl(url, mode: LaunchMode.externalApplication);
-                                              }
-                                            } catch (e) {
-                                              // Ignore errors
-                                            }
-                                          },
-                                        ),
                                     ],
                                   ),
-                                ],
-                              ],
-                            ),
-
-                          // LIVE Event Button (if event is ongoing and teams are saved)
-                          if (gameData.isEvent && isEventOngoing && event.teams.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: RepaintBoundary(
-                                child: PremiumLiveEventButton(
-                                  onPressed: () {
-                                    context.push(
-                                        '/hubs/${gameData.hubId}/events/${gameData.id}/live');
-                                  },
-                                ),
-                              ),
-                            ),
-
-                          // Manager Action Buttons (only for events, managers, and 1 hour before event)
-                          if (gameData.isEvent && canShowManagerActions && !isEventOngoing)
-                            RepaintBoundary(
-                              child: StreamBuilder<HubEvent?>(
-                                stream: ref
-                                    .read(hubEventsRepositoryProvider)
-                                    .watchHubEvent(gameData.hubId, gameData.id),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting ||
-                                      !snapshot.hasData) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  
-                                  final event = snapshot.data;
-                                  if (event == null || 
-                                      event.isStarted ||
-                                      event.status != 'upcoming' ||
-                                      !canShowManagerActions) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  
-                                  return _buildManagerButtons(context, gameData, event);
-                                },
-                              ),
-                            ),
-
-                          // Footer: Countdown + Participants
-                          Row(
-                              children: [
-                              // Countdown - עטוף ב-RepaintBoundary נוסף!
-                              Expanded(
-                                child: RepaintBoundary(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.1),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                  if (gameData.location != null) ...[
+                                    const SizedBox(height: 3),
+                                    Row(
                                       children: [
-                                        Text(
-                                          'מתחיל בעוד',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.grey.shade600,
+                                        const Icon(
+                                          Icons.location_on,
+                                          size: 16,
+                                          color: Colors.black87,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            gameData.location!,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black54,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
-                                        // רק החלק הזה מתעדכן כל שניה!
-                                        Text(
-                                          _formatCountdown(safeCountdown),
-                                          style: GoogleFonts.orbitron(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
+                                        // Navigation icon
+                                        if (gameData.isEvent &&
+                                            event != null &&
+                                            event.locationPoint != null)
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.navigation,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () async {
+                                              final lat =
+                                                  event.locationPoint!.latitude;
+                                              final lng = event
+                                                  .locationPoint!.longitude;
+                                              final url = Uri.parse(
+                                                'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                                              );
+                                              try {
+                                                if (await canLaunchUrl(url)) {
+                                                  await launchUrl(url,
+                                                      mode: LaunchMode
+                                                          .externalApplication);
+                                                }
+                                              } catch (e) {
+                                                // Ignore errors
+                                              }
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+
+                              // LIVE Event Button (if event is ongoing and teams are saved)
+                              if (gameData.isEvent &&
+                                  isEventOngoing &&
+                                  event.teams.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: RepaintBoundary(
+                                    child: PremiumLiveEventButton(
+                                      onPressed: () {
+                                        context.push(
+                                            '/hubs/${gameData.hubId}/events/${gameData.id}/live');
+                                      },
+                                    ),
+                                  ),
+                                ),
+
+                              // Manager Action Buttons (only for events, managers, and 1 hour before event)
+                              if (gameData.isEvent &&
+                                  canShowManagerActions &&
+                                  !isEventOngoing)
+                                RepaintBoundary(
+                                  child: StreamBuilder<HubEvent?>(
+                                    stream: ref
+                                        .read(hubEventsRepositoryProvider)
+                                        .watchHubEvent(
+                                            gameData.hubId, gameData.id),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                              ConnectionState.waiting ||
+                                          !snapshot.hasData) {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                      final event = snapshot.data;
+                                      if (event == null ||
+                                          event.isStarted ||
+                                          event.status != 'upcoming' ||
+                                          !canShowManagerActions) {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                      return _buildManagerButtons(
+                                          context, gameData, event);
+                                    },
+                                  ),
+                                ),
+
+                              // Footer: Countdown + Participants
+                              Row(
+                                children: [
+                                  // Countdown - עטוף ב-RepaintBoundary נוסף!
+                                  Expanded(
+                                    child: RepaintBoundary(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withValues(alpha: 0.1),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              AppLocalizations.of(context)!.startsIn,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            // רק החלק הזה מתעדכן כל שניה!
+                                            Text(
+                                              _formatCountdown(safeCountdown),
+                                              style: GoogleFonts.orbitron(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w700,
+                                                color: isUrgent
+                                                    ? PremiumColors.urgent
+                                                    : PremiumColors.info,
+                                                letterSpacing: 1.0,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 12),
+
+                                  // Participants count
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (gameData.isEvent) {
+                                        context.push(
+                                            '/hubs/${gameData.hubId}/events/${gameData.id}/manage');
+                                      } else {
+                                        context.push('/games/${gameData.id}');
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.1),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.people,
+                                            size: 24, // Increased size
                                             color: isUrgent
-                                                ? const Color(0xFFFF6B35)
-                                                : const Color(0xFF667eea),
-                                            letterSpacing: 1.0,
+                                                ? PremiumColors.urgent
+                                                : PremiumColors.info,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${gameData.participantCount}',
+                                            style: GoogleFonts.orbitron(
+                                              fontSize: 20, // Increased size
+                                              fontWeight: FontWeight.w700,
+                                              color: isUrgent
+                                                  ? PremiumColors.urgent
+                                                  : PremiumColors.info,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              // "All Events" Button
+                              Align(
+                                alignment: Alignment
+                                    .centerRight, // Align right to make it look smaller/less primary
+                                child: SizedBox(
+                                  width: 160, // Smaller width
+                                  child: TextButton(
+                                    onPressed: () {
+                                      HapticFeedback.lightImpact();
+                                      context.push('/games/all');
+                                    },
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      backgroundColor: PremiumColors.info
+                                          .withValues(alpha: 0.2),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: BorderSide(
+                                          color: PremiumColors.info
+                                              .withValues(alpha: 0.4),
+                                          width: 1,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.list_alt,
+                                            size: 16, color: Colors.indigo),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          AppLocalizations.of(context)!.allMyEvents,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.indigo,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                              ),
-
-                              const SizedBox(width: 12),
-
-                              // Participants count
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.1),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.people,
-                                      size: 20,
-                                      color: isUrgent
-                                          ? const Color(0xFFFF6B35)
-                                          : const Color(0xFF667eea),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${gameData.participantCount}',
-                                      style: GoogleFonts.orbitron(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        color: isUrgent
-                                            ? const Color(0xFFFF6B35)
-                                            : const Color(0xFF667eea),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
+                ), // Close Hero widget
+            );
           },
         );
       },
@@ -761,21 +825,26 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
 
           for (final event in events) {
             // Check if event is live/ongoing
-            final isLive = event.isStarted || event.status == 'ongoing' || event.status == 'live';
-            
+            final isLive = event.isStarted ||
+                event.status == 'ongoing' ||
+                event.status == 'live';
+
             // Check if event is within duration window (5 hours after start)
             final startTime = event.startedAt ?? event.eventDate;
             final happeningWindowEnd = startTime.add(const Duration(hours: 5));
-            final isWithinDurationWindow = now.isBefore(happeningWindowEnd) && 
-                (event.isStarted || now.isAfter(startTime.subtract(const Duration(minutes: 30))));
-            
+            final isWithinDurationWindow = now.isBefore(happeningWindowEnd) &&
+                (event.isStarted ||
+                    now.isAfter(
+                        startTime.subtract(const Duration(minutes: 30))));
+
             // Include event if:
             // 1. NOT completed (hide completed events), AND
             // 2. (It's live/ongoing, OR within duration window, OR upcoming future event)
             final shouldInclude = event.status != 'completed' &&
                 (isLive ||
-                 isWithinDurationWindow ||
-                 (event.eventDate.isAfter(now) && event.eventDate.isBefore(futureLimit)));
+                    isWithinDurationWindow ||
+                    (event.eventDate.isAfter(now) &&
+                        event.eventDate.isBefore(futureLimit)));
 
             if (shouldInclude) {
               final isRegistered = event.registeredPlayerIds.contains(userId);
@@ -787,7 +856,7 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
                   location: event.location,
                   hubId: hubId,
                   hubName: hub?.name,
-                  creatorName: 'מארגן',
+                  creatorName: AppLocalizations.of(context)!.organizer,
                   participantCount: event.registeredPlayerIds.length,
                   isEvent: true,
                 ));
@@ -808,7 +877,8 @@ class _NextGameSpotlightCardState extends ConsumerState<NextGameSpotlightCard> {
     }
 
     // Subscribe to games
-    subscriptions.add(gameQueriesRepo.streamMyUpcomingGames(userId).listen((games) {
+    subscriptions
+        .add(gameQueriesRepo.streamMyUpcomingGames(userId).listen((games) {
       latestGames = games;
       update();
     }));
@@ -858,35 +928,6 @@ class _NextGameData {
   });
 }
 
-/// Custom painter for spotlight effect
-class _SpotlightPainter extends CustomPainter {
-  final Color color;
-
-  _SpotlightPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.7, -0.5),
-        radius: 1.0,
-        colors: [
-          color,
-          Colors.transparent,
-        ],
-        stops: const [0.0, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 /// Premium Create Teams Button with animation
 class _PremiumCreateTeamsButton extends StatefulWidget {
   final VoidCallback? onPressed;
@@ -896,7 +937,8 @@ class _PremiumCreateTeamsButton extends StatefulWidget {
   });
 
   @override
-  State<_PremiumCreateTeamsButton> createState() => _PremiumCreateTeamsButtonState();
+  State<_PremiumCreateTeamsButton> createState() =>
+      _PremiumCreateTeamsButtonState();
 }
 
 class _PremiumCreateTeamsButtonState extends State<_PremiumCreateTeamsButton>
@@ -944,15 +986,7 @@ class _PremiumCreateTeamsButtonState extends State<_PremiumCreateTeamsButton>
             angle: widget.onPressed != null ? _rotationAnimation.value : 0.0,
             child: Container(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF667eea), // Purple
-                    Color(0xFF764ba2), // Dark Purple
-                    Color(0xFFf093fb), // Pink
-                  ],
-                ),
+                gradient: PremiumColors.teamCreationGradient,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: widget.onPressed != null
                     ? [
@@ -976,7 +1010,10 @@ class _PremiumCreateTeamsButtonState extends State<_PremiumCreateTeamsButton>
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: widget.onPressed,
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    widget.onPressed?.call();
+                  },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -1028,7 +1065,8 @@ class _PremiumStartEventButton extends StatefulWidget {
   });
 
   @override
-  State<_PremiumStartEventButton> createState() => _PremiumStartEventButtonState();
+  State<_PremiumStartEventButton> createState() =>
+      _PremiumStartEventButtonState();
 }
 
 class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
@@ -1071,15 +1109,7 @@ class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
               : 1.0,
           child: Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF00C853), // Green
-                  Color(0xFF00E676), // Light Green
-                  Color(0xFF69F0AE), // Lighter Green
-                ],
-              ),
+              gradient: PremiumColors.eventStartGradient,
               borderRadius: BorderRadius.circular(12),
               boxShadow: widget.onPressed != null && !widget.isLoading
                   ? [
@@ -1103,7 +1133,12 @@ class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: widget.isLoading ? null : widget.onPressed,
+                onTap: widget.isLoading
+                    ? null
+                    : () {
+                        HapticFeedback.mediumImpact();
+                        widget.onPressed?.call();
+                      },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -1120,7 +1155,8 @@ class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       else ...[
@@ -1131,7 +1167,7 @@ class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'התחל אירוע',
+                          AppLocalizations.of(context)!.startEvent,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,

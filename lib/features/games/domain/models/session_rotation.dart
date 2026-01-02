@@ -27,10 +27,8 @@ class SessionRotationLogic {
     }
 
     // For 3+ teams, create waiting queue with teams[2] onwards
-    final waitingQueue = teams
-        .skip(2)
-        .map((team) => team.color ?? team.name)
-        .toList();
+    final waitingQueue =
+        teams.skip(2).map((team) => team.color ?? team.name).toList();
 
     return RotationState(
       teamAColor: teams[0].color ?? teams[0].name,
@@ -40,12 +38,29 @@ class SessionRotationLogic {
     );
   }
 
+  /// Check if a team has won too many times in a row (Streak Breaker rule)
+  ///
+  /// Returns true if the team should be forced to rotate,
+  /// false if it's OK to stay.
+  ///
+  /// Streak Breaker Rule: If a team wins 3 matches in a row,
+  /// force them to rotate to keep the game fair and fun.
+  static bool shouldForceStreakRotation(
+    RotationState current,
+    String teamColor,
+  ) {
+    final currentStreak = current.teamWinStreaks[teamColor] ?? 0;
+    // If team just won their 3rd consecutive match, force rotation
+    return currentStreak + 1 >= 3;
+  }
+
   /// Calculate next rotation after a match completes
   ///
   /// Rules:
   /// - Winner stays on field
   /// - Loser rotates to end of waiting queue
   /// - Next team from queue enters as challenger
+  /// - **NEW: Streak Breaker** - If winner has 3 consecutive wins, force rotation
   /// - For ties: manager must select which team stays (via managerSelectedStayingTeam)
   /// - For 2-team sessions: no rotation (same teams continue)
   ///
@@ -99,20 +114,47 @@ class SessionRotationLogic {
           : current.teamAColor;
     }
 
+    // Winner stays, loser rotates - pure "Winner Stays" logic
+    // Streak Breaker removed per user request (teams can stay indefinitely)
+    final String finalStayingTeam;
+    final String finalRotatingTeam;
+
+    if (true) {
+      // Normal: winner stays, loser rotates
+      finalStayingTeam = stayingTeam;
+      finalRotatingTeam = rotatingTeam;
+    }
+
     // Pop next team from front of queue
     final nextTeam = current.waitingTeamColors.first;
 
     // Add rotating team to end of queue
     final updatedQueue = [
       ...current.waitingTeamColors.skip(1),
-      rotatingTeam,
+      finalRotatingTeam,
     ];
 
+    // Updated strokes logic
+    final updatedStreaks = Map<String, int>.from(current.teamWinStreaks);
+
+    // If there was a winner (not a tie/manager selection that resulted in same state)
+    if (finalStayingTeam == stayingTeam) {
+      // stayingTeam won (or was chosen to stay)
+      updatedStreaks[finalStayingTeam] =
+          (updatedStreaks[finalStayingTeam] ?? 0) + 1;
+      // Reset rotating team's streak
+      updatedStreaks[finalRotatingTeam] = 0;
+    }
+
+    // Reset new team's streak (they're entering fresh)
+    updatedStreaks[nextTeam] = 0;
+
     return RotationState(
-      teamAColor: stayingTeam,
+      teamAColor: finalStayingTeam,
       teamBColor: nextTeam,
       waitingTeamColors: updatedQueue,
       currentMatchNumber: current.currentMatchNumber + 1,
+      teamWinStreaks: updatedStreaks,
     );
   }
 

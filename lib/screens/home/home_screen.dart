@@ -13,7 +13,7 @@ import 'package:kattrick/theme/premium_theme.dart';
 import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/premium/empty_state.dart';
 import 'package:kattrick/widgets/premium/loading_state.dart';
-import 'package:kattrick/widgets/player_avatar.dart';
+// Duplicate import removed
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -26,8 +26,11 @@ import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dar
 import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
 import 'package:kattrick/widgets/home/bubble_menu.dart';
+import 'package:kattrick/core/audio/audio_controller.dart';
 import 'package:kattrick/widgets/home/hubs_carousel.dart';
 import 'package:kattrick/widgets/common/home_logo_button.dart';
+import 'package:kattrick/widgets/premium/animated_menu_logo.dart';
+import 'package:kattrick/widgets/premium/premium_drawer.dart';
 import 'package:kattrick/widgets/home/atmospheric_profile_header.dart';
 
 /// Premium Home Dashboard - Figma Design Implementation
@@ -52,6 +55,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Schedule prefetching for next frame to avoid blocking initial render
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _prefetchData();
+      // Ensure background music is playing
+      ref.read(audioControllerProvider.notifier).ensurePlaying();
     });
   }
 
@@ -92,7 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _unreadCountStream = null;
       _gamificationStream = null;
       _cachedUserId = null;
-      
+
       return Scaffold(
         backgroundColor: PremiumColors.background,
         appBar: AppBar(
@@ -173,7 +178,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         // Figma design: Custom AppBar with DASHBOARD title, Bell icon, and Avatar
         return Scaffold(
-          backgroundColor: PremiumColors.background,
+          backgroundColor: Colors.transparent, // Transparent for Prism
+          extendBodyBehindAppBar:
+              false, // Prevent header from going under app bar
+          drawer: PremiumDrawer(
+            user: user,
+            currentUserId: currentUserId,
+            onLogout: () => _showLogoutDialog(context, currentUserId),
+          ),
           appBar: _buildAppBar(context, user, unreadCountStream, currentUserId),
           bottomNavigationBar: PremiumBottomNavBar(
             currentRoute: GoRouterState.of(context).uri.toString(),
@@ -189,7 +201,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // Force refresh
                   },
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -199,32 +210,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             user: user,
                             currentUserId: currentUserId,
                           ),
-                          const SizedBox(height: 16),
                         ],
 
-                        // Next Game Spotlight Card - Shows upcoming game/event
-                        NextGameSpotlightCard(userId: currentUserId),
+                        // Rest of the content with consistent padding
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
 
-                        // "To All Events" Link
-                        Center(
-                          child: TextButton(
-                            onPressed: () => context.push('/games/all'),
-                            child: Text(
-                              'לכל האירועים',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: PremiumColors.primary,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
+                              // Next Game Spotlight Card - Shows upcoming game/event
+                              NextGameSpotlightCard(userId: currentUserId),
+
+                              // Removed old redundant "To All Events" link
+
+                              const SizedBox(height: 16),
+
+                              // Admin Tasks Card (if user is admin)
+                              _buildAdminTasksCard(context, currentUserId),
+                              const SizedBox(height: 16),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-
-                        // Admin Tasks Card (if user is admin)
-                        _buildAdminTasksCard(context, currentUserId),
-                        const SizedBox(height: 16),
 
                         // My Hubs Carousel (Unified) + Upcoming Games
                         // OPTIMIZED: Single stream query for both carousel and games
@@ -257,7 +265,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 // Upcoming Games Section
                                 FutureBuilder<List<Game>>(
                                   future: _getUpcomingGames(
-                                      ref.read(gameQueriesRepositoryProvider), hubIds, now, nextWeek),
+                                      ref.read(gameQueriesRepositoryProvider),
+                                      hubIds,
+                                      now,
+                                      nextWeek),
                                   builder: (context, gamesSnapshot) {
                                     final games = gamesSnapshot.data ?? [];
                                     if (games.isEmpty) {
@@ -288,8 +299,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                   children: [
                                                     Icon(
                                                       Icons.calendar_today,
-                                                      color: PremiumColors
-                                                          .primary,
+                                                      color:
+                                                          PremiumColors.primary,
                                                       size: 20,
                                                     ),
                                                     const SizedBox(width: 12),
@@ -516,11 +527,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ) {
     return AppBar(
       toolbarHeight: 72, // Increased from default 56
-      title: const HomeLogoButton(
-        height: 60, // Premium size for main logo
-        padding: EdgeInsets.zero,
-      ),
-      backgroundColor: PremiumColors.surface,
+      leading: const AnimatedMenuLogo(size: 80),
+      leadingWidth: 90,
+      title: null, // Title replaced by logo
+      backgroundColor: Colors.transparent,
       foregroundColor: PremiumColors.textPrimary,
       elevation: 0,
       automaticallyImplyLeading: false,
@@ -552,6 +562,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onPressed: () => context.push('/leaderboard'),
           tooltip: 'שולחן מובילים',
         ),
+        // Audio Toggle - Header
         // Notifications icon with badge - Premium style
         StreamBuilder<int>(
           stream: unreadCountStream,
@@ -602,113 +613,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             );
           },
         ),
-        // Profile button (top-left in RTL) - Circular Avatar with Menu - ALWAYS SHOWN
-        Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: PopupMenuButton<String>(
-            offset: const Offset(0, 50), // Position menu below avatar
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: PremiumColors.surfaceVariant,
-                width: 1,
-              ),
-            ),
-            color: PremiumColors.surface,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: PremiumColors.primary, // solid color for visibility
-                  width: 2,
-                ),
-              ),
-              child: user != null
-                  ? PlayerAvatar(
-                      user: user,
-                      size: AvatarSize.sm,
-                      clickable: false,
-                    )
-                  : const Icon(Icons.person,
-                      color: PremiumColors.textPrimary),
-            ),
-            onSelected: (value) {
-              switch (value) {
-                case 'profile':
-                  context.push('/profile/$currentUserId');
-                  break;
-                case 'settings':
-                  context.push('/profile/$currentUserId/settings');
-                  break;
-                case 'logout':
-                  _showLogoutDialog(context, currentUserId);
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.person,
-                      color: PremiumColors.textPrimary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'הפרופיל שלי',
-                      style: PremiumTypography.labelLarge.copyWith(
-                        color: PremiumColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.settings,
-                      color: PremiumColors.textPrimary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'הגדרות',
-                      style: PremiumTypography.labelLarge.copyWith(
-                        color: PremiumColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout,
-                      color: PremiumColors.error,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'התנתק',
-                      style: PremiumTypography.labelLarge.copyWith(
-                        color: PremiumColors.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Profile button removed - Menu is now in the Drawer via Logo
       ],
     );
   }
@@ -800,7 +705,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
-
 
 /// Location Toggle Button for AppBar
 /// Supports GPS mode and Manual Location mode
@@ -1109,4 +1013,3 @@ class _PremiumIconButton extends StatelessWidget {
     );
   }
 }
-

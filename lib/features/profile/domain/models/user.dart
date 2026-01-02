@@ -27,8 +27,10 @@ class User with _$User {
     String? firstName,
     String? lastName,
     @TimestampConverter() required DateTime birthDate, // ✅ Required field
-    String? favoriteTeamId, // DEPRECATED: Old field, use favoriteProTeamId instead
-    String? favoriteProTeamId, // ID of favorite professional team (Israeli Premier/National League)
+    String?
+        favoriteTeamId, // DEPRECATED: Old field, use favoriteProTeamId instead
+    String?
+        favoriteProTeamId, // ID of favorite professional team (Israeli Premier/National League)
     String? facebookProfileUrl,
     String? instagramProfileUrl,
     @Default(false)
@@ -37,7 +39,8 @@ class User with _$User {
     String
         availabilityStatus, // available, busy, notAvailable (deprecated, use isActive)
     @Default(true) bool isActive, // true = פתוח להאבים והזמנות, false = לא פתוח
-    @Default(false) bool isFictitious, // Marks manual players created by managers
+    @Default(false)
+    bool isFictitious, // Marks manual players created by managers
     @TimestampConverter() required DateTime createdAt,
     @Default([]) List<String> hubIds,
     // DEPRECATED: currentRankScore - Use managerRatings in Hub model instead
@@ -51,6 +54,7 @@ class User with _$User {
     // Physical data (optional, metric units)
     double? heightCm, // גובה בסנטימטרים (140-220)
     double? weightKg, // משקל בקילוגרמים (40-150)
+    String? preferredFoot, // 'left', 'right', 'both'
     @Default(0)
     int totalParticipations, // Total games played (for milestone badges)
     @Default(0) int gamesPlayed, // Compatibility field used throughout the app
@@ -63,7 +67,6 @@ class User with _$User {
 
     // NEW: Location value object (Phase 4 - dual-write pattern)
     UserLocation? userLocation,
-
     @Default(false) bool isProfileComplete,
     // Denormalized fields (updated by Cloud Functions, not written by client)
     @Default(0)

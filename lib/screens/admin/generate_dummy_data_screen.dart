@@ -454,7 +454,7 @@ class _GenerateDummyDataScreenState
 
       await script.cleanupTestScenario(
         hubId: _lastTestHubId!,
-        gameId: _lastTestEventId!,
+        eventId: _lastTestEventId!,
         playerIds: dummyPlayerIds,
       );
 

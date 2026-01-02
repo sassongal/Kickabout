@@ -76,6 +76,10 @@ dependencies:
   # Reactive Programming
   rxdart: ^0.28.0
   google_maps_flutter: ^2.5.0
+  # Audio
+  just_audio: ^0.9.42
+  # Performance - Visibility detection for optimizing animations
+  visibility_detector: ^0.4.0+2
   # google_maps_cluster_manager: disabled due to name conflicts with google_maps_flutter_platform_interface
   # TODO: Re-enable when fixed - see https://github.com/google/flutter-google-maps-clustering/issues
 
@@ -97,12 +101,15 @@ flutter:
   uses-material-design: true
   generate: true
 
-  # Assets
+  shaders:
+    - assets/shaders/prism.frag
+
   assets:
     - .env
     - assets/logo/
     - assets/images/
     - assets/icons/
+    - assets/sound/Kattrick_Theme.mp3
 
 flutter_native_splash:
   color: "#0B0C10"

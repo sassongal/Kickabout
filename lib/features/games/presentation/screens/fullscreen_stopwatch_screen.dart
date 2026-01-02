@@ -8,6 +8,7 @@ class FullScreenStopwatchScreen extends ConsumerStatefulWidget {
   final StopwatchUtility stopwatchUtility;
   final int elapsedOffsetSeconds;
   final bool isRunning;
+  final bool isCountdownMode;
   final Function(bool) onRunningChanged;
   final Function() onReset;
 
@@ -16,6 +17,7 @@ class FullScreenStopwatchScreen extends ConsumerStatefulWidget {
     required this.stopwatchUtility,
     required this.elapsedOffsetSeconds,
     required this.isRunning,
+    required this.isCountdownMode,
     required this.onRunningChanged,
     required this.onReset,
   });
@@ -49,29 +51,49 @@ class _FullScreenStopwatchScreenState
               // Large stopwatch display (MM:SS:mm format)
               Hero(
                 tag: 'stopwatch',
-                child: AnimatedBuilder(
-                  animation: widget.stopwatchUtility,
-                  builder: (context, _) {
-                    final totalMilliseconds = (widget.elapsedOffsetSeconds * 1000) +
-                        (widget.stopwatchUtility.isRunning
-                            ? widget.stopwatchUtility.elapsed.inMilliseconds
-                            : 0);
-                    final totalSeconds = totalMilliseconds ~/ 1000;
-                    final minutes = totalSeconds ~/ 60;
-                    final seconds = totalSeconds % 60;
-                    final centiseconds = (totalMilliseconds % 1000) ~/ 10;
+                child: Material(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: ExcludeSemantics(
+                      child: AnimatedBuilder(
+                        animation: widget.stopwatchUtility,
+                        builder: (context, _) {
+                          final totalMilliseconds =
+                              (widget.elapsedOffsetSeconds * 1000) +
+                                  (widget.stopwatchUtility.isRunning
+                                      ? widget.stopwatchUtility.elapsed
+                                          .inMilliseconds
+                                      : 0);
 
-                    return Text(
-                      '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}:${centiseconds.toString().padLeft(2, '0')}',
-                      style: const TextStyle(
-                        fontSize: 72,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'monospace',
-                        letterSpacing: 4,
+                          const durationMinutes = 12; // Default if not found
+                          final timeLimitMilliseconds =
+                              durationMinutes * 60 * 1000;
+
+                          final displayMs = widget.isCountdownMode
+                              ? (timeLimitMilliseconds - totalMilliseconds)
+                                  .clamp(0, timeLimitMilliseconds)
+                              : totalMilliseconds;
+
+                          final totalSeconds = displayMs ~/ 1000;
+                          final minutes = totalSeconds ~/ 60;
+                          final seconds = totalSeconds % 60;
+                          final centiseconds = (displayMs % 1000) ~/ 10;
+
+                          return Text(
+                            '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}:${centiseconds.toString().padLeft(2, '0')}',
+                            style: const TextStyle(
+                              fontSize: 72, // Stable large size
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontFamily: 'monospace',
+                              letterSpacing: 4,
+                            ),
+                            textAlign: TextAlign.center,
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 48),
@@ -136,4 +158,3 @@ class _FullScreenStopwatchScreenState
     );
   }
 }
-

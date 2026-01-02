@@ -121,11 +121,35 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                     ? 'צור אירוע חדש כדי להתחיל'
                     : 'אין אירועים זמינים כרגע',
                 action: widget.isManager
-                    ? ElevatedButton.icon(
-                        onPressed: () =>
-                            context.push('/hubs/${widget.hubId}/events/create'),
-                        icon: const Icon(Icons.add),
-                        label: const Text('צור אירוע'),
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            _ActionCircleButton(
+                              icon: Icons.public,
+                              label: 'משחק ציבורי',
+                              color: Colors.blue,
+                              onTap: () => context.push('/games/create'),
+                            ),
+                            _ActionCircleButton(
+                              icon: Icons.hub,
+                              label: 'משחק האב',
+                              color: PremiumColors.primary,
+                              onTap: () => context
+                                  .push('/hubs/${widget.hubId}/events/create'),
+                            ),
+                            _ActionCircleButton(
+                              icon: Icons.poll,
+                              label: 'סקר חדש',
+                              color: Colors.purple,
+                              onTap: () => context
+                                  .push('/hubs/${widget.hubId}/polls/create'),
+                            ),
+                          ],
+                        ),
                       )
                     : null,
               ),
@@ -151,19 +175,22 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                   final isRegistered = currentUserId != null &&
                       event.registeredPlayerIds.contains(currentUserId);
                   final isPast = DateTime.now().isAfter(happeningWindowEnd);
-                  
+
                   // Check if event is within 1 hour before start (for manager actions)
                   final now = DateTime.now();
-                  final oneHourBeforeEvent = event.eventDate.subtract(const Duration(hours: 1));
-                  final canShowManagerActions = widget.isManager && 
-                      !isPast && 
+                  final oneHourBeforeEvent =
+                      event.eventDate.subtract(const Duration(hours: 1));
+                  final canShowManagerActions = widget.isManager &&
+                      !isPast &&
                       !event.isStarted &&
                       now.isAfter(oneHourBeforeEvent);
 
                   // Check if event is ongoing
-                  final isEventOngoing = event.isStarted || event.status == 'ongoing';
-                  
+                  final isEventOngoing =
+                      event.isStarted || event.status == 'ongoing';
+
                   return SpotlightCard(
+                    usePrism: true,
                     margin: const EdgeInsets.only(bottom: 12),
                     onTap: () {
                       if (isEventOngoing) {
@@ -190,8 +217,8 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 children: [
                                   Text(
                                     event.title,
-                                    style: PremiumTypography.techHeadline
-                                        .copyWith(
+                                    style:
+                                        PremiumTypography.techHeadline.copyWith(
                                       fontSize: 18,
                                     ),
                                   ),
@@ -213,8 +240,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color:
-                                              PremiumColors.surfaceVariant,
+                                          color: PremiumColors.surfaceVariant,
                                           borderRadius:
                                               BorderRadius.circular(12),
                                         ),
@@ -222,8 +248,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                           'עבר',
                                           style: PremiumTypography.labelSmall
                                               .copyWith(
-                                            color:
-                                                PremiumColors.textSecondary,
+                                            color: PremiumColors.textSecondary,
                                           ),
                                         ),
                                       ),
@@ -333,18 +358,16 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                       children: [
                                         Text(
                                           locationText,
-                                          style:
-                                              PremiumTypography.bodyMedium,
+                                          style: PremiumTypography.bodyMedium,
                                         ),
                                         if (venue?.address != null &&
                                             venue!.address != locationText)
                                           Text(
                                             venue.address!,
-                                            style: PremiumTypography
-                                                .bodySmall
+                                            style: PremiumTypography.bodySmall
                                                 .copyWith(
-                                              color: PremiumColors
-                                                  .textSecondary,
+                                              color:
+                                                  PremiumColors.textSecondary,
                                             ),
                                           ),
                                       ],
@@ -419,11 +442,13 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                     context.push(
                                         '/hubs/${widget.hubId}/events/${event.eventId}/manage');
                                   },
-                                  icon: const Icon(Icons.info_outline, size: 18),
+                                  icon:
+                                      const Icon(Icons.info_outline, size: 18),
                                   label: const Text('פרטי אירוע'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: PremiumColors.primary,
-                                    side: BorderSide(color: PremiumColors.primary),
+                                    side: BorderSide(
+                                        color: PremiumColors.primary),
                                   ),
                                 ),
                               ),
@@ -458,8 +483,7 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                 ),
                                 child: Text(
                                   'הרשמה סגורה',
-                                  style:
-                                      PremiumTypography.labelSmall.copyWith(
+                                  style: PremiumTypography.labelSmall.copyWith(
                                     color: Colors.red,
                                   ),
                                 ),
@@ -569,8 +593,8 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
                                     child: _PremiumStartEventButton(
                                       onPressed: () async {
                                         // Use EventActionController for smart logic with confirmation
-                                        final actionController =
-                                            ref.read(eventActionControllerProvider);
+                                        final actionController = ref.read(
+                                            eventActionControllerProvider);
                                         await actionController.handleStartEvent(
                                           context: context,
                                           hubId: widget.hubId,
@@ -799,47 +823,94 @@ class _HubEventsTabState extends ConsumerState<HubEventsTab> {
       final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
       await hubEventsRepo.unregisterFromEvent(
           widget.hubId, event.eventId, currentUserId);
-      if (!mounted || !context.mounted) return;
-      SnackbarHelper.showSuccess(context, 'ביטלת הרשמה לאירוע');
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'ההרשמה בוטלה');
+      }
     } catch (e) {
-      if (!mounted || !context.mounted) return;
-      SnackbarHelper.showErrorFromException(context, e);
+      if (mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
     }
   }
 
   Future<void> _deleteEvent(HubEvent event) async {
-    final confirmed = await showDialog<bool>(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('מחיקת אירוע'),
-        content: Text('האם אתה בטוח שברצונך למחוק את האירוע "${event.title}"?'),
+        content: const Text('האם אתה בטוח שברצונך למחוק את האירוע?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('ביטול'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('מחק'),
           ),
         ],
       ),
     );
 
-    if (confirmed == true) {
-      try {
-        final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
-        await hubEventsRepo.deleteEvent(widget.hubId, event.eventId);
-        if (!mounted || !context.mounted) return;
-        SnackbarHelper.showSuccess(context, 'אירוע נמחק');
-      } catch (e) {
-        if (!mounted || !context.mounted) return;
+    if (confirm != true) return;
+
+    try {
+      final hubEventsRepo = ref.read(hubEventsRepositoryProvider);
+      await hubEventsRepo.deleteEvent(widget.hubId, event.eventId);
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'האירוע נמחק בהצלחה');
+      }
+    } catch (e) {
+      if (mounted) {
         SnackbarHelper.showErrorFromException(context, e);
       }
     }
+  }
+}
+
+class _ActionCircleButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionCircleButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: color.withValues(alpha: 0.1),
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Icon(icon, color: color, size: 28),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: PremiumTypography.labelSmall.copyWith(
+            color: PremiumColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1022,7 +1093,8 @@ class _PremiumCreateTeamsButton extends StatefulWidget {
   });
 
   @override
-  State<_PremiumCreateTeamsButton> createState() => _PremiumCreateTeamsButtonState();
+  State<_PremiumCreateTeamsButton> createState() =>
+      _PremiumCreateTeamsButtonState();
 }
 
 class _PremiumCreateTeamsButtonState extends State<_PremiumCreateTeamsButton>
@@ -1154,7 +1226,8 @@ class _PremiumStartEventButton extends StatefulWidget {
   });
 
   @override
-  State<_PremiumStartEventButton> createState() => _PremiumStartEventButtonState();
+  State<_PremiumStartEventButton> createState() =>
+      _PremiumStartEventButtonState();
 }
 
 class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
@@ -1246,7 +1319,8 @@ class _PremiumStartEventButtonState extends State<_PremiumStartEventButton>
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       else ...[

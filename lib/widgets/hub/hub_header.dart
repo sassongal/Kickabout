@@ -48,14 +48,15 @@ class HubHeader extends ConsumerWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceVariant,
-                image: hub.bannerUrl != null
+                image: (hub.bannerUrl != null || hub.profileImageUrl != null)
                     ? DecorationImage(
-                        image: NetworkImage(hub.bannerUrl!),
+                        image:
+                            NetworkImage(hub.bannerUrl ?? hub.profileImageUrl!),
                         fit: BoxFit.cover,
                       )
                     : null,
               ),
-              child: hub.bannerUrl == null
+              child: (hub.bannerUrl == null && hub.profileImageUrl == null)
                   ? Center(
                       child: Icon(
                         Icons.image_outlined,
@@ -83,6 +84,25 @@ class HubHeader extends ConsumerWidget {
                 ),
               ),
             ),
+            // Edit Banner Button (Managers Only)
+            if (hubPermissions != null &&
+                    (hubPermissions!.isManager ||
+                        hubPermissions!.isModerator) ||
+                isAdminRole)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black.withValues(alpha: 0.5),
+                  radius: 20,
+                  child: IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                    tooltip: 'ערוך תמונת נושא',
+                    onPressed: () => context.push(
+                        '/hubs/${hub.hubId}/settings'), // Direct to settings for now implies editing
+                  ),
+                ),
+              ),
             // Hub Profile Image (Overlapping)
             Positioned(
               left: 16,
@@ -377,7 +397,9 @@ class HubHeader extends ConsumerWidget {
     } on HubCapacityExceededException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ה-Hub מלא (${e.currentCount}/${e.maxCount} חברים)')),
+          SnackBar(
+              content:
+                  Text('ה-Hub מלא (${e.currentCount}/${e.maxCount} חברים)')),
         );
       }
     } on UserHubLimitException catch (_) {
@@ -460,8 +482,8 @@ class _HubActionsButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // If no permissions data, fall back to simple avatar (no menu)
-    final canShowMenu =
-        hubPermissions != null && (hubPermissions!.isManager || hubPermissions!.isModerator);
+    final canShowMenu = hubPermissions != null &&
+        (hubPermissions!.isManager || hubPermissions!.isModerator);
 
     return Hero(
       tag: 'hub_avatar_${hub.hubId}',

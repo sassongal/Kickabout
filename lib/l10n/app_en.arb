@@ -613,5 +613,19 @@
   "teamADefaultName": "Team A",
   "teamBDefaultName": "Team B",
   "finalScoreTitle": "Final score",
-  "hubFallbackName": "Hub"
+  "hubFallbackName": "Hub",
+  "welcome_message_1_premium": "✨ Welcome to the family! Let's hit the field",
+  "welcome_message_2_premium": "🔥 Ready to showcase your skills? Time to shine!",
+  "welcome_message_3_premium": "⚡ Your next-level game platform starts here",
+  "welcome_message_4_premium": "🏆 Your team is waiting - let's make history together",
+  "welcome_message_5_premium": "🎯 From dream to field - your journey starts now",
+  "noUpcomingEvents": "No upcoming events",
+  "signUpOrCreateEvent": "Sign up for a game or create a new event",
+  "startsIn": "Starts in",
+  "allMyEvents": "All my events",
+  "organizer": "Organizer",
+  "userFallback": "User",
+  "eventLabel": "Event",
+  "gameLabel": "Game",
+  "startEvent": "Start event"
 }

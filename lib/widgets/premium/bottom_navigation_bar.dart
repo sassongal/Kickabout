@@ -18,7 +18,7 @@ class PremiumBottomNavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 32),
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 48),
       color: Colors.transparent,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -153,9 +153,8 @@ class _NavItem extends StatelessWidget {
             Icon(
               icon,
               size: 24,
-              color: active
-                  ? PremiumColors.primary
-                  : PremiumColors.textSecondary,
+              color:
+                  active ? PremiumColors.primary : PremiumColors.textSecondary,
             ),
             const SizedBox(height: 2),
             Text(

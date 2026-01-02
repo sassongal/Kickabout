@@ -16,6 +16,44 @@ class HubEventsRepository {
   HubEventsRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// Normalizes HubEvent data for consistent parsing across all methods
+  /// Ensures all required fields have proper default values
+  Map<String, dynamic> _normalizeHubEventData(
+    Map<String, dynamic> data,
+    String hubId,
+    String eventId,
+  ) {
+    // Ensure hubId is present (might be missing in subcollection documents)
+    if (!data.containsKey('hubId')) {
+      data['hubId'] = hubId;
+    }
+
+    // Ensure array fields have default values for old documents
+    if (data['registeredPlayerIds'] == null) {
+      data['registeredPlayerIds'] = [];
+    }
+    if (data['waitingListPlayerIds'] == null) {
+      data['waitingListPlayerIds'] = [];
+    }
+    if (data['teams'] == null) {
+      data['teams'] = [];
+    } else if (data['teams'] is! List) {
+      data['teams'] = [];
+    }
+    if (data['matches'] == null) {
+      data['matches'] = [];
+    } else if (data['matches'] is! List) {
+      data['matches'] = [];
+    }
+    if (data['aggregateWins'] == null) {
+      data['aggregateWins'] = <String, int>{};
+    } else if (data['aggregateWins'] is! Map) {
+      data['aggregateWins'] = <String, int>{};
+    }
+
+    return {...data, 'eventId': eventId};
+  }
+
   /// Stream all events for a hub
   Stream<List<HubEvent>> watchHubEvents(String hubId) {
     if (!Env.isFirebaseAvailable) {
@@ -31,38 +69,8 @@ class HubEventsRepository {
         .map((snapshot) => snapshot.docs
             .map((doc) {
               try {
-                final data = doc.data();
-                // Ensure hubId is present (it might be missing in subcollection documents)
-                if (!data.containsKey('hubId')) {
-                  data['hubId'] = hubId;
-                }
-                // Ensure array fields have default values for old documents
-                // Handle null values explicitly - freezed expects non-null for default values
-                if (data['registeredPlayerIds'] == null) {
-                  data['registeredPlayerIds'] = [];
-                }
-                if (data['waitingListPlayerIds'] == null) {
-                  data['waitingListPlayerIds'] = [];
-                }
-                if (data['teams'] == null) {
-                  data['teams'] = [];
-                } else if (data['teams'] is! List) {
-                  // Handle case where teams might be stored as something else
-                  data['teams'] = [];
-                }
-                if (data['matches'] == null) {
-                  data['matches'] = [];
-                } else if (data['matches'] is! List) {
-                  data['matches'] = [];
-                }
-                if (data['aggregateWins'] == null) {
-                  data['aggregateWins'] = <String, int>{};
-                } else if (data['aggregateWins'] is! Map) {
-                  // Handle case where aggregateWins might be stored as something else
-                  data['aggregateWins'] = <String, int>{};
-                }
-
-                return HubEvent.fromJson({...data, 'eventId': doc.id});
+                final normalized = _normalizeHubEventData(doc.data(), hubId, doc.id);
+                return HubEvent.fromJson(normalized);
               } catch (e) {
                 debugPrint('Error parsing HubEvent ${doc.id}: $e');
                 return null;
@@ -93,33 +101,8 @@ class HubEventsRepository {
             return snapshot.docs
                 .map((doc) {
                   try {
-                    final data = doc.data();
-                    if (!data.containsKey('hubId')) {
-                      data['hubId'] = hubId;
-                    }
-                    // Ensure array fields have default values for old documents
-                    if (data['registeredPlayerIds'] == null) {
-                      data['registeredPlayerIds'] = [];
-                    }
-                    if (data['waitingListPlayerIds'] == null) {
-                      data['waitingListPlayerIds'] = [];
-                    }
-                    if (data['teams'] == null) {
-                      data['teams'] = [];
-                    } else if (data['teams'] is! List) {
-                      data['teams'] = [];
-                    }
-                    if (data['matches'] == null) {
-                      data['matches'] = [];
-                    } else if (data['matches'] is! List) {
-                      data['matches'] = [];
-                    }
-                    if (data['aggregateWins'] == null) {
-                      data['aggregateWins'] = <String, int>{};
-                    } else if (data['aggregateWins'] is! Map) {
-                      data['aggregateWins'] = <String, int>{};
-                    }
-                    return HubEvent.fromJson({...data, 'eventId': doc.id});
+                    final normalized = _normalizeHubEventData(doc.data(), hubId, doc.id);
+                    return HubEvent.fromJson(normalized);
                   } catch (e) {
                     debugPrint('Error parsing HubEvent ${doc.id}: $e');
                     return null;
@@ -202,31 +185,8 @@ class HubEventsRepository {
               return null;
             }
 
-            final data = doc.data()!;
-            // Ensure array fields have default values for old documents
-            if (data['registeredPlayerIds'] == null) {
-              data['registeredPlayerIds'] = [];
-            }
-            if (data['waitingListPlayerIds'] == null) {
-              data['waitingListPlayerIds'] = [];
-            }
-            if (data['teams'] == null) {
-              data['teams'] = [];
-            } else if (data['teams'] is! List) {
-              data['teams'] = [];
-            }
-            if (data['matches'] == null) {
-              data['matches'] = [];
-            } else if (data['matches'] is! List) {
-              data['matches'] = [];
-            }
-            if (data['aggregateWins'] == null) {
-              data['aggregateWins'] = <String, int>{};
-            } else if (data['aggregateWins'] is! Map) {
-              data['aggregateWins'] = <String, int>{};
-            }
-
-            return HubEvent.fromJson({...data, 'eventId': doc.id});
+            final normalized = _normalizeHubEventData(doc.data()!, hubId, eventId);
+            return HubEvent.fromJson(normalized);
           },
           config: RetryConfig.network,
           operationName: 'getHubEvent',
@@ -254,31 +214,9 @@ class HubEventsRepository {
       if (!doc.exists) return null;
       final data = doc.data();
       if (data == null) return null;
-      
-      // Ensure array fields have default values for old documents
-      if (data['registeredPlayerIds'] == null) {
-        data['registeredPlayerIds'] = [];
-      }
-      if (data['waitingListPlayerIds'] == null) {
-        data['waitingListPlayerIds'] = [];
-      }
-      if (data['teams'] == null) {
-        data['teams'] = [];
-      } else if (data['teams'] is! List) {
-        data['teams'] = [];
-      }
-      if (data['matches'] == null) {
-        data['matches'] = [];
-      } else if (data['matches'] is! List) {
-        data['matches'] = [];
-      }
-      if (data['aggregateWins'] == null) {
-        data['aggregateWins'] = <String, int>{};
-      } else if (data['aggregateWins'] is! Map) {
-        data['aggregateWins'] = <String, int>{};
-      }
-      
-      return HubEvent.fromJson({...data, 'eventId': doc.id});
+
+      final normalized = _normalizeHubEventData(data, hubId, eventId);
+      return HubEvent.fromJson(normalized);
     });
   }
 
@@ -666,6 +604,7 @@ class HubEventsRepository {
     required int scoreB,
     required String? selectedTeamAId,
     required String? selectedTeamBId,
+    required RotationState? rotationState,
   }) async {
     if (!Env.isFirebaseAvailable) {
       throw Exception('Firebase not available');
@@ -681,15 +620,15 @@ class HubEventsRepository {
           .doc('current');
 
       await liveStateRef.set({
-        'startTimestamp': startTimestamp != null
-            ? Timestamp.fromDate(startTimestamp)
-            : null,
+        'startTimestamp':
+            startTimestamp != null ? Timestamp.fromDate(startTimestamp) : null,
         'isRunning': isRunning,
         'elapsedOffsetSeconds': elapsedOffsetSeconds,
         'scoreA': scoreA,
         'scoreB': scoreB,
         'selectedTeamAId': selectedTeamAId,
         'selectedTeamBId': selectedTeamBId,
+        'rotationState': rotationState?.toJson(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -727,6 +666,10 @@ class HubEventsRepository {
         'scoreB': data['scoreB'] as int? ?? 0,
         'selectedTeamAId': data['selectedTeamAId'] as String?,
         'selectedTeamBId': data['selectedTeamBId'] as String?,
+        'rotationState': data['rotationState'] != null
+            ? RotationState.fromJson(
+                data['rotationState'] as Map<String, dynamic>)
+            : null,
       };
     } catch (e) {
       debugPrint('Error getting live state: $e');
@@ -735,8 +678,7 @@ class HubEventsRepository {
   }
 
   /// Stream live match state for real-time updates
-  Stream<Map<String, dynamic>?> watchLiveState(
-      String hubId, String eventId) {
+  Stream<Map<String, dynamic>?> watchLiveState(String hubId, String eventId) {
     if (!Env.isFirebaseAvailable) {
       return Stream.value(null);
     }
@@ -763,6 +705,10 @@ class HubEventsRepository {
         'scoreB': data['scoreB'] as int? ?? 0,
         'selectedTeamAId': data['selectedTeamAId'] as String?,
         'selectedTeamBId': data['selectedTeamBId'] as String?,
+        'rotationState': data['rotationState'] != null
+            ? RotationState.fromJson(
+                data['rotationState'] as Map<String, dynamic>)
+            : null,
       };
     });
   }
@@ -889,25 +835,27 @@ class HubEventsRepository {
 
         // Get old match for aggregate wins recalculation
         final oldMatch = matches[matchIndex];
-        
+
         // Update the match
         matches[matchIndex] = updatedMatch;
 
         // Recalculate aggregate wins
-        final updatedAggregateWins = Map<String, int>.from(currentEvent.aggregateWins);
-        
+        final updatedAggregateWins =
+            Map<String, int>.from(currentEvent.aggregateWins);
+
         // Remove old win if it existed
         final oldWinnerColor = oldMatch.scoreA > oldMatch.scoreB
             ? oldMatch.teamAColor
             : (oldMatch.scoreB > oldMatch.scoreA ? oldMatch.teamBColor : null);
-        if (oldWinnerColor != null && updatedAggregateWins[oldWinnerColor] != null) {
-          updatedAggregateWins[oldWinnerColor] = 
+        if (oldWinnerColor != null &&
+            updatedAggregateWins[oldWinnerColor] != null) {
+          updatedAggregateWins[oldWinnerColor] =
               (updatedAggregateWins[oldWinnerColor] ?? 1) - 1;
           if (updatedAggregateWins[oldWinnerColor]! <= 0) {
             updatedAggregateWins.remove(oldWinnerColor);
           }
         }
-        
+
         // Add new win
         final newWinnerColor = updatedMatch.scoreA > updatedMatch.scoreB
             ? updatedMatch.teamAColor
@@ -1063,11 +1011,13 @@ class HubEventsRepository {
       };
 
       for (final playerId in participantIds) {
-        playerStats.putIfAbsent(playerId, () => {
-              'goals': 0,
-              'assists': 0,
-              'gamesPlayed': 0,
-            });
+        playerStats.putIfAbsent(
+            playerId,
+            () => {
+                  'goals': 0,
+                  'assists': 0,
+                  'gamesPlayed': 0,
+                });
 
         // Count this match once per player
         if (!playerStats[playerId]!.containsKey('_counted_${match.matchId}')) {
@@ -1079,22 +1029,26 @@ class HubEventsRepository {
 
       // Count goals
       for (final scorerId in match.scorerIds) {
-        playerStats.putIfAbsent(scorerId, () => {
-              'goals': 0,
-              'assists': 0,
-              'gamesPlayed': 0,
-            });
+        playerStats.putIfAbsent(
+            scorerId,
+            () => {
+                  'goals': 0,
+                  'assists': 0,
+                  'gamesPlayed': 0,
+                });
         playerStats[scorerId]!['goals'] =
             (playerStats[scorerId]!['goals'] ?? 0) + 1;
       }
 
       // Count assists
       for (final assistId in match.assistIds) {
-        playerStats.putIfAbsent(assistId, () => {
-              'goals': 0,
-              'assists': 0,
-              'gamesPlayed': 0,
-            });
+        playerStats.putIfAbsent(
+            assistId,
+            () => {
+                  'goals': 0,
+                  'assists': 0,
+                  'gamesPlayed': 0,
+                });
         playerStats[assistId]!['assists'] =
             (playerStats[assistId]!['assists'] ?? 0) + 1;
       }
@@ -1129,9 +1083,8 @@ class HubEventsRepository {
     String? mvpName;
     if (stats['mvpId'] != null) {
       try {
-        final mvpDoc = await _firestore
-            .doc(FirestorePaths.user(stats['mvpId']))
-            .get();
+        final mvpDoc =
+            await _firestore.doc(FirestorePaths.user(stats['mvpId'])).get();
         if (mvpDoc.exists) {
           final mvpUser = User.fromJson({...mvpDoc.data()!, 'uid': mvpDoc.id});
           mvpName = mvpUser.displayName;
@@ -1144,9 +1097,7 @@ class HubEventsRepository {
     // Get hub name
     String? hubName;
     try {
-      final hubDoc = await _firestore
-          .doc(FirestorePaths.hub(hubId))
-          .get();
+      final hubDoc = await _firestore.doc(FirestorePaths.hub(hubId)).get();
       if (hubDoc.exists) {
         final hubData = Hub.fromJson({...hubDoc.data()!, 'hubId': hubId});
         hubName = hubData.name;
@@ -1161,14 +1112,16 @@ class HubEventsRepository {
     String content;
     if (totalMatches == 0) {
       // No matches played
-      content = 'אירוע "${event.title}" ${hubName != null ? 'ב-$hubName ' : ''}הסתיים!';
+      content =
+          'אירוע "${event.title}" ${hubName != null ? 'ב-$hubName ' : ''}הסתיים!';
     } else {
       // Has matches - show statistics
       final winningTeamName = stats['winningTeamColor'] ?? 'לא ידוע';
       final wins = stats['winningTeamWins'] ?? 0;
       final mvpText = mvpName != null ? '\n⭐ MVP של האירוע: $mvpName' : '';
 
-      content = '''אירוע "${event.title}" ${hubName != null ? 'ב-$hubName ' : ''}הסתיים!
+      content =
+          '''אירוע "${event.title}" ${hubName != null ? 'ב-$hubName ' : ''}הסתיים!
 🏆 הקבוצה המנצחת: $winningTeamName עם $wins ניצחונות$mvpText
 📊 סך הכל $totalMatches משחקים''';
     }

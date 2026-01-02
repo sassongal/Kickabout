@@ -91,7 +91,10 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
     final locationService = ref.watch(locationServiceProvider);
     final hubsRepo = ref.watch(hubsRepositoryProvider);
     final currentUserId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
+
     final usersRepo = ref.watch(usersRepositoryProvider);
+    final followRepo = ref.watch(followRepositoryProvider);
+    final pmRepo = ref.watch(privateMessagesRepositoryProvider);
 
     return PremiumScaffold(
       title: 'לוח שחקנים',
@@ -269,8 +272,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                 player.availabilityStatus),
                                             shape: BoxShape.circle,
                                             border: Border.all(
-                                              color:
-                                                  PremiumColors.background,
+                                              color: PremiumColors.background,
                                               width: 2,
                                             ),
                                           ),
@@ -289,8 +291,8 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                             Expanded(
                                               child: Text(
                                                 player.name,
-                                                style: PremiumTypography
-                                                    .heading3,
+                                                style:
+                                                    PremiumTypography.heading3,
                                               ),
                                             ),
                                             // Social media icons (if enabled and links exist)
@@ -398,8 +400,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                   Icon(
                                                     Icons.favorite,
                                                     size: 14,
-                                                    color:
-                                                        PremiumColors.error,
+                                                    color: PremiumColors.error,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
@@ -434,14 +435,13 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                             Icon(
                                               Icons.event,
                                               size: 14,
-                                              color:
-                                                  PremiumColors.textTertiary,
+                                              color: PremiumColors.textTertiary,
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
                                               '${player.totalParticipations} משחקים',
-                                              style: PremiumTypography
-                                                  .bodySmall,
+                                              style:
+                                                  PremiumTypography.bodySmall,
                                             ),
                                           ],
                                         ),
@@ -463,8 +463,8 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                       .bodySmall
                                                       .copyWith(
                                                     fontWeight: FontWeight.w600,
-                                                    color: PremiumColors
-                                                        .primary,
+                                                    color:
+                                                        PremiumColors.primary,
                                                   ),
                                                   overflow:
                                                       TextOverflow.ellipsis,
@@ -490,8 +490,7 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                                 style: PremiumTypography
                                                     .bodySmall
                                                     .copyWith(
-                                                  color:
-                                                      PremiumColors.primary,
+                                                  color: PremiumColors.primary,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
@@ -500,6 +499,75 @@ class _PlayersListScreenState extends ConsumerState<PlayersListScreen> {
                                         ],
                                       ],
                                     ),
+                                  ),
+
+                                  const SizedBox(width: 8),
+                                  // Actions Column
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.person_add_alt_1,
+                                            color: PremiumColors.primary),
+                                        onPressed: () async {
+                                          if (currentUserId == null) return;
+                                          try {
+                                            await followRepo.follow(
+                                                currentUserId, player.uid);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content: Text(
+                                                        'התחלת לעקוב אחרי ${player.name}')),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content: Text('שגיאה: $e')),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        tooltip: 'עקוב',
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.message_outlined,
+                                            color: PremiumColors.secondary),
+                                        onPressed: () async {
+                                          if (currentUserId == null) return;
+                                          try {
+                                            final conversationId = await pmRepo
+                                                .getOrCreateConversation(
+                                              currentUserId,
+                                              player.uid,
+                                            );
+                                            if (context.mounted) {
+                                              // Navigate to chat (assuming route exists)
+                                              // We likely need a route for /chat/:id
+                                              // For now, allow sending a request implicitly or via a dialog if chat screen isn't ready
+                                              // Assuming chat screen is at /messages/:id
+                                              context.push(
+                                                  '/messages/$conversationId',
+                                                  extra: player);
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content: Text(
+                                                        'שגיאה ביצירת שיחה: $e')),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        tooltip: 'שלח הודעה',
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

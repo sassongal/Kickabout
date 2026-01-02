@@ -67,13 +67,19 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
 
               final games = gamesSnapshot.data ?? [];
 
-              // Filter out past games just in case
-              final upcomingGames = games
-                  .where((g) => g.gameDate.isAfter(DateTime.now()))
-                  .toList();
+              // Include future games AND games that started recently (up to 3 hours ago)
+              final now = DateTime.now();
+              final upcomingGames = games.where((g) {
+                final startLimit = now.subtract(const Duration(hours: 3));
+                return g.gameDate.isAfter(startLimit);
+              }).toList();
 
-              // Sort chronologically
-              upcomingGames.sort((a, b) => a.gameDate.compareTo(b.gameDate));
+              // Sort by proximity to 'now' (absolute difference)
+              upcomingGames.sort((a, b) {
+                final diffA = (a.gameDate.difference(now)).inSeconds.abs();
+                final diffB = (b.gameDate.difference(now)).inSeconds.abs();
+                return diffA.compareTo(diffB);
+              });
 
               if (upcomingGames.isEmpty) {
                 return const PremiumEmptyState(
@@ -112,6 +118,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: SpotlightCard(
+        usePrism: true,
         onTap: () => context.push('/games/${game.gameId}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,8 +151,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
                 ),
                 if (isCreator)
                   IconButton(
-                    icon:
-                        const Icon(Icons.edit, color: PremiumColors.primary),
+                    icon: const Icon(Icons.edit, color: PremiumColors.primary),
                     onPressed: () {
                       // Navigate to edit game or hub event depending on type
                       // For now, assuming generic edit or game details handles it
