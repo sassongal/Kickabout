@@ -636,4 +636,120 @@ class GameManagementService {
       throw Exception('Failed to edit game result: $e');
     }
   }
+
+  /// Cancel a game with notification to all participants
+  ///
+  /// This method:
+  /// 1. Verifies user is game creator or hub manager
+  /// 2. Updates game status to 'cancelled'
+  /// 3. Adds audit log with reason
+  /// 4. Notifies all confirmed players
+  /// 5. Invalidates cache
+  ///
+  /// Parameters:
+  /// - gameId: The game to cancel
+  /// - reason: Mandatory cancellation reason
+  ///
+  /// Throws: Exception if unauthorized or game not found
+  Future<void> cancelGame({
+    required String gameId,
+    required String reason,
+  }) async {
+    if (!Env.isFirebaseAvailable) {
+      throw Exception('Firebase not available');
+    }
+
+    if (reason.trim().isEmpty) {
+      throw Exception('Reason is required for cancelling games');
+    }
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Get game and verify permissions
+    final game = await _gamesRepo.getGame(gameId);
+    if (game == null) {
+      throw Exception('Game not found: $gameId');
+    }
+
+    // Check if user is creator or hub manager
+    bool isAuthorized = game.createdBy == currentUserId;
+
+    if (!isAuthorized && game.hubId != null) {
+      final hub = await _hubsRepo.getHub(game.hubId!);
+      if (hub != null) {
+        final hubPermissions = HubPermissions(hub: hub, userId: currentUserId);
+        isAuthorized = hubPermissions.isManager || hubPermissions.isModerator;
+      }
+    }
+
+    if (!isAuthorized) {
+      throw Exception('Only game creator or hub managers can cancel games');
+    }
+
+    // Get all confirmed signups for notifications
+    final allSignups = await _signupsRepo.getSignups(gameId);
+    final confirmedPlayerIds = allSignups
+        .where((s) => s.status == SignupStatus.confirmed)
+        .map((s) => s.playerId)
+        .toList();
+
+    // Use transaction to update game and add audit log
+    await _firestore.runTransaction((transaction) async {
+      final gameRef = _gamesRepo.getGameRef(gameId);
+
+      // Update game status
+      transaction.update(gameRef, {
+        'status': GameStatus.cancelled.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Add audit log
+      final auditEntry = GameAuditEvent(
+        action: 'GAME_CANCELLED',
+        userId: currentUserId,
+        timestamp: DateTime.now(),
+        reason: reason,
+      );
+
+      transaction.set(
+        gameRef.collection('audit').doc(),
+        auditEntry.toJson(),
+      );
+    });
+
+    // Send notifications to all confirmed players (outside transaction)
+    for (final playerId in confirmedPlayerIds) {
+      try {
+        await _notificationsRepo.createNotification(
+          Notification(
+            notificationId: '',
+            userId: playerId,
+            title: 'משחק בוטל',
+            body: 'המשחק בוטל. סיבה: $reason',
+            type: 'game_cancelled',
+            data: {'gameId': gameId, 'reason': reason},
+            createdAt: DateTime.now(),
+          ),
+        );
+      } catch (e) {
+        AppLogger.debug(
+          'Failed to send cancellation notification to $playerId',
+          error: e,
+        );
+      }
+    }
+
+    // Invalidate cache
+    CacheService().clear(CacheKeys.game(gameId));
+    if (game.hubId != null) {
+      CacheService().clear(CacheKeys.gamesByHub(game.hubId!));
+    }
+
+    AppLogger.debug(
+      'Game cancelled: $gameId by $currentUserId. Reason: $reason',
+    );
+  }
 }

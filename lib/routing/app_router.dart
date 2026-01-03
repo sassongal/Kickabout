@@ -36,6 +36,8 @@ import 'package:kattrick/features/games/presentation/screens/team_maker_screen.d
     deferred as team_maker_screen;
 import 'package:kattrick/features/games/presentation/screens/log_game_screen.dart'
     deferred as log_game_screen;
+import 'package:kattrick/features/games/presentation/screens/vote_motm_screen.dart'
+    deferred as vote_motm_screen;
 import 'package:kattrick/features/profile/presentation/screens/player_profile_screen.dart'
     deferred as player_profile_screen;
 import 'package:kattrick/features/profile/presentation/screens/edit_profile_screen.dart'
@@ -987,6 +989,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: () {
                       final gameId = state.pathParameters['id']!;
                       return game_chat_screen.GameChatScreen(gameId: gameId);
+                    }),
+              ),
+              // MOTM voting (Sprint 3)
+              GoRoute(
+                path: 'vote-motm',
+                name: 'voteMotm',
+                builder: (context, state) => LazyRouteLoader(
+                    loader: vote_motm_screen.loadLibrary(),
+                    builder: () {
+                      final gameId = state.pathParameters['id']!;
+                      return vote_motm_screen.VoteMotmScreen(gameId: gameId);
                     }),
               ),
             ],

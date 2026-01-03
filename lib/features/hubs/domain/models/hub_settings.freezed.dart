@@ -69,6 +69,10 @@ mixin _$HubSettings {
   MatchLoggingPolicy get matchLoggingPolicy =>
       throw _privateConstructorUsedError;
 
+  /// Enable Man of the Match voting (Sprint 3)
+  /// When enabled, games created in this hub will have MOTM voting by default
+  bool get enableMotmVoting => throw _privateConstructorUsedError;
+
   /// Serializes this HubSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -99,7 +103,8 @@ abstract class $HubSettingsCopyWith<$Res> {
       String? invitationCode,
       bool invitationsEnabled,
       @JoinModeConverter() JoinMode joinMode,
-      @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy});
+      @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy,
+      bool enableMotmVoting});
 }
 
 /// @nodoc
@@ -131,6 +136,7 @@ class _$HubSettingsCopyWithImpl<$Res, $Val extends HubSettings>
     Object? invitationsEnabled = null,
     Object? joinMode = null,
     Object? matchLoggingPolicy = null,
+    Object? enableMotmVoting = null,
   }) {
     return _then(_value.copyWith(
       showManagerContactInfo: null == showManagerContactInfo
@@ -189,6 +195,10 @@ class _$HubSettingsCopyWithImpl<$Res, $Val extends HubSettings>
           ? _value.matchLoggingPolicy
           : matchLoggingPolicy // ignore: cast_nullable_to_non_nullable
               as MatchLoggingPolicy,
+      enableMotmVoting: null == enableMotmVoting
+          ? _value.enableMotmVoting
+          : enableMotmVoting // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -215,7 +225,8 @@ abstract class _$$HubSettingsImplCopyWith<$Res>
       String? invitationCode,
       bool invitationsEnabled,
       @JoinModeConverter() JoinMode joinMode,
-      @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy});
+      @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy,
+      bool enableMotmVoting});
 }
 
 /// @nodoc
@@ -245,6 +256,7 @@ class __$$HubSettingsImplCopyWithImpl<$Res>
     Object? invitationsEnabled = null,
     Object? joinMode = null,
     Object? matchLoggingPolicy = null,
+    Object? enableMotmVoting = null,
   }) {
     return _then(_$HubSettingsImpl(
       showManagerContactInfo: null == showManagerContactInfo
@@ -303,6 +315,10 @@ class __$$HubSettingsImplCopyWithImpl<$Res>
           ? _value.matchLoggingPolicy
           : matchLoggingPolicy // ignore: cast_nullable_to_non_nullable
               as MatchLoggingPolicy,
+      enableMotmVoting: null == enableMotmVoting
+          ? _value.enableMotmVoting
+          : enableMotmVoting // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -325,7 +341,8 @@ class _$HubSettingsImpl extends _HubSettings {
       this.invitationsEnabled = true,
       @JoinModeConverter() this.joinMode = JoinMode.auto,
       @MatchLoggingPolicyConverter()
-      this.matchLoggingPolicy = MatchLoggingPolicy.managerOnly})
+      this.matchLoggingPolicy = MatchLoggingPolicy.managerOnly,
+      this.enableMotmVoting = false})
       : super._();
 
   factory _$HubSettingsImpl.fromJson(Map<String, dynamic> json) =>
@@ -406,9 +423,15 @@ class _$HubSettingsImpl extends _HubSettings {
   @MatchLoggingPolicyConverter()
   final MatchLoggingPolicy matchLoggingPolicy;
 
+  /// Enable Man of the Match voting (Sprint 3)
+  /// When enabled, games created in this hub will have MOTM voting by default
+  @override
+  @JsonKey()
+  final bool enableMotmVoting;
+
   @override
   String toString() {
-    return 'HubSettings(showManagerContactInfo: $showManagerContactInfo, allowJoinRequests: $allowJoinRequests, allowModeratorsToCreateGames: $allowModeratorsToCreateGames, requireResultApproval: $requireResultApproval, allowMemberInvites: $allowMemberInvites, enablePolls: $enablePolls, enableChat: $enableChat, enableEvents: $enableEvents, maxMembers: $maxMembers, veteranGamesThreshold: $veteranGamesThreshold, invitationCode: $invitationCode, invitationsEnabled: $invitationsEnabled, joinMode: $joinMode, matchLoggingPolicy: $matchLoggingPolicy)';
+    return 'HubSettings(showManagerContactInfo: $showManagerContactInfo, allowJoinRequests: $allowJoinRequests, allowModeratorsToCreateGames: $allowModeratorsToCreateGames, requireResultApproval: $requireResultApproval, allowMemberInvites: $allowMemberInvites, enablePolls: $enablePolls, enableChat: $enableChat, enableEvents: $enableEvents, maxMembers: $maxMembers, veteranGamesThreshold: $veteranGamesThreshold, invitationCode: $invitationCode, invitationsEnabled: $invitationsEnabled, joinMode: $joinMode, matchLoggingPolicy: $matchLoggingPolicy, enableMotmVoting: $enableMotmVoting)';
   }
 
   @override
@@ -445,7 +468,9 @@ class _$HubSettingsImpl extends _HubSettings {
             (identical(other.joinMode, joinMode) ||
                 other.joinMode == joinMode) &&
             (identical(other.matchLoggingPolicy, matchLoggingPolicy) ||
-                other.matchLoggingPolicy == matchLoggingPolicy));
+                other.matchLoggingPolicy == matchLoggingPolicy) &&
+            (identical(other.enableMotmVoting, enableMotmVoting) ||
+                other.enableMotmVoting == enableMotmVoting));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -465,7 +490,8 @@ class _$HubSettingsImpl extends _HubSettings {
       invitationCode,
       invitationsEnabled,
       joinMode,
-      matchLoggingPolicy);
+      matchLoggingPolicy,
+      enableMotmVoting);
 
   /// Create a copy of HubSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -499,7 +525,8 @@ abstract class _HubSettings extends HubSettings {
       final bool invitationsEnabled,
       @JoinModeConverter() final JoinMode joinMode,
       @MatchLoggingPolicyConverter()
-      final MatchLoggingPolicy matchLoggingPolicy}) = _$HubSettingsImpl;
+      final MatchLoggingPolicy matchLoggingPolicy,
+      final bool enableMotmVoting}) = _$HubSettingsImpl;
   const _HubSettings._() : super._();
 
   factory _HubSettings.fromJson(Map<String, dynamic> json) =
@@ -566,6 +593,11 @@ abstract class _HubSettings extends HubSettings {
   @override
   @MatchLoggingPolicyConverter()
   MatchLoggingPolicy get matchLoggingPolicy;
+
+  /// Enable Man of the Match voting (Sprint 3)
+  /// When enabled, games created in this hub will have MOTM voting by default
+  @override
+  bool get enableMotmVoting;
 
   /// Create a copy of HubSettings
   /// with the given fields replaced by the non-null parameter values.

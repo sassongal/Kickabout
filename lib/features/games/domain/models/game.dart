@@ -58,6 +58,19 @@ class Game with _$Game {
     @Default(true) bool enableAttendanceReminder,
     bool? reminderSent2Hours,
     DateTime? reminderSent2HoursAt,
+    // Payment tracking (manual approach - Sprint 2.2)
+    double? gameCost, // Cost per player in ₪ (null = free game)
+    @Default({})
+    Map<String, bool>
+        paymentStatus, // {userId: hasPaid} - manager manually marks as paid
+    // Man of the Match voting (optional per game - Sprint 2.3)
+    @Default(false) bool motmVotingEnabled, // Hub manager can toggle per game
+    @Default({})
+    Map<String, String>
+        motmVotes, // {voterId: votedPlayerId} - one vote per participant
+    String? motmWinnerId, // Player ID of MOTM winner (set after voting closes)
+    @NullableTimestampConverter()
+    DateTime? motmVotingClosedAt, // When voting was closed
     // Sub-models
     @Default(GameDenormalizedData()) GameDenormalizedData denormalized,
     @Default(GameSession()) GameSession session,

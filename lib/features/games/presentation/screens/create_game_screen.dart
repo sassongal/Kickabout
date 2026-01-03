@@ -58,6 +58,13 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
   // Attendance reminder setting
   bool _enableAttendanceReminder = true;
 
+  // Payment tracking (Sprint 2.2)
+  double? _gameCost; // Cost per player in ₪
+  final _gameCostController = TextEditingController();
+
+  // MOTM voting (Sprint 3)
+  bool _motmVotingEnabled = false; // Default: disabled (inherits from hub)
+
   // Hub city for venue filtering
   String? _hubCity;
 
@@ -77,6 +84,7 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
     _locationController.dispose();
     _locationFocusNode.dispose();
     _gameEndConditionController.dispose();
+    _gameCostController.dispose();
     super.dispose();
   }
 
@@ -175,8 +183,11 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
       if (hub != null && mounted) {
         setState(() {
           _hubCity = hub.city; // Load hub city for filtering
+          // Load MOTM voting default from hub settings (Sprint 3)
+          _motmVotingEnabled = hub.settings.enableMotmVoting;
         });
         debugPrint('✅ Loaded hub city for filtering: ${hub.city}');
+        debugPrint('✅ Loaded MOTM voting default: $_motmVotingEnabled');
       }
 
       // Priority: mainVenueId > primaryVenueId > venueIds[0]
@@ -347,6 +358,8 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
         region: gameRegion,
         city: gameCity,
         enableAttendanceReminder: _enableAttendanceReminder,
+        gameCost: _gameCost, // Payment tracking (Sprint 2.2)
+        motmVotingEnabled: _motmVotingEnabled, // MOTM voting (Sprint 3)
       );
 
       debugPrint('📝 Creating game with venueId: $_selectedVenueId');
@@ -962,6 +975,143 @@ class _CreateGameScreenState extends ConsumerState<CreateGameScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Payment tracking (Sprint 2.2 - Optional)
+              if (!_isPublicGame) // Only show for hub games
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.payments, color: Colors.green),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'תשלום (אופציונלי)',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'הגדר עלות למשחק כדי לעקוב אחר תשלומים',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _gameCostController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'עלות לשחקן (₪)',
+                            hintText: 'לדוגמה: 20, 30, 50',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.attach_money),
+                            helperText: 'השאר ריק אם המשחק בחינם',
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              if (value.trim().isEmpty) {
+                                _gameCost = null;
+                              } else {
+                                _gameCost = double.tryParse(value.trim());
+                              }
+                            });
+                          },
+                          validator: (value) {
+                            if (value != null && value.trim().isNotEmpty) {
+                              final cost = double.tryParse(value.trim());
+                              if (cost == null) {
+                                return 'הזן מספר תקין';
+                              }
+                              if (cost < 0) {
+                                return 'העלות חייבת להיות חיובית';
+                              }
+                              if (cost > 500) {
+                                return 'העלות גבוהה מדי (מקסימום ₪500)';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        if (_gameCost != null && _gameCost! > 0) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline, color: Colors.green, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'תוכל לעקוב אחר תשלומים ולשלוח בקשות תשלום למשתתפים בפרטי המשחק',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              if (!_isPublicGame) const SizedBox(height: 16),
+
+              // MOTM Voting (Sprint 3)
+              if (!_isPublicGame)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.emoji_events, color: Colors.amber),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'שחקן מצטיין',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        CheckboxListTile(
+                          title: const Text('אפשר הצבעה לשחקן המצטיין'),
+                          subtitle: const Text(
+                            'שחקנים יוכלו להצביע למצטיין אחרי המשחק',
+                          ),
+                          value: _motmVotingEnabled,
+                          onChanged: (value) {
+                            setState(() {
+                              _motmVotingEnabled = value ?? false;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (!_isPublicGame) const SizedBox(height: 16),
 
               // Location section
               Card(

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories.dart';
-import 'package:kattrick/l10n/app_localizations.dart';
 import 'package:kattrick/features/games/domain/models/session_logic.dart';
-import 'package:kattrick/models/models.dart';
-import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
+import 'package:kattrick/features/games/presentation/widgets/motm_results_card.dart';
 import 'package:kattrick/features/games/presentation/widgets/strategies/game_detail_sections.dart';
+import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/models/models.dart';
 
 class CompletedGameState extends StatelessWidget {
   final Game game;
@@ -43,6 +44,20 @@ class CompletedGameState extends StatelessWidget {
             game.session.legacyTeamBScore != null)
           _FinalScoreWidget(game: game),
         const SizedBox(height: 24),
+        // MOTM Results (Sprint 3)
+        if (game.motmVotingEnabled && game.motmVotingClosedAt != null)
+          teamUsersAsync.when(
+            data: (playerUsers) {
+              final winnerId = game.motmWinnerId;
+              final winnerUser = winnerId != null ? playerUsers[winnerId] : null;
+              return MotmResultsCard(
+                game: game,
+                winnerUser: winnerUser,
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
         if (game.teams.isNotEmpty) ...[
           GameTeamsSection(game: game, teamUsersAsync: teamUsersAsync),
           const SizedBox(height: 24),

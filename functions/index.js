@@ -12,6 +12,11 @@ exports.sendGameReminder = games.sendGameReminder;
 exports.startGameEarly = games.startGameEarly;
 exports.notifyHubOnNewGame = games.notifyHubOnNewGame;
 exports.onSignupStatusChanged = games.onSignupStatusChanged;
+exports.onGameCancelled = games.onGameCancelled;
+
+// MOTM Voting (Sprint 2.3)
+exports.onMotmVoteAdded = games.onMotmVoteAdded;
+exports.closeExpiredMotmVoting = games.closeExpiredMotmVoting;
 
 // Game Signup Denormalization Sync (CRITICAL: Keeps signup data in sync with games)
 exports.onGameCreatedSyncSignups = games.onGameCreatedSyncSignups;

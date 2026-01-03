@@ -68,6 +68,35 @@ enum PlayerRole {
       ];
 }
 
+/// Chemistry data for player pairs
+class PlayerChemistry {
+  final String player1Id;
+  final String player2Id;
+  final double winRate; // 0.0-1.0
+  final int gamesPlayedTogether;
+
+  PlayerChemistry({
+    required this.player1Id,
+    required this.player2Id,
+    required this.winRate,
+    required this.gamesPlayedTogether,
+  });
+
+  /// Check if this chemistry data involves both players
+  bool involves(String playerId1, String playerId2) {
+    return (player1Id == playerId1 && player2Id == playerId2) ||
+        (player1Id == playerId2 && player2Id == playerId1);
+  }
+
+  /// Get chemistry penalty (higher = should split this pair)
+  double get chemistryPenalty {
+    if (gamesPlayedTogether < 3) return 0.0; // Not enough data
+    // High win rate pairs (>65%) should be split for fairness
+    if (winRate > 0.65) return (winRate - 0.65) * 2.0; // 0.0-0.7 penalty
+    return 0.0;
+  }
+}
+
 /// Minimal player data for team making
 class PlayerForTeam {
   final String uid;
@@ -257,11 +286,16 @@ class TeamMaker {
 
   /// Create balanced teams using snake draft + local swap.
   /// Returns a record containing the list of teams and the balance score.
+  ///
+  /// Enhanced with chemistry awareness:
+  /// - chemistryData: Optional list of player pair chemistry (win rates from past games)
+  /// - Algorithm will try to split pairs with high win rates (>65%) for fairness
   static TeamCreationResult createBalancedTeams(
     List<PlayerForTeam> players, {
     required int teamCount,
     int? playersPerSide,
     int? seed,
+    List<PlayerChemistry>? chemistryData,
   }) {
     if (players.length < teamCount) {
       throw ArgumentError('Not enough players for $teamCount teams');
@@ -290,8 +324,8 @@ class TeamMaker {
     final teams = _distributeGoalkeepers(goalkeepers, teamCount);
     // Distribute field players
     _distributeFieldPlayers(fieldPlayers, teams, teamCount, random);
-    // Optimize via local swaps
-    final optimizedTeams = _localSwap(teams, teamCount);
+    // Optimize via local swaps (with chemistry awareness if data provided)
+    final optimizedTeams = _localSwap(teams, teamCount, chemistryData: chemistryData);
 
     // Define team colors and names
     const teamColors = ['Red', 'Blue', 'Yellow', 'Green', 'Orange'];
@@ -623,15 +657,16 @@ class TeamMaker {
   }
 
   /// Local swap to reduce stddev while maintaining role coverage
-  /// Enhanced to consider both rating balance and position balance
+  /// Enhanced to consider both rating balance, position balance, and chemistry
   static List<List<PlayerForTeam>> _localSwap(
     List<List<PlayerForTeam>> teams,
-    int teamCount,
-  ) {
+    int teamCount, {
+    List<PlayerChemistry>? chemistryData,
+  }) {
     if (teams.length < 2) return teams;
 
-    // Calculate current balance score (combines rating and position balance)
-    double currentScore = _calculateBalanceScore(teams);
+    // Calculate current balance score (combines rating, position, and chemistry balance)
+    double currentScore = _calculateBalanceScore(teams, chemistryData: chemistryData);
     final visitedStates = <String>{_stateSignature(teams)};
 
     // Try pairwise swaps
@@ -680,8 +715,8 @@ class TeamMaker {
                 continue;
               }
 
-              // Check if balance improved
-              final newScore = _calculateBalanceScore(teams);
+              // Check if balance improved (including chemistry consideration)
+              final newScore = _calculateBalanceScore(teams, chemistryData: chemistryData);
               if (newScore > currentScore) {
                 // Keep swap
                 currentScore = newScore;
@@ -771,11 +806,14 @@ class TeamMaker {
     return crossTeamBalance * 0.7 + withinTeamDiversity * 0.3;
   }
 
-  /// Calculate overall balance score considering rating, position, and physical attributes
-  static double _calculateBalanceScore(List<List<PlayerForTeam>> teams) {
+  /// Calculate overall balance score considering rating, position, physical attributes, and chemistry
+  static double _calculateBalanceScore(
+    List<List<PlayerForTeam>> teams, {
+    List<PlayerChemistry>? chemistryData,
+  }) {
     if (teams.isEmpty) return 0.0;
 
-    // 1. Rating balance (lower stddev = higher score) - 40%
+    // 1. Rating balance (lower stddev = higher score) - 35%
     final stddev = _calculateStddev(teams);
     final ratingScore = (1.0 / (1.0 + stddev)).clamp(0.0, 1.0);
 
@@ -786,7 +824,7 @@ class TeamMaker {
     final gkVariance = _calculateVariance(gkCounts);
     final gkScore = (1.0 / (1.0 + gkVariance * 2)).clamp(0.0, 1.0);
 
-    // 3. Position balance (defenders vs attackers) - 25%
+    // 3. Position balance (defenders vs attackers) - 20%
     final defCounts = teams
         .map((t) => t.where((p) => p.isDefensive).length.toDouble())
         .toList();
@@ -798,14 +836,67 @@ class TeamMaker {
     final posScore =
         (1.0 / (1.0 + (defVariance + attVariance))).clamp(0.0, 1.0);
 
-    // 4. Physical balance - 20%
+    // 4. Physical balance - 15%
     final physicalScore = _calculatePhysicalBalance(teams);
 
-    // Weighted combination: rating (40%), position (25%), GK (15%), physical (20%)
-    return ratingScore * 0.40 +
-        posScore * 0.25 +
+    // 5. Chemistry balance (avoid strong pairs on same team) - 15%
+    final chemistryScore = _calculateChemistryBalance(teams, chemistryData);
+
+    // Weighted combination: rating (35%), position (20%), GK (15%), physical (15%), chemistry (15%)
+    return ratingScore * 0.35 +
+        posScore * 0.20 +
         gkScore * 0.15 +
-        physicalScore * 0.20;
+        physicalScore * 0.15 +
+        chemistryScore * 0.15;
+  }
+
+  /// Calculate chemistry balance - penalize teams with high-chemistry pairs
+  static double _calculateChemistryBalance(
+    List<List<PlayerForTeam>> teams,
+    List<PlayerChemistry>? chemistryData,
+  ) {
+    if (chemistryData == null || chemistryData.isEmpty) {
+      return 1.0; // Perfect score if no chemistry data
+    }
+
+    double totalPenalty = 0.0;
+    int pairCount = 0;
+
+    // Check each team for high-chemistry pairs
+    for (final team in teams) {
+      final playerIds = team.map((p) => p.uid).toList();
+
+      // Check all pairs within this team
+      for (int i = 0; i < playerIds.length; i++) {
+        for (int j = i + 1; j < playerIds.length; j++) {
+          final player1 = playerIds[i];
+          final player2 = playerIds[j];
+
+          // Find chemistry data for this pair
+          final chemistry = chemistryData.firstWhere(
+            (c) => c.involves(player1, player2),
+            orElse: () => PlayerChemistry(
+              player1Id: player1,
+              player2Id: player2,
+              winRate: 0.5,
+              gamesPlayedTogether: 0,
+            ),
+          );
+
+          totalPenalty += chemistry.chemistryPenalty;
+          pairCount++;
+        }
+      }
+    }
+
+    if (pairCount == 0) return 1.0;
+
+    // Average penalty per pair (0.0-0.7 range)
+    final avgPenalty = totalPenalty / pairCount;
+
+    // Convert to score (lower penalty = higher score)
+    // Max penalty of 0.7 maps to score of 0.0, penalty of 0.0 maps to 1.0
+    return (1.0 - (avgPenalty / 0.7)).clamp(0.0, 1.0);
   }
 
   /// Calculate standard deviation of team average ratings

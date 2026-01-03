@@ -18,6 +18,7 @@ _$HubMemberImpl _$$HubMemberImplFromJson(Map<String, dynamic> json) =>
       veteranSince: _$JsonConverterFromJson<Object, DateTime>(
           json['veteranSince'], const TimestampConverter().fromJson),
       managerRating: (json['managerRating'] as num?)?.toDouble() ?? 0.0,
+      totalMvps: (json['totalMvps'] as num?)?.toInt() ?? 0,
       lastActiveAt: _$JsonConverterFromJson<Object, DateTime>(
           json['lastActiveAt'], const TimestampConverter().fromJson),
       updatedAt: _$JsonConverterFromJson<Object, DateTime>(
@@ -36,6 +37,7 @@ Map<String, dynamic> _$$HubMemberImplToJson(_$HubMemberImpl instance) =>
       'veteranSince': _$JsonConverterToJson<Object, DateTime>(
           instance.veteranSince, const TimestampConverter().toJson),
       'managerRating': instance.managerRating,
+      'totalMvps': instance.totalMvps,
       'lastActiveAt': _$JsonConverterToJson<Object, DateTime>(
           instance.lastActiveAt, const TimestampConverter().toJson),
       'updatedAt': _$JsonConverterToJson<Object, DateTime>(

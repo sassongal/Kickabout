@@ -597,20 +597,28 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       case GameStatus.scheduled:
       case GameStatus.recruiting:
       case GameStatus.teamSelection:
-        child = PendingGameState(
-          game: game,
-          gameId: widget.gameId,
-          role: role,
-          isCreator: isCreator,
-          isSignedUp: isSignedUp,
-          isGameFull: isGameFull,
-          confirmedSignups: confirmedSignups,
-          pendingSignups: pendingSignups,
-          usersRepo: usersRepo,
-          currentUserId: currentUserId,
-          onToggleSignup: _toggleSignup,
-          onApprovePlayer: _approvePlayer,
-          onRejectPlayer: _rejectPlayer,
+        child = teamUsersAsync.when(
+          data: (playerUsers) => PendingGameState(
+            game: game,
+            gameId: widget.gameId,
+            role: role,
+            isCreator: isCreator,
+            isSignedUp: isSignedUp,
+            isGameFull: isGameFull,
+            confirmedSignups: confirmedSignups,
+            pendingSignups: pendingSignups,
+            playerUsers: playerUsers,
+            usersRepo: usersRepo,
+            currentUserId: currentUserId,
+            onToggleSignup: _toggleSignup,
+            onApprovePlayer: _approvePlayer,
+            onRejectPlayer: _rejectPlayer,
+            onCancelGame: _cancelGame,
+            onJoinWaitlist: _joinWaitlist,
+            onUpdatePaymentStatus: _updatePaymentStatus,
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
         );
 
       case GameStatus.fullyBooked:
@@ -716,6 +724,78 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       }
     } finally {
       reasonController.dispose();
+    }
+  }
+
+  Future<void> _cancelGame(String reason) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final service = GameManagementService();
+      await service.cancelGame(
+        gameId: widget.gameId,
+        reason: reason,
+      );
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'המשחק בוטל בהצלחה');
+        // Navigate back to games list
+        context.go('/games');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _updatePaymentStatus(String playerId, bool hasPaid) async {
+    try {
+      final gamesRepo = ref.read(gamesRepositoryProvider);
+      final game = await gamesRepo.getGame(widget.gameId);
+
+      if (game == null) return;
+
+      // Update payment status map
+      final updatedPaymentStatus = Map<String, bool>.from(game.paymentStatus);
+      updatedPaymentStatus[playerId] = hasPaid;
+
+      await gamesRepo.updateGame(
+        widget.gameId,
+        {'paymentStatus': updatedPaymentStatus},
+      );
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(
+          context,
+          hasPaid ? 'השחקן סומן כמי ששילם' : 'התשלום בוטל',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
+    }
+  }
+
+  Future<void> _joinWaitlist(BuildContext context, Game game) async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
+
+    final signupService = ref.read(gameSignupServiceProvider);
+
+    try {
+      await signupService.setSignup(
+        widget.gameId,
+        currentUserId,
+        SignupStatus.waitlist,
+      );
+
+      if (context.mounted) {
+        SnackbarHelper.showSuccess(context, 'הצטרפת לרשימת המתנה בהצלחה');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackbarHelper.showErrorFromException(context, e);
+      }
     }
   }
 

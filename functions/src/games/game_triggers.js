@@ -231,3 +231,199 @@ exports.onSignupStatusChanged = onDocumentUpdated(
         }
     },
 );
+
+// --- Player Pairing Tracking (for Chemistry Score) ---
+// Updates player pairing stats when game status changes to 'completed'
+exports.onGameCompleted = onDocumentUpdated("games/{gameId}", async (event) => {
+    const gameId = event.params.gameId;
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+
+    if (!beforeData || !afterData) {
+        return;
+    }
+
+    const beforeStatus = beforeData.status;
+    const afterStatus = afterData.status;
+
+    // Only process if status changed to 'completed'
+    if (beforeStatus !== "completed" && afterStatus === "completed") {
+        info(`Game ${gameId} completed. Updating player pairings...`);
+
+        try {
+            const hubId = afterData.hubId;
+            if (!hubId) {
+                info(`Game ${gameId} has no hubId, skipping pairing updates`);
+                return;
+            }
+
+            // Get game teams (from gameSession subcollection)
+            const sessionSnapshot = await db
+                .collection("games")
+                .doc(gameId)
+                .collection("gameSession")
+                .doc("current")
+                .get();
+
+            if (!sessionSnapshot.exists) {
+                info(`No game session found for game ${gameId}`);
+                return;
+            }
+
+            const sessionData = sessionSnapshot.data();
+            const teams = sessionData.teams || [];
+            const finalScore = sessionData.finalScore || {};
+
+            // Determine winning team(s)
+            let winningTeamIds = [];
+            if (finalScore) {
+                const scores = Object.entries(finalScore).map(([teamId, score]) => ({
+                    teamId,
+                    score,
+                }));
+                const maxScore = Math.max(...scores.map((s) => s.score));
+                winningTeamIds = scores.filter((s) => s.score === maxScore).map((s) => s.teamId);
+            }
+
+            // Update pairings for each team
+            for (const team of teams) {
+                const playerIds = team.playerIds || [];
+                const didWin = winningTeamIds.includes(team.teamId);
+
+                // Create/update pairing for each pair of players on this team
+                for (let i = 0; i < playerIds.length; i++) {
+                    for (let j = i + 1; j < playerIds.length; j++) {
+                        const player1 = playerIds[i];
+                        const player2 = playerIds[j];
+
+                        // Sort alphabetically for consistent pairing ID
+                        const sorted = [player1, player2].sort();
+                        const pairingId = `${sorted[0]}_${sorted[1]}`;
+
+                        const pairingRef = db
+                            .collection("hubs")
+                            .doc(hubId)
+                            .collection("pairings")
+                            .doc(pairingId);
+
+                        // Use transaction to safely increment counters
+                        await db.runTransaction(async (transaction) => {
+                            const pairingDoc = await transaction.get(pairingRef);
+
+                            if (pairingDoc.exists) {
+                                // Update existing pairing
+                                const data = pairingDoc.data();
+                                const newGamesPlayed = (data.gamesPlayedTogether || 0) + 1;
+                                const newGamesWon = (data.gamesWonTogether || 0) + (didWin ? 1 : 0);
+                                const newWinRate = newGamesWon / newGamesPlayed;
+
+                                transaction.update(pairingRef, {
+                                    gamesPlayedTogether: newGamesPlayed,
+                                    gamesWonTogether: newGamesWon,
+                                    winRate: newWinRate,
+                                    lastPlayedTogether: admin.firestore.FieldValue.serverTimestamp(),
+                                });
+                            } else {
+                                // Create new pairing
+                                transaction.set(pairingRef, {
+                                    player1Id: sorted[0],
+                                    player2Id: sorted[1],
+                                    gamesPlayedTogether: 1,
+                                    gamesWonTogether: didWin ? 1 : 0,
+                                    winRate: didWin ? 1.0 : 0.0,
+                                    lastPlayedTogether: admin.firestore.FieldValue.serverTimestamp(),
+                                    pairingId,
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
+            info(`Successfully updated pairings for game ${gameId}`);
+        } catch (error) {
+            error(`Error updating pairings for game ${gameId}:`, error);
+        }
+    }
+});
+
+// --- Game Cancellation Handler ---
+exports.onGameCancelled = onDocumentUpdated("games/{gameId}", async (event) => {
+    const gameId = event.params.gameId;
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+
+    if (!beforeData || !afterData) {
+        return;
+    }
+
+    const beforeStatus = beforeData.status;
+    const afterStatus = afterData.status;
+
+    // Only process if status changed to 'cancelled'
+    if (beforeStatus !== "cancelled" && afterStatus === "cancelled") {
+        info(`Game ${gameId} was cancelled. Processing notifications...`);
+
+        try {
+            // Get all confirmed signups
+            const signupsSnapshot = await db
+                .collection("games")
+                .doc(gameId)
+                .collection("signups")
+                .where("status", "==", "confirmed")
+                .get();
+
+            const playerIds = signupsSnapshot.docs.map((doc) => doc.id);
+
+            // Get cancellation reason from audit log (most recent entry)
+            const auditSnapshot = await db
+                .collection("games")
+                .doc(gameId)
+                .collection("audit")
+                .orderBy("timestamp", "desc")
+                .limit(1)
+                .get();
+
+            const cancellationReason =
+                !auditSnapshot.empty && auditSnapshot.docs[0].data().reason
+                    ? auditSnapshot.docs[0].data().reason
+                    : "לא צוין";
+
+            // Send FCM notifications to all confirmed players
+            for (const playerId of playerIds) {
+                try {
+                    const tokens = await getUserFCMTokens(playerId);
+
+                    if (tokens.length > 0) {
+                        const message = {
+                            notification: {
+                                title: "משחק בוטל",
+                                body: `המשחק בוטל. סיבה: ${cancellationReason}`,
+                            },
+                            data: {
+                                type: "game_cancelled",
+                                gameId: gameId,
+                                hubId: afterData.hubId || "",
+                                reason: cancellationReason,
+                            },
+                            tokens: tokens,
+                        };
+
+                        await messaging.sendEachForMulticast(message);
+                    }
+                } catch (notificationError) {
+                    info(
+                        `Failed to send cancellation notification to ${playerId}:`,
+                        notificationError
+                    );
+                }
+            }
+
+            info(
+                `Sent cancellation notifications for game ${gameId} to ${playerIds.length} players.`
+            );
+        } catch (error) {
+            info(`Error in onGameCancelled for game ${gameId}:`, error);
+        }
+    }
+});

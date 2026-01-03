@@ -367,11 +367,52 @@ class HubHeader extends ConsumerWidget {
 
     try {
       if (isMember) {
+        // CRITICAL: Check if user is hub creator
+        if (hub.createdBy == currentUserId) {
+          if (context.mounted) {
+            await _showCreatorCannotLeaveDialog(context, hub);
+          }
+          return;
+        }
+
+        // Show confirmation dialog
+        final confirmed = await _showLeaveConfirmationDialog(context, hub);
+        if (!confirmed) return;
+
         await hubsRepo.removeMember(hub.hubId, currentUserId);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('עזבת את ה-Hub')),
+            SnackBar(
+              content: Text(
+                  'עזבת את ${hub.name}. הסטטיסטיקות שלך נשמרו ותוכל להצטרף שוב בכל עת.'),
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'בטל',
+                onPressed: () async {
+                  // Re-join the hub
+                  try {
+                    await membershipService.addMember(
+                      hubId: hub.hubId,
+                      userId: currentUserId,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('הצטרפת מחדש להוב בהצלחה')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('שגיאה בהצטרפות מחדש: $e')),
+                      );
+                    }
+                  }
+                },
+              ),
+            ),
           );
+          // CRITICAL: Navigate to hubs list after leaving
+          context.go('/hubs');
         }
       } else {
         // Use HubMembershipService for business validation
@@ -558,5 +599,106 @@ class _HubActionsButton extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _showCreatorCannotLeaveDialog(
+    BuildContext context,
+    Hub hub,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('לא ניתן לעזוב הוב'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('כיוצר ההוב, אינך יכול לעזוב אותו ישירות.'),
+            SizedBox(height: 16),
+            Text(
+              'אפשרויות:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text('• העבר בעלות למנהל אחר'),
+            Text('• מחק את ההוב לצמיתות'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('סגור'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/hubs/${hub.hubId}/settings');
+            },
+            child: const Text('עבור להגדרות'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _showLeaveConfirmationDialog(
+    BuildContext context,
+    Hub hub,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('אישור עזיבת הוב'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('האם אתה בטוח שברצונך לעזוב את ${hub.name}?'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'הסטטיסטיקות שלך ישמרו ותוכל להצטרף שוב בכל עת',
+                      style: TextStyle(color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('אשר עזיבה'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
   }
 }

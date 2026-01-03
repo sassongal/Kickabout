@@ -60,6 +60,19 @@ _$GameImpl _$$GameImplFromJson(Map<String, dynamic> json) => _$GameImpl(
       reminderSent2HoursAt: json['reminderSent2HoursAt'] == null
           ? null
           : DateTime.parse(json['reminderSent2HoursAt'] as String),
+      gameCost: (json['gameCost'] as num?)?.toDouble(),
+      paymentStatus: (json['paymentStatus'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, e as bool),
+          ) ??
+          const {},
+      motmVotingEnabled: json['motmVotingEnabled'] as bool? ?? false,
+      motmVotes: (json['motmVotes'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, e as String),
+          ) ??
+          const {},
+      motmWinnerId: json['motmWinnerId'] as String?,
+      motmVotingClosedAt: const NullableTimestampConverter()
+          .fromJson(json['motmVotingClosedAt']),
       denormalized: json['denormalized'] == null
           ? const GameDenormalizedData()
           : GameDenormalizedData.fromJson(
@@ -108,6 +121,13 @@ Map<String, dynamic> _$$GameImplToJson(_$GameImpl instance) =>
       'enableAttendanceReminder': instance.enableAttendanceReminder,
       'reminderSent2Hours': instance.reminderSent2Hours,
       'reminderSent2HoursAt': instance.reminderSent2HoursAt?.toIso8601String(),
+      'gameCost': instance.gameCost,
+      'paymentStatus': instance.paymentStatus,
+      'motmVotingEnabled': instance.motmVotingEnabled,
+      'motmVotes': instance.motmVotes,
+      'motmWinnerId': instance.motmWinnerId,
+      'motmVotingClosedAt': const NullableTimestampConverter()
+          .toJson(instance.motmVotingClosedAt),
       'denormalized': instance.denormalized,
       'session': instance.session,
       'audit': instance.audit,

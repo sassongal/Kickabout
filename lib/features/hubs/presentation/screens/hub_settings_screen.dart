@@ -346,6 +346,20 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                           _updateSetting('feedEnabled', value),
                     ),
                   ),
+                  const SizedBox(height: 8),
+
+                  // MOTM Voting (Sprint 3)
+                  Card(
+                    child: SwitchListTile(
+                      title: const Text('הצבעה לשחקן המצטיין'),
+                      subtitle: const Text(
+                        'אפשר הצבעה למצטיין אחרי כל משחק. מגביר מעורבות ותחרותיות',
+                      ),
+                      value: settings['enableMotmVoting'] as bool? ?? false,
+                      onChanged: (value) =>
+                          _updateSetting('enableMotmVoting', value),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   // Venues Management
                   Card(

@@ -71,7 +71,22 @@ mixin _$Game {
   bool get enableAttendanceReminder => throw _privateConstructorUsedError;
   bool? get reminderSent2Hours => throw _privateConstructorUsedError;
   DateTime? get reminderSent2HoursAt =>
-      throw _privateConstructorUsedError; // Sub-models
+      throw _privateConstructorUsedError; // Payment tracking (manual approach - Sprint 2.2)
+  double? get gameCost =>
+      throw _privateConstructorUsedError; // Cost per player in ₪ (null = free game)
+  Map<String, bool> get paymentStatus =>
+      throw _privateConstructorUsedError; // {userId: hasPaid} - manager manually marks as paid
+// Man of the Match voting (optional per game - Sprint 2.3)
+  bool get motmVotingEnabled =>
+      throw _privateConstructorUsedError; // Hub manager can toggle per game
+  Map<String, String> get motmVotes =>
+      throw _privateConstructorUsedError; // {voterId: votedPlayerId} - one vote per participant
+  String? get motmWinnerId =>
+      throw _privateConstructorUsedError; // Player ID of MOTM winner (set after voting closes)
+  @NullableTimestampConverter()
+  DateTime? get motmVotingClosedAt =>
+      throw _privateConstructorUsedError; // When voting was closed
+// Sub-models
   GameDenormalizedData get denormalized => throw _privateConstructorUsedError;
   GameSession get session => throw _privateConstructorUsedError;
   GameAudit get audit => throw _privateConstructorUsedError;
@@ -124,6 +139,12 @@ abstract class $GameCopyWith<$Res> {
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
       DateTime? reminderSent2HoursAt,
+      double? gameCost,
+      Map<String, bool> paymentStatus,
+      bool motmVotingEnabled,
+      Map<String, String> motmVotes,
+      String? motmWinnerId,
+      @NullableTimestampConverter() DateTime? motmVotingClosedAt,
       GameDenormalizedData denormalized,
       GameSession session,
       GameAudit audit});
@@ -182,6 +203,12 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
     Object? reminderSent2HoursAt = freezed,
+    Object? gameCost = freezed,
+    Object? paymentStatus = null,
+    Object? motmVotingEnabled = null,
+    Object? motmVotes = null,
+    Object? motmWinnerId = freezed,
+    Object? motmVotingClosedAt = freezed,
     Object? denormalized = null,
     Object? session = null,
     Object? audit = null,
@@ -315,6 +342,30 @@ class _$GameCopyWithImpl<$Res, $Val extends Game>
           ? _value.reminderSent2HoursAt
           : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      gameCost: freezed == gameCost
+          ? _value.gameCost
+          : gameCost // ignore: cast_nullable_to_non_nullable
+              as double?,
+      paymentStatus: null == paymentStatus
+          ? _value.paymentStatus
+          : paymentStatus // ignore: cast_nullable_to_non_nullable
+              as Map<String, bool>,
+      motmVotingEnabled: null == motmVotingEnabled
+          ? _value.motmVotingEnabled
+          : motmVotingEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      motmVotes: null == motmVotes
+          ? _value.motmVotes
+          : motmVotes // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
+      motmWinnerId: freezed == motmWinnerId
+          ? _value.motmWinnerId
+          : motmWinnerId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      motmVotingClosedAt: freezed == motmVotingClosedAt
+          ? _value.motmVotingClosedAt
+          : motmVotingClosedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       denormalized: null == denormalized
           ? _value.denormalized
           : denormalized // ignore: cast_nullable_to_non_nullable
@@ -430,6 +481,12 @@ abstract class _$$GameImplCopyWith<$Res> implements $GameCopyWith<$Res> {
       bool enableAttendanceReminder,
       bool? reminderSent2Hours,
       DateTime? reminderSent2HoursAt,
+      double? gameCost,
+      Map<String, bool> paymentStatus,
+      bool motmVotingEnabled,
+      Map<String, String> motmVotes,
+      String? motmWinnerId,
+      @NullableTimestampConverter() DateTime? motmVotingClosedAt,
       GameDenormalizedData denormalized,
       GameSession session,
       GameAudit audit});
@@ -490,6 +547,12 @@ class __$$GameImplCopyWithImpl<$Res>
     Object? enableAttendanceReminder = null,
     Object? reminderSent2Hours = freezed,
     Object? reminderSent2HoursAt = freezed,
+    Object? gameCost = freezed,
+    Object? paymentStatus = null,
+    Object? motmVotingEnabled = null,
+    Object? motmVotes = null,
+    Object? motmWinnerId = freezed,
+    Object? motmVotingClosedAt = freezed,
     Object? denormalized = null,
     Object? session = null,
     Object? audit = null,
@@ -623,6 +686,30 @@ class __$$GameImplCopyWithImpl<$Res>
           ? _value.reminderSent2HoursAt
           : reminderSent2HoursAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      gameCost: freezed == gameCost
+          ? _value.gameCost
+          : gameCost // ignore: cast_nullable_to_non_nullable
+              as double?,
+      paymentStatus: null == paymentStatus
+          ? _value._paymentStatus
+          : paymentStatus // ignore: cast_nullable_to_non_nullable
+              as Map<String, bool>,
+      motmVotingEnabled: null == motmVotingEnabled
+          ? _value.motmVotingEnabled
+          : motmVotingEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      motmVotes: null == motmVotes
+          ? _value._motmVotes
+          : motmVotes // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
+      motmWinnerId: freezed == motmWinnerId
+          ? _value.motmWinnerId
+          : motmWinnerId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      motmVotingClosedAt: freezed == motmVotingClosedAt
+          ? _value.motmVotingClosedAt
+          : motmVotingClosedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       denormalized: null == denormalized
           ? _value.denormalized
           : denormalized // ignore: cast_nullable_to_non_nullable
@@ -675,11 +762,19 @@ class _$GameImpl extends _Game {
       this.enableAttendanceReminder = true,
       this.reminderSent2Hours,
       this.reminderSent2HoursAt,
+      this.gameCost,
+      final Map<String, bool> paymentStatus = const {},
+      this.motmVotingEnabled = false,
+      final Map<String, String> motmVotes = const {},
+      this.motmWinnerId,
+      @NullableTimestampConverter() this.motmVotingClosedAt,
       this.denormalized = const GameDenormalizedData(),
       this.session = const GameSession(),
       this.audit = const GameAudit()})
       : _photoUrls = photoUrls,
         _teams = teams,
+        _paymentStatus = paymentStatus,
+        _motmVotes = motmVotes,
         super._();
 
   factory _$GameImpl.fromJson(Map<String, dynamic> json) =>
@@ -792,6 +887,44 @@ class _$GameImpl extends _Game {
   final bool? reminderSent2Hours;
   @override
   final DateTime? reminderSent2HoursAt;
+// Payment tracking (manual approach - Sprint 2.2)
+  @override
+  final double? gameCost;
+// Cost per player in ₪ (null = free game)
+  final Map<String, bool> _paymentStatus;
+// Cost per player in ₪ (null = free game)
+  @override
+  @JsonKey()
+  Map<String, bool> get paymentStatus {
+    if (_paymentStatus is EqualUnmodifiableMapView) return _paymentStatus;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_paymentStatus);
+  }
+
+// {userId: hasPaid} - manager manually marks as paid
+// Man of the Match voting (optional per game - Sprint 2.3)
+  @override
+  @JsonKey()
+  final bool motmVotingEnabled;
+// Hub manager can toggle per game
+  final Map<String, String> _motmVotes;
+// Hub manager can toggle per game
+  @override
+  @JsonKey()
+  Map<String, String> get motmVotes {
+    if (_motmVotes is EqualUnmodifiableMapView) return _motmVotes;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_motmVotes);
+  }
+
+// {voterId: votedPlayerId} - one vote per participant
+  @override
+  final String? motmWinnerId;
+// Player ID of MOTM winner (set after voting closes)
+  @override
+  @NullableTimestampConverter()
+  final DateTime? motmVotingClosedAt;
+// When voting was closed
 // Sub-models
   @override
   @JsonKey()
@@ -805,7 +938,7 @@ class _$GameImpl extends _Game {
 
   @override
   String toString() {
-    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, targetingCriteria: $targetingCriteria, requiresApproval: $requiresApproval, minPlayersToPlay: $minPlayersToPlay, maxPlayers: $maxPlayers, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, teams: $teams, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, city: $city, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt, denormalized: $denormalized, session: $session, audit: $audit)';
+    return 'Game(gameId: $gameId, createdBy: $createdBy, hubId: $hubId, eventId: $eventId, gameDate: $gameDate, location: $location, locationPoint: $locationPoint, geohash: $geohash, venueId: $venueId, teamCount: $teamCount, status: $status, visibility: $visibility, targetingCriteria: $targetingCriteria, requiresApproval: $requiresApproval, minPlayersToPlay: $minPlayersToPlay, maxPlayers: $maxPlayers, photoUrls: $photoUrls, createdAt: $createdAt, updatedAt: $updatedAt, isRecurring: $isRecurring, parentGameId: $parentGameId, recurrencePattern: $recurrencePattern, recurrenceEndDate: $recurrenceEndDate, teams: $teams, durationInMinutes: $durationInMinutes, gameEndCondition: $gameEndCondition, region: $region, city: $city, showInCommunityFeed: $showInCommunityFeed, enableAttendanceReminder: $enableAttendanceReminder, reminderSent2Hours: $reminderSent2Hours, reminderSent2HoursAt: $reminderSent2HoursAt, gameCost: $gameCost, paymentStatus: $paymentStatus, motmVotingEnabled: $motmVotingEnabled, motmVotes: $motmVotes, motmWinnerId: $motmWinnerId, motmVotingClosedAt: $motmVotingClosedAt, denormalized: $denormalized, session: $session, audit: $audit)';
   }
 
   @override
@@ -869,6 +1002,18 @@ class _$GameImpl extends _Game {
                 other.reminderSent2Hours == reminderSent2Hours) &&
             (identical(other.reminderSent2HoursAt, reminderSent2HoursAt) ||
                 other.reminderSent2HoursAt == reminderSent2HoursAt) &&
+            (identical(other.gameCost, gameCost) ||
+                other.gameCost == gameCost) &&
+            const DeepCollectionEquality()
+                .equals(other._paymentStatus, _paymentStatus) &&
+            (identical(other.motmVotingEnabled, motmVotingEnabled) ||
+                other.motmVotingEnabled == motmVotingEnabled) &&
+            const DeepCollectionEquality()
+                .equals(other._motmVotes, _motmVotes) &&
+            (identical(other.motmWinnerId, motmWinnerId) ||
+                other.motmWinnerId == motmWinnerId) &&
+            (identical(other.motmVotingClosedAt, motmVotingClosedAt) ||
+                other.motmVotingClosedAt == motmVotingClosedAt) &&
             (identical(other.denormalized, denormalized) ||
                 other.denormalized == denormalized) &&
             (identical(other.session, session) || other.session == session) &&
@@ -911,6 +1056,12 @@ class _$GameImpl extends _Game {
         enableAttendanceReminder,
         reminderSent2Hours,
         reminderSent2HoursAt,
+        gameCost,
+        const DeepCollectionEquality().hash(_paymentStatus),
+        motmVotingEnabled,
+        const DeepCollectionEquality().hash(_motmVotes),
+        motmWinnerId,
+        motmVotingClosedAt,
         denormalized,
         session,
         audit
@@ -967,6 +1118,12 @@ abstract class _Game extends Game {
       final bool enableAttendanceReminder,
       final bool? reminderSent2Hours,
       final DateTime? reminderSent2HoursAt,
+      final double? gameCost,
+      final Map<String, bool> paymentStatus,
+      final bool motmVotingEnabled,
+      final Map<String, String> motmVotes,
+      final String? motmWinnerId,
+      @NullableTimestampConverter() final DateTime? motmVotingClosedAt,
       final GameDenormalizedData denormalized,
       final GameSession session,
       final GameAudit audit}) = _$GameImpl;
@@ -1046,7 +1203,26 @@ abstract class _Game extends Game {
   @override
   bool? get reminderSent2Hours;
   @override
-  DateTime? get reminderSent2HoursAt; // Sub-models
+  DateTime?
+      get reminderSent2HoursAt; // Payment tracking (manual approach - Sprint 2.2)
+  @override
+  double? get gameCost; // Cost per player in ₪ (null = free game)
+  @override
+  Map<String, bool>
+      get paymentStatus; // {userId: hasPaid} - manager manually marks as paid
+// Man of the Match voting (optional per game - Sprint 2.3)
+  @override
+  bool get motmVotingEnabled; // Hub manager can toggle per game
+  @override
+  Map<String, String>
+      get motmVotes; // {voterId: votedPlayerId} - one vote per participant
+  @override
+  String?
+      get motmWinnerId; // Player ID of MOTM winner (set after voting closes)
+  @override
+  @NullableTimestampConverter()
+  DateTime? get motmVotingClosedAt; // When voting was closed
+// Sub-models
   @override
   GameDenormalizedData get denormalized;
   @override

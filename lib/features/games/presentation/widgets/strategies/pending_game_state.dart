@@ -6,6 +6,7 @@ import 'package:kattrick/models/models.dart';
 import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import 'package:kattrick/shared/domain/models/targeting_criteria.dart';
 import 'package:kattrick/features/games/presentation/widgets/strategies/game_detail_sections.dart';
+import 'package:kattrick/features/games/presentation/widgets/payment_status_card.dart';
 
 class PendingGameState extends StatelessWidget {
   final Game game;
@@ -16,12 +17,16 @@ class PendingGameState extends StatelessWidget {
   final bool isGameFull;
   final List<GameSignup> confirmedSignups;
   final List<GameSignup> pendingSignups;
+  final Map<String, User> playerUsers;
   final UsersRepository usersRepo;
   final String? currentUserId;
   final Future<void> Function(BuildContext context, Game game, bool isSignedUp)
       onToggleSignup;
   final void Function(String playerId) onApprovePlayer;
   final void Function(String playerId) onRejectPlayer;
+  final Future<void> Function(String reason)? onCancelGame;
+  final Future<void> Function(BuildContext context, Game game)? onJoinWaitlist;
+  final Future<void> Function(String playerId, bool hasPaid)? onUpdatePaymentStatus;
 
   const PendingGameState({
     super.key,
@@ -33,11 +38,15 @@ class PendingGameState extends StatelessWidget {
     required this.isGameFull,
     required this.confirmedSignups,
     required this.pendingSignups,
+    required this.playerUsers,
     required this.usersRepo,
     required this.currentUserId,
     required this.onToggleSignup,
     required this.onApprovePlayer,
     required this.onRejectPlayer,
+    this.onCancelGame,
+    this.onJoinWaitlist,
+    this.onUpdatePaymentStatus,
   });
 
   @override
@@ -115,6 +124,19 @@ class PendingGameState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          if ((isCreator || role == UserRole.admin) && onCancelGame != null)
+            ElevatedButton.icon(
+              onPressed: () => _showCancelGameDialog(context, l10n, onCancelGame!),
+              icon: const Icon(Icons.cancel),
+              label: const Text('ביטול משחק'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+            ),
+          if ((isCreator || role == UserRole.admin) && onCancelGame != null)
+            const SizedBox(height: 12),
           if (!isCreator && !isSignedUp && !isGameFull)
             ElevatedButton.icon(
               onPressed: () => onToggleSignup(context, game, isSignedUp),
@@ -154,7 +176,18 @@ class PendingGameState extends StatelessWidget {
                 foregroundColor: Theme.of(context).colorScheme.onError,
               ),
             ),
-          if (isGameFull && !isSignedUp)
+          if (isGameFull && !isSignedUp && onJoinWaitlist != null)
+            ElevatedButton.icon(
+              onPressed: () => onJoinWaitlist!(context, game),
+              icon: const Icon(Icons.list),
+              label: const Text('הצטרף לרשימת המתנה'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          if (isGameFull && !isSignedUp && onJoinWaitlist == null)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -167,6 +200,34 @@ class PendingGameState extends StatelessWidget {
                   const Icon(Icons.info_outline, color: Colors.orange),
                   const SizedBox(width: 8),
                   Text(l10n.gameFullWaitlist),
+                ],
+              ),
+            ),
+          if (isGameFull &&
+              isSignedUp &&
+              pendingSignups
+                  .any((s) => s.playerId == currentUserId && s.status == SignupStatus.waitlist))
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.hourglass_empty, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ברשימת המתנה - מקום #${_getWaitlistPosition(confirmedSignups, pendingSignups, currentUserId)}',
+                      style: const TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => onToggleSignup(context, game, isSignedUp),
+                    child: const Text('עזוב רשימה'),
+                  ),
                 ],
               ),
             ),
@@ -211,6 +272,17 @@ class PendingGameState extends StatelessWidget {
           ),
           const SizedBox(height: 24),
         ],
+        // Payment tracking (Sprint 2.2)
+        if (game.gameCost != null && game.gameCost! > 0)
+          PaymentStatusCard(
+            game: game,
+            confirmedSignups: confirmedSignups,
+            playerUsers: playerUsers,
+            role: role,
+            isCreator: isCreator,
+            currentUserId: currentUserId,
+            onUpdatePaymentStatus: onUpdatePaymentStatus,
+          ),
         GameSignupsSection(
           confirmedSignups: confirmedSignups,
           pendingSignups: signupsPending,
@@ -220,5 +292,81 @@ class PendingGameState extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _showCancelGameDialog(
+    BuildContext context,
+    AppLocalizations l10n,
+    Future<void> Function(String reason) onCancelGame,
+  ) async {
+    final reasonController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ביטול משחק'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'פעולה זו תבטל את המשחק ותודיע לכל השחקנים הרשומים. האם להמשיך?',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'סיבת ביטול (חובה)',
+                hintText: 'למשל: מזג אוויר גרוע, מגרש לא זמין',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              maxLength: 200,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (reasonController.text.trim().isEmpty) {
+                // Show error - reason is mandatory
+                return;
+              }
+              Navigator.pop(context, true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('אשר ביטול'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && reasonController.text.trim().isNotEmpty) {
+      await onCancelGame(reasonController.text.trim());
+    }
+
+    reasonController.dispose();
+  }
+
+  int _getWaitlistPosition(
+    List<GameSignup> confirmedSignups,
+    List<GameSignup> pendingSignups,
+    String? userId,
+  ) {
+    if (userId == null) return 0;
+
+    final allSignups = [...confirmedSignups, ...pendingSignups];
+    final waitlistSignups = allSignups
+        .where((s) => s.status == SignupStatus.waitlist)
+        .toList()
+      ..sort((a, b) => a.signedUpAt.compareTo(b.signedUpAt));
+
+    return waitlistSignups.indexWhere((s) => s.playerId == userId) + 1;
   }
 }

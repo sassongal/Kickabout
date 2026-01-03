@@ -32,6 +32,9 @@ class HubMember with _$HubMember {
     // Additional metadata (moved from Hub.managerRatings map)
     @Default(0.0) double managerRating,
 
+    // Gamification stats (Sprint 2.3)
+    @Default(0) int totalMvps, // Total "Man of the Match" awards in this hub
+
     // Activity tracking
     @TimestampConverter() DateTime? lastActiveAt,
 

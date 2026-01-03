@@ -32,7 +32,10 @@ mixin _$HubMember {
   DateTime? get veteranSince =>
       throw _privateConstructorUsedError; // Additional metadata (moved from Hub.managerRatings map)
   double get managerRating =>
-      throw _privateConstructorUsedError; // Activity tracking
+      throw _privateConstructorUsedError; // Gamification stats (Sprint 2.3)
+  int get totalMvps =>
+      throw _privateConstructorUsedError; // Total "Man of the Match" awards in this hub
+// Activity tracking
   @TimestampConverter()
   DateTime? get lastActiveAt =>
       throw _privateConstructorUsedError; // Audit trail
@@ -66,6 +69,7 @@ abstract class $HubMemberCopyWith<$Res> {
       HubMemberStatus status,
       @TimestampConverter() DateTime? veteranSince,
       double managerRating,
+      int totalMvps,
       @TimestampConverter() DateTime? lastActiveAt,
       @TimestampConverter() DateTime? updatedAt,
       String? updatedBy,
@@ -94,6 +98,7 @@ class _$HubMemberCopyWithImpl<$Res, $Val extends HubMember>
     Object? status = null,
     Object? veteranSince = freezed,
     Object? managerRating = null,
+    Object? totalMvps = null,
     Object? lastActiveAt = freezed,
     Object? updatedAt = freezed,
     Object? updatedBy = freezed,
@@ -128,6 +133,10 @@ class _$HubMemberCopyWithImpl<$Res, $Val extends HubMember>
           ? _value.managerRating
           : managerRating // ignore: cast_nullable_to_non_nullable
               as double,
+      totalMvps: null == totalMvps
+          ? _value.totalMvps
+          : totalMvps // ignore: cast_nullable_to_non_nullable
+              as int,
       lastActiveAt: freezed == lastActiveAt
           ? _value.lastActiveAt
           : lastActiveAt // ignore: cast_nullable_to_non_nullable
@@ -164,6 +173,7 @@ abstract class _$$HubMemberImplCopyWith<$Res>
       HubMemberStatus status,
       @TimestampConverter() DateTime? veteranSince,
       double managerRating,
+      int totalMvps,
       @TimestampConverter() DateTime? lastActiveAt,
       @TimestampConverter() DateTime? updatedAt,
       String? updatedBy,
@@ -190,6 +200,7 @@ class __$$HubMemberImplCopyWithImpl<$Res>
     Object? status = null,
     Object? veteranSince = freezed,
     Object? managerRating = null,
+    Object? totalMvps = null,
     Object? lastActiveAt = freezed,
     Object? updatedAt = freezed,
     Object? updatedBy = freezed,
@@ -224,6 +235,10 @@ class __$$HubMemberImplCopyWithImpl<$Res>
           ? _value.managerRating
           : managerRating // ignore: cast_nullable_to_non_nullable
               as double,
+      totalMvps: null == totalMvps
+          ? _value.totalMvps
+          : totalMvps // ignore: cast_nullable_to_non_nullable
+              as int,
       lastActiveAt: freezed == lastActiveAt
           ? _value.lastActiveAt
           : lastActiveAt // ignore: cast_nullable_to_non_nullable
@@ -255,6 +270,7 @@ class _$HubMemberImpl extends _HubMember {
       this.status = HubMemberStatus.active,
       @TimestampConverter() this.veteranSince,
       this.managerRating = 0.0,
+      this.totalMvps = 0,
       @TimestampConverter() this.lastActiveAt,
       @TimestampConverter() this.updatedAt,
       this.updatedBy,
@@ -286,6 +302,11 @@ class _$HubMemberImpl extends _HubMember {
   @override
   @JsonKey()
   final double managerRating;
+// Gamification stats (Sprint 2.3)
+  @override
+  @JsonKey()
+  final int totalMvps;
+// Total "Man of the Match" awards in this hub
 // Activity tracking
   @override
   @TimestampConverter()
@@ -303,7 +324,7 @@ class _$HubMemberImpl extends _HubMember {
 
   @override
   String toString() {
-    return 'HubMember(hubId: $hubId, userId: $userId, joinedAt: $joinedAt, role: $role, status: $status, veteranSince: $veteranSince, managerRating: $managerRating, lastActiveAt: $lastActiveAt, updatedAt: $updatedAt, updatedBy: $updatedBy, statusReason: $statusReason)';
+    return 'HubMember(hubId: $hubId, userId: $userId, joinedAt: $joinedAt, role: $role, status: $status, veteranSince: $veteranSince, managerRating: $managerRating, totalMvps: $totalMvps, lastActiveAt: $lastActiveAt, updatedAt: $updatedAt, updatedBy: $updatedBy, statusReason: $statusReason)';
   }
 
   @override
@@ -321,6 +342,8 @@ class _$HubMemberImpl extends _HubMember {
                 other.veteranSince == veteranSince) &&
             (identical(other.managerRating, managerRating) ||
                 other.managerRating == managerRating) &&
+            (identical(other.totalMvps, totalMvps) ||
+                other.totalMvps == totalMvps) &&
             (identical(other.lastActiveAt, lastActiveAt) ||
                 other.lastActiveAt == lastActiveAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -342,6 +365,7 @@ class _$HubMemberImpl extends _HubMember {
       status,
       veteranSince,
       managerRating,
+      totalMvps,
       lastActiveAt,
       updatedAt,
       updatedBy,
@@ -372,6 +396,7 @@ abstract class _HubMember extends HubMember {
       final HubMemberStatus status,
       @TimestampConverter() final DateTime? veteranSince,
       final double managerRating,
+      final int totalMvps,
       @TimestampConverter() final DateTime? lastActiveAt,
       @TimestampConverter() final DateTime? updatedAt,
       final String? updatedBy,
@@ -398,7 +423,10 @@ abstract class _HubMember extends HubMember {
   DateTime?
       get veteranSince; // Additional metadata (moved from Hub.managerRatings map)
   @override
-  double get managerRating; // Activity tracking
+  double get managerRating; // Gamification stats (Sprint 2.3)
+  @override
+  int get totalMvps; // Total "Man of the Match" awards in this hub
+// Activity tracking
   @override
   @TimestampConverter()
   DateTime? get lastActiveAt; // Audit trail

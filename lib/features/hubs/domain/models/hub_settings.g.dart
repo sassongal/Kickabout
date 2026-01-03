@@ -29,6 +29,7 @@ _$HubSettingsImpl _$$HubSettingsImplFromJson(Map<String, dynamic> json) =>
           ? MatchLoggingPolicy.managerOnly
           : const MatchLoggingPolicyConverter()
               .fromJson(json['matchLoggingPolicy'] as String),
+      enableMotmVoting: json['enableMotmVoting'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$HubSettingsImplToJson(_$HubSettingsImpl instance) =>
@@ -48,4 +49,5 @@ Map<String, dynamic> _$$HubSettingsImplToJson(_$HubSettingsImpl instance) =>
       'joinMode': const JoinModeConverter().toJson(instance.joinMode),
       'matchLoggingPolicy': const MatchLoggingPolicyConverter()
           .toJson(instance.matchLoggingPolicy),
+      'enableMotmVoting': instance.enableMotmVoting,
     };

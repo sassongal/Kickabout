@@ -57,6 +57,10 @@ class HubSettings with _$HubSettings {
 
     /// Match logging policy: who can log matches
     @MatchLoggingPolicyConverter() @Default(MatchLoggingPolicy.managerOnly) MatchLoggingPolicy matchLoggingPolicy,
+
+    /// Enable Man of the Match voting (Sprint 3)
+    /// When enabled, games created in this hub will have MOTM voting by default
+    @Default(false) bool enableMotmVoting,
   }) = _HubSettings;
 
   const HubSettings._();
@@ -87,6 +91,7 @@ class HubSettings with _$HubSettings {
       matchLoggingPolicy: MatchLoggingPolicy.fromFirestore(
         map['matchLoggingPolicy'] as String? ?? 'managerOnly',
       ),
+      enableMotmVoting: map['enableMotmVoting'] as bool? ?? false,
     );
   }
 
