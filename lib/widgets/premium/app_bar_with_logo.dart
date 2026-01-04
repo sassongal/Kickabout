@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/widgets/premium/offline_indicator.dart';
-import 'package:kattrick/widgets/notifications_badge_button.dart';
-import 'package:kattrick/theme/premium_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'package:kattrick/features/audio/infrastructure/services/playlist_service.dart';
+import 'package:kattrick/features/audio/presentation/widgets/music_player_dialog.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/widgets/notifications_badge_button.dart';
+import 'package:kattrick/widgets/premium/offline_indicator.dart';
 
 /// AppBar with KICKA BALL logo
 /// Refactored: Large animated Logo triggers the Menu.
@@ -69,6 +72,7 @@ class AppBarWithLogo extends StatelessWidget implements PreferredSizeWidget {
             (showBackButton && context.canPop()) ? kToolbarHeight : 100,
         actions: [
           const OfflineIndicatorIcon(),
+          const _MusicPlayerButton(),
           const NotificationsBadgeButton(),
           if (actions != null) ...actions!,
         ],
@@ -141,6 +145,86 @@ class _AnimatedMenuLogoState extends State<_AnimatedMenuLogo>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Music Player Button
+/// Shows now-playing indicator and opens music dialog
+class _MusicPlayerButton extends StatefulWidget {
+  const _MusicPlayerButton();
+
+  @override
+  State<_MusicPlayerButton> createState() => _MusicPlayerButtonState();
+}
+
+class _MusicPlayerButtonState extends State<_MusicPlayerButton> {
+  final PlaylistService _playlist = PlaylistService();
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPlaylist();
+  }
+
+  Future<void> _initPlaylist() async {
+    await _playlist.initialize();
+    if (mounted) {
+      setState(() {
+        _isPlaying = _playlist.isPlaying;
+      });
+    }
+
+    // Listen to playlist changes
+    _startListening();
+  }
+
+  void _startListening() {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) {
+        setState(() {
+          _isPlaying = _playlist.isPlaying;
+        });
+        return true;
+      }
+      return false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        IconButton(
+          icon: Icon(
+            _isPlaying ? Icons.music_note_rounded : Icons.music_note_outlined,
+            color: PremiumColors.textPrimary,
+          ),
+          onPressed: () => showMusicPlayerDialog(context),
+          tooltip: 'נגן מוזיקה',
+        ),
+        if (_isPlaying)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.greenAccent,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.greenAccent,
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

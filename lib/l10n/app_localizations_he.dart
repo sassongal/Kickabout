@@ -893,9 +893,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get hubFallbackName => 'האב';
 
   @override
-  String get temp => 'temp';
-
-  @override
   String get welcome_message_1_premium => '✨ ברוך הבא למשפחה! בואו תצא למגרש';
 
   @override
@@ -940,4 +937,42 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get startEvent => 'התחל אירוע';
+
+  @override
+  String get voteMotm => 'הצבעה למצטיין';
+
+  @override
+  String get whoIsMotm => 'מי היה השחקן המצטיין היום?';
+
+  @override
+  String get submitVote => 'שלח הצבעה';
+
+  @override
+  String get voteCaptured => 'ההצבעה נקלטה! תודה על ההשתתפות.';
+
+  @override
+  String get alreadyVoted => 'כבר הצבעת למשחק זה';
+
+  @override
+  String voteError(Object error) {
+    return 'שגיאה בשליחת ההצבעה: $error';
+  }
+
+  @override
+  String get voteAtAnotherTime => 'לא עכשיו';
+
+  @override
+  String get enableMotmVoting => 'אפשר הצבעה למצטיין';
+
+  @override
+  String get enableMotmVotingSubtitle =>
+      'אפשר לחברים להצביע לשחקן המצטיין לאחר המשחק';
+
+  @override
+  String motmWinner(Object name) {
+    return 'השחקן המצטיין: $name';
+  }
+
+  @override
+  String get noWinnerYet => 'טרם נבחר מנצח';
 }

@@ -7,9 +7,8 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Authentication service
 class AuthService {
-  final FirebaseAuth _auth;
-
   AuthService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
+  final FirebaseAuth _auth;
 
   /// Get current user
   User? get currentUser => _auth.currentUser;
@@ -37,7 +36,8 @@ class AuthService {
   Future<UserCredential> signInAnonymously() async {
     debugPrint('❌ Anonymous sign in attempted but is disabled');
     throw Exception(
-        'התחברות כאורח לא זמינה. אנא הירשם או התחבר כדי להשתמש באפליקציה.');
+      'התחברות כאורח לא זמינה. אנא הירשם או התחבר כדי להשתמש באפליקציה.',
+    );
   }
 
   /// Sign out
@@ -69,7 +69,8 @@ class AuthService {
   ) async {
     if (!Env.isFirebaseAvailable) {
       debugPrint(
-          '❌ User registration failed: Firebase not available (limited mode)');
+        '❌ User registration failed: Firebase not available (limited mode)',
+      );
       throw Exception('Firebase not available');
     }
     try {
@@ -156,7 +157,8 @@ class AuthService {
         }
       }
       debugPrint(
-          '❌ Google sign in failed (FirebaseAuthException): ${e.code} - ${e.message}');
+        '❌ Google sign in failed (FirebaseAuthException): ${e.code} - ${e.message}',
+      );
       rethrow;
     } catch (e) {
       // Handle GoogleSignIn cancellation (especially on Web)
@@ -195,7 +197,7 @@ class AuthService {
       );
 
       // Create an `OAuthCredential` from the credential returned by Apple
-      final oauthCredential = OAuthProvider("apple.com").credential(
+      final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
       );

@@ -80,6 +80,8 @@ dependencies:
   just_audio: ^0.9.42
   # Performance - Visibility detection for optimizing animations
   visibility_detector: ^0.4.0+2
+  # Animations
+  flutter_animate: ^4.5.0
   # google_maps_cluster_manager: disabled due to name conflicts with google_maps_flutter_platform_interface
   # TODO: Re-enable when fixed - see https://github.com/google/flutter-google-maps-clustering/issues
 
@@ -110,6 +112,11 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/sound/Kattrick_Theme.mp3
+    - assets/sound/k1.mp3
+    - assets/sound/k2.mp3
+    - assets/sound/k3.mp3
+    - assets/sound/k4.mp3
+    - assets/sound/k5.mp3
 
 flutter_native_splash:
   color: "#0B0C10"

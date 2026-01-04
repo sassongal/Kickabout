@@ -167,16 +167,45 @@ class VenuesRepository {
 
       // Query venues in the geohash area concurrently
       final geohashes = <String>{centerGeohash, ...neighbors};
+
+      // Track query success/failure for diagnostics
+      int successfulQueries = 0;
+      int failedQueries = 0;
+
       final snapshots = await Future.wait(
         geohashes.map(
-          (geohash) => _firestore
-              .collection(FirestorePaths.venues())
-              .where('geohash', isGreaterThanOrEqualTo: geohash)
-              .where('geohash', isLessThanOrEqualTo: '${geohash}z')
-              .where('isActive', isEqualTo: true)
-              .get(),
+          (geohash) async {
+            try {
+              final snapshot = await _firestore
+                  .collection(FirestorePaths.venues())
+                  .where('geohash', isGreaterThanOrEqualTo: geohash)
+                  .where('geohash', isLessThanOrEqualTo: '${geohash}z')
+                  .where('isActive', isEqualTo: true)
+                  .get();
+              successfulQueries++;
+              return snapshot;
+            } catch (e) {
+              // 🔍 DIAGNOSTIC: Log which specific geohash query failed
+              failedQueries++;
+              debugPrint('❌ Venue geohash query FAILED ($failedQueries/${geohashes.length}):');
+              debugPrint('   Geohash: $geohash');
+              debugPrint('   Error: $e');
+              if (e.toString().contains('permission')) {
+                debugPrint('   → Likely cause: Firestore security rules blocking query');
+              } else if (e.toString().contains('index')) {
+                debugPrint('   → Likely cause: Missing Firestore index');
+              }
+              // Return empty snapshot
+              return _firestore.collection(FirestorePaths.venues()).limit(0).get();
+            }
+          },
         ),
       );
+
+      // 🔍 DIAGNOSTIC: Summary of query results
+      if (failedQueries > 0) {
+        debugPrint('⚠️ Venue search summary: $successfulQueries succeeded, $failedQueries failed out of ${geohashes.length} geohash queries');
+      }
 
       final venues = <Venue>[];
       final distances = <String, double>{};

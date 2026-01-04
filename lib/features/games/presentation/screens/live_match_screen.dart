@@ -610,24 +610,26 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
           // 1. Stopwatch Header (Premium with Hero animation) - MOVED TO TOP
           _buildPremiumStopwatchHeader(canLog, currentMatchNumber),
 
-          // 2. Teams Carousel (Premium with glassmorphism)
+          // 2. Current Match Scoreboard - תיעוד תוצאה מיד מתחת לסטופר!
+          const SizedBox(height: 8),
+          _buildScoreboard(canLog),
+
+          // 3. Teams Carousel (Premium with glassmorphism)
           if (_teams.isNotEmpty) _buildTeamsCarousel(),
 
-          // 3. Current Match Scoreboard
+          // 4. Match History & Leaderboard
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
                   const SizedBox(height: 16),
-                  _buildScoreboard(canLog),
-                  const SizedBox(height: 24),
 
-                  // 4. Leaderboard (Mini Table)
+                  // 5. Leaderboard (Mini Table)
                   _buildLeaderboard(),
 
                   const SizedBox(height: 24),
 
-                  // 5. Match History
+                  // 6. Match History
                   _buildMatchHistory(),
                 ],
               ),
@@ -643,7 +645,7 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
     if (_teams.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 200,
+      height: 280, // הגדלה מ-200 ל-280 כדי להציג את כל השחקנים
       margin: const EdgeInsets.symmetric(vertical: 16),
       child: PageView.builder(
         itemCount: _teams.length,
@@ -673,7 +675,7 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14), // הגדלה מ-12 ל-14 לחלל נושם יותר
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1037,16 +1039,52 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
   }
 
   Widget _buildScoreboard(bool canLog) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 4,
-      shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.shade50,
+            Colors.white,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withValues(alpha: 0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+        border: Border.all(
+          color: Colors.blue.shade100,
+          width: 1.5,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // כותרת ברורה
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.scoreboard, color: Colors.blue.shade700, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'תיעוד תוצאה',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1065,12 +1103,22 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                 ),
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 30),
-                  child: Text('VS',
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 30),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      'VS',
                       style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.grey[300])),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.blue.shade900,
+                      ),
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: _buildTeamControl(
@@ -1086,24 +1134,25 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             if (canLog)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _finishMatch,
-                  icon: const Icon(Icons.check_circle_outline, size: 20),
-                  label: const Text('סיום משחק ותיעוד',
+                  icon: const Icon(Icons.save, size: 22),
+                  label: const Text('שמור משחק ותעד תוצאה',
                       style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: Colors.green.shade600,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    elevation: 2,
+                        horizontal: 24, vertical: 18),
+                    elevation: 3,
+                    shadowColor: Colors.green.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),

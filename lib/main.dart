@@ -29,6 +29,7 @@ import 'dart:async';
 import 'package:kattrick/core/providers/auth_providers.dart';
 import 'package:kattrick/core/providers/services_providers.dart';
 import 'package:kattrick/shared/infrastructure/cache/cache_service.dart';
+import 'package:kattrick/features/audio/infrastructure/services/playlist_service.dart';
 
 /// Initialize background services (non-blocking)
 Future<void> _initializeBackgroundServices() async {
@@ -47,6 +48,17 @@ Future<void> _initializeBackgroundServices() async {
     debugPrint('✅ Remote Config initialized');
   } catch (e) {
     debugPrint('⚠️ Remote Config initialization failed: $e');
+  }
+
+  // Initialize Music Playlist (Kattrick Theme)
+  try {
+    final playlist = PlaylistService();
+    await playlist.initialize();
+    // Auto-start music playback
+    await playlist.play();
+    debugPrint('✅ Music Playlist initialized and playing');
+  } catch (e) {
+    debugPrint('⚠️ Music Playlist initialization failed: $e');
   }
 }
 

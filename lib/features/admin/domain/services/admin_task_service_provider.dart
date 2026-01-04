@@ -1,6 +1,6 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:kattrick/features/admin/domain/services/admin_task_service.dart';
 import 'package:kattrick/core/providers/repositories_providers.dart';
+import 'package:kattrick/features/admin/domain/services/admin_task_service.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'admin_task_service_provider.g.dart';
 

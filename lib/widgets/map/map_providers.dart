@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kattrick/models/models.dart';
@@ -77,9 +78,14 @@ final nearbyVenuesProvider = FutureProvider.autoDispose
 
     // Apply result limit from mode
     return venues.take(mapState.mode.maxInitialResults).toList();
-  } catch (e) {
-    // Log error but return empty list instead of throwing
-    // This prevents the map from crashing if query fails
+  } catch (e, stackTrace) {
+    // 🔍 DIAGNOSTIC: Enhanced error logging for map search failures
+    debugPrint('❌ MAP SEARCH ERROR (Venues):');
+    debugPrint('   Center: (${mapState.center!.latitude}, ${mapState.center!.longitude})');
+    debugPrint('   Radius: ${mapState.radiusKm}km');
+    debugPrint('   Error: $e');
+    debugPrint('   Stack: ${stackTrace.toString().split('\n').take(3).join('\n')}');
+    // Return empty list to prevent map crash
     return [];
   }
 });
@@ -101,7 +107,14 @@ final nearbyHubsProvider = FutureProvider.autoDispose
 
     // Apply result limit from mode
     return hubs.take(mapState.mode.maxInitialResults).toList();
-  } catch (e) {
+  } catch (e, stackTrace) {
+    // 🔍 DIAGNOSTIC: Enhanced error logging for map search failures
+    debugPrint('❌ MAP SEARCH ERROR (Hubs):');
+    debugPrint('   Center: (${mapState.center!.latitude}, ${mapState.center!.longitude})');
+    debugPrint('   Radius: ${mapState.radiusKm}km');
+    debugPrint('   Error: $e');
+    debugPrint('   Stack: ${stackTrace.toString().split('\n').take(3).join('\n')}');
+    // Return empty list to prevent map crash
     return [];
   }
 });
@@ -123,7 +136,14 @@ final nearbyGamesProvider = FutureProvider.autoDispose
 
     // Apply result limit from mode
     return games.take(mapState.mode.maxInitialResults).toList();
-  } catch (e) {
+  } catch (e, stackTrace) {
+    // 🔍 DIAGNOSTIC: Enhanced error logging for map search failures
+    debugPrint('❌ MAP SEARCH ERROR (Games):');
+    debugPrint('   Center: (${mapState.center!.latitude}, ${mapState.center!.longitude})');
+    debugPrint('   Radius: ${mapState.radiusKm}km');
+    debugPrint('   Error: $e');
+    debugPrint('   Stack: ${stackTrace.toString().split('\n').take(3).join('\n')}');
+    // Return empty list to prevent map crash
     return [];
   }
 });

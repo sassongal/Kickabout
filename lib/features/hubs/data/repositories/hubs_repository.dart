@@ -1200,6 +1200,11 @@ class HubsRepository {
 
       // Query Firestore with geohash prefixes (limited to prevent massive loads)
       final allHashes = [centerHash, ...neighbors];
+
+      // Track which queries succeed vs fail for diagnostics
+      int successfulQueries = 0;
+      int failedQueries = 0;
+
       final queries = allHashes.map((hash) async {
         try {
           final snapshot = await _firestore
@@ -1208,15 +1213,29 @@ class HubsRepository {
               .where('geohash', isLessThanOrEqualTo: '$hash~')
               .limit(50) // Limit per hash query to prevent massive loads
               .get();
+          successfulQueries++;
           return snapshot.docs;
         } catch (e) {
-          // If query fails (e.g., permission denied), return empty list
-          debugPrint('⚠️ Geohash query failed for $hash: $e');
+          // 🔍 DIAGNOSTIC: Log which specific geohash query failed and why
+          failedQueries++;
+          debugPrint('❌ Hub geohash query FAILED ($failedQueries/${allHashes.length}):');
+          debugPrint('   Geohash: $hash');
+          debugPrint('   Error: $e');
+          if (e.toString().contains('permission')) {
+            debugPrint('   → Likely cause: Firestore security rules blocking query');
+          } else if (e.toString().contains('index')) {
+            debugPrint('   → Likely cause: Missing Firestore index for geohash field');
+          }
           return <QueryDocumentSnapshot<Map<String, dynamic>>>[];
         }
       });
 
       final results = await Future.wait(queries);
+
+      // 🔍 DIAGNOSTIC: Summary of query results
+      if (failedQueries > 0) {
+        debugPrint('⚠️ Hub search summary: $successfulQueries succeeded, $failedQueries failed out of ${allHashes.length} geohash queries');
+      }
 
       // Filter by actual distance
       // Use primaryVenueLocation (preferred) or fallback to location (deprecated)

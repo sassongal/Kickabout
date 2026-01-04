@@ -539,11 +539,13 @@ service cloud.firestore {
     match /games/{gameId} {
       // FIX: Allow users to query their own games via confirmedPlayerIds or participants
       // This enables "my games" queries without requiring hub membership check upfront
+      // OPTIMIZED: For queries with hubId filter, check hub membership first (most common case)
       allow read: if isAuthenticated() && (
+        // Check hub membership first for better query performance
+        (resource.data.hubId != null && resource.data.hubId != '' && isHubMember(resource.data.hubId)) ||
         resource.data.showInCommunityFeed == true ||
-        request.auth.uid in resource.data.confirmedPlayerIds ||
-        request.auth.uid in resource.data.participants ||
-        (resource.data.hubId != null && resource.data.hubId != '' && isHubMember(resource.data.hubId))
+        request.auth.uid in resource.data.get('confirmedPlayerIds', []) ||
+        request.auth.uid in resource.data.get('participants', [])
       );
 
       allow create: if ((

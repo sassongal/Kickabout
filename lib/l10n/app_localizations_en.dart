@@ -185,7 +185,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventNotFound => 'Event not found';
 
   @override
-  String get gameNotFound => 'Game not found';
+  String get gameNotFound => 'משחק לא נמצא';
 
   @override
   String get noAdminPermissionForScreen =>
@@ -321,10 +321,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hubInvitationsDescription => 'Manage pending invitations';
 
   @override
-  String get checkingPermissions => 'Checking permissions...';
+  String get checkingPermissions => 'בודק הרשאות...';
 
   @override
-  String get permissionCheckError => 'Permission check error';
+  String get permissionCheckError => 'שגיאה בבדיקת הרשאות';
 
   @override
   String get settingUpdatedSuccess => 'Setting updated successfully';
@@ -627,7 +627,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get statusApproved => 'Approved';
+  String get statusApproved => 'מאושר';
 
   @override
   String get statusPending => 'Pending';
@@ -902,9 +902,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hubFallbackName => 'Hub';
 
   @override
-  String get temp => 'temp';
-
-  @override
   String get welcome_message_1_premium =>
       '✨ Welcome to the family! Let\'s hit the field';
 
@@ -950,4 +947,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startEvent => 'Start event';
+
+  @override
+  String get voteMotm => 'Vote MOTM';
+
+  @override
+  String get whoIsMotm => 'Who was the best player today?';
+
+  @override
+  String get submitVote => 'Submit Vote';
+
+  @override
+  String get voteCaptured => 'Vote recorded! Thanks for participating.';
+
+  @override
+  String get alreadyVoted => 'You have already voted for this game';
+
+  @override
+  String voteError(Object error) {
+    return 'Error submitting vote: $error';
+  }
+
+  @override
+  String get voteAtAnotherTime => 'Not now';
+
+  @override
+  String get enableMotmVoting => 'Enable MOTM Voting';
+
+  @override
+  String get enableMotmVotingSubtitle =>
+      'Allow members to vote for the best player after the game';
+
+  @override
+  String motmWinner(Object name) {
+    return 'Man of the Match: $name';
+  }
+
+  @override
+  String get noWinnerYet => 'No winner selected yet';
 }

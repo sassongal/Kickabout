@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:kattrick/features/profile/domain/models/player.dart';
 import 'package:kattrick/features/profile/domain/models/player_stats.dart';
 import 'package:kattrick/theme/premium_theme.dart';
@@ -7,18 +7,9 @@ import 'package:kattrick/widgets/common/premium_card.dart';
 import 'package:kattrick/widgets/optimized_image.dart';
 
 class PlayerCard extends StatelessWidget {
-  final Player player;
-  final bool showRank;
-  final int? rank;
-  final VoidCallback? onTap;
-  final bool isSelected;
-  final VoidCallback? onLongPress;
-  final bool showRadarChart;
-  final PlayerStats? latestStats;
-
   const PlayerCard({
-    super.key,
     required this.player,
+    super.key,
     this.showRank = false,
     this.rank,
     this.onTap,
@@ -27,6 +18,15 @@ class PlayerCard extends StatelessWidget {
     this.showRadarChart = false,
     this.latestStats,
   });
+
+  final Player player;
+  final bool showRank;
+  final int? rank;
+  final VoidCallback? onTap;
+  final bool isSelected;
+  final VoidCallback? onLongPress;
+  final bool showRadarChart;
+  final PlayerStats? latestStats;
 
   @override
   Widget build(BuildContext context) {
@@ -73,10 +73,13 @@ class PlayerCard extends StatelessWidget {
                       ),
                     ),
                     if (player.isInForm)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Icon(Icons.local_fire_department,
-                            size: 16, color: PremiumColors.accent),
+                      const Padding(
+                        padding: EdgeInsets.only(left: 4),
+                        child: Icon(
+                          Icons.local_fire_department,
+                          size: 16,
+                          color: PremiumColors.accent,
+                        ),
                       ),
                   ],
                 ),
@@ -157,7 +160,7 @@ class PlayerCard extends StatelessWidget {
                   border: Border.all(color: PremiumColors.surface, width: 4),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -177,8 +180,11 @@ class PlayerCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.sports_soccer,
-                      size: 14, color: PremiumColors.textSecondary),
+                  const Icon(
+                    Icons.sports_soccer,
+                    size: 14,
+                    color: PremiumColors.textSecondary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     player.attributes.preferredPosition.toUpperCase(),
@@ -190,7 +196,10 @@ class PlayerCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Container(
-                      width: 1, height: 12, color: PremiumColors.divider),
+                    width: 1,
+                    height: 12,
+                    color: PremiumColors.divider,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     'דירוג ${player.currentRankScore.toStringAsFixed(1)}',
@@ -235,7 +244,6 @@ class PlayerCard extends StatelessWidget {
           imageUrl: player.photoUrl!,
           width: size,
           height: size,
-          fit: BoxFit.cover,
           errorWidget: _buildInitialsAvatar(size),
         ),
       );
@@ -252,7 +260,7 @@ class PlayerCard extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             _getAvatarColor(player.name),
-            _getAvatarColor(player.name).withOpacity(0.7),
+            _getAvatarColor(player.name).withValues(alpha: 0.7),
           ],
           begin: Alignment.bottomRight,
           end: Alignment.topLeft,
@@ -280,7 +288,7 @@ class PlayerCard extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 4,
           ),
         ],
@@ -300,9 +308,10 @@ class PlayerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _getGradeColor(player.overallGrade).withOpacity(0.15),
-        border:
-            Border.all(color: _getGradeColor(player.overallGrade), width: 1),
+        color: _getGradeColor(player.overallGrade).withValues(alpha: 0.15),
+        border: Border.all(
+          color: _getGradeColor(player.overallGrade),
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -322,15 +331,16 @@ class PlayerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: PremiumColors.accent.withOpacity(0.2),
+        color: PremiumColors.accent.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
+      child: const Text(
         'IN FORM',
         style: TextStyle(
-            fontSize: 8,
-            color: PremiumColors.accent,
-            fontWeight: FontWeight.bold),
+          fontSize: 8,
+          color: PremiumColors.accent,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -343,8 +353,11 @@ class PlayerCard extends StatelessWidget {
         _buildStatItem('GAMES', '${player.gamesPlayed}'),
         // We don't have Age/Foot, keeping it clean with existing data.
         // Maybe add "Grade" here prominently?
-        _buildStatItem('GRADE', player.overallGrade,
-            color: _getGradeColor(player.overallGrade)),
+        _buildStatItem(
+          'GRADE',
+          player.overallGrade,
+          color: _getGradeColor(player.overallGrade),
+        ),
         // Speed/Strength form attributes
         _buildStatItem('SPD', '${player.attributes.speed}'),
         _buildStatItem('STR', '${player.attributes.strength}'),
@@ -364,7 +377,9 @@ class PlayerCard extends StatelessWidget {
         Text(
           value,
           style: PremiumTypography.heading3.copyWith(
-              fontSize: 16, color: color ?? PremiumColors.textPrimary),
+            fontSize: 16,
+            color: color ?? PremiumColors.textPrimary,
+          ),
         ),
       ],
     );
@@ -376,7 +391,7 @@ class PlayerCard extends StatelessWidget {
         radarTouchData: RadarTouchData(enabled: false),
         dataSets: [
           RadarDataSet(
-            fillColor: PremiumColors.primary.withOpacity(0.2),
+            fillColor: PremiumColors.primary.withValues(alpha: 0.2),
             borderColor: PremiumColors.primary,
             borderWidth: 2,
             entryRadius: 3,
@@ -385,7 +400,7 @@ class PlayerCard extends StatelessWidget {
                 .toList(),
           ),
         ],
-        radarBorderData: BorderSide(
+        radarBorderData: const BorderSide(
           color: PremiumColors.surfaceVariant,
         ),
         titleTextStyle: PremiumTypography.labelSmall.copyWith(fontSize: 9),
@@ -404,7 +419,7 @@ class PlayerCard extends StatelessWidget {
         tickBorderData:
             const BorderSide(color: Colors.transparent), // Cleaner look
         gridBorderData: BorderSide(
-          color: PremiumColors.divider.withOpacity(0.1),
+          color: PremiumColors.divider.withValues(alpha: 0.1),
         ),
       ),
     );
@@ -435,7 +450,7 @@ class PlayerCard extends StatelessWidget {
                   child: Container(
                     height: 6,
                     decoration: BoxDecoration(
-                      color: _getAttributeColor(attributes[i]).withOpacity(0.2),
+                      color: _getAttributeColor(attributes[i]).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(3),
                     ),
                     child: FractionallySizedBox(

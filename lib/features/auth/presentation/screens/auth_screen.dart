@@ -76,7 +76,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       SnackbarHelper.showError(context, 'הסיסמאות אינן תואמות');
       return;
     }
-    
+
     // ✅ Age validation - minimum 13 years old
     if (_birthDate == null) {
       SnackbarHelper.showError(context, 'נא לבחור תאריך לידה');
@@ -85,12 +85,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     if (!AgeUtils.isAgeValid(_birthDate!)) {
       final age = AgeUtils.calculateAge(_birthDate!);
       SnackbarHelper.showError(
-        context, 
-        'גיל מינימלי להרשמה: ${AgeUtils.minimumAge} שנים (הגיל שלך: $age)'
+        context,
+        'גיל מינימלי להרשמה: ${AgeUtils.minimumAge} שנים (הגיל שלך: $age)',
       );
       return;
     }
-    
+
     setState(() => _isLoading = true);
     try {
       final authService = ref.read(authServiceProvider);
@@ -117,7 +117,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       await AnalyticsService().logSignUp(signUpMethod: 'email');
 
       if (mounted) {
-        SnackbarHelper.showSuccess(context, 'ההרשמה הצליחה! המשך בהשלמת הפרופיל');
+        SnackbarHelper.showSuccess(
+            context, 'ההרשמה הצליחה! המשך בהשלמת הפרופיל');
         context.go('/');
       }
     } catch (e) {
@@ -184,8 +185,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
-                      onPressed: () =>
-                          SnackbarHelper.showInfo(context, 'בקרוב: איפוס סיסמה'),
+                      onPressed: () => SnackbarHelper.showInfo(
+                          context, 'בקרוב: איפוס סיסמה'),
                       child: const Text('שכחת סיסמה?'),
                     ),
                   ),
@@ -234,7 +235,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -247,8 +250,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.cake_outlined,
-                              color: Colors.white.withOpacity(0.7)),
+                          Icon(
+                            Icons.cake_outlined,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
                           const SizedBox(width: 12),
                           Text(
                             _birthDate == null
@@ -256,7 +261,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                 : '${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}',
                             style: TextStyle(
                               color: Colors.white.withOpacity(
-                                  _birthDate == null ? 0.5 : 1.0),
+                                _birthDate == null ? 0.5 : 1.0,
+                              ),
                               fontSize: 16,
                             ),
                           ),
@@ -291,7 +297,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     label: 'אימות סיסמה',
                     obscure: _signupConfirmObscure,
                     toggle: () => setState(
-                        () => _signupConfirmObscure = !_signupConfirmObscure),
+                      () => _signupConfirmObscure = !_signupConfirmObscure,
+                    ),
                     validator: (v) =>
                         v != null && v.isNotEmpty ? null : 'נא לאמת סיסמה',
                   ),
@@ -311,10 +318,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 }
 
 class _AuthCard extends StatelessWidget {
+  const _AuthCard({required this.formKey, required this.children});
   final GlobalKey<FormState> formKey;
   final List<Widget> children;
-
-  const _AuthCard({required this.formKey, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -342,12 +348,6 @@ class _AuthCard extends StatelessWidget {
 }
 
 class _TextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final IconData icon;
-  final String? Function(String?)? validator;
-  final TextInputType? keyboardType;
-
   const _TextField({
     required this.controller,
     required this.label,
@@ -355,6 +355,11 @@ class _TextField extends StatelessWidget {
     this.validator,
     this.keyboardType,
   });
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
@@ -372,12 +377,6 @@ class _TextField extends StatelessWidget {
 }
 
 class _PasswordField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final bool obscure;
-  final VoidCallback toggle;
-  final String? Function(String?)? validator;
-
   const _PasswordField({
     required this.controller,
     required this.label,
@@ -385,6 +384,11 @@ class _PasswordField extends StatelessWidget {
     required this.toggle,
     this.validator,
   });
+  final TextEditingController controller;
+  final String label;
+  final bool obscure;
+  final VoidCallback toggle;
+  final String? Function(String?)? validator;
 
   @override
   Widget build(BuildContext context) {
@@ -406,10 +410,9 @@ class _PasswordField extends StatelessWidget {
 }
 
 class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({required this.label, required this.onPressed});
   final String label;
   final VoidCallback? onPressed;
-
-  const _PrimaryButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {

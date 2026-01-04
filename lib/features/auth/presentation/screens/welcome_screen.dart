@@ -93,7 +93,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     final slide = _slides[index];
                     return Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 16),
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -163,9 +165,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                     ),
                     child: Text(
-                      _currentPage == _slides.length - 1
-                          ? 'התחל עכשיו'
-                          : 'הבא',
+                      _currentPage == _slides.length - 1 ? 'התחל עכשיו' : 'הבא',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),

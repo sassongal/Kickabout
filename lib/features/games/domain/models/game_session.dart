@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:kattrick/shared/domain/models/match_result.dart';
 import 'package:kattrick/features/games/domain/models/rotation_state.dart';
+import 'package:kattrick/shared/domain/models/match_result.dart';
 import 'package:kattrick/shared/infrastructure/firestore/converters/timestamp_firestore_converter.dart';
 
 part 'game_session.freezed.dart';

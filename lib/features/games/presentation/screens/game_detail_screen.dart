@@ -4,35 +4,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kattrick/widgets/app_scaffold.dart';
-import 'package:kattrick/widgets/error_widget.dart';
-import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/shared/infrastructure/analytics/analytics_service.dart';
-import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/data/repositories.dart';
-import 'package:kattrick/models/models.dart';
-import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/services/weather_service.dart';
-import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/widgets/common/premium_card.dart';
-import 'package:kattrick/widgets/loading_widget.dart';
+import 'package:kattrick/data/repositories.dart';
+import 'package:kattrick/data/repositories_providers.dart';
 import 'package:kattrick/features/games/infrastructure/services/game_management_service.dart';
-import 'package:kattrick/widgets/dialogs/edit_game_result_dialog.dart';
-import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/features/games/presentation/widgets/motm_voting_popup.dart';
 import 'package:kattrick/features/games/presentation/widgets/strategies/active_game_state.dart';
 import 'package:kattrick/features/games/presentation/widgets/strategies/completed_game_state.dart';
 import 'package:kattrick/features/games/presentation/widgets/strategies/pending_game_state.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/services/weather_service.dart';
+import 'package:kattrick/shared/infrastructure/analytics/analytics_service.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/widgets/app_scaffold.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/dialogs/edit_game_result_dialog.dart';
+import 'package:kattrick/widgets/error_widget.dart';
+import 'package:kattrick/widgets/loading_widget.dart';
 
 @immutable
 class _TeamUsersRequest {
-  final String gameId;
-  final List<String> playerIds;
-
   _TeamUsersRequest({
     required this.gameId,
     required List<String> playerIds,
   }) : playerIds = List.unmodifiable(playerIds);
+  final String gameId;
+  final List<String> playerIds;
 
   @override
   bool operator ==(Object other) {
@@ -58,9 +57,8 @@ final _teamUsersProvider = FutureProvider.autoDispose
 
 /// Game detail screen
 class GameDetailScreen extends ConsumerStatefulWidget {
+  const GameDetailScreen({required this.gameId, super.key});
   final String gameId;
-
-  const GameDetailScreen({super.key, required this.gameId});
 
   @override
   ConsumerState<GameDetailScreen> createState() => _GameDetailScreenState();
@@ -128,6 +126,31 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
           return roleAsync.when(
             data: (role) {
+              final teamUsersAsync = ref.watch(
+                _teamUsersProvider(_buildTeamUsersRequest(game)),
+              );
+
+              // MOTM Popup Check (Sprint 3)
+              if (game.status == GameStatus.completed &&
+                  game.motmVotingEnabled &&
+                  game.motmVotingClosedAt == null &&
+                  currentUserId != null &&
+                  game.teams.any((t) => t.playerIds.contains(currentUserId)) &&
+                  !game.motmVotes.containsKey(currentUserId)) {
+                // Show popup once in post frame
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  teamUsersAsync.whenData((playerUsers) {
+                    if (mounted) {
+                      MotmVotingPopup.show(
+                        context,
+                        game: game,
+                        players: playerUsers,
+                      );
+                    }
+                  });
+                });
+              }
+
               return StreamBuilder<List<GameSignup>>(
                 stream: signupsStream,
                 builder: (context, signupsSnapshot) {
@@ -146,9 +169,6 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                   final maxPlayers =
                       game.teamCount * 3; // 3 players per team minimum
                   final isGameFull = confirmedSignups.length >= maxPlayers;
-                  final teamUsersAsync = ref.watch(
-                    _teamUsersProvider(_buildTeamUsersRequest(game)),
-                  );
 
                   return CustomScrollView(
                     slivers: [
@@ -165,7 +185,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                   child: ElevatedButton.icon(
                                     onPressed: () {
                                       context.push(
-                                          '/games/${widget.gameId}/attendance');
+                                        '/games/${widget.gameId}/attendance',
+                                      );
                                     },
                                     icon: const Icon(Icons.people),
                                     label: Text(l10n.attendanceMonitoring),
@@ -204,20 +225,16 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                                 .watchVenue(game.venueId!),
                                             builder: (context, venueSnapshot) {
                                               final l10n =
-                                                  AppLocalizations.of(
-                                                      context)!;
-                                              final venue =
-                                                  venueSnapshot.data;
+                                                  AppLocalizations.of(context)!;
+                                              final venue = venueSnapshot.data;
                                               final locationText =
                                                   venue?.name ??
                                                       game.location ??
-                                                      l10n
-                                                          .locationNotSpecified;
+                                                      l10n.locationNotSpecified;
 
                                               if (locationText.isEmpty ||
                                                   locationText ==
-                                                      l10n
-                                                          .locationNotSpecified) {
+                                                      l10n.locationNotSpecified) {
                                                 return const SizedBox.shrink();
                                               }
 
@@ -229,8 +246,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                                     color: Theme.of(context)
                                                         .colorScheme
                                                         .onSurface
-                                                        .withValues(
-                                                            alpha: 0.6),
+                                                        .withValues(alpha: 0.6),
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Expanded(
@@ -253,7 +269,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                                           Text(
                                                             venue.address!,
                                                             style: Theme.of(
-                                                                    context)
+                                                              context,
+                                                            )
                                                                 .textTheme
                                                                 .bodySmall
                                                                 ?.copyWith(
@@ -262,8 +279,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                                                       .colorScheme
                                                                       .onSurface
                                                                       .withValues(
-                                                                          alpha:
-                                                                              0.6),
+                                                                        alpha:
+                                                                            0.6,
+                                                                      ),
                                                                 ),
                                                           ),
                                                       ],
@@ -305,8 +323,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                                   .withValues(alpha: 0.1),
                                             ),
                                             const SizedBox(width: 8),
-                                            Text(l10n
-                                                .teamCountLabel(game.teamCount)),
+                                            Text(l10n.teamCountLabel(
+                                                game.teamCount)),
                                           ],
                                         ),
                                         const SizedBox(height: 8),
@@ -314,8 +332,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                           isGameFull
                                               ? l10n.signupsCountFull(
                                                   signups.length)
-                                              : l10n.signupsCount(
-                                                  signups.length),
+                                              : l10n
+                                                  .signupsCount(signups.length),
                                           style: Theme.of(context)
                                               .textTheme
                                               .bodyMedium,
@@ -335,7 +353,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                           ),
-                                          if (game.durationInMinutes != null) ...[
+                                          if (game.durationInMinutes !=
+                                              null) ...[
                                             const SizedBox(height: 4),
                                             Row(
                                               children: [
@@ -358,7 +377,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                                               ],
                                             ),
                                           ],
-                                          if (game.gameEndCondition != null) ...[
+                                          if (game.gameEndCondition !=
+                                              null) ...[
                                             const SizedBox(height: 4),
                                             Row(
                                               crossAxisAlignment:
@@ -747,21 +767,35 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     }
   }
 
+  /// Update payment status using transaction (prevents race conditions)
   Future<void> _updatePaymentStatus(String playerId, bool hasPaid) async {
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      final game = await gamesRepo.getGame(widget.gameId);
+      final firestore = FirebaseFirestore.instance;
 
-      if (game == null) return;
+      // Use transaction to prevent concurrent payment status updates from conflicting
+      await firestore.runTransaction((transaction) async {
+        final gameRef = gamesRepo.getGameRef(widget.gameId);
+        final gameSnapshot = await transaction.get(gameRef);
 
-      // Update payment status map
-      final updatedPaymentStatus = Map<String, bool>.from(game.paymentStatus);
-      updatedPaymentStatus[playerId] = hasPaid;
+        if (!gameSnapshot.exists) {
+          throw Exception('משחק לא נמצא');
+        }
 
-      await gamesRepo.updateGame(
-        widget.gameId,
-        {'paymentStatus': updatedPaymentStatus},
-      );
+        final gameData = gameSnapshot.data() as Map<String, dynamic>;
+
+        // Get current payment status and update
+        final currentPaymentStatus = Map<String, bool>.from(
+          gameData['paymentStatus'] as Map<String, dynamic>? ?? {},
+        );
+        currentPaymentStatus[playerId] = hasPaid;
+
+        // Update atomically
+        transaction.update(gameRef, {
+          'paymentStatus': currentPaymentStatus,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
 
       if (mounted) {
         SnackbarHelper.showSuccess(
@@ -834,8 +868,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                       : () async {
                           setState(() => isLoading = true);
                           try {
-                            final gamesRepo =
-                                ref.read(gamesRepositoryProvider);
+                            final gamesRepo = ref.read(gamesRepositoryProvider);
                             final hubsRepo = ref.read(hubsRepositoryProvider);
                             final feedRepo = ref.read(feedRepositoryProvider);
                             final usersRepo = ref.read(usersRepositoryProvider);
@@ -850,8 +883,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                             if (game.hubId != null) {
                               // Get hub name
                               final hub = await hubsRepo.getHub(game.hubId!);
-                              final hubName =
-                                  hub?.name ?? l10n.hubFallbackName;
+                              final hubName = hub?.name ?? l10n.hubFallbackName;
 
                               final currentUserId =
                                   ref.read(currentUserIdProvider);

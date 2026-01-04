@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kattrick/data/repositories.dart';
@@ -173,8 +175,11 @@ class _VoteMotmScreenState extends ConsumerState<VoteMotmScreen> {
               ),
             )
           else
-            ...eligiblePlayers.map((player) {
+            ...eligiblePlayers.asMap().entries.map((entry) {
+              final index = entry.key;
+              final player = entry.value;
               final isSelected = _selectedPlayerId == player.uid;
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 color: isSelected ? Colors.amber.withValues(alpha: 0.2) : null,
@@ -252,7 +257,19 @@ class _VoteMotmScreenState extends ConsumerState<VoteMotmScreen> {
                     ),
                   ),
                 ),
-              );
+              )
+                .animate()
+                .slideX(
+                  begin: 0.2,
+                  end: 0,
+                  duration: const Duration(milliseconds: 300),
+                  delay: Duration(milliseconds: index * 50),
+                  curve: Curves.easeOutCubic,
+                )
+                .fadeIn(
+                  duration: const Duration(milliseconds: 300),
+                  delay: Duration(milliseconds: index * 50),
+                );
             }),
 
           const SizedBox(height: 24),
@@ -585,6 +602,9 @@ class _VoteMotmScreenState extends ConsumerState<VoteMotmScreen> {
     );
   }
 
+  /// Submit vote using Firestore transaction (prevents race conditions)
+  ///
+  /// Uses transaction to prevent concurrent votes from overwriting each other
   Future<void> _submitVote(String currentUserId) async {
     if (_selectedPlayerId == null) return;
 
@@ -592,38 +612,116 @@ class _VoteMotmScreenState extends ConsumerState<VoteMotmScreen> {
 
     try {
       final gamesRepo = ref.read(gamesRepositoryProvider);
-      final game = await gamesRepo.getGame(widget.gameId);
+      final firestore = FirebaseFirestore.instance;
 
-      if (game == null) {
-        throw Exception('משחק לא נמצא');
-      }
+      // Use transaction to prevent race conditions when multiple users vote simultaneously
+      await firestore.runTransaction((transaction) async {
+        // Read game within transaction
+        final gameRef = gamesRepo.getGameRef(widget.gameId);
+        final gameSnapshot = await transaction.get(gameRef);
 
-      // Check if voting is still open
-      if (game.motmVotingClosedAt != null) {
-        throw Exception('ההצבעה כבר נסגרה');
-      }
+        if (!gameSnapshot.exists) {
+          throw Exception('משחק לא נמצא');
+        }
 
-      // Update motmVotes map
-      final updatedVotes = Map<String, String>.from(game.motmVotes);
-      updatedVotes[currentUserId] = _selectedPlayerId!;
+        final gameData = gameSnapshot.data() as Map<String, dynamic>;
 
-      await gamesRepo.updateGame(
-        widget.gameId,
-        {'motmVotes': updatedVotes},
-      );
+        // Check if voting is still open
+        if (gameData['motmVotingClosedAt'] != null) {
+          throw Exception('ההצבעה כבר נסגרה');
+        }
+
+        // Get current votes and add new vote
+        final currentVotes = Map<String, String>.from(
+          gameData['motmVotes'] as Map<String, dynamic>? ?? {},
+        );
+        currentVotes[currentUserId] = _selectedPlayerId!;
+
+        // Update game with new votes (transaction ensures atomicity)
+        transaction.update(gameRef, {
+          'motmVotes': currentVotes,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
 
       if (mounted) {
-        SnackbarHelper.showSuccess(
-          context,
-          'ההצבעה נשלחה בהצלחה! תודה',
+        // Show success dialog with trophy animation
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.emoji_events,
+                    size: 80,
+                    color: Colors.amber,
+                  )
+                    .animate(
+                      onPlay: (controller) => controller.repeat(reverse: true),
+                    )
+                    .scale(
+                      duration: const Duration(milliseconds: 800),
+                      begin: const Offset(0.9, 0.9),
+                      end: const Offset(1.1, 1.1),
+                    )
+                    .then()
+                    .shake(
+                      duration: const Duration(milliseconds: 500),
+                      hz: 5,
+                      curve: Curves.easeInOut,
+                    ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'ההצבעה נשלחה בהצלחה! 🏆',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'תודה על ההשתתפות',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: const Text('סגור'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
-        setState(() {});
       }
     } catch (e) {
       if (mounted) {
         SnackbarHelper.showError(
           context,
-          'שגיאה בשליחת ההצבעה: ${e.toString()}',
+          'שגיאה בשליחת ההצבעה: ${e.toString().replaceAll('Exception: ', '')}',
         );
       }
     } finally {

@@ -1,14 +1,13 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:kattrick/theme/premium_theme.dart';
 
 class PrismBackground extends StatefulWidget {
+  const PrismBackground({super.key, this.opacity = 1.0});
+
   /// Opacity of the prism effect itself (controlled by shader uniform).
   /// Note: This is separate from the Widget's opacity.
   final double opacity;
-
-  const PrismBackground({super.key, this.opacity = 1.0});
 
   @override
   State<PrismBackground> createState() => _PrismBackgroundState();
@@ -86,12 +85,15 @@ class _PrismBackgroundState extends State<PrismBackground>
 }
 
 class _PrismPainter extends CustomPainter {
+  _PrismPainter({
+    required this.shader,
+    required this.time,
+    required this.opacity,
+  });
+
   final ui.FragmentShader shader;
   final double time;
   final double opacity;
-
-  _PrismPainter(
-      {required this.shader, required this.time, required this.opacity});
 
   @override
   void paint(Canvas canvas, Size size) {

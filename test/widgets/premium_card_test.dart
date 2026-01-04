@@ -6,7 +6,7 @@ void main() {
   group('PremiumCard', () {
     testWidgets('should display child widget', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: PremiumCard(
               child: Text('Test Content'),
@@ -28,7 +28,7 @@ void main() {
               onTap: () {
                 tapped = true;
               },
-              child: Text('Test'),
+              child: const Text('Test'),
             ),
           ),
         ),
@@ -42,7 +42,7 @@ void main() {
 
     testWidgets('should not call onTap when null', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: PremiumCard(
               child: Text('Test'),

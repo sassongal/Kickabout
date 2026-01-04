@@ -1,32 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kattrick/l10n/app_localizations.dart';
-import 'package:kattrick/widgets/common/premium_scaffold.dart';
-import 'package:kattrick/widgets/premium/loading_state.dart';
-import 'package:kattrick/widgets/premium/empty_state.dart';
-import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/core/providers/complex_providers.dart';
-import 'package:kattrick/models/models.dart';
-import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
-import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/features/hubs/presentation/screens/hub_invitations_screen.dart';
-import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
-import 'package:kattrick/widgets/hub/hub_banner_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/features/hubs/presentation/screens/hub_invitations_screen.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:kattrick/services/storage_service.dart';
-import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/widgets/input/city_autocomplete_field.dart';
 import 'package:kattrick/utils/city_utils.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
+import 'package:kattrick/widgets/common/premium_scaffold.dart';
+import 'package:kattrick/widgets/hub/hub_banner_picker.dart';
+import 'package:kattrick/widgets/hub/hub_venues_manager.dart';
+import 'package:kattrick/widgets/input/city_autocomplete_field.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
 
 /// Hub Settings Screen - הגדרות מורחבות ל-Hub
 class HubSettingsScreen extends ConsumerStatefulWidget {
-  final String hubId;
-
   const HubSettingsScreen({
-    super.key,
     required this.hubId,
+    super.key,
   });
+  final String hubId;
 
   @override
   ConsumerState<HubSettingsScreen> createState() => _HubSettingsScreenState();
@@ -50,7 +47,9 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
       if (sizeBytes > 10 * 1024 * 1024) {
         if (mounted) {
           SnackbarHelper.showError(
-              context, 'הקובץ גדול מדי (מעל 10MB). בחר תמונה קלה יותר.');
+            context,
+            'הקובץ גדול מדי (מעל 10MB). בחר תמונה קלה יותר.',
+          );
         }
         return;
       }
@@ -98,7 +97,9 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                   Text(
                     l10n.noAdminPermissionForScreen,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -276,7 +277,8 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                         SwitchListTile(
                           title: const Text('אפשר בקשות הצטרפות'),
                           subtitle: const Text(
-                              'אם כבוי, לא ניתן לשלוח בקשות הצטרפות להאב'),
+                            'אם כבוי, לא ניתן לשלוח בקשות הצטרפות להאב',
+                          ),
                           value: settings['allowJoinRequests'] as bool? ?? true,
                           onChanged: (value) =>
                               _updateSetting('allowJoinRequests', value),
@@ -285,12 +287,15 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                         SwitchListTile(
                           title: const Text('מנחים יכולים לפתוח משחקים'),
                           subtitle: const Text(
-                              'אפשר למנחים ליצור משחקים מאירועים (ברירת מחדל: מנהל בלבד)'),
+                            'אפשר למנחים ליצור משחקים מאירועים (ברירת מחדל: מנהל בלבד)',
+                          ),
                           value: settings['allowModeratorsToCreateGames']
                                   as bool? ??
                               false,
                           onChanged: (value) => _updateSetting(
-                              'allowModeratorsToCreateGames', value),
+                            'allowModeratorsToCreateGames',
+                            value,
+                          ),
                         ),
                       ],
                     ),
@@ -442,8 +447,10 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                   // Custom Permissions Management
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.admin_panel_settings,
-                          color: Colors.blue),
+                      leading: const Icon(
+                        Icons.admin_panel_settings,
+                        color: Colors.blue,
+                      ),
                       title: const Text('הרשאות מותאמות אישית'),
                       subtitle: const Text(
                         'ניהול הרשאות ספציפיות לשחקנים בודדים',
@@ -486,8 +493,10 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
                         'פעולה זו תמחק את ההאב לצמיתות. כל הנתונים יימחקו ולא ניתן לשחזר אותם.',
                         style: TextStyle(color: Colors.red),
                       ),
-                      trailing: const Icon(Icons.arrow_forward_ios,
-                          color: Colors.red),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.red,
+                      ),
                       onTap: () => _showDeleteHubDialog(context, hub),
                     ),
                   ),
@@ -543,7 +552,8 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
       }
 
       // ignore: deprecated_member_use
-      final updatedSettings = Map<String, dynamic>.from(hub.legacySettings ?? {});
+      final updatedSettings =
+          Map<String, dynamic>.from(hub.legacySettings ?? {});
       updatedSettings[key] = value;
 
       await hubsRepo.updateHub(widget.hubId, {
@@ -567,11 +577,11 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.warning, color: Colors.red, size: 28),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.warning, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Text(
               'מחיקת ההאב',
               style: TextStyle(
                 color: Colors.red,
@@ -661,7 +671,7 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
     if (confirmed != true || !mounted) return;
 
     // Show loading indicator
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
@@ -699,17 +709,16 @@ class _HubSettingsScreenState extends ConsumerState<HubSettingsScreen> {
 
 /// Widget for editing hub venues
 class _HubVenuesEditor extends ConsumerStatefulWidget {
+  const _HubVenuesEditor({
+    required this.hubId,
+    required this.initialVenueIds,
+    this.hubCity,
+    this.initialMainVenueId,
+  });
   final String hubId;
   final String? hubCity;
   final List<String> initialVenueIds;
   final String? initialMainVenueId;
-
-  const _HubVenuesEditor({
-    required this.hubId,
-    this.hubCity,
-    required this.initialVenueIds,
-    this.initialMainVenueId,
-  });
 
   @override
   ConsumerState<_HubVenuesEditor> createState() => _HubVenuesEditorState();
@@ -885,13 +894,12 @@ class _HubVenuesEditorState extends ConsumerState<_HubVenuesEditor> {
 
 /// Widget for editing hub rules
 class _HubRulesEditor extends ConsumerStatefulWidget {
-  final String hubId;
-  final String initialRules;
-
   const _HubRulesEditor({
     required this.hubId,
     required this.initialRules,
   });
+  final String hubId;
+  final String initialRules;
 
   @override
   ConsumerState<_HubRulesEditor> createState() => _HubRulesEditorState();
@@ -975,13 +983,12 @@ class _HubRulesEditorState extends ConsumerState<_HubRulesEditor> {
 
 /// Widget for editing payment link
 class _PaymentLinkEditor extends ConsumerStatefulWidget {
-  final String hubId;
-  final String initialLink;
-
   const _PaymentLinkEditor({
     required this.hubId,
     required this.initialLink,
   });
+  final String hubId;
+  final String initialLink;
 
   @override
   ConsumerState<_PaymentLinkEditor> createState() => _PaymentLinkEditorState();
@@ -1022,7 +1029,9 @@ class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
     } catch (e) {
       if (!mounted) return;
       SnackbarHelper.showError(
-          context, l10n.paymentLinkSaveError(e.toString()));
+        context,
+        l10n.paymentLinkSaveError(e.toString()),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -1067,15 +1076,14 @@ class _PaymentLinkEditorState extends ConsumerState<_PaymentLinkEditor> {
 
 /// Widget for editing hub city
 class _HubCityEditor extends ConsumerStatefulWidget {
-  final String hubId;
-  final String? initialCity;
-  final String? initialRegion;
-
   const _HubCityEditor({
     required this.hubId,
     this.initialCity,
     this.initialRegion,
   });
+  final String hubId;
+  final String? initialCity;
+  final String? initialRegion;
 
   @override
   ConsumerState<_HubCityEditor> createState() => _HubCityEditorState();
@@ -1145,7 +1153,8 @@ class _HubCityEditorState extends ConsumerState<_HubCityEditor> {
             ),
             if (_calculatedRegion != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),

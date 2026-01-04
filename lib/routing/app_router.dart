@@ -48,6 +48,7 @@ import 'package:kattrick/features/profile/presentation/screens/settings_screen.d
     deferred as settings_screen;
 import 'package:kattrick/features/profile/presentation/screens/notification_settings_screen.dart'
     deferred as notification_settings_screen;
+import 'package:kattrick/features/audio/presentation/screens/audio_settings_screen.dart';
 import 'package:kattrick/features/profile/presentation/screens/blocked_users_screen.dart';
 import 'package:kattrick/features/profile/presentation/screens/performance_breakdown_screen.dart'
     deferred as performance_breakdown_screen;
@@ -302,6 +303,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile/setup',
         name: 'profileSetup',
         builder: (context, state) => const ProfileSetupWizard(),
+      ),
+
+      // Audio Settings route
+      GoRoute(
+        path: '/settings/audio',
+        name: 'audioSettings',
+        builder: (context, state) => const AudioSettingsScreen(),
       ),
 
       // Home route - Premium Dashboard

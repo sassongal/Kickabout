@@ -1,6 +1,6 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:kattrick/features/dashboard/domain/services/dashboard_service.dart';
 import 'package:kattrick/core/providers/services_providers.dart';
+import 'package:kattrick/features/dashboard/domain/services/dashboard_service.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_service_provider.g.dart';
 

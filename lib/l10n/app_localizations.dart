@@ -440,7 +440,7 @@ abstract class AppLocalizations {
   /// **'אירוע לא נמצא'**
   String get eventNotFound;
 
-  /// No description provided for @gameNotFound.
+  /// Message shown when a game is not found
   ///
   /// In he, this message translates to:
   /// **'משחק לא נמצא'**
@@ -692,7 +692,7 @@ abstract class AppLocalizations {
   /// **'ניהול הזמנות ממתינות'**
   String get hubInvitationsDescription;
 
-  /// No description provided for @checkingPermissions.
+  /// Loading message while checking permissions
   ///
   /// In he, this message translates to:
   /// **'בודק הרשאות...'**
@@ -1167,31 +1167,31 @@ abstract class AppLocalizations {
   /// **'כפה מיקום (פיתוח)'**
   String get forceLocation;
 
-  /// No description provided for @gameDetailsTitle.
+  /// Title for game details screen
   ///
   /// In he, this message translates to:
   /// **'פרטי משחק'**
   String get gameDetailsTitle;
 
-  /// No description provided for @gameLoadingMessage.
+  /// Loading message for game
   ///
   /// In he, this message translates to:
   /// **'טוען משחק...'**
   String get gameLoadingMessage;
 
-  /// No description provided for @gameLoadingError.
+  /// Error message when game fails to load
   ///
   /// In he, this message translates to:
   /// **'שגיאה בטעינת המשחק'**
   String get gameLoadingError;
 
-  /// No description provided for @attendanceMonitoring.
+  /// Title for attendance monitoring section
   ///
   /// In he, this message translates to:
   /// **'ניטור הגעה'**
   String get attendanceMonitoring;
 
-  /// No description provided for @locationNotSpecified.
+  /// Message when location is not specified
   ///
   /// In he, this message translates to:
   /// **'מיקום לא צוין'**
@@ -1215,7 +1215,7 @@ abstract class AppLocalizations {
   /// **'{count} נרשמו (מלא)'**
   String signupsCountFull(Object count);
 
-  /// No description provided for @gameRulesTitle.
+  /// Title for game rules section
   ///
   /// In he, this message translates to:
   /// **'חוקי המשחק'**
@@ -1233,127 +1233,127 @@ abstract class AppLocalizations {
   /// **'תנאי סיום: {condition}'**
   String gameEndConditionLabel(Object condition);
 
-  /// No description provided for @statusApproved.
+  /// Status label for approved requests
   ///
   /// In he, this message translates to:
   /// **'מאושר'**
   String get statusApproved;
 
-  /// No description provided for @statusPending.
+  /// Status label for pending requests
   ///
   /// In he, this message translates to:
   /// **'ממתין'**
   String get statusPending;
 
-  /// No description provided for @removePlayerTooltip.
+  /// Tooltip for remove player button
   ///
   /// In he, this message translates to:
   /// **'הסר שחקן'**
   String get removePlayerTooltip;
 
-  /// No description provided for @signupRemovedSuccess.
+  /// Success message when signup is removed
   ///
   /// In he, this message translates to:
   /// **'הסרת הרשמה'**
   String get signupRemovedSuccess;
 
-  /// No description provided for @signupSuccess.
+  /// Success message when signup is confirmed
   ///
   /// In he, this message translates to:
   /// **'נרשמת למשחק'**
   String get signupSuccess;
 
-  /// No description provided for @onlyCreatorCanStartGame.
+  /// Error message when non-creator tries to start game
   ///
   /// In he, this message translates to:
   /// **'רק יוצר המשחק יכול להתחיל'**
   String get onlyCreatorCanStartGame;
 
-  /// No description provided for @gameStartedSuccess.
+  /// Success message when game is started
   ///
   /// In he, this message translates to:
   /// **'המשחק התחיל'**
   String get gameStartedSuccess;
 
-  /// No description provided for @onlyCreatorCanEndGame.
+  /// Error message when non-creator tries to end game
   ///
   /// In he, this message translates to:
   /// **'רק יוצר המשחק יכול לסיים'**
   String get onlyCreatorCanEndGame;
 
-  /// No description provided for @gameEndedSuccess.
+  /// Success message when game is ended
   ///
   /// In he, this message translates to:
   /// **'המשחק הסתיים'**
   String get gameEndedSuccess;
 
-  /// No description provided for @gameStatusDraft.
+  /// Game status: Draft
   ///
   /// In he, this message translates to:
   /// **'טיוטה'**
   String get gameStatusDraft;
 
-  /// No description provided for @gameStatusScheduled.
+  /// Game status: Scheduled
   ///
   /// In he, this message translates to:
   /// **'מתוכנן'**
   String get gameStatusScheduled;
 
-  /// No description provided for @gameStatusRecruiting.
+  /// Game status: Recruiting players
   ///
   /// In he, this message translates to:
   /// **'גיוס שחקנים'**
   String get gameStatusRecruiting;
 
-  /// No description provided for @gameStatusTeamSelection.
+  /// Game status: Team selection phase
   ///
   /// In he, this message translates to:
   /// **'בחירת קבוצות'**
   String get gameStatusTeamSelection;
 
-  /// No description provided for @gameStatusTeamsFormed.
+  /// Game status: Teams formed
   ///
   /// In he, this message translates to:
   /// **'קבוצות נוצרו'**
   String get gameStatusTeamsFormed;
 
-  /// No description provided for @gameStatusFull.
+  /// Game status: Full capacity
   ///
   /// In he, this message translates to:
   /// **'מלא'**
   String get gameStatusFull;
 
-  /// No description provided for @gameStatusInProgress.
+  /// Game status: In progress
   ///
   /// In he, this message translates to:
   /// **'במהלך'**
   String get gameStatusInProgress;
 
-  /// No description provided for @gameStatusCompleted.
+  /// Game status: Completed
   ///
   /// In he, this message translates to:
   /// **'הושלם'**
   String get gameStatusCompleted;
 
-  /// No description provided for @gameStatusStatsInput.
+  /// Game status: Entering stats
   ///
   /// In he, this message translates to:
   /// **'הזנת סטטיסטיקות'**
   String get gameStatusStatsInput;
 
-  /// No description provided for @gameStatusCancelled.
+  /// Game status: Cancelled
   ///
   /// In he, this message translates to:
   /// **'בוטל'**
   String get gameStatusCancelled;
 
-  /// No description provided for @gameStatusArchivedNotPlayed.
+  /// Game status: Archived and not played
   ///
   /// In he, this message translates to:
   /// **'ארכיון - לא שוחק'**
   String get gameStatusArchivedNotPlayed;
 
-  /// No description provided for @playersLoadError.
+  /// Error message when players fail to load
   ///
   /// In he, this message translates to:
   /// **'שגיאה בטעינת שחקנים'**
@@ -1366,49 +1366,49 @@ abstract class AppLocalizations {
   String targetingMismatchWarning(
       Object minAge, Object maxAge, Object genderSuffix);
 
-  /// No description provided for @genderMaleSuffix.
+  /// Gender suffix for male-only games
   ///
   /// In he, this message translates to:
   /// **'(גברים)'**
   String get genderMaleSuffix;
 
-  /// No description provided for @genderFemaleSuffix.
+  /// Gender suffix for female-only games
   ///
   /// In he, this message translates to:
   /// **'(נשים)'**
   String get genderFemaleSuffix;
 
-  /// No description provided for @gameChatButton.
+  /// Button to open game chat
   ///
   /// In he, this message translates to:
   /// **'צ\'אט משחק'**
   String get gameChatButton;
 
-  /// No description provided for @requestToJoin.
+  /// Button to request joining a game
   ///
   /// In he, this message translates to:
   /// **'בקש להצטרף'**
   String get requestToJoin;
 
-  /// No description provided for @signupForGame.
+  /// Button to sign up for a game
   ///
   /// In he, this message translates to:
   /// **'הירשם למשחק'**
   String get signupForGame;
 
-  /// No description provided for @requestSentPendingApproval.
+  /// Status message for pending signup
   ///
   /// In he, this message translates to:
   /// **'בקשה נשלחה - ממתין לאישור'**
   String get requestSentPendingApproval;
 
-  /// No description provided for @cancelSignup.
+  /// Button to cancel game signup
   ///
   /// In he, this message translates to:
   /// **'בטל הרשמה'**
   String get cancelSignup;
 
-  /// No description provided for @gameFullWaitlist.
+  /// Message when game is full but waitlist available
   ///
   /// In he, this message translates to:
   /// **'המשחק מלא - ניתן להירשם לרשימת המתנה'**
@@ -1420,55 +1420,55 @@ abstract class AppLocalizations {
   /// **'בקשות ממתינות ({count})'**
   String pendingRequestsTitle(Object count);
 
-  /// No description provided for @findMissingPlayers.
+  /// Button to find missing players for game
   ///
   /// In he, this message translates to:
   /// **'מצא שחקנים חסרים'**
   String get findMissingPlayers;
 
-  /// No description provided for @createTeams.
+  /// Button to create teams
   ///
   /// In he, this message translates to:
   /// **'צור קבוצות'**
   String get createTeams;
 
-  /// No description provided for @logResultAndStats.
+  /// Button to log game result and stats
   ///
   /// In he, this message translates to:
   /// **'תעד תוצאה וסטטיסטיקות'**
   String get logResultAndStats;
 
-  /// No description provided for @startGame.
+  /// Button to start game
   ///
   /// In he, this message translates to:
   /// **'התחל משחק'**
   String get startGame;
 
-  /// No description provided for @recordStats.
+  /// Button to record game statistics
   ///
   /// In he, this message translates to:
   /// **'רישום סטטיסטיקות'**
   String get recordStats;
 
-  /// No description provided for @endGame.
+  /// Button to end game
   ///
   /// In he, this message translates to:
   /// **'סיים משחק'**
   String get endGame;
 
-  /// No description provided for @editResult.
+  /// Button to edit game result
   ///
   /// In he, this message translates to:
   /// **'ערוך תוצאה'**
   String get editResult;
 
-  /// No description provided for @viewFullStats.
+  /// Button to view full statistics
   ///
   /// In he, this message translates to:
   /// **'צפה בסטטיסטיקות המלאות'**
   String get viewFullStats;
 
-  /// No description provided for @signupsTitle.
+  /// Title for signups section
   ///
   /// In he, this message translates to:
   /// **'נרשמים'**
@@ -1486,7 +1486,7 @@ abstract class AppLocalizations {
   /// **'ממתינים ({count})'**
   String pendingSignupsTitle(Object count);
 
-  /// No description provided for @noSignups.
+  /// Message when no signups exist
   ///
   /// In he, this message translates to:
   /// **'אין נרשמים'**
@@ -1498,49 +1498,49 @@ abstract class AppLocalizations {
   /// **'ביקש להצטרף • {time}'**
   String requestedToJoinAt(Object time);
 
-  /// No description provided for @approveTooltip.
+  /// Tooltip for approve button
   ///
   /// In he, this message translates to:
   /// **'אשר'**
   String get approveTooltip;
 
-  /// No description provided for @rejectTooltip.
+  /// Tooltip for reject button
   ///
   /// In he, this message translates to:
   /// **'דחה'**
   String get rejectTooltip;
 
-  /// No description provided for @playerApprovedSuccess.
+  /// Success message when player is approved
   ///
   /// In he, this message translates to:
   /// **'שחקן אושר בהצלחה'**
   String get playerApprovedSuccess;
 
-  /// No description provided for @rejectRequestTitle.
+  /// Title for reject request dialog
   ///
   /// In he, this message translates to:
   /// **'דחיית בקשה'**
   String get rejectRequestTitle;
 
-  /// No description provided for @rejectionReasonLabel.
+  /// Label for rejection reason field
   ///
   /// In he, this message translates to:
   /// **'סיבת הדחייה (חובה)'**
   String get rejectionReasonLabel;
 
-  /// No description provided for @rejectionReasonHint.
+  /// Hint text for rejection reason
   ///
   /// In he, this message translates to:
   /// **'לדוגמה: המשחק מלא, לא מתאים לרמה...'**
   String get rejectionReasonHint;
 
-  /// No description provided for @rejectRequestButton.
+  /// Button to reject request
   ///
   /// In he, this message translates to:
   /// **'דחה בקשה'**
   String get rejectRequestButton;
 
-  /// No description provided for @requestRejectedSuccess.
+  /// Success message when request is rejected
   ///
   /// In he, this message translates to:
   /// **'בקשה נדחתה'**
@@ -1552,7 +1552,7 @@ abstract class AppLocalizations {
   /// **'המשחק יהפוך ל-\"מגייס שחקנים\" ויוצג בפיד האזורי.\nנדרשים {count} שחקנים נוספים.'**
   String findMissingPlayersDescription(Object count);
 
-  /// No description provided for @confirm.
+  /// Confirm button label
   ///
   /// In he, this message translates to:
   /// **'אישור'**
@@ -1582,25 +1582,25 @@ abstract class AppLocalizations {
   /// **'האב {hubName} צריך {count} שחקנים למשחק ב-{gameDate}'**
   String recruitingFeedContent(Object hubName, Object count, Object gameDate);
 
-  /// No description provided for @gamePromotedToRegionalFeed.
+  /// Success message when game is promoted to regional feed
   ///
   /// In he, this message translates to:
   /// **'המשחק הוצג בפיד האזורי למציאת שחקנים'**
   String get gamePromotedToRegionalFeed;
 
-  /// No description provided for @gameOpenForRecruiting.
+  /// Message when game is open for recruiting
   ///
   /// In he, this message translates to:
   /// **'המשחק פתוח כעת לגיוס שחקנים'**
   String get gameOpenForRecruiting;
 
-  /// No description provided for @loadingWeather.
+  /// Loading message for weather data
   ///
   /// In he, this message translates to:
   /// **'טוען תנאי מזג אוויר...'**
   String get loadingWeather;
 
-  /// No description provided for @gameWeatherTitle.
+  /// Title for weather section
   ///
   /// In he, this message translates to:
   /// **'תנאי מזג אוויר למשחק'**
@@ -1612,7 +1612,7 @@ abstract class AppLocalizations {
   /// **'{temp}°C'**
   String temperatureCelsius(Object temp);
 
-  /// No description provided for @resultUpdatedSuccess.
+  /// Success message when result is updated
   ///
   /// In he, this message translates to:
   /// **'התוצאה עודכנה בהצלחה'**
@@ -1624,7 +1624,7 @@ abstract class AppLocalizations {
   /// **'שגיאה בעדכון התוצאה: {error}'**
   String resultUpdateError(Object error);
 
-  /// No description provided for @teamsTitle.
+  /// Title for teams section
   ///
   /// In he, this message translates to:
   /// **'הקבוצות'**
@@ -1636,13 +1636,13 @@ abstract class AppLocalizations {
   /// **'({count})'**
   String teamPlayerCount(Object count);
 
-  /// No description provided for @noPlayers.
+  /// Message when no players exist
   ///
   /// In he, this message translates to:
   /// **'אין שחקנים'**
   String get noPlayers;
 
-  /// No description provided for @sessionSummaryTitle.
+  /// Title for session summary
   ///
   /// In he, this message translates to:
   /// **'סיכום סשן'**
@@ -1654,7 +1654,7 @@ abstract class AppLocalizations {
   /// **'מנצח: {winner}'**
   String sessionWinnerLabel(Object winner);
 
-  /// No description provided for @teamStatsTitle.
+  /// Title for team statistics
   ///
   /// In he, this message translates to:
   /// **'סטטיסטיקות קבוצות'**
@@ -1684,35 +1684,29 @@ abstract class AppLocalizations {
   /// **'סה\"כ {count} משחקים'**
   String totalMatchesLabel(Object count);
 
-  /// No description provided for @teamADefaultName.
+  /// Default name for team A
   ///
   /// In he, this message translates to:
   /// **'קבוצה א\''**
   String get teamADefaultName;
 
-  /// No description provided for @teamBDefaultName.
+  /// Default name for team B
   ///
   /// In he, this message translates to:
   /// **'קבוצה ב\''**
   String get teamBDefaultName;
 
-  /// No description provided for @finalScoreTitle.
+  /// Title for final score section
   ///
   /// In he, this message translates to:
   /// **'תוצאה סופית'**
   String get finalScoreTitle;
 
-  /// No description provided for @hubFallbackName.
+  /// Fallback name when hub name is not available
   ///
   /// In he, this message translates to:
   /// **'האב'**
   String get hubFallbackName;
-
-  /// No description provided for @temp.
-  ///
-  /// In he, this message translates to:
-  /// **'temp'**
-  String get temp;
 
   /// Premium welcome message 1
   ///
@@ -1797,6 +1791,72 @@ abstract class AppLocalizations {
   /// In he, this message translates to:
   /// **'התחל אירוע'**
   String get startEvent;
+
+  /// Button or title for Man of the Match voting
+  ///
+  /// In he, this message translates to:
+  /// **'הצבעה למצטיין'**
+  String get voteMotm;
+
+  /// Question asked in the MOTM voting popup
+  ///
+  /// In he, this message translates to:
+  /// **'מי היה השחקן המצטיין היום?'**
+  String get whoIsMotm;
+
+  /// Button to submit the MOTM vote
+  ///
+  /// In he, this message translates to:
+  /// **'שלח הצבעה'**
+  String get submitVote;
+
+  /// Success message after voting for MOTM
+  ///
+  /// In he, this message translates to:
+  /// **'ההצבעה נקלטה! תודה על ההשתתפות.'**
+  String get voteCaptured;
+
+  /// Error message when user tries to vote more than once
+  ///
+  /// In he, this message translates to:
+  /// **'כבר הצבעת למשחק זה'**
+  String get alreadyVoted;
+
+  /// Error message when MOTM voting fails
+  ///
+  /// In he, this message translates to:
+  /// **'שגיאה בשליחת ההצבעה: {error}'**
+  String voteError(Object error);
+
+  /// Button to dismiss the MOTM popup without voting
+  ///
+  /// In he, this message translates to:
+  /// **'לא עכשיו'**
+  String get voteAtAnotherTime;
+
+  /// Switch label to enable Man of the Match voting in hub/game settings
+  ///
+  /// In he, this message translates to:
+  /// **'אפשר הצבעה למצטיין'**
+  String get enableMotmVoting;
+
+  /// Subtitle for the MOTM voting toggle
+  ///
+  /// In he, this message translates to:
+  /// **'אפשר לחברים להצביע לשחקן המצטיין לאחר המשחק'**
+  String get enableMotmVotingSubtitle;
+
+  /// Label displaying the MOTM winner
+  ///
+  /// In he, this message translates to:
+  /// **'השחקן המצטיין: {name}'**
+  String motmWinner(Object name);
+
+  /// Message shown when voting is still open or no votes were cast
+  ///
+  /// In he, this message translates to:
+  /// **'טרם נבחר מנצח'**
+  String get noWinnerYet;
 }
 
 class _AppLocalizationsDelegate

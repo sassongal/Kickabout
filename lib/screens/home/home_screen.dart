@@ -1,37 +1,36 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'package:kattrick/widgets/premium/bottom_navigation_bar.dart';
-import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
-import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
-
-import 'package:kattrick/models/models.dart';
-import 'package:kattrick/core/constants.dart';
-import 'package:kattrick/theme/premium_theme.dart';
-import 'package:kattrick/widgets/common/premium_card.dart';
-import 'package:kattrick/widgets/premium/empty_state.dart';
-import 'package:kattrick/widgets/premium/loading_state.dart';
 // Duplicate import removed
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:kattrick/widgets/dialogs/location_search_dialog.dart';
-import 'package:kattrick/widgets/stopwatch_countdown_widget.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
-import 'package:kattrick/utils/snackbar_helper.dart';
-import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
-import 'package:kattrick/widgets/home/bubble_menu.dart';
+import 'package:intl/intl.dart';
 import 'package:kattrick/core/audio/audio_controller.dart';
-import 'package:kattrick/widgets/home/hubs_carousel.dart';
+import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/features/games/data/repositories/game_queries_repository.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/shared/domain/models/value_objects/geographic_point.dart';
+import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/widgets/common/home_logo_button.dart';
-import 'package:kattrick/widgets/premium/animated_menu_logo.dart';
-import 'package:kattrick/widgets/premium/premium_drawer.dart';
+import 'package:kattrick/widgets/common/premium_card.dart';
+import 'package:kattrick/widgets/dialogs/location_search_dialog.dart';
 import 'package:kattrick/widgets/home/atmospheric_profile_header.dart';
+import 'package:kattrick/widgets/home/bubble_menu.dart';
+import 'package:kattrick/widgets/home/hubs_carousel.dart';
+import 'package:kattrick/widgets/home/next_game_spotlight_card.dart';
+import 'package:kattrick/widgets/premium/animated_menu_logo.dart';
+import 'package:kattrick/widgets/premium/bottom_navigation_bar.dart';
+import 'package:kattrick/widgets/premium/empty_state.dart';
+import 'package:kattrick/widgets/premium/loading_state.dart';
+import 'package:kattrick/widgets/premium/premium_drawer.dart';
+import 'package:kattrick/widgets/stopwatch_countdown_widget.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Premium Home Dashboard - Figma Design Implementation
 /// This is a simplified version matching the Figma design exactly

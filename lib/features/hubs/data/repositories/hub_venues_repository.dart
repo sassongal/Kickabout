@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kattrick/config/env.dart';
 import 'package:kattrick/services/firestore_paths.dart';
 import 'package:kattrick/shared/infrastructure/cache/cache_service.dart';
@@ -32,6 +33,11 @@ class HubVenuesRepository {
       throw Exception('Firebase not available');
     }
 
+    // 🔍 DIAGNOSTIC: Log venue save attempt
+    debugPrint('🏟️ [HubVenuesRepo] setHubPrimaryVenue called:');
+    debugPrint('   Hub ID: $hubId');
+    debugPrint('   Venue ID: $venueId');
+
     try {
       await _firestore.runTransaction((transaction) async {
         // Get references
@@ -44,25 +50,37 @@ class HubVenuesRepository {
 
         // Validate documents exist
         if (!hubDoc.exists) {
+          debugPrint('❌ [HubVenuesRepo] Hub not found: $hubId');
           throw Exception('Hub not found');
         }
         if (!venueDoc.exists) {
+          debugPrint('❌ [HubVenuesRepo] Venue not found: $venueId');
           throw Exception('Venue not found');
         }
 
         final hubData = hubDoc.data();
         final venueData = venueDoc.data();
-        if (hubData == null) throw Exception('Hub data is null');
-        if (venueData == null) throw Exception('Venue data is null');
+        if (hubData == null) {
+          debugPrint('❌ [HubVenuesRepo] Hub data is null');
+          throw Exception('Hub data is null');
+        }
+        if (venueData == null) {
+          debugPrint('❌ [HubVenuesRepo] Venue data is null');
+          throw Exception('Venue data is null');
+        }
+
+        debugPrint('✅ [HubVenuesRepo] Documents validated successfully');
 
         // Get venue location (GeoPoint)
         final venueLocation = venueData['location'];
         if (venueLocation == null) {
+          debugPrint('❌ [HubVenuesRepo] Venue has no location');
           throw Exception('Venue must have a location');
         }
 
         // Get old primary venue ID (if exists)
         final oldPrimaryVenueId = hubData['primaryVenueId'] as String?;
+        debugPrint('📋 [HubVenuesRepo] Old primary venue: ${oldPrimaryVenueId ?? "none"}');
 
         // Prepare hub updates
         // Update both primaryVenueId and mainVenueId for consistency
@@ -112,11 +130,19 @@ class HubVenuesRepository {
           'hubId': hubId, // Ensure hubId is set correctly
           'updatedAt': FieldValue.serverTimestamp(),
         });
+
+        debugPrint('📝 [HubVenuesRepo] Transaction updates prepared successfully');
       });
+
+      debugPrint('✅ [HubVenuesRepo] Transaction committed successfully!');
 
       // Invalidate cache after successful transaction
       CacheService().clear(CacheKeys.hub(hubId));
-    } catch (e) {
+      debugPrint('🗑️ [HubVenuesRepo] Cache cleared for hub: $hubId');
+    } catch (e, stackTrace) {
+      debugPrint('❌ [HubVenuesRepo] FAILED to set primary venue:');
+      debugPrint('   Error: $e');
+      debugPrint('   Stack: ${stackTrace.toString().split('\n').take(5).join('\n')}');
       throw Exception('Failed to set hub primary venue: $e');
     }
   }

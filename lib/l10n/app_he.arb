@@ -171,7 +171,9 @@
   "eventNotFound": "אירוע לא נמצא",
   "@eventNotFound": {},
   "gameNotFound": "משחק לא נמצא",
-  "@gameNotFound": {},
+  "@gameNotFound": {
+    "description": "Message shown when a game is not found"
+  },
   "noAdminPermissionForScreen": "אין לך הרשאת ניהול למסך זה",
   "@noAdminPermissionForScreen": {},
   "onlyHubAdminsCanCreateTeams": "רק מנהלי הוב יכולים ליצור קבוצות",
@@ -279,7 +281,9 @@
   "hubInvitationsDescription": "ניהול הזמנות ממתינות",
   "@hubInvitationsDescription": {},
   "checkingPermissions": "בודק הרשאות...",
-  "@checkingPermissions": {},
+  "@checkingPermissions": {
+    "description": "Loading message while checking permissions"
+  },
   "permissionCheckError": "שגיאה בבדיקת הרשאות",
   "@permissionCheckError": {},
   "settingUpdatedSuccess": "הגדרה עודכנה בהצלחה",
@@ -542,11 +546,25 @@
     "description": "Force location button for dev mode"
   },
   "gameDetailsTitle": "פרטי משחק",
+  "@gameDetailsTitle": {
+    "description": "Title for game details screen"
+  },
   "gameLoadingMessage": "טוען משחק...",
+  "@gameLoadingMessage": {
+    "description": "Loading message for game"
+  },
   "gameLoadingError": "שגיאה בטעינת המשחק",
-  "gameNotFound": "משחק לא נמצא",
+  "@gameLoadingError": {
+    "description": "Error message when game fails to load"
+  },
   "attendanceMonitoring": "ניטור הגעה",
+  "@attendanceMonitoring": {
+    "description": "Title for attendance monitoring section"
+  },
   "locationNotSpecified": "מיקום לא צוין",
+  "@locationNotSpecified": {
+    "description": "Message when location is not specified"
+  },
   "teamCountLabel": "{count} קבוצות",
   "@teamCountLabel": {
     "placeholders": {
@@ -566,6 +584,9 @@
     }
   },
   "gameRulesTitle": "חוקי המשחק",
+  "@gameRulesTitle": {
+    "description": "Title for game rules section"
+  },
   "gameDurationLabel": "משך: {minutes} דקות",
   "@gameDurationLabel": {
     "placeholders": {
@@ -578,28 +599,90 @@
       "condition": {}
     }
   },
-  "checkingPermissions": "בודק הרשאות...",
   "statusApproved": "מאושר",
+  "@statusApproved": {
+    "description": "Status label for approved requests"
+  },
   "statusPending": "ממתין",
+  "@statusPending": {
+    "description": "Status label for pending requests"
+  },
   "removePlayerTooltip": "הסר שחקן",
+  "@removePlayerTooltip": {
+    "description": "Tooltip for remove player button"
+  },
   "signupRemovedSuccess": "הסרת הרשמה",
+  "@signupRemovedSuccess": {
+    "description": "Success message when signup is removed"
+  },
   "signupSuccess": "נרשמת למשחק",
+  "@signupSuccess": {
+    "description": "Success message when signup is confirmed"
+  },
   "onlyCreatorCanStartGame": "רק יוצר המשחק יכול להתחיל",
+  "@onlyCreatorCanStartGame": {
+    "description": "Error message when non-creator tries to start game"
+  },
   "gameStartedSuccess": "המשחק התחיל",
+  "@gameStartedSuccess": {
+    "description": "Success message when game is started"
+  },
   "onlyCreatorCanEndGame": "רק יוצר המשחק יכול לסיים",
+  "@onlyCreatorCanEndGame": {
+    "description": "Error message when non-creator tries to end game"
+  },
   "gameEndedSuccess": "המשחק הסתיים",
+  "@gameEndedSuccess": {
+    "description": "Success message when game is ended"
+  },
   "gameStatusDraft": "טיוטה",
+  "@gameStatusDraft": {
+    "description": "Game status: Draft"
+  },
   "gameStatusScheduled": "מתוכנן",
+  "@gameStatusScheduled": {
+    "description": "Game status: Scheduled"
+  },
   "gameStatusRecruiting": "גיוס שחקנים",
+  "@gameStatusRecruiting": {
+    "description": "Game status: Recruiting players"
+  },
   "gameStatusTeamSelection": "בחירת קבוצות",
+  "@gameStatusTeamSelection": {
+    "description": "Game status: Team selection phase"
+  },
   "gameStatusTeamsFormed": "קבוצות נוצרו",
+  "@gameStatusTeamsFormed": {
+    "description": "Game status: Teams formed"
+  },
   "gameStatusFull": "מלא",
+  "@gameStatusFull": {
+    "description": "Game status: Full capacity"
+  },
   "gameStatusInProgress": "במהלך",
+  "@gameStatusInProgress": {
+    "description": "Game status: In progress"
+  },
   "gameStatusCompleted": "הושלם",
+  "@gameStatusCompleted": {
+    "description": "Game status: Completed"
+  },
   "gameStatusStatsInput": "הזנת סטטיסטיקות",
+  "@gameStatusStatsInput": {
+    "description": "Game status: Entering stats"
+  },
   "gameStatusCancelled": "בוטל",
+  "@gameStatusCancelled": {
+    "description": "Game status: Cancelled"
+  },
   "gameStatusArchivedNotPlayed": "ארכיון - לא שוחק",
+  "@gameStatusArchivedNotPlayed": {
+    "description": "Game status: Archived and not played"
+  },
   "playersLoadError": "שגיאה בטעינת שחקנים",
+  "@playersLoadError": {
+    "description": "Error message when players fail to load"
+  },
   "targetingMismatchWarning": "שים לב: המשחק מיועד לגילאים {minAge}-{maxAge} {genderSuffix}",
   "@targetingMismatchWarning": {
     "placeholders": {
@@ -609,13 +692,37 @@
     }
   },
   "genderMaleSuffix": "(גברים)",
+  "@genderMaleSuffix": {
+    "description": "Gender suffix for male-only games"
+  },
   "genderFemaleSuffix": "(נשים)",
+  "@genderFemaleSuffix": {
+    "description": "Gender suffix for female-only games"
+  },
   "gameChatButton": "צ'אט משחק",
+  "@gameChatButton": {
+    "description": "Button to open game chat"
+  },
   "requestToJoin": "בקש להצטרף",
+  "@requestToJoin": {
+    "description": "Button to request joining a game"
+  },
   "signupForGame": "הירשם למשחק",
+  "@signupForGame": {
+    "description": "Button to sign up for a game"
+  },
   "requestSentPendingApproval": "בקשה נשלחה - ממתין לאישור",
+  "@requestSentPendingApproval": {
+    "description": "Status message for pending signup"
+  },
   "cancelSignup": "בטל הרשמה",
+  "@cancelSignup": {
+    "description": "Button to cancel game signup"
+  },
   "gameFullWaitlist": "המשחק מלא - ניתן להירשם לרשימת המתנה",
+  "@gameFullWaitlist": {
+    "description": "Message when game is full but waitlist available"
+  },
   "pendingRequestsTitle": "בקשות ממתינות ({count})",
   "@pendingRequestsTitle": {
     "placeholders": {
@@ -623,14 +730,41 @@
     }
   },
   "findMissingPlayers": "מצא שחקנים חסרים",
+  "@findMissingPlayers": {
+    "description": "Button to find missing players for game"
+  },
   "createTeams": "צור קבוצות",
+  "@createTeams": {
+    "description": "Button to create teams"
+  },
   "logResultAndStats": "תעד תוצאה וסטטיסטיקות",
+  "@logResultAndStats": {
+    "description": "Button to log game result and stats"
+  },
   "startGame": "התחל משחק",
+  "@startGame": {
+    "description": "Button to start game"
+  },
   "recordStats": "רישום סטטיסטיקות",
+  "@recordStats": {
+    "description": "Button to record game statistics"
+  },
   "endGame": "סיים משחק",
+  "@endGame": {
+    "description": "Button to end game"
+  },
   "editResult": "ערוך תוצאה",
+  "@editResult": {
+    "description": "Button to edit game result"
+  },
   "viewFullStats": "צפה בסטטיסטיקות המלאות",
+  "@viewFullStats": {
+    "description": "Button to view full statistics"
+  },
   "signupsTitle": "נרשמים",
+  "@signupsTitle": {
+    "description": "Title for signups section"
+  },
   "confirmedSignupsTitle": "מאושרים ({count})",
   "@confirmedSignupsTitle": {
     "placeholders": {
@@ -644,6 +778,9 @@
     }
   },
   "noSignups": "אין נרשמים",
+  "@noSignups": {
+    "description": "Message when no signups exist"
+  },
   "requestedToJoinAt": "ביקש להצטרף • {time}",
   "@requestedToJoinAt": {
     "placeholders": {
@@ -651,13 +788,37 @@
     }
   },
   "approveTooltip": "אשר",
+  "@approveTooltip": {
+    "description": "Tooltip for approve button"
+  },
   "rejectTooltip": "דחה",
+  "@rejectTooltip": {
+    "description": "Tooltip for reject button"
+  },
   "playerApprovedSuccess": "שחקן אושר בהצלחה",
+  "@playerApprovedSuccess": {
+    "description": "Success message when player is approved"
+  },
   "rejectRequestTitle": "דחיית בקשה",
+  "@rejectRequestTitle": {
+    "description": "Title for reject request dialog"
+  },
   "rejectionReasonLabel": "סיבת הדחייה (חובה)",
+  "@rejectionReasonLabel": {
+    "description": "Label for rejection reason field"
+  },
   "rejectionReasonHint": "לדוגמה: המשחק מלא, לא מתאים לרמה...",
+  "@rejectionReasonHint": {
+    "description": "Hint text for rejection reason"
+  },
   "rejectRequestButton": "דחה בקשה",
+  "@rejectRequestButton": {
+    "description": "Button to reject request"
+  },
   "requestRejectedSuccess": "בקשה נדחתה",
+  "@requestRejectedSuccess": {
+    "description": "Success message when request is rejected"
+  },
   "findMissingPlayersDescription": "המשחק יהפוך ל-\"מגייס שחקנים\" ויוצג בפיד האזורי.\nנדרשים {count} שחקנים נוספים.",
   "@findMissingPlayersDescription": {
     "placeholders": {
@@ -665,6 +826,9 @@
     }
   },
   "confirm": "אישור",
+  "@confirm": {
+    "description": "Confirm button label"
+  },
   "recruitingUrgentLabel": "דחוף",
   "@recruitingUrgentLabel": {
     "description": "Label for urgent recruiting posts"
@@ -694,9 +858,21 @@
     }
   },
   "gamePromotedToRegionalFeed": "המשחק הוצג בפיד האזורי למציאת שחקנים",
+  "@gamePromotedToRegionalFeed": {
+    "description": "Success message when game is promoted to regional feed"
+  },
   "gameOpenForRecruiting": "המשחק פתוח כעת לגיוס שחקנים",
+  "@gameOpenForRecruiting": {
+    "description": "Message when game is open for recruiting"
+  },
   "loadingWeather": "טוען תנאי מזג אוויר...",
+  "@loadingWeather": {
+    "description": "Loading message for weather data"
+  },
   "gameWeatherTitle": "תנאי מזג אוויר למשחק",
+  "@gameWeatherTitle": {
+    "description": "Title for weather section"
+  },
   "temperatureCelsius": "{temp}°C",
   "@temperatureCelsius": {
     "placeholders": {
@@ -704,6 +880,9 @@
     }
   },
   "resultUpdatedSuccess": "התוצאה עודכנה בהצלחה",
+  "@resultUpdatedSuccess": {
+    "description": "Success message when result is updated"
+  },
   "resultUpdateError": "שגיאה בעדכון התוצאה: {error}",
   "@resultUpdateError": {
     "placeholders": {
@@ -711,6 +890,9 @@
     }
   },
   "teamsTitle": "הקבוצות",
+  "@teamsTitle": {
+    "description": "Title for teams section"
+  },
   "teamPlayerCount": "({count})",
   "@teamPlayerCount": {
     "placeholders": {
@@ -718,7 +900,13 @@
     }
   },
   "noPlayers": "אין שחקנים",
+  "@noPlayers": {
+    "description": "Message when no players exist"
+  },
   "sessionSummaryTitle": "סיכום סשן",
+  "@sessionSummaryTitle": {
+    "description": "Title for session summary"
+  },
   "sessionWinnerLabel": "מנצח: {winner}",
   "@sessionWinnerLabel": {
     "placeholders": {
@@ -726,6 +914,9 @@
     }
   },
   "teamStatsTitle": "סטטיסטיקות קבוצות",
+  "@teamStatsTitle": {
+    "description": "Title for team statistics"
+  },
   "teamStatsRecord": "ניצחונות: {wins} | תיקו: {draws} | הפסדים: {losses}",
   "@teamStatsRecord": {
     "placeholders": {
@@ -754,10 +945,21 @@
     }
   },
   "teamADefaultName": "קבוצה א'",
+  "@teamADefaultName": {
+    "description": "Default name for team A"
+  },
   "teamBDefaultName": "קבוצה ב'",
+  "@teamBDefaultName": {
+    "description": "Default name for team B"
+  },
   "finalScoreTitle": "תוצאה סופית",
+  "@finalScoreTitle": {
+    "description": "Title for final score section"
+  },
   "hubFallbackName": "האב",
-  "temp": "temp",
+  "@hubFallbackName": {
+    "description": "Fallback name when hub name is not available"
+  },
   "welcome_message_1_premium": "✨ ברוך הבא למשפחה! בואו תצא למגרש",
   "@welcome_message_1_premium": {
     "description": "Premium welcome message 1"
@@ -813,5 +1015,55 @@
   "startEvent": "התחל אירוע",
   "@startEvent": {
     "description": "כפתור להתחלת אירוע"
+  },
+  "voteMotm": "הצבעה למצטיין",
+  "@voteMotm": {
+    "description": "Button or title for Man of the Match voting"
+  },
+  "whoIsMotm": "מי היה השחקן המצטיין היום?",
+  "@whoIsMotm": {
+    "description": "Question asked in the MOTM voting popup"
+  },
+  "submitVote": "שלח הצבעה",
+  "@submitVote": {
+    "description": "Button to submit the MOTM vote"
+  },
+  "voteCaptured": "ההצבעה נקלטה! תודה על ההשתתפות.",
+  "@voteCaptured": {
+    "description": "Success message after voting for MOTM"
+  },
+  "alreadyVoted": "כבר הצבעת למשחק זה",
+  "@alreadyVoted": {
+    "description": "Error message when user tries to vote more than once"
+  },
+  "voteError": "שגיאה בשליחת ההצבעה: {error}",
+  "@voteError": {
+    "description": "Error message when MOTM voting fails",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "voteAtAnotherTime": "לא עכשיו",
+  "@voteAtAnotherTime": {
+    "description": "Button to dismiss the MOTM popup without voting"
+  },
+  "enableMotmVoting": "אפשר הצבעה למצטיין",
+  "@enableMotmVoting": {
+    "description": "Switch label to enable Man of the Match voting in hub/game settings"
+  },
+  "enableMotmVotingSubtitle": "אפשר לחברים להצביע לשחקן המצטיין לאחר המשחק",
+  "@enableMotmVotingSubtitle": {
+    "description": "Subtitle for the MOTM voting toggle"
+  },
+  "motmWinner": "השחקן המצטיין: {name}",
+  "@motmWinner": {
+    "description": "Label displaying the MOTM winner",
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "noWinnerYet": "טרם נבחר מנצח",
+  "@noWinnerYet": {
+    "description": "Message shown when voting is still open or no votes were cast"
   }
 }

@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:kattrick/models/models.dart';
-import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
 import 'package:kattrick/core/providers/auth_providers.dart';
 import 'package:kattrick/core/providers/repositories_providers.dart';
 import 'package:kattrick/core/providers/services_providers.dart';
-import 'package:kattrick/shared/infrastructure/analytics/analytics_service.dart';
-import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
 import 'package:kattrick/features/hubs/domain/services/hub_membership_service.dart';
+import 'package:kattrick/features/hubs/domain/services/hub_permissions_service.dart';
+import 'package:kattrick/models/models.dart';
+import 'package:kattrick/shared/infrastructure/analytics/analytics_service.dart';
 import 'package:kattrick/utils/hub_sharing_utils.dart';
+import 'package:kattrick/widgets/hub/hub_city_selector.dart';
 import 'package:kattrick/widgets/hub/hub_command_center.dart';
 import 'package:kattrick/widgets/hub/hub_home_venue_selector.dart';
-import 'package:kattrick/widgets/hub/hub_city_selector.dart';
 import 'package:kattrick/widgets/hub/hub_venues_list.dart';
 
 class HubHeader extends ConsumerWidget {
@@ -353,6 +351,68 @@ class HubHeader extends ConsumerWidget {
     );
   }
 
+  /// Show dialog preventing hub creator from leaving
+  Future<void> _showCreatorCannotLeaveDialog(
+    BuildContext context,
+    Hub hub,
+  ) async {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('לא ניתן לעזוב'),
+        content: const Text(
+          'כיוצר ההאב, לא תוכל לעזוב אותו.\n\n'
+          'כדי לעזוב, עליך תחילה להעביר את הבעלות לחבר אחר או למחוק את ההאב.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('סגור'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/hubs/${hub.hubId}/settings');
+            },
+            child: const Text('הגדרות האב'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show confirmation dialog before leaving hub
+  Future<bool> _showLeaveConfirmationDialog(
+    BuildContext context,
+    Hub hub,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('עזיבת האב'),
+        content: Text(
+          'האם אתה בטוח שברצונך לעזוב את ${hub.name}?\n\n'
+          '✓ הסטטיסטיקות שלך יישמרו\n'
+          '✓ תוכל להצטרף שוב בכל עת\n'
+          '✓ המשחקים הקרובים שלך יישארו פעילים',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('עזוב'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
   Future<void> _toggleMembership(
     BuildContext context,
     WidgetRef ref,
@@ -397,7 +457,8 @@ class HubHeader extends ConsumerWidget {
                     );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('הצטרפת מחדש להוב בהצלחה')),
+                        const SnackBar(
+                            content: Text('הצטרפת מחדש להוב בהצלחה')),
                       );
                     }
                   } catch (e) {

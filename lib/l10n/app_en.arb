@@ -133,9 +133,13 @@
   "errorMissingHubId": "Error: Missing Hub ID",
   "@errorMissingHubId": {},
   "eventNotFound": "Event not found",
-  "@eventNotFound": {},
+  "@eventNotFound": {
+    "description": "Error message when an event is not found"
+  },
   "gameNotFound": "Game not found",
-  "@gameNotFound": {},
+  "@gameNotFound": {
+    "description": "Message shown when a game is not found"
+  },
   "noAdminPermissionForScreen": "You do not have admin permission for this screen",
   "@noAdminPermissionForScreen": {},
   "onlyHubAdminsCanCreateTeams": "Only Hub admins can create teams",
@@ -241,9 +245,13 @@
   "hubInvitations": "Invitations",
   "@hubInvitations": {},
   "hubInvitationsDescription": "Manage pending invitations",
-  "@hubInvitationsDescription": {},
+  "@hubInvitationsDescription": {
+    "description": "Information about managing hub invitations"
+  },
   "checkingPermissions": "Checking permissions...",
-  "@checkingPermissions": {},
+  "@checkingPermissions": {
+    "description": "Loading message while checking permissions"
+  },
   "permissionCheckError": "Permission check error",
   "@permissionCheckError": {},
   "settingUpdatedSuccess": "Setting updated successfully",
@@ -506,27 +514,70 @@
     "description": "Force location button for dev mode"
   },
   "gameDetailsTitle": "Game Details",
+  "@gameDetailsTitle": {
+    "description": "Title for the game details screen"
+  },
   "gameLoadingMessage": "Loading game...",
+  "@gameLoadingMessage": {
+    "description": "Loading message while game data is being fetched"
+  },
   "gameLoadingError": "Failed to load game",
-  "gameNotFound": "Game not found",
+  "@gameLoadingError": {
+    "description": "Error message when game data fails to load"
+  },
   "attendanceMonitoring": "Attendance Monitoring",
+  "@attendanceMonitoring": {
+    "description": "Label for the attendance monitoring button"
+  },
   "locationNotSpecified": "Location not specified",
+  "@locationNotSpecified": {
+    "description": "Text shown when a game has no location defined"
+  },
   "teamCountLabel": "{count} teams",
   "signupsCount": "{count} registered",
   "signupsCountFull": "{count} registered (full)",
   "gameRulesTitle": "Game rules",
+  "@gameRulesTitle": {
+    "description": "Title for the competitive game rules section"
+  },
   "gameDurationLabel": "Duration: {minutes} minutes",
   "gameEndConditionLabel": "End condition: {condition}",
-  "checkingPermissions": "Checking permissions...",
   "statusApproved": "Approved",
+  "@statusApproved": {
+    "description": "Status label for approved requests"
+  },
   "statusPending": "Pending",
+  "@statusPending": {
+    "description": "Status label for a pending signup"
+  },
   "removePlayerTooltip": "Remove player",
+  "@removePlayerTooltip": {
+    "description": "Tooltip for removing a player from a game"
+  },
   "signupRemovedSuccess": "Registration removed",
+  "@signupRemovedSuccess": {
+    "description": "Snackbar message after successfully removing a signup"
+  },
   "signupSuccess": "Joined the game",
+  "@signupSuccess": {
+    "description": "Snackbar message after successfully signing up for a game"
+  },
   "onlyCreatorCanStartGame": "Only the game creator can start",
+  "@onlyCreatorCanStartGame": {
+    "description": "Error message when non-creator tries to start a game"
+  },
   "gameStartedSuccess": "Game started",
+  "@gameStartedSuccess": {
+    "description": "Success message when a game is successfully started"
+  },
   "onlyCreatorCanEndGame": "Only the game creator can end",
+  "@onlyCreatorCanEndGame": {
+    "description": "Error message when non-creator tries to end a game"
+  },
   "gameEndedSuccess": "Game ended",
+  "@gameEndedSuccess": {
+    "description": "Success message when a game is successfully ended"
+  },
   "gameStatusDraft": "Draft",
   "gameStatusScheduled": "Scheduled",
   "gameStatusRecruiting": "Recruiting players",
@@ -627,5 +678,58 @@
   "userFallback": "User",
   "eventLabel": "Event",
   "gameLabel": "Game",
-  "startEvent": "Start event"
+  "startEvent": "Start event",
+  "@startEvent": {
+    "description": "Button to start an event"
+  },
+  "voteMotm": "Vote MOTM",
+  "@voteMotm": {
+    "description": "Button or title for Man of the Match voting"
+  },
+  "whoIsMotm": "Who was the best player today?",
+  "@whoIsMotm": {
+    "description": "Question asked in the MOTM voting popup"
+  },
+  "submitVote": "Submit Vote",
+  "@submitVote": {
+    "description": "Button to submit the MOTM vote"
+  },
+  "voteCaptured": "Vote recorded! Thanks for participating.",
+  "@voteCaptured": {
+    "description": "Success message after voting for MOTM"
+  },
+  "alreadyVoted": "You have already voted for this game",
+  "@alreadyVoted": {
+    "description": "Error message when user tries to vote more than once"
+  },
+  "voteError": "Error submitting vote: {error}",
+  "@voteError": {
+    "description": "Error message when MOTM voting fails",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "voteAtAnotherTime": "Not now",
+  "@voteAtAnotherTime": {
+    "description": "Button to dismiss the MOTM popup without voting"
+  },
+  "enableMotmVoting": "Enable MOTM Voting",
+  "@enableMotmVoting": {
+    "description": "Switch label to enable Man of the Match voting in hub/game settings"
+  },
+  "enableMotmVotingSubtitle": "Allow members to vote for the best player after the game",
+  "@enableMotmVotingSubtitle": {
+    "description": "Subtitle for the MOTM voting toggle"
+  },
+  "motmWinner": "Man of the Match: {name}",
+  "@motmWinner": {
+    "description": "Label displaying the MOTM winner",
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "noWinnerYet": "No winner selected yet",
+  "@noWinnerYet": {
+    "description": "Message shown when voting is still open or no votes were cast"
+  }
 }
