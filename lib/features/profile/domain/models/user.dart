@@ -55,6 +55,7 @@ class User with _$User {
     double? heightCm, // גובה בסנטימטרים (140-220)
     double? weightKg, // משקל בקילוגרמים (40-150)
     String? preferredFoot, // 'left', 'right', 'both'
+    @Default(false) bool hasCar, // Has a car for ride-sharing (Trempiyada feature)
     @Default(0)
     int totalParticipations, // Total games played (for milestone badges)
     @Default(0) int gamesPlayed, // Compatibility field used throughout the app

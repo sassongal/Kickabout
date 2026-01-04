@@ -15,6 +15,10 @@ _$GameSignupImpl _$$GameSignupImplFromJson(Map<String, dynamic> json) =>
           ? SignupStatus.pending
           : const SignupStatusConverter().fromJson(json['status'] as String),
       adminActionReason: json['adminActionReason'] as String?,
+      offeringRide: json['offeringRide'] as bool? ?? false,
+      needsRide: json['needsRide'] as bool? ?? false,
+      availableSeats: (json['availableSeats'] as num?)?.toInt(),
+      requestedDriverId: json['requestedDriverId'] as String?,
       gameDate: _$JsonConverterFromJson<Object, DateTime>(
           json['gameDate'], const TimestampConverter().fromJson),
       gameStatus: json['gameStatus'] as String?,
@@ -29,6 +33,10 @@ Map<String, dynamic> _$$GameSignupImplToJson(_$GameSignupImpl instance) =>
       'signedUpAt': const TimestampConverter().toJson(instance.signedUpAt),
       'status': const SignupStatusConverter().toJson(instance.status),
       'adminActionReason': instance.adminActionReason,
+      'offeringRide': instance.offeringRide,
+      'needsRide': instance.needsRide,
+      'availableSeats': instance.availableSeats,
+      'requestedDriverId': instance.requestedDriverId,
       'gameDate': _$JsonConverterToJson<Object, DateTime>(
           instance.gameDate, const TimestampConverter().toJson),
       'gameStatus': instance.gameStatus,

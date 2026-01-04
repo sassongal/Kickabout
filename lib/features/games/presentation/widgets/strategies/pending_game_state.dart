@@ -27,6 +27,7 @@ class PendingGameState extends StatelessWidget {
   final Future<void> Function(String reason)? onCancelGame;
   final Future<void> Function(BuildContext context, Game game)? onJoinWaitlist;
   final Future<void> Function(String playerId, bool hasPaid)? onUpdatePaymentStatus;
+  final String? hubPaymentLink; // Payment link from Hub settings
 
   const PendingGameState({
     super.key,
@@ -47,6 +48,7 @@ class PendingGameState extends StatelessWidget {
     this.onCancelGame,
     this.onJoinWaitlist,
     this.onUpdatePaymentStatus,
+    this.hubPaymentLink,
   });
 
   @override
@@ -282,6 +284,7 @@ class PendingGameState extends StatelessWidget {
             isCreator: isCreator,
             currentUserId: currentUserId,
             onUpdatePaymentStatus: onUpdatePaymentStatus,
+            hubPaymentLink: hubPaymentLink,
           ),
         GameSignupsSection(
           confirmedSignups: confirmedSignups,

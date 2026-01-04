@@ -975,4 +975,63 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get noWinnerYet => 'טרם נבחר מנצח';
+
+  @override
+  String get payNow => 'שלם עכשיו';
+
+  @override
+  String get paymentLinkNotConfigured => 'קישור תשלום לא הוגדר';
+
+  @override
+  String get openingPaymentApp => 'פותח אפליקציית תשלום...';
+
+  @override
+  String get couldNotOpenPaymentLink => 'לא ניתן לפתוח קישור תשלום';
+
+  @override
+  String get rideSharing => 'טרמפיאדה';
+
+  @override
+  String get offeringRide => 'מציע טרמפ';
+
+  @override
+  String get needsRide => 'צריך טרמפ';
+
+  @override
+  String get hasCar => 'יש לי רכב';
+
+  @override
+  String get availableSeats => 'מקומות פנויים';
+
+  @override
+  String get requestRide => 'בקש טרמפ';
+
+  @override
+  String get cancelRideRequest => 'בטל בקשה';
+
+  @override
+  String get offerRide => 'הצע טרמפ';
+
+  @override
+  String get cancelRideOffer => 'בטל הצעה';
+
+  @override
+  String get drivers => 'נהגים';
+
+  @override
+  String get passengersNeeded => 'מחפשים טרמפ';
+
+  @override
+  String get selectDriver => 'בחר נהג';
+
+  @override
+  String get rideRequestSent => 'בקשת טרמפ נשלחה';
+
+  @override
+  String get noDriversAvailable => 'אין נהגים זמינים כרגע';
+
+  @override
+  String seatsAvailable(int count) {
+    return '$count מקומות פנויים';
+  }
 }

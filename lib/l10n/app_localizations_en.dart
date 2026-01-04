@@ -185,7 +185,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventNotFound => 'Event not found';
 
   @override
-  String get gameNotFound => 'משחק לא נמצא';
+  String get gameNotFound => 'Game not found';
 
   @override
   String get noAdminPermissionForScreen =>
@@ -321,10 +321,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hubInvitationsDescription => 'Manage pending invitations';
 
   @override
-  String get checkingPermissions => 'בודק הרשאות...';
+  String get checkingPermissions => 'Checking permissions...';
 
   @override
-  String get permissionCheckError => 'שגיאה בבדיקת הרשאות';
+  String get permissionCheckError => 'Permission check error';
 
   @override
   String get settingUpdatedSuccess => 'Setting updated successfully';
@@ -627,7 +627,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get statusApproved => 'מאושר';
+  String get statusApproved => 'Approved';
 
   @override
   String get statusPending => 'Pending';
@@ -985,4 +985,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noWinnerYet => 'No winner selected yet';
+
+  @override
+  String get payNow => 'שלם עכשיו';
+
+  @override
+  String get paymentLinkNotConfigured => 'קישור תשלום לא הוגדר';
+
+  @override
+  String get openingPaymentApp => 'פותח אפליקציית תשלום...';
+
+  @override
+  String get couldNotOpenPaymentLink => 'לא ניתן לפתוח קישור תשלום';
+
+  @override
+  String get rideSharing => 'טרמפיאדה';
+
+  @override
+  String get offeringRide => 'מציע טרמפ';
+
+  @override
+  String get needsRide => 'צריך טרמפ';
+
+  @override
+  String get hasCar => 'יש לי רכב';
+
+  @override
+  String get availableSeats => 'מקומות פנויים';
+
+  @override
+  String get requestRide => 'בקש טרמפ';
+
+  @override
+  String get cancelRideRequest => 'בטל בקשה';
+
+  @override
+  String get offerRide => 'הצע טרמפ';
+
+  @override
+  String get cancelRideOffer => 'בטל הצעה';
+
+  @override
+  String get drivers => 'נהגים';
+
+  @override
+  String get passengersNeeded => 'מחפשים טרמפ';
+
+  @override
+  String get selectDriver => 'בחר נהג';
+
+  @override
+  String get rideRequestSent => 'בקשת טרמפ נשלחה';
+
+  @override
+  String get noDriversAvailable => 'אין נהגים זמינים כרגע';
+
+  @override
+  String seatsAvailable(int count) {
+    return '$count מקומות פנויים';
+  }
 }

@@ -124,6 +124,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             );
           }
 
+          // Get hub payment link if game belongs to a hub
+          final hubsRepo = ref.read(hubsRepositoryProvider);
+          final hubPaymentLinkFuture = game.hubId != null
+              ? hubsRepo.getHub(game.hubId!).then((hub) => hub?.paymentLink)
+              : Future.value(null);
+
           return roleAsync.when(
             data: (role) {
               final teamUsersAsync = ref.watch(
@@ -436,6 +442,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                           pendingSignups,
                           usersRepo,
                           teamUsersAsync,
+                          hubPaymentLinkFuture,
                         ),
                       ),
                     ],
@@ -610,6 +617,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     List<GameSignup> pendingSignups,
     UsersRepository usersRepo,
     AsyncValue<Map<String, User>> teamUsersAsync,
+    Future<String?> hubPaymentLinkFuture,
   ) {
     final Widget child;
     switch (game.status) {
@@ -617,28 +625,35 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       case GameStatus.scheduled:
       case GameStatus.recruiting:
       case GameStatus.teamSelection:
-        child = teamUsersAsync.when(
-          data: (playerUsers) => PendingGameState(
-            game: game,
-            gameId: widget.gameId,
-            role: role,
-            isCreator: isCreator,
-            isSignedUp: isSignedUp,
-            isGameFull: isGameFull,
-            confirmedSignups: confirmedSignups,
-            pendingSignups: pendingSignups,
-            playerUsers: playerUsers,
-            usersRepo: usersRepo,
-            currentUserId: currentUserId,
-            onToggleSignup: _toggleSignup,
-            onApprovePlayer: _approvePlayer,
-            onRejectPlayer: _rejectPlayer,
-            onCancelGame: _cancelGame,
-            onJoinWaitlist: _joinWaitlist,
-            onUpdatePaymentStatus: _updatePaymentStatus,
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
+        child = FutureBuilder<String?>(
+          future: hubPaymentLinkFuture,
+          builder: (context, paymentLinkSnapshot) {
+            final hubPaymentLink = paymentLinkSnapshot.data;
+            return teamUsersAsync.when(
+              data: (playerUsers) => PendingGameState(
+                game: game,
+                gameId: widget.gameId,
+                role: role,
+                isCreator: isCreator,
+                isSignedUp: isSignedUp,
+                isGameFull: isGameFull,
+                confirmedSignups: confirmedSignups,
+                pendingSignups: pendingSignups,
+                playerUsers: playerUsers,
+                usersRepo: usersRepo,
+                currentUserId: currentUserId,
+                onToggleSignup: _toggleSignup,
+                onApprovePlayer: _approvePlayer,
+                onRejectPlayer: _rejectPlayer,
+                onCancelGame: _cancelGame,
+                onJoinWaitlist: _joinWaitlist,
+                onUpdatePaymentStatus: _updatePaymentStatus,
+                hubPaymentLink: hubPaymentLink,
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+            );
+          },
         );
 
       case GameStatus.fullyBooked:

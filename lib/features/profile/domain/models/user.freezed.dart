@@ -67,6 +67,8 @@ mixin _$User {
       throw _privateConstructorUsedError; // משקל בקילוגרמים (40-150)
   String? get preferredFoot =>
       throw _privateConstructorUsedError; // 'left', 'right', 'both'
+  bool get hasCar =>
+      throw _privateConstructorUsedError; // Has a car for ride-sharing (Trempiyada feature)
   int get totalParticipations =>
       throw _privateConstructorUsedError; // Total games played (for milestone badges)
   int get gamesPlayed =>
@@ -144,6 +146,7 @@ abstract class $UserCopyWith<$Res> {
       double? heightCm,
       double? weightKg,
       String? preferredFoot,
+      bool hasCar,
       int totalParticipations,
       int gamesPlayed,
       @NullableGeographicPointFirestoreConverter() GeographicPoint? location,
@@ -210,6 +213,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? heightCm = freezed,
     Object? weightKg = freezed,
     Object? preferredFoot = freezed,
+    Object? hasCar = null,
     Object? totalParticipations = null,
     Object? gamesPlayed = null,
     Object? location = freezed,
@@ -334,6 +338,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.preferredFoot
           : preferredFoot // ignore: cast_nullable_to_non_nullable
               as String?,
+      hasCar: null == hasCar
+          ? _value.hasCar
+          : hasCar // ignore: cast_nullable_to_non_nullable
+              as bool,
       totalParticipations: null == totalParticipations
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
@@ -501,6 +509,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       double? heightCm,
       double? weightKg,
       String? preferredFoot,
+      bool hasCar,
       int totalParticipations,
       int gamesPlayed,
       @NullableGeographicPointFirestoreConverter() GeographicPoint? location,
@@ -568,6 +577,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? heightCm = freezed,
     Object? weightKg = freezed,
     Object? preferredFoot = freezed,
+    Object? hasCar = null,
     Object? totalParticipations = null,
     Object? gamesPlayed = null,
     Object? location = freezed,
@@ -692,6 +702,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.preferredFoot
           : preferredFoot // ignore: cast_nullable_to_non_nullable
               as String?,
+      hasCar: null == hasCar
+          ? _value.hasCar
+          : hasCar // ignore: cast_nullable_to_non_nullable
+              as bool,
       totalParticipations: null == totalParticipations
           ? _value.totalParticipations
           : totalParticipations // ignore: cast_nullable_to_non_nullable
@@ -798,6 +812,7 @@ class _$UserImpl implements _User {
       this.heightCm,
       this.weightKg,
       this.preferredFoot,
+      this.hasCar = false,
       this.totalParticipations = 0,
       this.gamesPlayed = 0,
       @NullableGeographicPointFirestoreConverter() this.location,
@@ -931,6 +946,10 @@ class _$UserImpl implements _User {
 // 'left', 'right', 'both'
   @override
   @JsonKey()
+  final bool hasCar;
+// Has a car for ride-sharing (Trempiyada feature)
+  @override
+  @JsonKey()
   final int totalParticipations;
 // Total games played (for milestone badges)
   @override
@@ -1020,7 +1039,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, favoriteProTeamId: $favoriteProTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, showSocialLinks: $showSocialLinks, availabilityStatus: $availabilityStatus, isActive: $isActive, isFictitious: $isFictitious, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, heightCm: $heightCm, weightKg: $weightKg, preferredFoot: $preferredFoot, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, userLocation: $userLocation, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, privacy: $privacy, notificationPreferences: $notificationPreferences, notifications: $notifications, blockedUserIds: $blockedUserIds)';
+    return 'User(uid: $uid, name: $name, email: $email, photoUrl: $photoUrl, avatarColor: $avatarColor, phoneNumber: $phoneNumber, city: $city, displayName: $displayName, firstName: $firstName, lastName: $lastName, birthDate: $birthDate, favoriteTeamId: $favoriteTeamId, favoriteProTeamId: $favoriteProTeamId, facebookProfileUrl: $facebookProfileUrl, instagramProfileUrl: $instagramProfileUrl, showSocialLinks: $showSocialLinks, availabilityStatus: $availabilityStatus, isActive: $isActive, isFictitious: $isFictitious, createdAt: $createdAt, hubIds: $hubIds, currentRankScore: $currentRankScore, preferredPosition: $preferredPosition, heightCm: $heightCm, weightKg: $weightKg, preferredFoot: $preferredFoot, hasCar: $hasCar, totalParticipations: $totalParticipations, gamesPlayed: $gamesPlayed, location: $location, geohash: $geohash, region: $region, userLocation: $userLocation, isProfileComplete: $isProfileComplete, followerCount: $followerCount, wins: $wins, losses: $losses, draws: $draws, goals: $goals, assists: $assists, privacySettings: $privacySettings, privacy: $privacy, notificationPreferences: $notificationPreferences, notifications: $notifications, blockedUserIds: $blockedUserIds)';
   }
 
   @override
@@ -1075,6 +1094,7 @@ class _$UserImpl implements _User {
                 other.weightKg == weightKg) &&
             (identical(other.preferredFoot, preferredFoot) ||
                 other.preferredFoot == preferredFoot) &&
+            (identical(other.hasCar, hasCar) || other.hasCar == hasCar) &&
             (identical(other.totalParticipations, totalParticipations) ||
                 other.totalParticipations == totalParticipations) &&
             (identical(other.gamesPlayed, gamesPlayed) ||
@@ -1135,6 +1155,7 @@ class _$UserImpl implements _User {
         heightCm,
         weightKg,
         preferredFoot,
+        hasCar,
         totalParticipations,
         gamesPlayed,
         location,
@@ -1199,6 +1220,7 @@ abstract class _User implements User {
       final double? heightCm,
       final double? weightKg,
       final String? preferredFoot,
+      final bool hasCar,
       final int totalParticipations,
       final int gamesPlayed,
       @NullableGeographicPointFirestoreConverter()
@@ -1285,6 +1307,8 @@ abstract class _User implements User {
   double? get weightKg; // משקל בקילוגרמים (40-150)
   @override
   String? get preferredFoot; // 'left', 'right', 'both'
+  @override
+  bool get hasCar; // Has a car for ride-sharing (Trempiyada feature)
   @override
   int get totalParticipations; // Total games played (for milestone badges)
   @override

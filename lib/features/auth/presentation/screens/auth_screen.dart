@@ -70,6 +70,80 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = ref.read(authServiceProvider);
+      final usersRepo = ref.read(usersRepositoryProvider);
+
+      final cred = await authService.signInWithGoogle();
+      final uid = cred.user?.uid;
+
+      if (uid != null) {
+        // Check if user already exists
+        final existingUser = await usersRepo.getUser(uid);
+        if (existingUser == null) {
+          // Create new user profile
+          final user = User(
+            uid: uid,
+            name: cred.user?.displayName ?? 'משתמש',
+            email: cred.user?.email ?? '',
+            birthDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // Default 18 years old
+            createdAt: DateTime.now(),
+            isProfileComplete: false,
+          );
+          await usersRepo.setUser(user);
+        }
+      }
+
+      await AnalyticsService().logLogin(loginMethod: 'google');
+      if (mounted) context.go('/');
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'התחברות עם Google נכשלה: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = ref.read(authServiceProvider);
+      final usersRepo = ref.read(usersRepositoryProvider);
+
+      final cred = await authService.signInWithApple();
+      final uid = cred.user?.uid;
+
+      if (uid != null) {
+        // Check if user already exists
+        final existingUser = await usersRepo.getUser(uid);
+        if (existingUser == null) {
+          // Create new user profile
+          final user = User(
+            uid: uid,
+            name: cred.user?.displayName ?? 'משתמש',
+            email: cred.user?.email ?? '',
+            birthDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // Default 18 years old
+            createdAt: DateTime.now(),
+            isProfileComplete: false,
+          );
+          await usersRepo.setUser(user);
+        }
+      }
+
+      await AnalyticsService().logLogin(loginMethod: 'apple');
+      if (mounted) context.go('/');
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'התחברות עם Apple נכשלה: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _signUp() async {
     if (!_signupFormKey.currentState!.validate()) return;
     if (_signupPassword.text.trim() != _signupConfirm.text.trim()) {
@@ -164,6 +238,34 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               _AuthCard(
                 formKey: _loginFormKey,
                 children: [
+                  // Social Login Buttons (faster onboarding)
+                  _SocialButton(
+                    label: 'המשך עם Google',
+                    icon: Icons.g_mobiledata,
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    color: Colors.white,
+                    textColor: Colors.black87,
+                  ),
+                  const SizedBox(height: 12),
+                  _SocialButton(
+                    label: 'המשך עם Apple',
+                    icon: Icons.apple,
+                    onPressed: _isLoading ? null : _signInWithApple,
+                    color: Colors.black,
+                    textColor: Colors.white,
+                  ),
+                  const SizedBox(height: 24),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text('או', style: TextStyle(color: Colors.grey)),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   _TextField(
                     controller: _loginEmail,
                     label: 'אימייל',
@@ -200,6 +302,34 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               _AuthCard(
                 formKey: _signupFormKey,
                 children: [
+                  // Social Login Buttons (faster onboarding)
+                  _SocialButton(
+                    label: 'המשך עם Google',
+                    icon: Icons.g_mobiledata,
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    color: Colors.white,
+                    textColor: Colors.black87,
+                  ),
+                  const SizedBox(height: 12),
+                  _SocialButton(
+                    label: 'המשך עם Apple',
+                    icon: Icons.apple,
+                    onPressed: _isLoading ? null : _signInWithApple,
+                    color: Colors.black,
+                    textColor: Colors.white,
+                  ),
+                  const SizedBox(height: 24),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text('או', style: TextStyle(color: Colors.grey)),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   _TextField(
                     controller: _signupName,
                     label: 'שם מלא',
@@ -428,6 +558,45 @@ class _PrimaryButton extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  const _SocialButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    required this.color,
+    required this.textColor,
+  });
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final Color color;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: textColor,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.shade300),
+          ),
+        ),
+        icon: Icon(icon, size: 24),
+        label: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
     );

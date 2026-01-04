@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kattrick/models/models.dart';
+import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Widget to display and manage payment status for a game (Sprint 2.2)
 class PaymentStatusCard extends StatelessWidget {
@@ -11,6 +13,7 @@ class PaymentStatusCard extends StatelessWidget {
   final bool isCreator;
   final String? currentUserId;
   final Future<void> Function(String playerId, bool hasPaid)? onUpdatePaymentStatus;
+  final String? hubPaymentLink; // Deep link to Bit/PayBox for direct payment
 
   const PaymentStatusCard({
     super.key,
@@ -21,10 +24,52 @@ class PaymentStatusCard extends StatelessWidget {
     required this.isCreator,
     required this.currentUserId,
     this.onUpdatePaymentStatus,
+    this.hubPaymentLink,
   });
+
+  Future<void> _openPaymentLink(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    if (hubPaymentLink == null || hubPaymentLink!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.paymentLinkNotConfigured),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final uri = Uri.parse(hubPaymentLink!);
+      if (await canLaunchUrl(uri)) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.openingPaymentApp),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Cannot launch URL';
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.couldNotOpenPaymentLink),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     // Only show if game has a cost set
     if (game.gameCost == null || game.gameCost! <= 0) {
       return const SizedBox.shrink();
@@ -213,24 +258,47 @@ class PaymentStatusCard extends StatelessWidget {
                       : Colors.orange.withValues(alpha: 0.3),
                   ),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Icon(
-                      paymentStatus[currentUserId] == true ? Icons.check_circle : Icons.pending,
-                      color: paymentStatus[currentUserId] == true ? Colors.green : Colors.orange,
+                    Row(
+                      children: [
+                        Icon(
+                          paymentStatus[currentUserId] == true ? Icons.check_circle : Icons.pending,
+                          color: paymentStatus[currentUserId] == true ? Colors.green : Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            paymentStatus[currentUserId] == true
+                              ? 'סומנת כמי ששילם ✓'
+                              : 'ממתין לתשלום של ₪${game.gameCost!.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: paymentStatus[currentUserId] == true ? Colors.green[700] : Colors.orange[700],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        paymentStatus[currentUserId] == true
-                          ? 'סומנת כמי ששילם ✓'
-                          : 'ממתין לתשלום של ₪${game.gameCost!.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          color: paymentStatus[currentUserId] == true ? Colors.green[700] : Colors.orange[700],
-                          fontWeight: FontWeight.bold,
+                    // "Pay Now" button - only show if not paid and payment link is configured
+                    if (paymentStatus[currentUserId] != true &&
+                        hubPaymentLink != null &&
+                        hubPaymentLink!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _openPaymentLink(context),
+                          icon: const Icon(Icons.payment),
+                          label: Text(l10n.payNow),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

@@ -17,6 +17,12 @@ class GameSignup with _$GameSignup {
     @SignupStatusConverter() @Default(SignupStatus.pending) SignupStatus status,
     String? adminActionReason, // Mandatory for rejections/kicks
 
+    // Ride-sharing (Trempiyada) fields
+    @Default(false) bool offeringRide, // Player is offering a ride
+    @Default(false) bool needsRide, // Player needs a ride
+    int? availableSeats, // Number of available seats (if offeringRide=true)
+    String? requestedDriverId, // ID of driver player requested ride from
+
     // Denormalized game data (to avoid N+1 queries)
     @TimestampConverter() DateTime? gameDate,
     String? gameStatus, // 'teamSelection', 'teamsFormed', etc.

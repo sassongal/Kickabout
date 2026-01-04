@@ -61,6 +61,11 @@ class HubSettings with _$HubSettings {
     /// Enable Man of the Match voting (Sprint 3)
     /// When enabled, games created in this hub will have MOTM voting by default
     @Default(false) bool enableMotmVoting,
+
+    /// Payment link for hub (Bit/PayBox deep link)
+    /// When set, players can click "Pay Now" button to directly open payment app
+    /// Format: https://payboxapp.page.link/... or bit.ly/...
+    String? paymentLink,
   }) = _HubSettings;
 
   const HubSettings._();
@@ -92,6 +97,7 @@ class HubSettings with _$HubSettings {
         map['matchLoggingPolicy'] as String? ?? 'managerOnly',
       ),
       enableMotmVoting: map['enableMotmVoting'] as bool? ?? false,
+      paymentLink: map['paymentLink'] as String?,
     );
   }
 

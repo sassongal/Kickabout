@@ -27,6 +27,15 @@ mixin _$GameSignup {
   SignupStatus get status => throw _privateConstructorUsedError;
   String? get adminActionReason =>
       throw _privateConstructorUsedError; // Mandatory for rejections/kicks
+// Ride-sharing (Trempiyada) fields
+  bool get offeringRide =>
+      throw _privateConstructorUsedError; // Player is offering a ride
+  bool get needsRide =>
+      throw _privateConstructorUsedError; // Player needs a ride
+  int? get availableSeats =>
+      throw _privateConstructorUsedError; // Number of available seats (if offeringRide=true)
+  String? get requestedDriverId =>
+      throw _privateConstructorUsedError; // ID of driver player requested ride from
 // Denormalized game data (to avoid N+1 queries)
   @TimestampConverter()
   DateTime? get gameDate => throw _privateConstructorUsedError;
@@ -57,6 +66,10 @@ abstract class $GameSignupCopyWith<$Res> {
       @TimestampConverter() DateTime signedUpAt,
       @SignupStatusConverter() SignupStatus status,
       String? adminActionReason,
+      bool offeringRide,
+      bool needsRide,
+      int? availableSeats,
+      String? requestedDriverId,
       @TimestampConverter() DateTime? gameDate,
       String? gameStatus,
       String? hubId,
@@ -83,6 +96,10 @@ class _$GameSignupCopyWithImpl<$Res, $Val extends GameSignup>
     Object? signedUpAt = null,
     Object? status = null,
     Object? adminActionReason = freezed,
+    Object? offeringRide = null,
+    Object? needsRide = null,
+    Object? availableSeats = freezed,
+    Object? requestedDriverId = freezed,
     Object? gameDate = freezed,
     Object? gameStatus = freezed,
     Object? hubId = freezed,
@@ -105,6 +122,22 @@ class _$GameSignupCopyWithImpl<$Res, $Val extends GameSignup>
       adminActionReason: freezed == adminActionReason
           ? _value.adminActionReason
           : adminActionReason // ignore: cast_nullable_to_non_nullable
+              as String?,
+      offeringRide: null == offeringRide
+          ? _value.offeringRide
+          : offeringRide // ignore: cast_nullable_to_non_nullable
+              as bool,
+      needsRide: null == needsRide
+          ? _value.needsRide
+          : needsRide // ignore: cast_nullable_to_non_nullable
+              as bool,
+      availableSeats: freezed == availableSeats
+          ? _value.availableSeats
+          : availableSeats // ignore: cast_nullable_to_non_nullable
+              as int?,
+      requestedDriverId: freezed == requestedDriverId
+          ? _value.requestedDriverId
+          : requestedDriverId // ignore: cast_nullable_to_non_nullable
               as String?,
       gameDate: freezed == gameDate
           ? _value.gameDate
@@ -143,6 +176,10 @@ abstract class _$$GameSignupImplCopyWith<$Res>
       @TimestampConverter() DateTime signedUpAt,
       @SignupStatusConverter() SignupStatus status,
       String? adminActionReason,
+      bool offeringRide,
+      bool needsRide,
+      int? availableSeats,
+      String? requestedDriverId,
       @TimestampConverter() DateTime? gameDate,
       String? gameStatus,
       String? hubId,
@@ -167,6 +204,10 @@ class __$$GameSignupImplCopyWithImpl<$Res>
     Object? signedUpAt = null,
     Object? status = null,
     Object? adminActionReason = freezed,
+    Object? offeringRide = null,
+    Object? needsRide = null,
+    Object? availableSeats = freezed,
+    Object? requestedDriverId = freezed,
     Object? gameDate = freezed,
     Object? gameStatus = freezed,
     Object? hubId = freezed,
@@ -189,6 +230,22 @@ class __$$GameSignupImplCopyWithImpl<$Res>
       adminActionReason: freezed == adminActionReason
           ? _value.adminActionReason
           : adminActionReason // ignore: cast_nullable_to_non_nullable
+              as String?,
+      offeringRide: null == offeringRide
+          ? _value.offeringRide
+          : offeringRide // ignore: cast_nullable_to_non_nullable
+              as bool,
+      needsRide: null == needsRide
+          ? _value.needsRide
+          : needsRide // ignore: cast_nullable_to_non_nullable
+              as bool,
+      availableSeats: freezed == availableSeats
+          ? _value.availableSeats
+          : availableSeats // ignore: cast_nullable_to_non_nullable
+              as int?,
+      requestedDriverId: freezed == requestedDriverId
+          ? _value.requestedDriverId
+          : requestedDriverId // ignore: cast_nullable_to_non_nullable
               as String?,
       gameDate: freezed == gameDate
           ? _value.gameDate
@@ -222,6 +279,10 @@ class _$GameSignupImpl implements _GameSignup {
       @TimestampConverter() required this.signedUpAt,
       @SignupStatusConverter() this.status = SignupStatus.pending,
       this.adminActionReason,
+      this.offeringRide = false,
+      this.needsRide = false,
+      this.availableSeats,
+      this.requestedDriverId,
       @TimestampConverter() this.gameDate,
       this.gameStatus,
       this.hubId,
@@ -243,6 +304,21 @@ class _$GameSignupImpl implements _GameSignup {
   @override
   final String? adminActionReason;
 // Mandatory for rejections/kicks
+// Ride-sharing (Trempiyada) fields
+  @override
+  @JsonKey()
+  final bool offeringRide;
+// Player is offering a ride
+  @override
+  @JsonKey()
+  final bool needsRide;
+// Player needs a ride
+  @override
+  final int? availableSeats;
+// Number of available seats (if offeringRide=true)
+  @override
+  final String? requestedDriverId;
+// ID of driver player requested ride from
 // Denormalized game data (to avoid N+1 queries)
   @override
   @TimestampConverter()
@@ -259,7 +335,7 @@ class _$GameSignupImpl implements _GameSignup {
 
   @override
   String toString() {
-    return 'GameSignup(playerId: $playerId, signedUpAt: $signedUpAt, status: $status, adminActionReason: $adminActionReason, gameDate: $gameDate, gameStatus: $gameStatus, hubId: $hubId, location: $location, venueName: $venueName)';
+    return 'GameSignup(playerId: $playerId, signedUpAt: $signedUpAt, status: $status, adminActionReason: $adminActionReason, offeringRide: $offeringRide, needsRide: $needsRide, availableSeats: $availableSeats, requestedDriverId: $requestedDriverId, gameDate: $gameDate, gameStatus: $gameStatus, hubId: $hubId, location: $location, venueName: $venueName)';
   }
 
   @override
@@ -274,6 +350,14 @@ class _$GameSignupImpl implements _GameSignup {
             (identical(other.status, status) || other.status == status) &&
             (identical(other.adminActionReason, adminActionReason) ||
                 other.adminActionReason == adminActionReason) &&
+            (identical(other.offeringRide, offeringRide) ||
+                other.offeringRide == offeringRide) &&
+            (identical(other.needsRide, needsRide) ||
+                other.needsRide == needsRide) &&
+            (identical(other.availableSeats, availableSeats) ||
+                other.availableSeats == availableSeats) &&
+            (identical(other.requestedDriverId, requestedDriverId) ||
+                other.requestedDriverId == requestedDriverId) &&
             (identical(other.gameDate, gameDate) ||
                 other.gameDate == gameDate) &&
             (identical(other.gameStatus, gameStatus) ||
@@ -287,8 +371,21 @@ class _$GameSignupImpl implements _GameSignup {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, playerId, signedUpAt, status,
-      adminActionReason, gameDate, gameStatus, hubId, location, venueName);
+  int get hashCode => Object.hash(
+      runtimeType,
+      playerId,
+      signedUpAt,
+      status,
+      adminActionReason,
+      offeringRide,
+      needsRide,
+      availableSeats,
+      requestedDriverId,
+      gameDate,
+      gameStatus,
+      hubId,
+      location,
+      venueName);
 
   /// Create a copy of GameSignup
   /// with the given fields replaced by the non-null parameter values.
@@ -312,6 +409,10 @@ abstract class _GameSignup implements GameSignup {
       @TimestampConverter() required final DateTime signedUpAt,
       @SignupStatusConverter() final SignupStatus status,
       final String? adminActionReason,
+      final bool offeringRide,
+      final bool needsRide,
+      final int? availableSeats,
+      final String? requestedDriverId,
       @TimestampConverter() final DateTime? gameDate,
       final String? gameStatus,
       final String? hubId,
@@ -331,6 +432,15 @@ abstract class _GameSignup implements GameSignup {
   SignupStatus get status;
   @override
   String? get adminActionReason; // Mandatory for rejections/kicks
+// Ride-sharing (Trempiyada) fields
+  @override
+  bool get offeringRide; // Player is offering a ride
+  @override
+  bool get needsRide; // Player needs a ride
+  @override
+  int? get availableSeats; // Number of available seats (if offeringRide=true)
+  @override
+  String? get requestedDriverId; // ID of driver player requested ride from
 // Denormalized game data (to avoid N+1 queries)
   @override
   @TimestampConverter()

@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import 'package:kattrick/core/constants.dart';
+import 'package:kattrick/data/repositories_providers.dart';
+import 'package:kattrick/features/games/domain/models/team_maker.dart';
+import 'package:kattrick/features/games/domain/services/team_image_generator.dart';
+import 'package:kattrick/features/games/presentation/screens/team_maker_controller.dart';
 import 'package:kattrick/l10n/app_localizations.dart';
+import 'package:kattrick/models/models.dart';
 import 'package:kattrick/theme/premium_theme.dart';
+import 'package:kattrick/utils/snackbar_helper.dart';
+import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 import 'package:kattrick/widgets/common/premium_scaffold.dart';
 import 'package:kattrick/widgets/dialogs/unrated_players_warning_dialog.dart';
-import 'package:kattrick/data/repositories_providers.dart';
-import 'package:kattrick/models/models.dart';
-import 'package:kattrick/features/hubs/domain/models/hub_role.dart';
-import 'package:kattrick/core/constants.dart';
 import 'package:kattrick/widgets/player_avatar.dart';
-import 'package:kattrick/utils/snackbar_helper.dart';
 import 'package:kattrick/widgets/team_card.dart';
-import 'package:kattrick/features/games/presentation/screens/team_maker_controller.dart';
-import 'package:kattrick/features/games/domain/models/team_maker.dart';
-import 'package:kattrick/widgets/animations/kinetic_loading_animation.dart';
 
 /// Premium team maker screen with advanced UI
 class TeamMakerScreen extends ConsumerStatefulWidget {
@@ -421,11 +420,10 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Share to WhatsApp button
+                        // Share to WhatsApp button with image
                         ElevatedButton.icon(
                           onPressed: () async {
-                            final teamsText = controller.generateTeamsText();
-                            if (teamsText.isEmpty) {
+                            if (state.teams.isEmpty) {
                               SnackbarHelper.showError(
                                 context,
                                 'אין כוחות לשתף',
@@ -434,26 +432,31 @@ class _PremiumTeamBuilderState extends ConsumerState<PremiumTeamBuilder> {
                             }
 
                             try {
-                              final whatsappUrl = Uri.parse(
-                                'https://wa.me/?text=${Uri.encodeComponent(teamsText)}',
+                              // Show loading indicator
+                              SnackbarHelper.showSuccess(
+                                context,
+                                'מכין תמונה לשיתוף...',
                               );
-                              if (await canLaunchUrl(whatsappUrl)) {
-                                await launchUrl(
-                                  whatsappUrl,
-                                  mode: LaunchMode.externalApplication,
-                                );
-                              } else {
+
+                              // Generate team image
+                              final imageFile = await TeamImageGenerator.generateTeamImage(
+                                teams: state.teams,
+                                userMap: state.userMap,
+                                balanceScore: state.balanceScore,
+                              );
+
+                              // Share via WhatsApp or other apps
+                              await Share.shareXFiles(
+                                [XFile(imageFile.path)],
+                                text: '🏆 כוחות המשחק - Kattrick',
+                              );
+                            } catch (e) {
+                              // Fallback to text sharing
+                              if (mounted) {
+                                final teamsText = controller.generateTeamsText();
                                 await Share.share(
                                   teamsText,
                                   subject: 'Kattrick - כוחות המשחק',
-                                );
-                              }
-                            } catch (e) {
-                              await Clipboard.setData(ClipboardData(text: teamsText));
-                              if (mounted) {
-                                SnackbarHelper.showSuccess(
-                                  context,
-                                  'הכוחות הועתקו ללוח',
                                 );
                               }
                             }

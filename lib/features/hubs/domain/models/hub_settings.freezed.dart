@@ -73,6 +73,11 @@ mixin _$HubSettings {
   /// When enabled, games created in this hub will have MOTM voting by default
   bool get enableMotmVoting => throw _privateConstructorUsedError;
 
+  /// Payment link for hub (Bit/PayBox deep link)
+  /// When set, players can click "Pay Now" button to directly open payment app
+  /// Format: https://payboxapp.page.link/... or bit.ly/...
+  String? get paymentLink => throw _privateConstructorUsedError;
+
   /// Serializes this HubSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -104,7 +109,8 @@ abstract class $HubSettingsCopyWith<$Res> {
       bool invitationsEnabled,
       @JoinModeConverter() JoinMode joinMode,
       @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy,
-      bool enableMotmVoting});
+      bool enableMotmVoting,
+      String? paymentLink});
 }
 
 /// @nodoc
@@ -137,6 +143,7 @@ class _$HubSettingsCopyWithImpl<$Res, $Val extends HubSettings>
     Object? joinMode = null,
     Object? matchLoggingPolicy = null,
     Object? enableMotmVoting = null,
+    Object? paymentLink = freezed,
   }) {
     return _then(_value.copyWith(
       showManagerContactInfo: null == showManagerContactInfo
@@ -199,6 +206,10 @@ class _$HubSettingsCopyWithImpl<$Res, $Val extends HubSettings>
           ? _value.enableMotmVoting
           : enableMotmVoting // ignore: cast_nullable_to_non_nullable
               as bool,
+      paymentLink: freezed == paymentLink
+          ? _value.paymentLink
+          : paymentLink // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -226,7 +237,8 @@ abstract class _$$HubSettingsImplCopyWith<$Res>
       bool invitationsEnabled,
       @JoinModeConverter() JoinMode joinMode,
       @MatchLoggingPolicyConverter() MatchLoggingPolicy matchLoggingPolicy,
-      bool enableMotmVoting});
+      bool enableMotmVoting,
+      String? paymentLink});
 }
 
 /// @nodoc
@@ -257,6 +269,7 @@ class __$$HubSettingsImplCopyWithImpl<$Res>
     Object? joinMode = null,
     Object? matchLoggingPolicy = null,
     Object? enableMotmVoting = null,
+    Object? paymentLink = freezed,
   }) {
     return _then(_$HubSettingsImpl(
       showManagerContactInfo: null == showManagerContactInfo
@@ -319,6 +332,10 @@ class __$$HubSettingsImplCopyWithImpl<$Res>
           ? _value.enableMotmVoting
           : enableMotmVoting // ignore: cast_nullable_to_non_nullable
               as bool,
+      paymentLink: freezed == paymentLink
+          ? _value.paymentLink
+          : paymentLink // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -342,7 +359,8 @@ class _$HubSettingsImpl extends _HubSettings {
       @JoinModeConverter() this.joinMode = JoinMode.auto,
       @MatchLoggingPolicyConverter()
       this.matchLoggingPolicy = MatchLoggingPolicy.managerOnly,
-      this.enableMotmVoting = false})
+      this.enableMotmVoting = false,
+      this.paymentLink})
       : super._();
 
   factory _$HubSettingsImpl.fromJson(Map<String, dynamic> json) =>
@@ -429,9 +447,15 @@ class _$HubSettingsImpl extends _HubSettings {
   @JsonKey()
   final bool enableMotmVoting;
 
+  /// Payment link for hub (Bit/PayBox deep link)
+  /// When set, players can click "Pay Now" button to directly open payment app
+  /// Format: https://payboxapp.page.link/... or bit.ly/...
+  @override
+  final String? paymentLink;
+
   @override
   String toString() {
-    return 'HubSettings(showManagerContactInfo: $showManagerContactInfo, allowJoinRequests: $allowJoinRequests, allowModeratorsToCreateGames: $allowModeratorsToCreateGames, requireResultApproval: $requireResultApproval, allowMemberInvites: $allowMemberInvites, enablePolls: $enablePolls, enableChat: $enableChat, enableEvents: $enableEvents, maxMembers: $maxMembers, veteranGamesThreshold: $veteranGamesThreshold, invitationCode: $invitationCode, invitationsEnabled: $invitationsEnabled, joinMode: $joinMode, matchLoggingPolicy: $matchLoggingPolicy, enableMotmVoting: $enableMotmVoting)';
+    return 'HubSettings(showManagerContactInfo: $showManagerContactInfo, allowJoinRequests: $allowJoinRequests, allowModeratorsToCreateGames: $allowModeratorsToCreateGames, requireResultApproval: $requireResultApproval, allowMemberInvites: $allowMemberInvites, enablePolls: $enablePolls, enableChat: $enableChat, enableEvents: $enableEvents, maxMembers: $maxMembers, veteranGamesThreshold: $veteranGamesThreshold, invitationCode: $invitationCode, invitationsEnabled: $invitationsEnabled, joinMode: $joinMode, matchLoggingPolicy: $matchLoggingPolicy, enableMotmVoting: $enableMotmVoting, paymentLink: $paymentLink)';
   }
 
   @override
@@ -470,7 +494,9 @@ class _$HubSettingsImpl extends _HubSettings {
             (identical(other.matchLoggingPolicy, matchLoggingPolicy) ||
                 other.matchLoggingPolicy == matchLoggingPolicy) &&
             (identical(other.enableMotmVoting, enableMotmVoting) ||
-                other.enableMotmVoting == enableMotmVoting));
+                other.enableMotmVoting == enableMotmVoting) &&
+            (identical(other.paymentLink, paymentLink) ||
+                other.paymentLink == paymentLink));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -491,7 +517,8 @@ class _$HubSettingsImpl extends _HubSettings {
       invitationsEnabled,
       joinMode,
       matchLoggingPolicy,
-      enableMotmVoting);
+      enableMotmVoting,
+      paymentLink);
 
   /// Create a copy of HubSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -526,7 +553,8 @@ abstract class _HubSettings extends HubSettings {
       @JoinModeConverter() final JoinMode joinMode,
       @MatchLoggingPolicyConverter()
       final MatchLoggingPolicy matchLoggingPolicy,
-      final bool enableMotmVoting}) = _$HubSettingsImpl;
+      final bool enableMotmVoting,
+      final String? paymentLink}) = _$HubSettingsImpl;
   const _HubSettings._() : super._();
 
   factory _HubSettings.fromJson(Map<String, dynamic> json) =
@@ -598,6 +626,12 @@ abstract class _HubSettings extends HubSettings {
   /// When enabled, games created in this hub will have MOTM voting by default
   @override
   bool get enableMotmVoting;
+
+  /// Payment link for hub (Bit/PayBox deep link)
+  /// When set, players can click "Pay Now" button to directly open payment app
+  /// Format: https://payboxapp.page.link/... or bit.ly/...
+  @override
+  String? get paymentLink;
 
   /// Create a copy of HubSettings
   /// with the given fields replaced by the non-null parameter values.

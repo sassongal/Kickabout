@@ -1065,5 +1065,86 @@
   "noWinnerYet": "טרם נבחר מנצח",
   "@noWinnerYet": {
     "description": "Message shown when voting is still open or no votes were cast"
+  },
+  "payNow": "שלם עכשיו",
+  "@payNow": {
+    "description": "Button to open payment link (Bit/PayBox)"
+  },
+  "paymentLinkNotConfigured": "קישור תשלום לא הוגדר",
+  "@paymentLinkNotConfigured": {
+    "description": "Message when payment link is not configured"
+  },
+  "openingPaymentApp": "פותח אפליקציית תשלום...",
+  "@openingPaymentApp": {
+    "description": "Message when opening payment app"
+  },
+  "couldNotOpenPaymentLink": "לא ניתן לפתוח קישור תשלום",
+  "@couldNotOpenPaymentLink": {
+    "description": "Error message when payment link cannot be opened"
+  },
+  "rideSharing": "טרמפיאדה",
+  "@rideSharing": {
+    "description": "Ride-sharing feature section title"
+  },
+  "offeringRide": "מציע טרמפ",
+  "@offeringRide": {
+    "description": "Player is offering a ride"
+  },
+  "needsRide": "צריך טרמפ",
+  "@needsRide": {
+    "description": "Player needs a ride"
+  },
+  "hasCar": "יש לי רכב",
+  "@hasCar": {
+    "description": "User has a car"
+  },
+  "availableSeats": "מקומות פנויים",
+  "@availableSeats": {
+    "description": "Number of available seats in car"
+  },
+  "requestRide": "בקש טרמפ",
+  "@requestRide": {
+    "description": "Button to request a ride"
+  },
+  "cancelRideRequest": "בטל בקשה",
+  "@cancelRideRequest": {
+    "description": "Button to cancel ride request"
+  },
+  "offerRide": "הצע טרמפ",
+  "@offerRide": {
+    "description": "Button to offer a ride"
+  },
+  "cancelRideOffer": "בטל הצעה",
+  "@cancelRideOffer": {
+    "description": "Button to cancel ride offer"
+  },
+  "drivers": "נהגים",
+  "@drivers": {
+    "description": "Drivers section title"
+  },
+  "passengersNeeded": "מחפשים טרמפ",
+  "@passengersNeeded": {
+    "description": "Players looking for rides"
+  },
+  "selectDriver": "בחר נהג",
+  "@selectDriver": {
+    "description": "Select a driver to request ride from"
+  },
+  "rideRequestSent": "בקשת טרמפ נשלחה",
+  "@rideRequestSent": {
+    "description": "Confirmation message for ride request"
+  },
+  "noDriversAvailable": "אין נהגים זמינים כרגע",
+  "@noDriversAvailable": {
+    "description": "Message when no drivers are offering rides"
+  },
+  "seatsAvailable": "{count} מקומות פנויים",
+  "@seatsAvailable": {
+    "description": "Number of seats available in format",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

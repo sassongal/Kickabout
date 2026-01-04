@@ -38,6 +38,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       heightCm: (json['heightCm'] as num?)?.toDouble(),
       weightKg: (json['weightKg'] as num?)?.toDouble(),
       preferredFoot: json['preferredFoot'] as String?,
+      hasCar: json['hasCar'] as bool? ?? false,
       totalParticipations: (json['totalParticipations'] as num?)?.toInt() ?? 0,
       gamesPlayed: (json['gamesPlayed'] as num?)?.toInt() ?? 0,
       location: const NullableGeographicPointFirestoreConverter()
@@ -122,6 +123,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'heightCm': instance.heightCm,
       'weightKg': instance.weightKg,
       'preferredFoot': instance.preferredFoot,
+      'hasCar': instance.hasCar,
       'totalParticipations': instance.totalParticipations,
       'gamesPlayed': instance.gamesPlayed,
       'location': const NullableGeographicPointFirestoreConverter()

@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { info } = require('firebase-functions/logger');
-const { db, FieldValue, getUserFCMTokens } = require('../utils');
+const { db, FieldValue, getUserFCMTokens, messaging } = require('../utils');
 
 // --- Game Creation Trigger ---
 exports.onGameCreated = onDocumentCreated('games/{gameId}', async (event) => {
@@ -143,7 +143,8 @@ exports.onGameSignupChanged = onDocumentWritten(
     },
 );
 
-// --- Signup Status Changed (Waitlist) ---
+// --- Signup Status Changed (Waitlist Automation) ---
+// Automatically promotes waitlist users when a confirmed player cancels
 exports.onSignupStatusChanged = onDocumentUpdated(
     'games/{gameId}/signups/{userId}',
     async (event) => {
@@ -159,46 +160,90 @@ exports.onSignupStatusChanged = onDocumentUpdated(
         const beforeStatus = beforeData.status;
         const afterStatus = afterData.status;
 
-        if (beforeStatus !== 'confirmed' || afterStatus !== 'cancelled') {
+        // Trigger waitlist promotion only when:
+        // 1. A confirmed player cancels (confirmed -> cancelled)
+        // 2. An admin removes a confirmed player (confirmed -> rejected)
+        const shouldPromoteWaitlist =
+            beforeStatus === 'confirmed' &&
+            (afterStatus === 'cancelled' || afterStatus === 'rejected');
+
+        if (!shouldPromoteWaitlist) {
             return;
         }
 
-        info(`Signup ${userId} cancelled for game ${gameId}. Checking waitlist...`);
+        info(`Signup ${userId} ${afterStatus} for game ${gameId}. Checking waitlist...`);
 
         try {
-            const waitlistSnapshot = await db
-                .collection('games')
-                .doc(gameId)
-                .collection('signups')
-                .where('status', '==', 'waitlist')
-                .orderBy('signedUpAt', 'asc')
-                .limit(1)
-                .get();
+            // Use a transaction to prevent race conditions when multiple players cancel simultaneously
+            const promotedUserId = await db.runTransaction(async (transaction) => {
+                // 1. Get the first waitlist user
+                const waitlistSnapshot = await transaction.get(
+                    db.collection('games')
+                        .doc(gameId)
+                        .collection('signups')
+                        .where('status', '==', 'waitlist')
+                        .orderBy('signedUpAt', 'asc')
+                        .limit(1),
+                );
 
-            if (waitlistSnapshot.empty) {
-                info(`No waitlist users found for game ${gameId}.`);
+                if (waitlistSnapshot.empty) {
+                    info(`No waitlist users found for game ${gameId}.`);
+                    return null;
+                }
+
+                const firstWaitlistDoc = waitlistSnapshot.docs[0];
+                const waitlistUserId = firstWaitlistDoc.id;
+
+                // 2. Get game to check current state
+                const gameRef = db.collection('games').doc(gameId);
+                const gameDoc = await transaction.get(gameRef);
+
+                if (!gameDoc.exists) {
+                    info(`Game ${gameId} not found. Skipping waitlist promotion.`);
+                    return null;
+                }
+
+                const gameData = gameDoc.data();
+                const maxPlayers = gameData?.maxParticipants ?? (gameData?.teamCount ?? 2) * 3;
+                const currentConfirmedCount = gameData?.confirmedPlayerCount ?? 0;
+
+                // 3. Check if there's actually space (safety check)
+                if (currentConfirmedCount >= maxPlayers) {
+                    info(`Game ${gameId} is still full (${currentConfirmedCount}/${maxPlayers}). Not promoting waitlist user.`);
+                    return null;
+                }
+
+                // 4. Promote the waitlist user
+                transaction.update(firstWaitlistDoc.ref, {
+                    status: 'confirmed',
+                    updatedAt: FieldValue.serverTimestamp(),
+                });
+
+                // 5. Update game isFull status
+                const newConfirmedCount = currentConfirmedCount; // Will be incremented by onGameSignupChanged trigger
+                const stillFull = newConfirmedCount >= maxPlayers;
+
+                transaction.update(gameRef, {
+                    isFull: stillFull,
+                    updatedAt: FieldValue.serverTimestamp(),
+                });
+
+                info(`✅ Promoted waitlist user ${waitlistUserId} to confirmed for game ${gameId}. Space: ${newConfirmedCount}/${maxPlayers}`);
+
+                return waitlistUserId; // Return for notification sending
+            });
+
+            // If no user was promoted, exit early
+            if (!promotedUserId) {
                 return;
             }
 
-            const firstWaitlistDoc = waitlistSnapshot.docs[0];
-            const waitlistUserId = firstWaitlistDoc.id;
-
-            await firstWaitlistDoc.ref.update({
-                status: 'confirmed',
-                updatedAt: FieldValue.serverTimestamp(),
-            });
-
-            info(`Promoted waitlist user ${waitlistUserId} to confirmed for game ${gameId}.`);
-
-            const gameRef = db.collection('games').doc(gameId);
-            await gameRef.update({
-                confirmedPlayerCount: FieldValue.increment(1),
-            });
-
+            // Send notification to promoted user
             try {
-                const tokens = await getUserFCMTokens(waitlistUserId);
+                const tokens = await getUserFCMTokens(promotedUserId);
 
                 if (tokens.length > 0) {
+                    const gameRef = db.collection('games').doc(gameId);
                     const gameDoc = await gameRef.get();
                     const gameData = gameDoc.data();
                     const gameDate = gameData?.gameDate?.toDate();
@@ -218,10 +263,10 @@ exports.onSignupStatusChanged = onDocumentUpdated(
 
                     const response = await messaging.sendEachForMulticast(message);
                     info(
-                        `Sent waitlist promotion notification to ${response.successCount} devices for user ${waitlistUserId}.`
+                        `Sent waitlist promotion notification to ${response.successCount} devices for user ${promotedUserId}.`
                     );
                 } else {
-                    info(`No FCM tokens found for promoted waitlist user ${waitlistUserId}.`);
+                    info(`No FCM tokens found for promoted waitlist user ${promotedUserId}.`);
                 }
             } catch (notificationError) {
                 info(`Failed to send waitlist promotion notification:`, notificationError);

@@ -1857,6 +1857,120 @@ abstract class AppLocalizations {
   /// In he, this message translates to:
   /// **'טרם נבחר מנצח'**
   String get noWinnerYet;
+
+  /// Button to open payment link (Bit/PayBox)
+  ///
+  /// In he, this message translates to:
+  /// **'שלם עכשיו'**
+  String get payNow;
+
+  /// Message when payment link is not configured
+  ///
+  /// In he, this message translates to:
+  /// **'קישור תשלום לא הוגדר'**
+  String get paymentLinkNotConfigured;
+
+  /// Message when opening payment app
+  ///
+  /// In he, this message translates to:
+  /// **'פותח אפליקציית תשלום...'**
+  String get openingPaymentApp;
+
+  /// Error message when payment link cannot be opened
+  ///
+  /// In he, this message translates to:
+  /// **'לא ניתן לפתוח קישור תשלום'**
+  String get couldNotOpenPaymentLink;
+
+  /// Ride-sharing feature section title
+  ///
+  /// In he, this message translates to:
+  /// **'טרמפיאדה'**
+  String get rideSharing;
+
+  /// Player is offering a ride
+  ///
+  /// In he, this message translates to:
+  /// **'מציע טרמפ'**
+  String get offeringRide;
+
+  /// Player needs a ride
+  ///
+  /// In he, this message translates to:
+  /// **'צריך טרמפ'**
+  String get needsRide;
+
+  /// User has a car
+  ///
+  /// In he, this message translates to:
+  /// **'יש לי רכב'**
+  String get hasCar;
+
+  /// Number of available seats in car
+  ///
+  /// In he, this message translates to:
+  /// **'מקומות פנויים'**
+  String get availableSeats;
+
+  /// Button to request a ride
+  ///
+  /// In he, this message translates to:
+  /// **'בקש טרמפ'**
+  String get requestRide;
+
+  /// Button to cancel ride request
+  ///
+  /// In he, this message translates to:
+  /// **'בטל בקשה'**
+  String get cancelRideRequest;
+
+  /// Button to offer a ride
+  ///
+  /// In he, this message translates to:
+  /// **'הצע טרמפ'**
+  String get offerRide;
+
+  /// Button to cancel ride offer
+  ///
+  /// In he, this message translates to:
+  /// **'בטל הצעה'**
+  String get cancelRideOffer;
+
+  /// Drivers section title
+  ///
+  /// In he, this message translates to:
+  /// **'נהגים'**
+  String get drivers;
+
+  /// Players looking for rides
+  ///
+  /// In he, this message translates to:
+  /// **'מחפשים טרמפ'**
+  String get passengersNeeded;
+
+  /// Select a driver to request ride from
+  ///
+  /// In he, this message translates to:
+  /// **'בחר נהג'**
+  String get selectDriver;
+
+  /// Confirmation message for ride request
+  ///
+  /// In he, this message translates to:
+  /// **'בקשת טרמפ נשלחה'**
+  String get rideRequestSent;
+
+  /// Message when no drivers are offering rides
+  ///
+  /// In he, this message translates to:
+  /// **'אין נהגים זמינים כרגע'**
+  String get noDriversAvailable;
+
+  /// Number of seats available in format
+  ///
+  /// In he, this message translates to:
+  /// **'{count} מקומות פנויים'**
+  String seatsAvailable(int count);
 }
 
 class _AppLocalizationsDelegate
